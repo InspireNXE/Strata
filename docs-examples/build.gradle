@@ -1,0 +1,36 @@
+plugins {
+    id 'strata-java'
+    // Vanilla classes for the Minecraft examples
+    id 'net.neoforged.moddev'
+}
+
+description = 'The code shown on the documentation site. Pages include it by section, so every example compiles.'
+
+neoForge {
+    neoFormVersion = neo_form_version
+}
+
+dependencies {
+    // What a mod or game compiles against
+    implementation(project(':api'))
+    implementation(project(':canvas-swing'))
+    compileOnly(project(':mc-common'))
+    // The adapter guide's example engine creates hosts and runs the SPI contract tests
+    implementation(project(':spi'))
+    implementation(project(':core'))
+    testImplementation(testFixtures(project(':spi')))
+}
+
+tasks.named('test', Test) {
+    systemProperty('java.awt.headless', 'true')
+}
+
+// Renders the example screens to the PNGs the pages show
+tasks.register('renderDocImages', JavaExec) {
+    group = 'documentation'
+    description = 'Renders the documentation example screens to docs/assets/images.'
+    classpath = sourceSets.main.runtimeClasspath
+    mainClass = 'org.inspirenxe.strata.examples.RenderDocImages'
+    args(rootProject.file('docs/assets/images').absolutePath)
+    systemProperty('java.awt.headless', 'true')
+}

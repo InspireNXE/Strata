@@ -1,0 +1,88 @@
+# Text
+
+Text in Strata is plain values: characters with a style. The engine adapter picks the font, draws the text and measures it. The same text is therefore a little wider on one engine than on another, and layouts should never assume character widths.
+
+## TextStyle
+
+A record of how a span of text looks:
+
+| Field | Default (`TextStyle.DEFAULT`) |
+|---|---|
+| `color` | `0xFFFFFFFF`, opaque white. Alpha 0 draws nothing. |
+| `bold`, `italic`, `underline`, `strikethrough` | off |
+| `shadow` | off. A darker copy one unit down and to the right, as Minecraft draws it. |
+
+`with` methods return modified copies:
+
+```java
+TextStyle heading = TextStyle.DEFAULT.withColor(0xFFFFD54F).withBold(true).withShadow(true);
+```
+
+Engines draw what they can:
+
+| Style | Minecraft | Swing |
+|---|---|---|
+| Bold | Vanilla bold, one pixel wider per character | A bold font derived from the base font |
+| Italic | Vanilla italic | An italic font derived from the base font |
+| Underline, strikethrough | Vanilla's | Drawn by the adapter |
+| Shadow | Vanilla's | Drawn by the adapter |
+
+## TextSpan
+
+A `TextSpan` is a string with a `TextStyle`. `TextSpan.of(text)` uses the default style, and `withText` and `withStyle` make copies.
+
+As far as engines are concerned, a span is one line. Break text into lines before drawing it, as `Label` does.
+
+## Measuring
+
+`TextMetrics` measures text the way the engine draws it:
+
+| Method | Returns |
+|---|---|
+| `width(span)` | How wide the span is drawn, in UI units. 0 for empty text. |
+| `lineHeight(style)` | The distance from one line's top to the next line's top |
+
+Components get it from `MeasureContext.text()` during measure and from `environment().text()` anywhere else. The widths match drawing, so a text box can place its caret between characters.
+
+| Engine | Widths | Line height |
+|---|---|---|
+| Minecraft | Whole GUI pixels, from the player's font, including vanilla's extra pixel for bold | The font's line height, 9 for the default font |
+| Swing | Fractional advance widths of the AWT font | The font's height: ascent, descent and leading |
+
+## Drawing text in a custom component
+
+```java
+@Override
+protected Size measure(MeasureContext context, float availableWidth, float availableHeight) {
+    this.span = new TextSpan(this.caption, this.style);
+    this.lineHeight = context.text().lineHeight(this.style);
+    return new Size(context.text().width(this.span), this.lineHeight);
+}
+
+@Override
+protected void paint(Painter painter, Rect bounds) {
+    painter.text(this.span, bounds.x(), bounds.y());
+}
+```
+
+`Painter.text(span, x, y)` puts the top-left corner of the line box at the point: `y` is the top of the line, not the baseline. Build spans during measure and keep them for painting, so painting does not allocate. The [check box example](extending.md#write-a-new-component) does this.
+
+## Wrapping
+
+`Label` wraps greedily by word when wrapping is on: it fills each line with as many words as fit the available width, and breaks a single word wider than a whole line between characters. It always breaks at `\n`. See [Wrapping text](layout.md#wrapping-text) for giving it a width.
+
+Wrapping is part of the label, not a public utility. A custom component that needs wrapped text can measure and break the text itself, or contain a wrapping label.
+
+## Fonts
+
+Strata has no font API. Each adapter decides:
+
+- Minecraft draws with the screen's font, which follows the player's resource packs.
+- Swing draws with the font given to `SwingTextMetrics`. `SwingTextMetrics.defaults()` is the logical Dialog font at 9 units, close to Minecraft's size. See [Swing](../platforms/swing.md#fonts).
+
+## Not supported yet
+
+- Rich text that mixes styles or inline images in one line. `SpriteSpan` and `InlineElement` are reserved for it, but nothing draws them yet.
+- Markup such as BBCode. Avoid Minecraft's `§` formatting codes in text too: Strata does not interpret them, and vanilla's own text drawing may, so the same text would look different on each engine.
+- Right-to-left text and complex shaping beyond what the engine's own text drawing does.
+- Multi-line editing.
