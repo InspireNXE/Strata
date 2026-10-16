@@ -1,21 +1,22 @@
 package org.inspirenxe.strata.core;
 
-import org.inspirenxe.strata.api.Ui;
+import org.inspirenxe.strata.api.ComponentFactory;
 import org.inspirenxe.strata.api.component.Component;
 import org.inspirenxe.strata.api.input.Modifiers;
 import org.inspirenxe.strata.api.input.MouseButton;
 import org.inspirenxe.strata.api.theme.Theme;
 import org.inspirenxe.strata.api.theme.Themes;
+import org.inspirenxe.strata.core.host.ScreenHostImpl;
 import org.inspirenxe.strata.core.node.Node;
 
 import java.util.List;
 
 /**
- * A host for tests: build components with {@link #ui()} first, then {@link #show} the tree.
+ * A host for tests: build components with {@link #factory()} first, then {@link #show} the tree.
  */
 public final class TestHost {
     private final TestPlatform platform;
-    private final CoreHost host;
+    private final ScreenHostImpl host;
 
     public TestHost(final float width, final float height) {
         this(new TestPlatform(), Themes.flat(), width, height);
@@ -23,7 +24,7 @@ public final class TestHost {
 
     public TestHost(final TestPlatform platform, final Theme theme, final float width, final float height) {
         this.platform = platform;
-        this.host = (CoreHost) StrataCore.createHost(platform, theme);
+        this.host = (ScreenHostImpl) StrataCore.createScreenHost(platform, theme);
         this.host.resize(width, height);
     }
 
@@ -31,12 +32,12 @@ public final class TestHost {
         return this.platform;
     }
 
-    public CoreHost host() {
+    public ScreenHostImpl host() {
         return this.host;
     }
 
-    public Ui ui() {
-        return this.host.ui();
+    public ComponentFactory factory() {
+        return this.host.factory();
     }
 
     /**

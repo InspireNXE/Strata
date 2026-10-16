@@ -13,30 +13,43 @@ import java.util.Map;
 import java.util.Objects;
 
 /**
- * The handlers registered on one component. Single-threaded: all calls happen on the UI thread.
+ * The handlers registered on one component. A node creates its dispatcher on the first subscription. Every call
+ * must come from the UI thread.
  *
- * <p>Handler lists are replaced, not mutated, when they change, so a handler may unsubscribe itself (or others)
- * while an event is being delivered, and firing allocates nothing.</p>
+ * <p>Each change swaps in a new handler array for the event type. A handler can therefore unsubscribe itself or
+ * others while an event is being delivered (the delivery in progress still reaches every handler it started with),
+ * and firing allocates nothing.</p>
  */
 public final class EventDispatcher {
     private final Map<EventType<?>, Entry<?>[]> handlers;
 
+    /**
+     * Creates a dispatcher with no handlers.
+     */
     public EventDispatcher() {
         this.handlers = new HashMap<>();
     }
 
     /**
-     * Registers a handler.
+     * Registers a handler. Handlers for one type and phase run in the order they were registered.
      *
-     * @param owner an optional token; {@link #removeOwner(Object)} removes every handler registered with it
+     * @param <E> the event class
+     * @param type the event type to handle
+     * @param phase whether the handler runs before or after the component's default behavior
+     * @param handler the handler
+     * @param owner a token for {@link #removeOwner(Object)}, or {@code null} for none
+     * @param snapshots whether events of this type should take snapshots while this handler is registered
+     * @return a subscription that removes this handler; unsubscribing twice does nothing
+     * @throws NullPointerException if {@code type}, {@code phase} or {@code handler} is null
      */
     public <E extends Event> Subscription subscribe(final EventType<E> type, final Phase phase,
-                                                    final EventHandler<? super E> handler, final Object owner) {
+                                                    final EventHandler<? super E> handler, final Object owner,
+                                                    final boolean snapshots) {
         Objects.requireNonNull(type, "type");
         Objects.requireNonNull(phase, "phase");
         Objects.requireNonNull(handler, "handler");
 
-        final Entry<E> entry = new Entry<>(phase, handler, owner);
+        final Entry<E> entry = new Entry<>(phase, handler, owner, snapshots);
         final Entry<?>[] current = this.handlers.get(type);
         final Entry<?>[] next;
         if (current == null) {
@@ -50,6 +63,15 @@ public final class EventDispatcher {
         return () -> this.remove(type, entry);
     }
 
+    /**
+     * Calls every handler registered for the type and phase, in registration order. Exceptions from a handler
+     * propagate and stop the remaining handlers.
+     *
+     * @param <E> the event class
+     * @param type the event type
+     * @param phase the phase to run
+     * @param event the event to pass
+     */
     @SuppressWarnings("unchecked")
     public <E extends Event> void fire(final EventType<E> type, final Phase phase, final E event) {
         final Entry<?>[] entries = this.handlers.get(type);
@@ -63,10 +85,42 @@ public final class EventDispatcher {
         }
     }
 
+    /**
+     * Returns whether any handler, in either phase, is registered for a type.
+     *
+     * @param type the event type
+     * @return true if at least one handler is registered
+     */
     public boolean hasHandlers(final EventType<?> type) {
         return this.handlers.containsKey(type);
     }
 
+    /**
+     * Returns whether any handler for a type, in either phase, was registered as wanting snapshots. Allocates
+     * nothing.
+     *
+     * @param type the event type
+     * @return true if at least one such handler is registered
+     */
+    public boolean wantsSnapshots(final EventType<?> type) {
+        final Entry<?>[] entries = this.handlers.get(type);
+        if (entries == null) {
+            return false;
+        }
+        for (final Entry<?> entry : entries) {
+            if (entry.snapshots) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Removes every handler registered with an owner token. Owners compare by identity.
+     *
+     * @param owner the token passed to {@link #subscribe}
+     * @throws NullPointerException if {@code owner} is null
+     */
     public void removeOwner(final Object owner) {
         Objects.requireNonNull(owner, "owner");
         final List<EventType<?>> types = new ArrayList<>(this.handlers.keySet());
@@ -82,6 +136,9 @@ public final class EventDispatcher {
         }
     }
 
+    /**
+     * Removes every handler. Subscriptions handed out earlier become no-ops.
+     */
     public void clear() {
         this.handlers.clear();
     }
@@ -108,6 +165,7 @@ public final class EventDispatcher {
         }
     }
 
-    private record Entry<E extends Event>(Phase phase, EventHandler<? super E> handler, Object owner) {
+    private record Entry<E extends Event>(Phase phase, EventHandler<? super E> handler, Object owner,
+                                         boolean snapshots) {
     }
 }

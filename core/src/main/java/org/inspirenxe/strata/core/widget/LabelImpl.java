@@ -1,7 +1,7 @@
 package org.inspirenxe.strata.core.widget;
 
-import org.inspirenxe.strata.api.Ui;
-import org.inspirenxe.strata.api.component.HorizontalAlignment;
+import org.inspirenxe.strata.api.ComponentFactory;
+import org.inspirenxe.strata.api.layout.HorizontalAlignment;
 import org.inspirenxe.strata.api.extension.CustomComponent;
 import org.inspirenxe.strata.api.extension.MeasureContext;
 import org.inspirenxe.strata.api.extension.Painter;
@@ -19,6 +19,10 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
+/**
+ * The core {@link Label}. Measuring breaks the text into lines with {@link TextWrap}, at the width the parent
+ * offers when wrapping is on, and keeps them for painting. Each line is aligned on its own within the bounds.
+ */
 public final class LabelImpl extends CustomComponent<Label> implements Label {
     private String text;
     private TextStyle explicitStyle;
@@ -31,7 +35,15 @@ public final class LabelImpl extends CustomComponent<Label> implements Label {
     private final List<Float> lineWidths;
     private float lineHeight;
 
-    public LabelImpl(final Ui ui, final String text, final LabelBehavior behavior) {
+    /**
+     * Creates a label that does not wrap and aligns its text to the left.
+     *
+     * @param ui the factory that owns the label
+     * @param text the text, with {@code \n} for line breaks
+     * @param behavior the decorator for the label's hooks, or {@code null} for none
+     * @throws NullPointerException if {@code text} is null
+     */
+    public LabelImpl(final ComponentFactory ui, final String text, final LabelBehavior behavior) {
         super(ui, behavior);
         this.text = Objects.requireNonNull(text, "text");
         this.themeStyle = TextStyle.DEFAULT;
@@ -125,5 +137,10 @@ public final class LabelImpl extends CustomComponent<Label> implements Label {
             };
             painter.text(this.lines.get(i), x, bounds.y() + i * this.lineHeight);
         }
+    }
+
+    @Override
+    protected Object snapshotState() {
+        return new Label.State(this.text, this.style(), this.wrap, this.textAlignment);
     }
 }

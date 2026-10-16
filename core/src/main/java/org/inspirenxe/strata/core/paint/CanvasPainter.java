@@ -8,17 +8,35 @@ import org.inspirenxe.strata.api.theme.SpriteId;
 import org.inspirenxe.strata.spi.Canvas;
 
 /**
- * The developer-facing {@link Painter} over an engine's {@link Canvas}. Scoped clip and translation calls keep the
- * canvas stacks balanced even if the callback throws. Reused across frames.
+ * The {@link Painter} that components draw with, passing each call to the engine's {@link Canvas}. The scoped clip
+ * and translation calls pop what they pushed even if the drawing code throws, so the canvas stacks stay balanced.
+ * Each host reuses one painter for every frame.
  */
 public final class CanvasPainter implements Painter {
     private Canvas canvas;
 
+    /**
+     * Creates a painter with no canvas. Call {@link #begin(Canvas)} before drawing.
+     */
+    public CanvasPainter() {
+    }
+
+    /**
+     * Points the painter at the canvas for this frame.
+     *
+     * @param canvas the frame's canvas
+     * @return this painter
+     */
     public CanvasPainter begin(final Canvas canvas) {
         this.canvas = canvas;
         return this;
     }
 
+    /**
+     * Returns the canvas set by the last {@link #begin(Canvas)}.
+     *
+     * @return the canvas, or {@code null} before the first frame
+     */
     public Canvas canvas() {
         return this.canvas;
     }

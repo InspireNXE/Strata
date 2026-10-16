@@ -1,6 +1,6 @@
 package org.inspirenxe.strata.sandbox;
 
-import org.inspirenxe.strata.api.Ui;
+import org.inspirenxe.strata.api.ComponentFactory;
 import org.inspirenxe.strata.api.event.PointerButtonEvent;
 import org.inspirenxe.strata.api.extension.CustomComponent;
 import org.inspirenxe.strata.api.extension.MeasureContext;
@@ -19,7 +19,7 @@ final class Swatches extends CustomComponent<Swatches> {
     private final int[] colors;
     private int selected;
 
-    Swatches(final Ui ui, final int... colors) {
+    Swatches(final ComponentFactory ui, final int... colors) {
         super(ui);
         this.colors = colors.clone();
     }

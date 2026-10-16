@@ -6,19 +6,34 @@ import org.inspirenxe.strata.api.geom.Size;
 import org.inspirenxe.strata.api.text.TextMetrics;
 
 /**
- * What a container may use while placing its children.
+ * What a container may use while it places its children. Valid only during the arrange call.
+ *
+ * <p>Strata provides this object. Do not implement this interface.</p>
  */
 public interface ArrangeContext {
 
+    /**
+     * Returns the engine's text measurement.
+     *
+     * @return the text metrics
+     */
     TextMetrics text();
 
     /**
-     * The space the child asked for in the last measure, margin included.
+     * Returns the space a child asked for in the last measure: its desired size plus margin.
+     *
+     * @param child a child of the container being arranged
+     * @return the child's outer size, or zero if it is hidden
      */
     Size outerSize(Component<?> child);
 
     /**
-     * Gives a child its slot. The child places itself inside it by its margin, alignment and size limits.
+     * Gives a child its slot. The child shrinks the slot by its margin and places itself in what remains by its
+     * alignment and size limits, which sets its bounds. A slot smaller than the child's desired size is allowed;
+     * the child then overflows it unless it stretches.
+     *
+     * @param child a child of the container being arranged
+     * @param slot the area the child may use, margin included, in the host's coordinates
      */
     void arrange(Component<?> child, Rect slot);
 }

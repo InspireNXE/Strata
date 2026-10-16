@@ -2,8 +2,8 @@ package org.inspirenxe.strata.core.node;
 
 import org.inspirenxe.strata.api.component.Component;
 import org.inspirenxe.strata.api.extension.ComponentBehavior;
-import org.inspirenxe.strata.api.extension.ComponentHooks;
-import org.inspirenxe.strata.api.extension.ContainerPeer;
+import org.inspirenxe.strata.api.extension.peer.ComponentHooks;
+import org.inspirenxe.strata.api.extension.peer.ContainerPeer;
 import org.inspirenxe.strata.api.extension.CustomComponent;
 import org.inspirenxe.strata.api.geom.Insets;
 import org.inspirenxe.strata.core.paint.CanvasPainter;
@@ -15,8 +15,8 @@ import java.util.List;
 import java.util.Objects;
 
 /**
- * Core's half of a container: the child list, padding and clipping. Children are kept twice, as nodes for core and
- * as facades for callers, in the same order.
+ * Core's half of a container: the child list, padding and clipping. Children are kept twice in the same order, as
+ * nodes for core and as public components for callers. A new container has no padding and clips its children.
  */
 public final class ContainerNode extends Node implements ContainerPeer {
     private final List<Node> childNodes;
@@ -25,7 +25,15 @@ public final class ContainerNode extends Node implements ContainerPeer {
     private Insets padding;
     private boolean clipChildren;
 
-    public ContainerNode(final CoreUi ui, final CustomComponent<?> facade, final ComponentHooks hooks,
+    /**
+     * Creates the node behind a container. Only {@link ComponentFactoryImpl#createContainerPeer} calls this.
+     *
+     * @param ui the factory that owns the container
+     * @param facade the public container this node implements
+     * @param hooks the container's protected hooks
+     * @param behavior the decorator around those hooks, or {@code null} for none
+     */
+    public ContainerNode(final ComponentFactoryImpl ui, final CustomComponent<?> facade, final ComponentHooks hooks,
                          final ComponentBehavior<?> behavior) {
         super(ui, facade, hooks, behavior);
         this.childNodes = new ArrayList<>();
@@ -35,6 +43,11 @@ public final class ContainerNode extends Node implements ContainerPeer {
         this.clipChildren = true;
     }
 
+    /**
+     * Returns the child nodes, in the same order as {@link #children()}.
+     *
+     * @return an unmodifiable view that follows later changes
+     */
     public List<Node> childNodes() {
         return Collections.unmodifiableList(this.childNodes);
     }
@@ -46,7 +59,7 @@ public final class ContainerNode extends Node implements ContainerPeer {
 
     @Override
     public void add(final Component<?> child) {
-        final Node node = this.ui().nodeOf(child);
+        final Node node = this.factory().nodeOf(child);
         if (node.parentNode() != null) {
             throw new IllegalArgumentException(child + " already belongs to " + node.parent());
         }

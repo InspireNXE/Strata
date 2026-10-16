@@ -1,16 +1,16 @@
 package org.inspirenxe.strata.api.extension;
 
-import org.inspirenxe.strata.api.Ui;
+import org.inspirenxe.strata.api.ComponentFactory;
 import org.inspirenxe.strata.api.component.Component;
+import org.inspirenxe.strata.api.component.ComponentSnapshot;
 import org.inspirenxe.strata.api.component.Container;
 import org.inspirenxe.strata.api.component.CursorKind;
-import org.inspirenxe.strata.api.component.HorizontalAlignment;
-import org.inspirenxe.strata.api.component.VerticalAlignment;
 import org.inspirenxe.strata.api.event.CharEvent;
 import org.inspirenxe.strata.api.event.DragEvent;
 import org.inspirenxe.strata.api.event.Event;
 import org.inspirenxe.strata.api.event.EventHandler;
 import org.inspirenxe.strata.api.event.EventType;
+import org.inspirenxe.strata.api.event.EventTypes;
 import org.inspirenxe.strata.api.event.FocusEvent;
 import org.inspirenxe.strata.api.event.KeyEvent;
 import org.inspirenxe.strata.api.event.Phase;
@@ -18,10 +18,13 @@ import org.inspirenxe.strata.api.event.PointerButtonEvent;
 import org.inspirenxe.strata.api.event.PointerEvent;
 import org.inspirenxe.strata.api.event.ScrollEvent;
 import org.inspirenxe.strata.api.event.Subscription;
-import org.inspirenxe.strata.api.event.UIEvents;
+import org.inspirenxe.strata.api.extension.peer.ComponentHooks;
+import org.inspirenxe.strata.api.extension.peer.ComponentPeer;
 import org.inspirenxe.strata.api.geom.Insets;
 import org.inspirenxe.strata.api.geom.Rect;
 import org.inspirenxe.strata.api.geom.Size;
+import org.inspirenxe.strata.api.layout.HorizontalAlignment;
+import org.inspirenxe.strata.api.layout.VerticalAlignment;
 import org.inspirenxe.strata.api.theme.Paint;
 import org.inspirenxe.strata.api.theme.Theme;
 
@@ -29,59 +32,126 @@ import java.util.Objects;
 import java.util.Set;
 
 /**
- * Base for new component types. Subclass it, override the {@code protected} hooks, and implement your own
- * interfaces if other code should see the component by a type of its own:
+ * Base class for new kinds of component. Strata's own widgets are built on it too.
+ *
+ * <p>Subclass it, implement {@link #measure}, and override the other {@code protected} hooks you need. To let other
+ * code see the component as a type of your own, declare an interface that extends {@link Component} and implement
+ * it here:</p>
  *
  * <pre>{@code
- * public interface ColorPicker extends Component<ColorPicker> { ... }
+ * public interface ColorPicker extends Component<ColorPicker> {
+ *     int color();
+ * }
  *
  * final class ColorPickerImpl extends CustomComponent<ColorPicker> implements ColorPicker {
- *     ColorPickerImpl(final Ui ui) {
- *         super(ui);
+ *     private int color = 0xFFFF0000;
+ *
+ *     ColorPickerImpl(ComponentFactory factory) {
+ *         super(factory);
+ *         this.setFocusable(true);
  *     }
  *
- *     @Override
- *     protected Size measure(final MeasureContext context, final float width, final float height) { ... }
+ *     public int color() {
+ *         return this.color;
+ *     }
+ *
+ *     protected Size measure(MeasureContext context, float availableWidth, float availableHeight) {
+ *         return new Size(60, 20);
+ *     }
+ *
+ *     protected void paint(Painter painter, Rect bounds) {
+ *         painter.fill(bounds, this.color);
+ *     }
+ *
+ *     protected void onClick(PointerButtonEvent event) {
+ *         this.color = nextColor(this.color);
+ *         event.consume();
+ *     }
  * }
  * }</pre>
  *
- * <p>Every {@link Component} method here is {@code final} and delegates to a peer that Strata creates in the
- * constructor; the peer holds the bounds, state and handlers the rest of Strata relies on. Strata's own widgets and
- * containers are built on this class too.</p>
+ * <p>The constructor asks the factory for a <em>peer</em>, Strata's half of the component, which holds its bounds,
+ * state and handlers. Every {@link Component} method is {@code final} here and goes to the peer, so the component
+ * behaves like every other one in layout, focus and events.</p>
+ *
+ * <h2>Requirements for subclasses</h2>
+ * <ul>
+ *     <li>Pass the factory of the host that will show the component; a component cannot move between hosts.</li>
+ *     <li>{@link #measure} must be pure layout: compute and return a size, and cache what {@link #paint} needs. Do
+ *     not change other components or call {@link #invalidateLayout()} from it.</li>
+ *     <li>{@link #paint} draws inside the given bounds and must not change layout state. Painting happens every
+ *     frame, so avoid allocating there.</li>
+ *     <li>Call {@link #invalidateLayout()} whenever something that {@link #measure} reads changes.</li>
+ *     <li>Read time, the clipboard and text sizes through {@link #environment()}, never from the system directly,
+ *     so the component works on every engine and in tests.</li>
+ *     <li>Event hooks run only while the component is attached, and a disabled or hidden component gets no new
+ *     pointer or keyboard input. Consume the events you act on, so ancestors and the engine do not act on them
+ *     too.</li>
+ *     <li>Hooks run on the UI thread. Exceptions thrown from them propagate to the engine's call into Strata.</li>
+ * </ul>
  *
  * @param <T> the type callers see the component as: the subclass itself, or an interface it implements
  */
 public abstract class CustomComponent<T extends Component<T>> implements Component<T> {
     private final ComponentPeer peer;
 
-    protected CustomComponent(final Ui ui) {
-        this(ui, null);
+    /**
+     * Creates the component and its peer.
+     *
+     * @param factory the factory of the host that will show this component
+     * @throws NullPointerException if {@code factory} is null
+     */
+    protected CustomComponent(final ComponentFactory factory) {
+        this(factory, null);
     }
 
     /**
-     * @param behavior decorates this component's hooks, or {@code null}
+     * Creates the component and its peer, decorated by a behavior. Strata's widgets use this to accept the
+     * behavior passed to their factory method; offer the same to users of your component if it suits.
+     *
+     * @param factory the factory of the host that will show this component
+     * @param behavior wraps this component's hooks; {@code null} for none
+     * @throws NullPointerException if {@code factory} is null
      */
-    protected CustomComponent(final Ui ui, final ComponentBehavior<T> behavior) {
-        this(ui, behavior, false);
+    protected CustomComponent(final ComponentFactory factory, final ComponentBehavior<T> behavior) {
+        this(factory, behavior, false);
     }
 
     @SuppressWarnings("this-escape")
-    CustomComponent(final Ui ui, final ComponentBehavior<T> behavior, final boolean container) {
-        Objects.requireNonNull(ui, "ui");
+    CustomComponent(final ComponentFactory factory, final ComponentBehavior<T> behavior, final boolean container) {
+        Objects.requireNonNull(factory, "factory");
         final Hooks hooks = new Hooks();
-        this.peer = container ? ui.createContainerPeer(this, hooks, behavior) : ui.createPeer(this, hooks, behavior);
+        this.peer = container ? factory.createContainerPeer(this, hooks, behavior) : factory.createPeer(this, hooks, behavior);
     }
 
     /**
-     * Strata's half of this component. For Strata's implementation; not for use by subclasses or callers.
+     * Returns Strata's half of this component. Strata's implementation uses it to find the component's state; do
+     * not call it.
+     *
+     * @return the peer
      */
     public final ComponentPeer peer() {
         return this.peer;
     }
 
+    /**
+     * Returns this component as the type callers see, for returning from your own chaining setters.
+     *
+     * @return {@code this}
+     */
     @SuppressWarnings("unchecked")
     protected final T self() {
         return (T) this;
+    }
+
+    /**
+     * Returns text measurement, time and the clipboard, for use outside {@link #measure}: in event hooks and in
+     * {@link #paint}. Works before the component is attached.
+     *
+     * @return the host's environment
+     */
+    protected final Environment environment() {
+        return this.peer.environment();
     }
 
     // ------------------------------------------------------------------
@@ -89,85 +159,195 @@ public abstract class CustomComponent<T extends Component<T>> implements Compone
     // ------------------------------------------------------------------
 
     /**
-     * Returns the natural size of the content within the given space (margin already removed). Containers must
-     * measure their children here through {@link MeasureContext#measure}.
+     * Returns the size the content needs within the given space. Strata has already removed the margin and applied
+     * the maximum size; it applies the minimum size and any fixed size to what you return. Containers must measure
+     * each child here with {@link MeasureContext#measure}.
+     *
+     * @param context text measurement and child measuring
+     * @param availableWidth the width offered; may be {@link Float#POSITIVE_INFINITY}
+     * @param availableHeight the height offered; may be {@link Float#POSITIVE_INFINITY}
+     * @return the natural size of the content; a negative value counts as zero
      */
     protected abstract Size measure(MeasureContext context, float availableWidth, float availableHeight);
 
     /**
-     * Draws the component inside its bounds. The background is already drawn; a container's children are drawn
-     * afterwards.
+     * Draws the component. The {@linkplain #background() background} is already drawn, and a container's children
+     * are drawn after this returns, on top. The default draws nothing.
+     *
+     * @param painter what to draw with; valid only during this call
+     * @param bounds the component's bounds, the same as {@link #bounds()}
      */
     protected void paint(final Painter painter, final Rect bounds) {
     }
 
     /**
-     * The style keys this component needs from a theme. A theme that lacks any of them is rejected, listing every
-     * missing key.
+     * Returns the style keys this component needs from a theme. A host refuses to show the component with a theme
+     * that lacks any of them, and lists every missing key. Read optional keys in {@link #onApplyTheme} with a
+     * fallback instead of listing them here. The default needs none.
+     *
+     * @return the required keys; may be empty, must not be null
      */
     protected Set<String> requiredStyleKeys() {
         return Set.of();
     }
 
     /**
-     * Resolves paints and text styles. Called before the first layout and on every theme change.
+     * Reads paints and text styles from the theme. Called when the component is attached to a host, and again
+     * whenever the host's theme changes, always before the next layout. The required keys are present. The default
+     * does nothing.
+     *
+     * @param theme the host's theme
      */
     protected void onApplyTheme(final Theme theme) {
     }
 
     /**
-     * Whether focusing this component should start text input on the engine.
+     * Returns whether focusing this component should start text input on the engine. Return true for components
+     * that take typed characters: some engines (Minecraft 26.3, SDL-based engines) send no
+     * {@link org.inspirenxe.strata.api.event.CharEvent}s otherwise. The default is false.
+     *
+     * @return true if the component accepts typed text
      */
     protected boolean acceptsTextInput() {
         return false;
     }
 
+    /**
+     * Default behavior for {@link EventTypes#POINTER_ENTER}. The default does nothing.
+     *
+     * @param event the event
+     */
     protected void onPointerEnter(final PointerEvent event) {
     }
 
+    /**
+     * Default behavior for {@link EventTypes#POINTER_EXIT}. The default does nothing.
+     *
+     * @param event the event
+     */
     protected void onPointerExit(final PointerEvent event) {
     }
 
+    /**
+     * Default behavior for {@link EventTypes#POINTER_MOVE}. The default does nothing.
+     *
+     * @param event the event
+     */
     protected void onPointerMove(final PointerEvent event) {
     }
 
+    /**
+     * Default behavior for {@link EventTypes#POINTER_PRESS}. The default does nothing.
+     *
+     * @param event the event
+     */
     protected void onPointerPress(final PointerButtonEvent event) {
     }
 
+    /**
+     * Default behavior for {@link EventTypes#POINTER_RELEASE}. The default does nothing.
+     *
+     * @param event the event
+     */
     protected void onPointerRelease(final PointerButtonEvent event) {
     }
 
+    /**
+     * Default behavior for {@link EventTypes#CLICK}. The default does nothing.
+     *
+     * @param event the event
+     */
     protected void onClick(final PointerButtonEvent event) {
     }
 
+    /**
+     * Default behavior for {@link EventTypes#DRAG_START}. The default does nothing.
+     *
+     * @param event the event
+     */
     protected void onDragStart(final DragEvent event) {
     }
 
+    /**
+     * Default behavior for {@link EventTypes#DRAG}. The default does nothing.
+     *
+     * @param event the event
+     */
     protected void onDrag(final DragEvent event) {
     }
 
+    /**
+     * Default behavior for {@link EventTypes#DRAG_END}. The default does nothing.
+     *
+     * @param event the event
+     */
     protected void onDragEnd(final DragEvent event) {
     }
 
+    /**
+     * Default behavior for {@link EventTypes#SCROLL}. The default does nothing.
+     *
+     * @param event the event
+     */
     protected void onScroll(final ScrollEvent event) {
     }
 
+    /**
+     * Default behavior for {@link EventTypes#KEY}. The default does nothing.
+     *
+     * @param event the event
+     */
     protected void onKey(final KeyEvent event) {
     }
 
+    /**
+     * Default behavior for {@link EventTypes#CHAR}. The default does nothing.
+     *
+     * @param event the event
+     */
     protected void onChar(final CharEvent event) {
     }
 
+    /**
+     * Default behavior for {@link EventTypes#FOCUS_GAINED}. The default does nothing.
+     *
+     * @param event the event
+     */
     protected void onFocusGained(final FocusEvent event) {
     }
 
+    /**
+     * Default behavior for {@link EventTypes#FOCUS_LOST}. The default does nothing.
+     *
+     * @param event the event
+     */
     protected void onFocusLost(final FocusEvent event) {
     }
 
     /**
-     * Default behavior for event types defined outside Strata's core set.
+     * Default behavior for event types other than those in {@link EventTypes}. The default does nothing.
+     *
+     * @param type the event's type
+     * @param event the event
      */
     protected void onOtherEvent(final EventType<?> type, final Event event) {
+    }
+
+    /**
+     * Returns this component's own state for a {@link ComponentSnapshot}, which stores it as
+     * {@link ComponentSnapshot#state()}. Strata calls this only when an event that has snapshots fires and this
+     * component is captured, before any handler runs.
+     *
+     * <p>Return an immutable value, such as a record, that a handler can compare with the live component later.
+     * Copy mutable data; returning a live list or builder makes the snapshot change with the component. Record only
+     * this component's own state: a container must not include its children, which are captured separately. The
+     * state Strata already keeps for every component (bounds, flags, margin and so on) is in the snapshot already.
+     * Do not change any component from here. The default returns null.</p>
+     *
+     * @return the state, or null for none
+     */
+    protected Object snapshotState() {
+        return null;
     }
 
     // Overridden by CustomContainer
@@ -178,33 +358,33 @@ public abstract class CustomComponent<T extends Component<T>> implements Compone
     }
 
     private void handleEvent(final EventType<?> type, final Event event) {
-        if (type == UIEvents.POINTER_ENTER) {
+        if (type == EventTypes.POINTER_ENTER) {
             this.onPointerEnter((PointerEvent) event);
-        } else if (type == UIEvents.POINTER_EXIT) {
+        } else if (type == EventTypes.POINTER_EXIT) {
             this.onPointerExit((PointerEvent) event);
-        } else if (type == UIEvents.POINTER_MOVE) {
+        } else if (type == EventTypes.POINTER_MOVE) {
             this.onPointerMove((PointerEvent) event);
-        } else if (type == UIEvents.POINTER_PRESS) {
+        } else if (type == EventTypes.POINTER_PRESS) {
             this.onPointerPress((PointerButtonEvent) event);
-        } else if (type == UIEvents.POINTER_RELEASE) {
+        } else if (type == EventTypes.POINTER_RELEASE) {
             this.onPointerRelease((PointerButtonEvent) event);
-        } else if (type == UIEvents.CLICK) {
+        } else if (type == EventTypes.CLICK) {
             this.onClick((PointerButtonEvent) event);
-        } else if (type == UIEvents.DRAG_START) {
+        } else if (type == EventTypes.DRAG_START) {
             this.onDragStart((DragEvent) event);
-        } else if (type == UIEvents.DRAG) {
+        } else if (type == EventTypes.DRAG) {
             this.onDrag((DragEvent) event);
-        } else if (type == UIEvents.DRAG_END) {
+        } else if (type == EventTypes.DRAG_END) {
             this.onDragEnd((DragEvent) event);
-        } else if (type == UIEvents.SCROLL) {
+        } else if (type == EventTypes.SCROLL) {
             this.onScroll((ScrollEvent) event);
-        } else if (type == UIEvents.KEY) {
+        } else if (type == EventTypes.KEY) {
             this.onKey((KeyEvent) event);
-        } else if (type == UIEvents.CHAR) {
+        } else if (type == EventTypes.CHAR) {
             this.onChar((CharEvent) event);
-        } else if (type == UIEvents.FOCUS_GAINED) {
+        } else if (type == EventTypes.FOCUS_GAINED) {
             this.onFocusGained((FocusEvent) event);
-        } else if (type == UIEvents.FOCUS_LOST) {
+        } else if (type == EventTypes.FOCUS_LOST) {
             this.onFocusLost((FocusEvent) event);
         } else {
             this.onOtherEvent(type, event);
@@ -251,13 +431,18 @@ public abstract class CustomComponent<T extends Component<T>> implements Compone
         }
 
         @Override
+        public Object snapshotState() {
+            return CustomComponent.this.snapshotState();
+        }
+
+        @Override
         public void childRemoved(final Component<?> child) {
             CustomComponent.this.childRemovedHook(child);
         }
     }
 
     // ------------------------------------------------------------------
-    // Component, delegated to the peer
+    // Component, delegated to the peer. Documented on Component.
     // ------------------------------------------------------------------
 
     @Override
@@ -481,10 +666,22 @@ public abstract class CustomComponent<T extends Component<T>> implements Compone
     }
 
     @Override
+    public final <E extends Event> Subscription onWithSnapshot(final EventType<E> type, final Phase phase,
+                                                               final EventHandler<? super E> handler,
+                                                               final Object owner) {
+        return this.peer.onWithSnapshot(type, phase, handler, owner);
+    }
+
+    @Override
     public final void removeHandlers(final Object owner) {
         this.peer.removeHandlers(owner);
     }
 
+    /**
+     * Returns the class name and, if set, the id, for debugging.
+     *
+     * @return for example {@code ColorPickerImpl#accent}
+     */
     @Override
     public String toString() {
         final String id = this.peer.id();

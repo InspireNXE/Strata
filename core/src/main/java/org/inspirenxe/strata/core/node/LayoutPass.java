@@ -8,13 +8,19 @@ import org.inspirenxe.strata.api.geom.Size;
 import org.inspirenxe.strata.api.text.TextMetrics;
 
 /**
- * The context handed to measure and arrange hooks. One per host, reused for every layout.
+ * The context passed to measure and arrange hooks. Each host has one and reuses it for every layout.
  */
 public final class LayoutPass implements MeasureContext, ArrangeContext {
-    private final CoreUi ui;
+    private final ComponentFactoryImpl ui;
     private final TextMetrics text;
 
-    public LayoutPass(final CoreUi ui, final TextMetrics text) {
+    /**
+     * Creates the context for a host.
+     *
+     * @param ui the host's factory, which maps components to their nodes
+     * @param text the platform's text metrics
+     */
+    public LayoutPass(final ComponentFactoryImpl ui, final TextMetrics text) {
         this.ui = ui;
         this.text = text;
     }

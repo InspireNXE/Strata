@@ -1,9 +1,9 @@
 package org.inspirenxe.strata.core;
 
-import org.inspirenxe.strata.api.Ui;
+import org.inspirenxe.strata.api.ComponentFactory;
 import org.inspirenxe.strata.api.component.Component;
 import org.inspirenxe.strata.api.event.PointerButtonEvent;
-import org.inspirenxe.strata.api.event.UIEvents;
+import org.inspirenxe.strata.api.event.EventTypes;
 import org.inspirenxe.strata.api.extension.ArrangeContext;
 import org.inspirenxe.strata.api.extension.CustomComponent;
 import org.inspirenxe.strata.api.extension.CustomContainer;
@@ -32,7 +32,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class ExtensionTest {
     private final TestHost test = new TestHost(300, 300);
-    private final Ui ui = this.test.ui();
+    private final ComponentFactory ui = this.test.factory();
 
     // ------------------------------------------------------------------
     // Decorating built-ins with behaviors
@@ -104,7 +104,7 @@ class ExtensionTest {
                 next.proceed();
             }
         });
-        button.on(UIEvents.CLICK, event -> event.cancel());
+        button.on(EventTypes.CLICK, event -> event.cancel());
         this.test.show(this.ui.absolutePanel().add(button));
 
         this.test.click(5, 5);
@@ -128,7 +128,7 @@ class ExtensionTest {
     static final class CounterImpl extends CustomComponent<Counter> implements Counter {
         private int count;
 
-        CounterImpl(final Ui ui) {
+        CounterImpl(final ComponentFactory ui) {
             super(ui);
         }
 
@@ -174,7 +174,7 @@ class ExtensionTest {
      * A custom container: lays children out in a row from right to left.
      */
     static final class ReverseRow extends CustomContainer<ReverseRow> {
-        ReverseRow(final Ui ui) {
+        ReverseRow(final ComponentFactory ui) {
             super(ui);
         }
 
@@ -230,7 +230,7 @@ class ExtensionTest {
 
     @Test
     void componentFromAnotherUiIsRejected() {
-        final Ui other = new TestHost(100, 100).ui();
+        final ComponentFactory other = new TestHost(100, 100).factory();
         final AbsolutePanel panel = this.ui.absolutePanel();
 
         assertThrows(IllegalArgumentException.class, () -> panel.add(other.label("elsewhere")));
@@ -246,7 +246,7 @@ class ExtensionTest {
         final ScreenHandle[] handle = new ScreenHandle[1];
         this.test.host().open(new Screen() {
             @Override
-            public Component<?> build(final Ui ui) {
+            public Component<?> build(final ComponentFactory ui) {
                 builds[0]++;
                 return ui.label("build " + builds[0]);
             }
@@ -270,8 +270,8 @@ class ExtensionTest {
         final int[] closes = {0};
         this.test.host().open(new Screen() {
             @Override
-            public Component<?> build(final Ui ui) {
-                return ui.panel();
+            public Component<?> build(final ComponentFactory ui) {
+                return ui.anchorPanel();
             }
 
             @Override
@@ -284,7 +284,7 @@ class ExtensionTest {
                 closes[0]++;
             }
         });
-        this.test.host().open(ui -> ui.panel());
+        this.test.host().open(ui -> ui.anchorPanel());
         assertEquals(1, closes[0]);
 
         handle[0].close();

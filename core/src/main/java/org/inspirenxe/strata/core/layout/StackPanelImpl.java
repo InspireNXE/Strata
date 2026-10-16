@@ -1,6 +1,6 @@
 package org.inspirenxe.strata.core.layout;
 
-import org.inspirenxe.strata.api.Ui;
+import org.inspirenxe.strata.api.ComponentFactory;
 import org.inspirenxe.strata.api.component.Component;
 import org.inspirenxe.strata.api.extension.ArrangeContext;
 import org.inspirenxe.strata.api.extension.CustomContainer;
@@ -13,11 +13,23 @@ import org.inspirenxe.strata.api.layout.StackPanel;
 
 import java.util.Objects;
 
+/**
+ * The core {@link StackPanel}. Children are measured with unlimited space along the stacking axis and the content
+ * size across it, then placed one after another with the spacing between them. Each slot spans the whole content
+ * box across the axis. Hidden children take no space and add no spacing.
+ */
 public final class StackPanelImpl extends CustomContainer<StackPanel> implements StackPanel {
     private Orientation orientation;
     private float spacing;
 
-    public StackPanelImpl(final Ui ui, final Orientation orientation) {
+    /**
+     * Creates an empty panel with no spacing.
+     *
+     * @param ui the factory that owns the panel
+     * @param orientation the stacking direction
+     * @throws NullPointerException if {@code orientation} is null
+     */
+    public StackPanelImpl(final ComponentFactory ui, final Orientation orientation) {
         super(ui);
         this.orientation = Objects.requireNonNull(orientation, "orientation");
     }
@@ -102,5 +114,10 @@ public final class StackPanelImpl extends CustomContainer<StackPanel> implements
                 offset += outer.width();
             }
         }
+    }
+
+    @Override
+    protected Object snapshotState() {
+        return new StackPanel.State(this.orientation, this.spacing);
     }
 }

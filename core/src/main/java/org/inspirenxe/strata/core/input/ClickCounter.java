@@ -3,20 +3,28 @@ package org.inspirenxe.strata.core.input;
 import org.inspirenxe.strata.api.input.MouseButton;
 
 /**
- * Counts presses into single, double and triple clicks.
+ * Counts presses into single, double and triple clicks. Each screen's {@code Root} keeps one.
  *
- * <p>A press continues the sequence when it hits the same target with the same button, comes within
- * {@link #MULTI_CLICK_MILLIS} of the previous press, and lands within {@link #MULTI_CLICK_DISTANCE} of it. After a
- * triple click the next press starts again at one.</p>
+ * <p>A press continues the run when it hits the same target with the same button, comes within
+ * {@link #MULTI_CLICK_MILLIS} of the previous press, and lands within {@link #MULTI_CLICK_DISTANCE} of it on both
+ * axes. After a triple click the next press starts again at one.</p>
  *
- * <p>Unlike Wintergreen's recognizer this never holds a release back waiting for a possible second click. Every
- * press and release is delivered at once with its count, and widgets react to the count they care about (a text box
- * selects a word on two, everything on three). Holding releases back added up to half a second of lag to every
- * single click.</p>
+ * <p>The host delivers every press and release at once with its count, and widgets react to the count they care
+ * about (a text box selects a word on two and everything on three). Wintergreen's recognizer held single releases
+ * back until it knew no second click was coming, which added up to half a second of lag to every click.</p>
  */
 public final class ClickCounter {
+    /**
+     * The longest gap, in milliseconds, between two presses of one run.
+     */
     public static final long MULTI_CLICK_MILLIS = 500L;
+    /**
+     * The farthest, in UI units along either axis, a press may land from the previous one and still continue a run.
+     */
     public static final float MULTI_CLICK_DISTANCE = 4f;
+    /**
+     * The highest count; the press after it starts a new run.
+     */
     public static final int MAX_CLICKS = 3;
 
     private Object lastTarget;
@@ -27,7 +35,20 @@ public final class ClickCounter {
     private int count;
 
     /**
-     * Records a press and returns its click count, from 1 to {@link #MAX_CLICKS}.
+     * Creates a counter with no run in progress.
+     */
+    public ClickCounter() {
+    }
+
+    /**
+     * Records a press and returns its place in the current run.
+     *
+     * @param target the pressed component; targets compare by identity
+     * @param button the pressed button
+     * @param x the press's x, in the host's coordinates
+     * @param y the press's y, in the host's coordinates
+     * @param timeMillis the press time from the platform's clock
+     * @return the click count, from 1 to {@link #MAX_CLICKS}
      */
     public int press(final Object target, final MouseButton button, final float x, final float y, final long timeMillis) {
         final boolean continues = this.count > 0
@@ -48,12 +69,17 @@ public final class ClickCounter {
     }
 
     /**
-     * The count of the most recent press, or 0 if there has been none since the last reset.
+     * Returns the count of the most recent press.
+     *
+     * @return the count, or 0 if there has been no press since the last reset
      */
     public int current() {
         return this.count;
     }
 
+    /**
+     * Ends the current run, so the next press counts as 1.
+     */
     public void reset() {
         this.count = 0;
         this.lastTarget = null;

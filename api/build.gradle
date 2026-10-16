@@ -1,5 +1,6 @@
 plugins {
     id 'strata-shared'
+    id 'strata-documented'
 }
 
 description = 'The Strata API: the interfaces, values and extension points developers compile against.'

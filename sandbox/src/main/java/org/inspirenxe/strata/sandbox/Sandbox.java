@@ -2,7 +2,7 @@ package org.inspirenxe.strata.sandbox;
 
 import org.inspirenxe.strata.api.theme.Themes;
 import org.inspirenxe.strata.swing.StrataPanel;
-import org.inspirenxe.strata.swing.SwingFonts;
+import org.inspirenxe.strata.swing.SwingTextMetrics;
 import org.inspirenxe.strata.swing.SwingPlatform;
 import org.inspirenxe.strata.swing.SwingSnapshot;
 
@@ -33,7 +33,7 @@ public final class Sandbox {
     }
 
     private static void openWindow() {
-        final SwingPlatform platform = new SwingPlatform(SwingFonts.defaults());
+        final SwingPlatform platform = new SwingPlatform(SwingTextMetrics.defaults());
         final StrataPanel panel = new StrataPanel(platform, Themes.flat(), SCALE);
         panel.screens().push(new DemoScreen());
 

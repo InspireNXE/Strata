@@ -1,6 +1,6 @@
 package org.inspirenxe.strata.core.widget;
 
-import org.inspirenxe.strata.api.Ui;
+import org.inspirenxe.strata.api.ComponentFactory;
 import org.inspirenxe.strata.api.component.CursorKind;
 import org.inspirenxe.strata.api.event.KeyEvent;
 import org.inspirenxe.strata.api.event.PointerButtonEvent;
@@ -26,6 +26,16 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 
+/**
+ * The core {@link Button}. Its face is the disabled paint when disabled, the pressed paint while held under the
+ * pointer, the hovered paint while hovered or focused, and the normal paint otherwise. A focused button also draws
+ * a one-unit focus ring when the theme has one. The caption is centered.
+ *
+ * <p>The button is focusable and tabbable, shows a hand cursor, and is at least 20 by 20 units. Its desired size is
+ * the caption plus 8 units of padding on the left and right and 5 on the top and bottom, unless that padding is
+ * changed. Measuring takes the wider of the normal and disabled captions, so enabling or disabling it needs no
+ * relayout.</p>
+ */
 public final class ButtonImpl extends CustomComponent<Button> implements Button {
     private static final Set<String> REQUIRED = Set.of(STYLE_NORMAL, STYLE_HOVERED, STYLE_PRESSED, STYLE_DISABLED);
 
@@ -47,8 +57,16 @@ public final class ButtonImpl extends CustomComponent<Button> implements Button 
     private float captionWidth;
     private float captionHeight;
 
+    /**
+     * Creates a button.
+     *
+     * @param ui the factory that owns the button
+     * @param text the caption
+     * @param behavior the decorator for the button's hooks, or {@code null} for none
+     * @throws NullPointerException if {@code text} is null
+     */
     @SuppressWarnings("this-escape")
-    public ButtonImpl(final Ui ui, final String text, final ButtonBehavior behavior) {
+    public ButtonImpl(final ComponentFactory ui, final String text, final ButtonBehavior behavior) {
         super(ui, behavior);
         this.actions = new ArrayList<>();
         this.text = Objects.requireNonNull(text, "text");
@@ -169,5 +187,10 @@ public final class ButtonImpl extends CustomComponent<Button> implements Button 
             this.press();
             event.consume();
         }
+    }
+
+    @Override
+    protected Object snapshotState() {
+        return new Button.State(this.text);
     }
 }

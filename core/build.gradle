@@ -1,5 +1,6 @@
 plugins {
     id 'strata-shared'
+    id 'strata-documented'
 }
 
 description = 'The Strata implementation. Adapters use it; developers compile against api only.'
@@ -10,4 +11,6 @@ dependencies {
     compileOnly(project(':spi'))
     testImplementation(project(':api'))
     testImplementation(project(':spi'))
+    // Run the SPI contracts against the test platform, which checks both
+    testImplementation(testFixtures(project(':spi')))
 }

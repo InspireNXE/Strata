@@ -1,8 +1,8 @@
 package org.inspirenxe.strata.core;
 
-import org.inspirenxe.strata.api.Ui;
+import org.inspirenxe.strata.api.ComponentFactory;
 import org.inspirenxe.strata.api.event.Phase;
-import org.inspirenxe.strata.api.event.UIEvents;
+import org.inspirenxe.strata.api.event.EventTypes;
 import org.inspirenxe.strata.api.input.Key;
 import org.inspirenxe.strata.api.input.KeyAction;
 import org.inspirenxe.strata.api.input.Modifier;
@@ -28,7 +28,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class InputTest {
     private final TestHost test = new TestHost(300, 300);
-    private final Ui ui = this.test.ui();
+    private final ComponentFactory ui = this.test.factory();
 
     private TestHost show(final AbsolutePanel panel) {
         return this.test.show(panel);
@@ -38,7 +38,7 @@ class InputTest {
     void clickCountsGrowWithinTimeAndDistance() {
         final Box box = new Box(this.ui, 50, 50);
         final List<Integer> counts = new ArrayList<>();
-        box.on(UIEvents.CLICK, event -> counts.add(event.clicks()));
+        box.on(EventTypes.CLICK, event -> counts.add(event.clicks()));
         this.show(this.ui.absolutePanel().add(box, 10, 10));
 
         this.test.click(20, 20);
@@ -58,7 +58,7 @@ class InputTest {
     void clickMovedTooFarStartsOver() {
         final Box box = new Box(this.ui, 100, 100);
         final List<Integer> counts = new ArrayList<>();
-        box.on(UIEvents.CLICK, event -> counts.add(event.clicks()));
+        box.on(EventTypes.CLICK, event -> counts.add(event.clicks()));
         this.show(this.ui.absolutePanel().add(box));
 
         this.test.click(10, 10);
@@ -71,10 +71,10 @@ class InputTest {
     void dragPastThresholdSuppressesClick() {
         final Box box = new Box(this.ui, 100, 100);
         final List<String> seen = new ArrayList<>();
-        box.on(UIEvents.CLICK, event -> seen.add("click"));
-        box.on(UIEvents.DRAG_START, event -> seen.add("start"));
-        box.on(UIEvents.DRAG, event -> seen.add("drag"));
-        box.on(UIEvents.DRAG_END, event -> seen.add("end"));
+        box.on(EventTypes.CLICK, event -> seen.add("click"));
+        box.on(EventTypes.DRAG_START, event -> seen.add("start"));
+        box.on(EventTypes.DRAG, event -> seen.add("drag"));
+        box.on(EventTypes.DRAG_END, event -> seen.add("end"));
         this.show(this.ui.absolutePanel().add(box));
 
         this.test.host().pointerButton(10, 10, MouseButton.LEFT, true, Modifiers.NONE);
@@ -90,7 +90,7 @@ class InputTest {
     void dragKeepsGoingOutsideTheTarget() {
         final Box box = new Box(this.ui, 20, 20);
         final List<Float> xs = new ArrayList<>();
-        box.on(UIEvents.DRAG, event -> xs.add(event.x()));
+        box.on(EventTypes.DRAG, event -> xs.add(event.x()));
         this.show(this.ui.absolutePanel().add(box));
 
         this.test.host().pointerButton(5, 5, MouseButton.LEFT, true, Modifiers.NONE);
@@ -103,7 +103,7 @@ class InputTest {
     void releasingOneButtonDoesNotEndAnotherButtonsDrag() {
         final Box box = new Box(this.ui, 100, 100);
         final List<MouseButton> ended = new ArrayList<>();
-        box.on(UIEvents.DRAG_END, event -> ended.add(event.button()));
+        box.on(EventTypes.DRAG_END, event -> ended.add(event.button()));
         this.show(this.ui.absolutePanel().add(box));
 
         this.test.host().pointerButton(10, 10, MouseButton.LEFT, true, Modifiers.NONE);
@@ -128,7 +128,7 @@ class InputTest {
         this.test.click(5, 5);
         assertEquals(1, presses[0]);
 
-        button.on(UIEvents.CLICK, Phase.BEFORE, event -> event.cancel());
+        button.on(EventTypes.CLICK, Phase.BEFORE, event -> event.cancel());
         this.test.platform().advanceMillis(1000);
         this.test.click(5, 5);
         assertEquals(1, presses[0], "a canceled click must not press the button");
@@ -139,8 +139,8 @@ class InputTest {
         final Box box = new Box(this.ui, 10, 10);
         final Object owner = new Object();
         final int[] calls = {0};
-        box.on(UIEvents.CLICK, Phase.AFTER, event -> calls[0]++, owner);
-        box.on(UIEvents.POINTER_PRESS, Phase.AFTER, event -> calls[0]++, owner);
+        box.on(EventTypes.CLICK, Phase.AFTER, event -> calls[0]++, owner);
+        box.on(EventTypes.POINTER_PRESS, Phase.AFTER, event -> calls[0]++, owner);
         box.removeHandlers(owner);
         this.show(this.ui.absolutePanel().add(box));
 
@@ -153,8 +153,8 @@ class InputTest {
         final Box box = new Box(this.ui, 10, 10);
         final AbsolutePanel panel = this.ui.absolutePanel().add(box);
         final List<Object> currents = new ArrayList<>();
-        box.on(UIEvents.CLICK, event -> currents.add(event.current()));
-        panel.on(UIEvents.CLICK, event -> {
+        box.on(EventTypes.CLICK, event -> currents.add(event.current()));
+        panel.on(EventTypes.CLICK, event -> {
             currents.add(event.current());
             assertSame(box, event.target());
         });
@@ -244,9 +244,9 @@ class InputTest {
     void synthesizedRepeatsWhenEngineSendsNone() {
         final TestPlatform quiet = new TestPlatform(false);
         final TestHost host = new TestHost(quiet, Themes.flat(), 100, 100);
-        final Box box = new Box(host.ui(), 10, 10).setFocusable(true);
+        final Box box = new Box(host.factory(), 10, 10).setFocusable(true);
         final List<KeyAction> actions = new ArrayList<>();
-        box.on(UIEvents.KEY, event -> actions.add(event.action()));
+        box.on(EventTypes.KEY, event -> actions.add(event.action()));
         host.show(box);
         box.requestFocus();
 
@@ -268,7 +268,7 @@ class InputTest {
     void themeMissingKeysListsThemAll() {
         final Theme bare = Theme.builder("bare").build();
         final TestHost host = new TestHost(new TestPlatform(), bare, 100, 100);
-        final Button button = host.ui().button("x");
+        final Button button = host.factory().button("x");
 
         final ThemeException error = assertThrows(ThemeException.class, () -> host.show(button));
         assertEquals(Set.of(Button.STYLE_NORMAL, Button.STYLE_HOVERED, Button.STYLE_PRESSED, Button.STYLE_DISABLED),
@@ -280,7 +280,7 @@ class InputTest {
     @Test
     void clipsStayBalanced() {
         final NullCanvas canvas = new NullCanvas();
-        this.show(this.ui.absolutePanel().add(this.ui.panel().add(new Box(this.ui, 5, 5))));
+        this.show(this.ui.absolutePanel().add(this.ui.anchorPanel().add(new Box(this.ui, 5, 5))));
 
         this.test.host().render(canvas);
 

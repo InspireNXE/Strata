@@ -1,9 +1,10 @@
 package org.inspirenxe.strata.core.node;
 
+import org.inspirenxe.strata.api.component.ComponentSnapshot;
 import org.inspirenxe.strata.api.component.Container;
 import org.inspirenxe.strata.api.component.CursorKind;
-import org.inspirenxe.strata.api.component.HorizontalAlignment;
-import org.inspirenxe.strata.api.component.VerticalAlignment;
+import org.inspirenxe.strata.api.layout.HorizontalAlignment;
+import org.inspirenxe.strata.api.layout.VerticalAlignment;
 import org.inspirenxe.strata.api.event.CharEvent;
 import org.inspirenxe.strata.api.event.DragEvent;
 import org.inspirenxe.strata.api.event.Event;
@@ -16,11 +17,12 @@ import org.inspirenxe.strata.api.event.PointerButtonEvent;
 import org.inspirenxe.strata.api.event.PointerEvent;
 import org.inspirenxe.strata.api.event.ScrollEvent;
 import org.inspirenxe.strata.api.event.Subscription;
-import org.inspirenxe.strata.api.event.UIEvents;
+import org.inspirenxe.strata.api.event.EventTypes;
 import org.inspirenxe.strata.api.extension.ComponentBehavior;
-import org.inspirenxe.strata.api.extension.ComponentHooks;
-import org.inspirenxe.strata.api.extension.ComponentPeer;
+import org.inspirenxe.strata.api.extension.peer.ComponentHooks;
+import org.inspirenxe.strata.api.extension.peer.ComponentPeer;
 import org.inspirenxe.strata.api.extension.CustomComponent;
+import org.inspirenxe.strata.api.extension.Environment;
 import org.inspirenxe.strata.api.extension.Next;
 import org.inspirenxe.strata.api.geom.Insets;
 import org.inspirenxe.strata.api.geom.Rect;
@@ -37,13 +39,22 @@ import java.util.Set;
 
 /**
  * Core's half of every component: state, layout bookkeeping and event routing. The public object is the
- * {@link #facade()}, a {@link CustomComponent} whose {@code final} methods delegate here; its protected hooks are
- * reached through {@link ComponentHooks}, wrapped by the optional {@link ComponentBehavior}.
+ * {@link #facade()}, a {@link CustomComponent} whose {@code final} methods delegate here. Core reaches the facade's
+ * protected hooks only through {@link ComponentHooks}, wrapped by the component's {@link ComponentBehavior} when it
+ * has one.
+ *
+ * <p>A new node is visible, enabled, not focusable and not tabbable, with tab index 0, no cursor, no margin, no
+ * size limits, no fixed size, left and top alignment, and no background.</p>
+ *
+ * <p>Every method must be called on the UI thread.</p>
  */
 public class Node implements ComponentPeer {
+    /**
+     * The value of a fixed width or height that has not been set.
+     */
     protected static final float UNSET = Float.NaN;
 
-    private final CoreUi ui;
+    private final ComponentFactoryImpl ui;
     private final CustomComponent<?> facade;
     private final ComponentHooks hooks;
     @SuppressWarnings("rawtypes")
@@ -85,7 +96,16 @@ public class Node implements ComponentPeer {
     private Rect bounds;
     private boolean layoutDirty;
 
-    public Node(final CoreUi ui, final CustomComponent<?> facade, final ComponentHooks hooks,
+    /**
+     * Creates the node behind a component. Only {@link ComponentFactoryImpl#createPeer} and subclasses call this.
+     *
+     * @param ui the factory that owns the component
+     * @param facade the public component this node implements
+     * @param hooks the component's protected hooks
+     * @param behavior the decorator around those hooks, or {@code null} for none
+     * @throws NullPointerException if {@code ui}, {@code facade} or {@code hooks} is null
+     */
+    public Node(final ComponentFactoryImpl ui, final CustomComponent<?> facade, final ComponentHooks hooks,
                 final ComponentBehavior<?> behavior) {
         this.ui = Objects.requireNonNull(ui, "ui");
         this.facade = Objects.requireNonNull(facade, "facade");
@@ -107,14 +127,29 @@ public class Node implements ComponentPeer {
         this.layoutDirty = true;
     }
 
-    public final CoreUi ui() {
+    /**
+     * Returns the factory that made this component. A component can only join trees in that factory's host.
+     *
+     * @return the factory
+     */
+    public final ComponentFactoryImpl factory() {
         return this.ui;
     }
 
+    /**
+     * Returns the public component this node implements. Events and callers see this object, never the node.
+     *
+     * @return the component
+     */
     public final CustomComponent<?> facade() {
         return this.facade;
     }
 
+    /**
+     * Returns the component's protected hooks, without its behavior.
+     *
+     * @return the hooks
+     */
     protected final ComponentHooks hooks() {
         return this.hooks;
     }
@@ -123,6 +158,16 @@ public class Node implements ComponentPeer {
     // Layout
     // ------------------------------------------------------------------
 
+    /**
+     * Measures the component and stores its desired size. The hook gets the available space minus the margin,
+     * replaced by the fixed size where one is set and capped by the maximum size. The result is replaced by the
+     * fixed size where one is set, then clamped to the minimum and maximum. A hidden component measures as 0 by 0
+     * without calling its hook.
+     *
+     * @param pass the layout context
+     * @param availableWidth the width the parent offers, margin included; may be infinite
+     * @param availableHeight the height the parent offers, margin included; may be infinite
+     */
     @SuppressWarnings("unchecked")
     public final void measure(final LayoutPass pass, final float availableWidth, final float availableHeight) {
         if (!this.visible) {
@@ -145,6 +190,15 @@ public class Node implements ComponentPeer {
         this.desiredHeight = this.clampHeight(Float.isNaN(this.explicitHeight) ? content.height() : this.explicitHeight);
     }
 
+    /**
+     * Places the component in a slot and arranges its children. The slot is shrunk by the margin; the component
+     * then takes its desired size, or the whole inner slot on an axis set to stretch with no fixed size (still
+     * clamped), and is aligned inside. A hidden component gets an empty rectangle at the slot's origin. Arranging
+     * clears the layout dirty flag.
+     *
+     * @param pass the layout context
+     * @param slot the space the parent assigns, margin included, in the host's coordinates
+     */
     public final void arrange(final LayoutPass pass, final Rect slot) {
         this.layoutDirty = false;
         if (!this.visible) {
@@ -188,6 +242,11 @@ public class Node implements ComponentPeer {
         }
     }
 
+    /**
+     * Returns whether this component, or something inside it, changed in a way that needs a new layout.
+     *
+     * @return true until the next arrange
+     */
     public final boolean isLayoutDirty() {
         return this.layoutDirty;
     }
@@ -202,10 +261,20 @@ public class Node implements ComponentPeer {
         return this.desiredHeight;
     }
 
+    /**
+     * Returns the desired width plus the left and right margin.
+     *
+     * @return the outer width, or 0 when hidden
+     */
     public final float outerWidth() {
         return this.visible ? this.desiredWidth + this.margin.horizontal() : 0f;
     }
 
+    /**
+     * Returns the desired height plus the top and bottom margin.
+     *
+     * @return the outer height, or 0 when hidden
+     */
     public final float outerHeight() {
         return this.visible ? this.desiredHeight + this.margin.vertical() : 0f;
     }
@@ -227,6 +296,12 @@ public class Node implements ComponentPeer {
     // Painting and hit testing
     // ------------------------------------------------------------------
 
+    /**
+     * Paints the component: its background, then its paint hook (through its behavior if it has one), then its
+     * children. Hidden components and components with empty bounds paint nothing.
+     *
+     * @param painter the painter for this frame
+     */
     @SuppressWarnings("unchecked")
     public final void paint(final CanvasPainter painter) {
         if (!this.visible || this.bounds.isEmpty()) {
@@ -242,11 +317,21 @@ public class Node implements ComponentPeer {
         this.paintChildren(painter);
     }
 
+    /**
+     * Paints the children after the component itself. A plain node has none; {@link ContainerNode} overrides this.
+     *
+     * @param painter the painter for this frame
+     */
     protected void paintChildren(final CanvasPainter painter) {
     }
 
     /**
-     * Returns the deepest enabled, visible node at the point, or {@code null}.
+     * Finds the deepest visible, enabled node at a point. A disabled or hidden node hides its whole subtree from
+     * the pointer.
+     *
+     * @param x the x, in the host's coordinates
+     * @param y the y, in the host's coordinates
+     * @return the node hit, or {@code null} if the point misses this node
      */
     public Node hitTest(final float x, final float y) {
         if (!this.visible || !this.enabled || !this.bounds.contains(x, y)) {
@@ -265,7 +350,31 @@ public class Node implements ComponentPeer {
         if (this.dispatcher == null) {
             this.dispatcher = new EventDispatcher();
         }
-        return this.dispatcher.subscribe(type, phase, handler, owner);
+        return this.dispatcher.subscribe(type, phase, handler, owner, false);
+    }
+
+    @Override
+    public final <E extends Event> Subscription onWithSnapshot(final EventType<E> type, final Phase phase,
+                                                               final EventHandler<? super E> handler,
+                                                               final Object owner) {
+        if (this.dispatcher == null) {
+            this.dispatcher = new EventDispatcher();
+        }
+        return this.dispatcher.subscribe(type, phase, handler, owner, true);
+    }
+
+    /**
+     * Records the component's current state, its own only, with the component's
+     * {@code CustomComponent.snapshotState} as the {@linkplain ComponentSnapshot#state() state}. The behavior, if
+     * any, is not consulted. {@link EventRouter} calls this before an event that has snapshots reaches any handler.
+     *
+     * @return a new snapshot
+     */
+    public final ComponentSnapshot snapshot() {
+        return new ComponentSnapshot(this.facade, this.id, this.visible, this.enabled, this.focusable, this.tabbable,
+                this.tabIndex, this.cursor, this.hovered, this.pressed, this.focused, this.margin, this.minWidth,
+                this.maxWidth, this.minHeight, this.maxHeight, this.horizontalAlignment, this.verticalAlignment,
+                this.background, this.bounds, this.desiredWidth, this.desiredHeight, this.hooks.snapshotState());
     }
 
     @Override
@@ -275,19 +384,34 @@ public class Node implements ComponentPeer {
         }
     }
 
+    /**
+     * Returns this component's handlers. The dispatcher is created on the first subscription.
+     *
+     * @return the dispatcher, or {@code null} if nothing ever subscribed
+     */
     public final EventDispatcher dispatcherOrNull() {
         return this.dispatcher;
     }
 
     /**
-     * Delivers an event targeted at this node, bubbling if its type does.
+     * Delivers an event aimed at this node through {@link EventRouter}, bubbling if its type does.
+     *
+     * @param <E> the event class
+     * @param type the event type
+     * @param event the event, whose target must be this node's facade
+     * @return the same event, so the caller can check whether it was canceled
      */
     public final <E extends EventImpl> E fire(final EventType<? super E> type, final E event) {
         return EventRouter.dispatch(type, event, this);
     }
 
     /**
-     * Runs this component's default behavior for an event, through its behavior if it has one.
+     * Runs this component's default behavior for an event. With a behavior, the matching behavior hook runs and
+     * gets the component's own handling as its {@code next}; event types without a behavior hook go straight to
+     * the component.
+     *
+     * @param type the event type
+     * @param event the event, of the class that {@code type} describes
      */
     @SuppressWarnings("unchecked")
     public final void defaultAction(final EventType<?> type, final Event event) {
@@ -296,33 +420,33 @@ public class Node implements ComponentPeer {
             return;
         }
         final Next next = () -> this.hooks.handle(type, event);
-        if (type == UIEvents.POINTER_ENTER) {
+        if (type == EventTypes.POINTER_ENTER) {
             this.behavior.onPointerEnter(this.facade, (PointerEvent) event, next);
-        } else if (type == UIEvents.POINTER_EXIT) {
+        } else if (type == EventTypes.POINTER_EXIT) {
             this.behavior.onPointerExit(this.facade, (PointerEvent) event, next);
-        } else if (type == UIEvents.POINTER_MOVE) {
+        } else if (type == EventTypes.POINTER_MOVE) {
             this.behavior.onPointerMove(this.facade, (PointerEvent) event, next);
-        } else if (type == UIEvents.POINTER_PRESS) {
+        } else if (type == EventTypes.POINTER_PRESS) {
             this.behavior.onPointerPress(this.facade, (PointerButtonEvent) event, next);
-        } else if (type == UIEvents.POINTER_RELEASE) {
+        } else if (type == EventTypes.POINTER_RELEASE) {
             this.behavior.onPointerRelease(this.facade, (PointerButtonEvent) event, next);
-        } else if (type == UIEvents.CLICK) {
+        } else if (type == EventTypes.CLICK) {
             this.behavior.onClick(this.facade, (PointerButtonEvent) event, next);
-        } else if (type == UIEvents.DRAG_START) {
+        } else if (type == EventTypes.DRAG_START) {
             this.behavior.onDragStart(this.facade, (DragEvent) event, next);
-        } else if (type == UIEvents.DRAG) {
+        } else if (type == EventTypes.DRAG) {
             this.behavior.onDrag(this.facade, (DragEvent) event, next);
-        } else if (type == UIEvents.DRAG_END) {
+        } else if (type == EventTypes.DRAG_END) {
             this.behavior.onDragEnd(this.facade, (DragEvent) event, next);
-        } else if (type == UIEvents.SCROLL) {
+        } else if (type == EventTypes.SCROLL) {
             this.behavior.onScroll(this.facade, (ScrollEvent) event, next);
-        } else if (type == UIEvents.KEY) {
+        } else if (type == EventTypes.KEY) {
             this.behavior.onKey(this.facade, (KeyEvent) event, next);
-        } else if (type == UIEvents.CHAR) {
+        } else if (type == EventTypes.CHAR) {
             this.behavior.onChar(this.facade, (CharEvent) event, next);
-        } else if (type == UIEvents.FOCUS_GAINED) {
+        } else if (type == EventTypes.FOCUS_GAINED) {
             this.behavior.onFocusGained(this.facade, (FocusEvent) event, next);
-        } else if (type == UIEvents.FOCUS_LOST) {
+        } else if (type == EventTypes.FOCUS_LOST) {
             this.behavior.onFocusLost(this.facade, (FocusEvent) event, next);
         } else {
             next.proceed();
@@ -333,10 +457,22 @@ public class Node implements ComponentPeer {
     // Theme
     // ------------------------------------------------------------------
 
+    /**
+     * Returns the style keys the component cannot draw without. The host checks the whole tree against its theme
+     * before showing it.
+     *
+     * @return the required keys, possibly empty
+     */
     public final Set<String> requiredStyleKeys() {
         return this.hooks.requiredStyleKeys();
     }
 
+    /**
+     * Gives the component a theme and marks its layout dirty, since styles can change sizes.
+     *
+     * @param theme the theme
+     * @throws NullPointerException if {@code theme} is null
+     */
     public final void applyTheme(final Theme theme) {
         this.theme = Objects.requireNonNull(theme, "theme");
         this.hooks.applyTheme(theme);
@@ -352,6 +488,11 @@ public class Node implements ComponentPeer {
     // Tree
     // ------------------------------------------------------------------
 
+    /**
+     * Returns the node of the container holding this component.
+     *
+     * @return the parent node, or {@code null} for a root's content or a component not in any container
+     */
     public final ContainerNode parentNode() {
         return this.parent;
     }
@@ -365,6 +506,11 @@ public class Node implements ComponentPeer {
         this.parent = parent;
     }
 
+    /**
+     * Returns the root of the screen this component is shown in.
+     *
+     * @return the root, or {@code null} while the component is not attached to a shown tree
+     */
     public final Root root() {
         return this.root;
     }
@@ -372,6 +518,11 @@ public class Node implements ComponentPeer {
     @Override
     public final boolean isAttached() {
         return this.root != null;
+    }
+
+    @Override
+    public final Environment environment() {
+        return this.ui.environment();
     }
 
     final void attach(final Root root) {
@@ -393,6 +544,12 @@ public class Node implements ComponentPeer {
         return this.root != null && this.root.requestFocus(this);
     }
 
+    /**
+     * Returns whether the component takes typed text. The root turns the engine's text input on while such a
+     * component has focus.
+     *
+     * @return true for text-entry components
+     */
     public final boolean acceptsTextInput() {
         return this.hooks.acceptsTextInput();
     }

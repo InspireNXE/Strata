@@ -3,9 +3,10 @@ package org.inspirenxe.strata.api.theme;
 import org.inspirenxe.strata.api.text.TextStyle;
 import org.inspirenxe.strata.api.widget.Button;
 import org.inspirenxe.strata.api.widget.Label;
+import org.inspirenxe.strata.api.widget.TextBox;
 
 /**
- * Built-in themes.
+ * Themes that ship with Strata. Engine adapters may offer more, such as {@code MinecraftThemes.vanilla()}.
  */
 public final class Themes {
 
@@ -13,7 +14,10 @@ public final class Themes {
     }
 
     /**
-     * A flat theme made only of solid colors, so it works on any engine without sprites.
+     * Returns a dark theme made of solid colors only, so it works on any engine without image assets. It defines
+     * every key of every built-in widget.
+     *
+     * @return the flat theme
      */
     public static Theme flat() {
         return Theme.builder("flat")
@@ -25,6 +29,13 @@ public final class Themes {
                 .textStyle(Button.STYLE_TEXT, TextStyle.DEFAULT.withColor(0xFFF0F0F0))
                 .textStyle(Button.STYLE_TEXT_DISABLED, TextStyle.DEFAULT.withColor(0xFF808080))
                 .textStyle(Label.STYLE_TEXT, TextStyle.DEFAULT.withColor(0xFFE0E0E0))
+                .paint(TextBox.STYLE_NORMAL, Paint.solid(0xFF1B1C1F))
+                .paint(TextBox.STYLE_FOCUSED, Paint.solid(0xFF24262A))
+                .paint(TextBox.STYLE_DISABLED, Paint.solid(0xFF2A2A2A))
+                .paint(TextBox.STYLE_SELECTION, Paint.solid(0x806A9FFF))
+                .paint(TextBox.STYLE_CARET, Paint.solid(0xFFE0E0E0))
+                .textStyle(TextBox.STYLE_TEXT, TextStyle.DEFAULT.withColor(0xFFE0E0E0))
+                .textStyle(TextBox.STYLE_TEXT_DISABLED, TextStyle.DEFAULT.withColor(0xFF707070))
                 .build();
     }
 }

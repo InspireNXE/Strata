@@ -3,7 +3,8 @@ package org.inspirenxe.strata.api.widget;
 import org.inspirenxe.strata.api.extension.ComponentBehavior;
 
 /**
- * Decorates a built-in {@link Label}; see {@link ComponentBehavior}.
+ * Decorates a {@link Label}. Pass one to {@link org.inspirenxe.strata.api.ComponentFactory#label(String,
+ * LabelBehavior)}; see {@link ComponentBehavior} for how the hooks and {@code next} work.
  */
 public interface LabelBehavior extends ComponentBehavior<Label> {
 }
