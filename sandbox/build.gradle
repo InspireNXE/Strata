@@ -1,0 +1,16 @@
+plugins {
+    id 'strata-java'
+    id 'application'
+}
+
+description = 'Demo app for trying Strata without a game.'
+
+dependencies {
+    // Screens are written against the API only; canvas-swing boots them
+    implementation(project(':api'))
+    implementation(project(':canvas-swing'))
+}
+
+application {
+    mainClass = 'org.inspirenxe.strata.sandbox.Sandbox'
+}

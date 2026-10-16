@@ -1,0 +1,13 @@
+plugins {
+    id 'strata-shared'
+}
+
+description = 'The Strata implementation. Adapters use it; developers compile against api only.'
+
+dependencies {
+    // compileOnly: loaders compile every shared project's sources themselves, so nothing may leak in transitively
+    compileOnly(project(':api'))
+    compileOnly(project(':spi'))
+    testImplementation(project(':api'))
+    testImplementation(project(':spi'))
+}

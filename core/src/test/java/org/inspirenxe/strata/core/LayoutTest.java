@@ -1,0 +1,147 @@
+package org.inspirenxe.strata.core;
+
+import org.inspirenxe.strata.api.Ui;
+import org.inspirenxe.strata.api.component.Anchor;
+import org.inspirenxe.strata.api.component.HorizontalAlignment;
+import org.inspirenxe.strata.api.component.VerticalAlignment;
+import org.inspirenxe.strata.api.geom.Insets;
+import org.inspirenxe.strata.api.geom.Rect;
+import org.inspirenxe.strata.api.layout.Grid;
+import org.inspirenxe.strata.api.layout.GridLength;
+import org.inspirenxe.strata.api.layout.Panel;
+import org.inspirenxe.strata.api.layout.StackPanel;
+import org.inspirenxe.strata.api.widget.Label;
+import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
+class LayoutTest {
+
+    @Test
+    void panelPlacesChildrenByAnchor() {
+        final TestHost test = new TestHost(200, 100);
+        final Ui ui = test.ui();
+        final Box center = new Box(ui, 20, 10).setAnchor(Anchor.CENTER);
+        final Box bottomRight = new Box(ui, 30, 5).setAnchor(Anchor.BOTTOM_RIGHT).setMargin(2);
+        final Box fill = new Box(ui, 1, 1).setAnchor(Anchor.FILL);
+        final Panel panel = ui.panel().setPadding(10).add(center).add(bottomRight).add(fill);
+        panel.setAnchor(Anchor.FILL);
+
+        test.show(panel);
+
+        assertEquals(new Rect(0, 0, 200, 100), panel.bounds());
+        assertEquals(new Rect(90, 45, 20, 10), center.bounds());
+        assertEquals(new Rect(158, 83, 30, 5), bottomRight.bounds());
+        assertEquals(new Rect(10, 10, 180, 80), fill.bounds());
+    }
+
+    @Test
+    void verticalStackSumsHeightsWithSpacing() {
+        final TestHost test = new TestHost(500, 500);
+        final Ui ui = test.ui();
+        final Box a = new Box(ui, 40, 10);
+        final Box b = new Box(ui, 60, 20).setMargin(new Insets(0, 5, 0, 5));
+        final Box c = new Box(ui, 10, 10).setAlignment(HorizontalAlignment.RIGHT, VerticalAlignment.TOP);
+        final StackPanel stack = ui.stackPanel().setSpacing(4).add(a).add(b).add(c);
+
+        test.show(stack);
+
+        // 10 + (5 + 20 + 5) + 10 plus two gaps of 4
+        assertEquals(58, stack.desiredHeight());
+        assertEquals(60, stack.desiredWidth());
+        assertEquals(new Rect(0, 0, 40, 10), a.bounds());
+        assertEquals(new Rect(0, 19, 60, 20), b.bounds());
+        assertEquals(new Rect(50, 48, 10, 10), c.bounds());
+    }
+
+    @Test
+    void hiddenChildrenTakeNoSpaceInStack() {
+        final TestHost test = new TestHost(100, 100);
+        final Ui ui = test.ui();
+        final Box a = new Box(ui, 10, 10);
+        final Box hidden = new Box(ui, 10, 50).setVisible(false);
+        final Box b = new Box(ui, 10, 10);
+        final StackPanel stack = ui.stackPanel().setSpacing(2).add(a).add(hidden).add(b);
+
+        test.show(stack);
+
+        assertEquals(22, stack.desiredHeight());
+        assertEquals(12, b.bounds().y());
+    }
+
+    @Test
+    void gridSharesLeftoverSpaceByWeight() {
+        final TestHost test = new TestHost(200, 50);
+        final Ui ui = test.ui();
+        final Box fixed = new Box(ui, 5, 5);
+        final Box auto = new Box(ui, 30, 5);
+        final Box one = new Box(ui, 5, 5).setAnchor(Anchor.FILL);
+        final Box two = new Box(ui, 5, 5).setAnchor(Anchor.FILL);
+        final Grid grid = ui.grid()
+                .columns(GridLength.fixed(20), GridLength.auto(), GridLength.weighted(1), GridLength.weighted(2))
+                .rows(GridLength.weighted(1));
+        grid.add(fixed, 0, 0).add(auto, 0, 1).add(one, 0, 2).add(two, 0, 3);
+        grid.setAnchor(Anchor.FILL);
+
+        test.show(grid);
+
+        // 200 - 20 - 30 = 150 left, split 1:2
+        assertEquals(new Rect(50, 0, 50, 50), one.bounds());
+        assertEquals(new Rect(100, 0, 100, 50), two.bounds());
+    }
+
+    @Test
+    void gridSpanningChildGrowsAutoTracks() {
+        final TestHost test = new TestHost(500, 500);
+        final Ui ui = test.ui();
+        final Box left = new Box(ui, 10, 10);
+        final Box right = new Box(ui, 10, 10);
+        final Box wide = new Box(ui, 60, 10);
+        final Grid grid = ui.grid()
+                .columns(GridLength.auto(), GridLength.auto())
+                .rows(GridLength.auto(), GridLength.auto());
+        grid.add(left, 0, 0).add(right, 0, 1).add(wide, 1, 0, 1, 2);
+
+        test.show(grid);
+
+        assertEquals(60, grid.desiredWidth());
+        assertEquals(30, right.bounds().x());
+    }
+
+    @Test
+    void wrappingLabelBreaksAtAvailableWidth() {
+        final TestHost test = new TestHost(500, 500);
+        final Ui ui = test.ui();
+        // 6 units per character: "hello world" is 66 wide
+        final Label label = ui.label("hello world again").setWrap(true);
+        final Panel panel = ui.panel().add(label);
+        panel.setWidth(70);
+
+        test.show(panel);
+
+        assertEquals(66, label.desiredWidth());
+        assertEquals(2 * TestPlatform.LINE_HEIGHT, label.desiredHeight());
+    }
+
+    @Test
+    void layoutRunsAgainAfterAChange() {
+        final TestHost test = new TestHost(100, 100);
+        final Box box = new Box(test.ui(), 10, 10);
+        test.show(box);
+        assertEquals(new Rect(0, 0, 10, 10), box.bounds());
+
+        box.setMargin(5);
+        test.host().layout();
+        assertEquals(new Rect(5, 5, 10, 10), box.bounds());
+    }
+
+    @Test
+    void minAndMaxClampDesiredSize() {
+        final TestHost test = new TestHost(1000, 1000);
+        final Box box = new Box(test.ui(), 500, 1).setMinSize(0, 20).setMaxSize(100, Float.POSITIVE_INFINITY);
+        test.show(box);
+
+        assertEquals(100, box.desiredWidth());
+        assertEquals(20, box.desiredHeight());
+    }
+}

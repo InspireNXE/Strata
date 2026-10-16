@@ -1,0 +1,10 @@
+plugins {
+    id 'strata-shared'
+}
+
+description = 'The Strata SPI: what an engine adapter implements and drives.'
+
+dependencies {
+    // compileOnly: loaders compile every shared project's sources themselves, so nothing may leak in transitively
+    compileOnly(project(':api'))
+}
