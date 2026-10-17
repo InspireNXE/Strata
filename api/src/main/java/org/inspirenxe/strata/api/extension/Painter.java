@@ -11,7 +11,7 @@ import org.inspirenxe.strata.api.visual.Visual;
  * UI units; draw within the bounds you were given.
  *
  * <p>Colors are ARGB ({@code 0xAARRGGBB}); a color with alpha 0 draws nothing. Later calls draw over earlier ones.
- * The engine may round coordinates to whole pixels: Minecraft draws in whole GUI pixels.</p>
+ * The engine may round coordinates to whole pixels.</p>
  *
  * <p>Clipping and translation are scoped to a callback, so the engine's state is always restored, even if the
  * callback throws.</p>
@@ -53,8 +53,8 @@ public interface Painter {
      *
      * @param sprite the sprite
      * @param rect the area
-     * @param border the width of each fixed border, in the sprite's pixels; Minecraft takes it from the sprite's
-     *               {@code .png.mcmeta} instead
+     * @param border the width of each fixed border, in the sprite's pixels; an engine that stores the slicing
+     *               with the image may use that instead
      * @param tint an ARGB color multiplied with the sprite
      */
     void nineSlice(SpriteId sprite, Rect rect, Insets border, int tint);

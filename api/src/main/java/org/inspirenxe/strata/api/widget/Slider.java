@@ -28,7 +28,7 @@ import java.util.function.DoubleFunction;
  * <p>It is focusable and tabbable and shows the hand cursor. Its desired size is 150 by 20 units. The thumb is 8 units
  * wide and as tall as the slider; its left edge moves from the slider's left edge (at the minimum) to the slider's
  * right edge minus the thumb width (at the maximum). An optional {@linkplain #setLabel label} is drawn centered over
- * the track, as vanilla Minecraft's sliders show their setting.</p>
+ * the track to show the setting.</p>
  *
  * <h2>Theme keys</h2>
  * <ul>

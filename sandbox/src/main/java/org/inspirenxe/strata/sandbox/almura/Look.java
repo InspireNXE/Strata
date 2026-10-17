@@ -25,7 +25,7 @@ import java.util.List;
 
 /**
  * Almura's look and its number formats, shared by the Exchange and Store mock-ups. The colors follow Almura's
- * MalisisCore forms: black panels at alpha 215 with a white border at alpha 185, and Minecraft's formatting colors.
+ * MalisisCore forms: black panels at alpha 215 with a white border at alpha 185, and a 16-color text palette.
  */
 final class Look {
     static final int WHITE = 0xFFFFFFFF;

@@ -8,7 +8,7 @@ import java.util.List;
 import java.util.Random;
 
 /**
- * A pretend item type, standing in for a Minecraft {@code ItemStack} with a count of one.
+ * A pretend item type, standing in for a game item with a count of one.
  *
  * @param name the display name
  * @param color the icon's main color
@@ -24,7 +24,7 @@ record Item(String name, int color, Shape shape, int maxStack, String category) 
     enum Shape { BLOCK, GEM, INGOT, ROUND }
 
     /**
-     * The item's tooltip, laid out like vanilla's: the name, then the mod in blue italics.
+     * The item's tooltip: the name, then the source in blue italics.
      *
      * @return the tooltip
      */
@@ -34,7 +34,7 @@ record Item(String name, int color, Shape shape, int maxStack, String category) 
         if (this.maxStack < 64) {
             lines.add(List.of(Look.span("Stacks to " + this.maxStack, Look.GRAY)));
         }
-        lines.add(List.of(new TextSpan("Minecraft", Look.text(0xFF5555FF).withItalic(true))));
+        lines.add(List.of(new TextSpan("Almura", Look.text(0xFF5555FF).withItalic(true))));
         return Tooltip.lines(lines);
     }
 

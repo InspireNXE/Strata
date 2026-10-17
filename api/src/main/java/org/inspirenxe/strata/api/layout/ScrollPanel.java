@@ -37,7 +37,7 @@ import java.util.function.Consumer;
  * <h2>Drawing</h2>
  * <p>Children are clipped to the viewport and can only be hit inside it. Scroll bars draw over the children: the
  * track along the gutter and a thumb whose length is the visible fraction of the track, at least
- * {@link #MIN_THUMB_LENGTH} units and at most the track minus 8, as in vanilla Minecraft.</p>
+ * {@link #MIN_THUMB_LENGTH} units and at most the track minus 8.</p>
  *
  * <h2>Theme keys</h2>
  * <ul>
@@ -71,7 +71,7 @@ public interface ScrollPanel extends Container<ScrollPanel> {
      */
     String STYLE_TRACK = "scroll.track";
     /**
-     * How wide a scroll bar is, in UI units, as in vanilla Minecraft.
+     * How wide a scroll bar is, in UI units.
      */
     float BAR_WIDTH = 6f;
     /**
@@ -79,7 +79,7 @@ public interface ScrollPanel extends Container<ScrollPanel> {
      */
     float BAR_GAP = 2f;
     /**
-     * The shortest a thumb gets, in UI units, as in vanilla Minecraft.
+     * The shortest a thumb gets, in UI units.
      */
     float MIN_THUMB_LENGTH = 32f;
     /**

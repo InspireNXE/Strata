@@ -33,9 +33,9 @@ import java.util.function.UnaryOperator;
  * <h2>Focus and the engine</h2>
  * <p>The box is focusable and tabbable and shows the text cursor. Focus by Tab puts the caret at the end; focus by
  * a click puts it at the click, unless the box {@linkplain #setSelectAllOnFocus selects all on focus}. While focused
- * it asks the engine for text input (required on Minecraft 26.3, which sends no characters otherwise) and consumes
- * every key that types a character, so engine shortcuts on those keys, such as Minecraft's inventory key, do not
- * fire. Tab and Escape are not consumed: Tab moves focus and Escape still reaches the engine. Enter is consumed only
+ * it asks the engine for text input (required on SDL-based engines, which send no characters otherwise) and
+ * consumes every key that types a character, so engine shortcuts on those keys, such as a game's inventory key, do
+ * not fire. Tab and Escape are not consumed: Tab moves focus and Escape still reaches the engine. Enter is consumed only
  * when the box has submit listeners. A disabled box ignores input.</p>
  *
  * <h2>Text and indexes</h2>

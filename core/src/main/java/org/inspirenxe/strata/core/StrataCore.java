@@ -33,8 +33,8 @@ public final class StrataCore {
      *
      * @param platform the engine's platform
      * @param theme the theme for every component the host shows
-     * @param closeRequested runs when the open screen asks to close through its handle; on Minecraft, for example,
-     *                       this calls the vanilla screen's {@code onClose()}, which leaves the screen and in turn closes the host
+     * @param closeRequested runs when the open screen asks to close through its handle; an engine with its own
+     *                       screens may close the engine screen here, which in turn closes the host
      * @return a new host, with no screen open and a size of zero until resized
      */
     public static ScreenHost createScreenHost(final Platform platform, final Theme theme, final Runnable closeRequested) {

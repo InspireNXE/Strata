@@ -7,7 +7,7 @@ import java.util.EnumSet;
 import java.util.Set;
 
 /**
- * Tells key presses from repeats, for adapters whose engine reports a held key as more presses (AWT, Minecraft).
+ * Tells key presses from repeats, for adapters whose engine reports a held key as more presses, such as AWT.
  * The first press of a key is a {@link KeyAction#PRESS}; every press after it, until the key is released, is a
  * {@link KeyAction#REPEAT}.
  *

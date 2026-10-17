@@ -78,18 +78,15 @@ A `SpriteId` names an image as `namespace:path`:
 --8<-- "theming/ThemeExamples.java:sprites"
 ```
 
-Both adapters read the same layout, so one set of images serves both:
+Each adapter decides where the image comes from. The Swing adapter reads it from the classpath, by default at:
 
 ```text
-assets/<namespace>/textures/gui/sprites/<path>.png
+assets/<namespace>/sprites/<path>.png
 ```
 
-| Adapter | Reads it from | A missing image draws |
-|---|---|---|
-| Minecraft | The `minecraft:gui` sprite atlas, which loads that path from every resource pack and mod | Vanilla's missing-texture pattern |
-| Swing | The classpath | Magenta |
+A `SpriteResolver` given to `SwingSprites` maps ids to any other layout. A missing image draws as magenta.
 
-`SpriteId.parse("examplemod:button")` parses the text form. Unlike Minecraft's identifiers, a missing namespace is an error, so a sprite never lands in the `minecraft` namespace by accident.
+`SpriteId.parse("examplemod:button")` parses the text form. A missing namespace is an error, so a sprite never lands in another namespace by accident.
 
 ### Nine-slices
 

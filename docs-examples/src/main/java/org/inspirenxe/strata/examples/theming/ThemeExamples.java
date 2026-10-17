@@ -73,7 +73,7 @@ public final class ThemeExamples {
 
     static Theme sprites() {
         // --8<-- [start:sprites]
-        // assets/examplemod/textures/gui/sprites/button.png, with a 4-pixel frame
+        // assets/examplemod/sprites/button.png, with a 4-pixel frame
         final SpriteId button = SpriteId.of("examplemod", "button");
         final SpriteId buttonHover = SpriteId.parse("examplemod:button_hover");
         final Theme textured = Themes.flat().toBuilder()

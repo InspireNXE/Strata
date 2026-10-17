@@ -180,7 +180,7 @@ Swing draws with an AWT font, Dialog 9 by default, not Minecraft's pixel font. W
 
 ### My sprite draws as a magenta square.
 
-The image was not found on the classpath at `assets/<namespace>/textures/gui/sprites/<path>.png`, or could not be read. See [Sprites](../platforms/swing.md#sprites).
+The image was not found on the classpath at `assets/<namespace>/sprites/<path>.png` (or where your `SpriteResolver` points), or could not be read. See [Sprites](../platforms/swing.md#sprites).
 
 ### Can I render a screen without a window?
 

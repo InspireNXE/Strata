@@ -45,7 +45,7 @@ Text will not look like Minecraft's pixel font, and its widths differ. Layouts b
 
 ## Sprites
 
-`SwingSprites` loads images from the classpath at `assets/<namespace>/textures/gui/sprites/<path>.png`, the same layout Minecraft uses, so one set of images serves both. Images are loaded once and cached, including the fact that one is missing. A missing or unreadable image draws as solid magenta.
+`SwingSprites` loads images from the classpath at `assets/<namespace>/sprites/<path>.png`. Pass a `SpriteResolver` to `SwingSprites`, and that to `StrataPanel` or `SwingSnapshot.render`, to read another layout. Images are loaded once and cached, including the fact that one is missing. A missing or unreadable image draws as solid magenta.
 
 The panel and `SwingSnapshot` look images up through the class loader that loaded the Swing adapter. In an ordinary application, where everything shares one class path, that finds images in your own jar. Under a plugin system that gives each plugin its own class loader, it may not.
 

@@ -18,7 +18,7 @@ public interface ScreenHandle {
 
     /**
      * Asks the host to close the screen. The host decides what that means: a Swing screen stack pops the screen,
-     * and on Minecraft the vanilla screen's {@code onClose()} runs, which by default leaves the screen and returns to the game.
+     * and an engine with its own screens may close the engine screen that shows it.
      */
     void close();
 

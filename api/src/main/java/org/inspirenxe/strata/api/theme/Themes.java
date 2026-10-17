@@ -17,7 +17,7 @@ import org.inspirenxe.strata.api.widget.TextBox;
 import org.inspirenxe.strata.api.widget.Window;
 
 /**
- * Themes that ship with Strata. Engine adapters may offer more, such as {@code MinecraftThemes.vanilla()}.
+ * Themes that ship with Strata. Engine adapters may offer more.
  */
 public final class Themes {
 

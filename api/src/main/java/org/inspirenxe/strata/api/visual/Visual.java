@@ -3,8 +3,8 @@ package org.inspirenxe.strata.api.visual;
 import org.inspirenxe.strata.api.geom.Size;
 
 /**
- * Something an engine knows how to draw that Strata cannot describe itself, such as an item stack on Minecraft or
- * a loaded image on Swing. Strata never looks inside a visual; it passes it to the engine's canvas, which draws the
+ * Something an engine knows how to draw that Strata cannot describe itself, such as a game item or a loaded image
+ * on Swing. Strata never looks inside a visual; it passes it to the engine's canvas, which draws the
  * kinds it made and a placeholder for any other.
  *
  * <p>Engine adapters make visuals in their own public classes ({@code SwingVisuals.image(...)} on Swing), so code
@@ -26,7 +26,7 @@ public interface Visual {
     /**
      * Returns the size the visual is meant to be drawn at, which an image widget asks for by default.
      *
-     * @return the natural size in UI units, for example 16 by 16 for a Minecraft item
+     * @return the natural size in UI units, for example 16 by 16 for a small icon
      */
     Size size();
 }

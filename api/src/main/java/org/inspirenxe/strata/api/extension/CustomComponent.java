@@ -203,7 +203,7 @@ public abstract class CustomComponent<T extends Component<T>> implements Compone
 
     /**
      * Returns whether focusing this component should start text input on the engine. Return true for components
-     * that take typed characters: some engines (Minecraft 26.3, SDL-based engines) send no
+     * that take typed characters: some engines, SDL-based ones among them, send no
      * {@link org.inspirenxe.strata.api.event.CharEvent}s otherwise. The default is false.
      *
      * @return true if the component accepts typed text

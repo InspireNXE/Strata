@@ -12,12 +12,12 @@ import java.util.function.Consumer;
  * (not repeated). It consumes those inputs. A disabled check box does neither and draws its disabled look.</p>
  *
  * <p>It is focusable and tabbable and shows the hand cursor. The box is square, {@linkplain #setBoxSize sized} to the
- * caption's line height plus 8 units by default, which is 17 with Minecraft's font, the size of vanilla's check box.
+ * caption's line height plus 8 units by default, which is 17 with a 9-unit font.
  * The caption sits 4 units right of the box, centered on it vertically. The desired size is the box, the gap and the
  * caption's width wide (just the box when the caption is empty), and the taller of the box and the caption.</p>
  *
  * <h2>Theme keys</h2>
- * <p>The box paints cover the whole box. Themes built from images, such as Minecraft's, draw the check mark into
+ * <p>The box paints cover the whole box. Themes built from images draw the check mark into
  * the checked paints; themes built from colors draw it with {@value #STYLE_MARK} instead.</p>
  * <ul>
  *     <li>{@value #STYLE_NORMAL} (paint, required): the box when unchecked.</li>

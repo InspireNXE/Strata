@@ -19,7 +19,7 @@ import org.inspirenxe.strata.api.visual.Visual;
  *     is already drawn.</li>
  *     <li>Later calls draw over earlier ones. An engine that batches or reorders draws must keep this order, at least
  *     across {@link #nextLayer()}.</li>
- *     <li>Calls may be recorded and replayed later (Minecraft's GUI does this); nothing requires immediate
+ *     <li>Calls may be recorded and replayed later; nothing requires immediate
  *     drawing.</li>
  *     <li>Clips and transforms form stacks. Strata balances every push with a pop within one frame, and pops in
  *     reverse order, even when a component throws. A clip applies in the transform current when it was pushed and
@@ -63,7 +63,7 @@ public interface Canvas {
     /**
      * Draws a sprite as a nine-slice over a rectangle: the corners at their native size, the edges stretched along
      * their length, and the center stretched both ways. An engine that knows the sprite's slicing natively
-     * (Minecraft's {@code .png.mcmeta}) may use that and ignore {@code border}. If the rectangle is smaller than the
+     * (stored with the image, for example) may use that and ignore {@code border}. If the rectangle is smaller than the
      * borders, shrink the borders rather than drawing outside it.
      *
      * @param sprite the sprite

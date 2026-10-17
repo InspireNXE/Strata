@@ -4,7 +4,7 @@ import org.inspirenxe.strata.api.geom.Rect;
 
 /**
  * Where a host tells the engine that a text field gained or lost focus. Some engines deliver no typed characters
- * until told (Minecraft 26.3 and other SDL-based engines), and some show an on-screen keyboard or input method
+ * until told (SDL-based engines among them), and some show an on-screen keyboard or input method
  * window at the given area.
  *
  * <h2>Requirements for implementors</h2>

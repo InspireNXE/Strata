@@ -9,7 +9,7 @@ import java.util.Map;
 
 /**
  * Stand-in item icons for the sandbox: 16 by 16 images drawn from a color and a shape, shown through Swing visuals
- * the way Minecraft would show item stacks through its own.
+ * the way a game adapter would show its items through its own.
  */
 final class Icons {
     private static final Map<String, Visual> CACHE = new HashMap<>();

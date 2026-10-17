@@ -117,8 +117,8 @@ public sealed interface Paint {
      * A sprite cut into a 3 by 3 grid. Corners keep their size, edges stretch along one axis, and the center
      * stretches both ways, so one small image can frame a rectangle of any size.
      *
-     * <p>On Minecraft the sprite's {@code .png.mcmeta} decides the slicing and {@code border} is ignored; keep the
-     * two in agreement so other engines draw the same.</p>
+     * <p>An engine that stores the slicing with the image may use that and ignore {@code border}; keep the two in
+     * agreement so every engine draws the same.</p>
      *
      * @param sprite the sprite
      * @param border the width of each fixed border, in the sprite's pixels

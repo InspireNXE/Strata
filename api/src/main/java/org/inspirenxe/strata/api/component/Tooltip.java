@@ -16,7 +16,7 @@ import java.util.function.Function;
  * units of padding, in the {@value #STYLE_TEXT} text style unless their spans carry their own.</p>
  *
  * <p>The {@link Text} and {@link Lines} kinds are drawn by Strata. Engine adapters can offer factory methods that
- * build tooltips from engine objects, such as an item's tooltip lines on Minecraft.</p>
+ * build tooltips from engine objects, such as the lines an engine shows for one of its items.</p>
  */
 public sealed interface Tooltip {
     /**

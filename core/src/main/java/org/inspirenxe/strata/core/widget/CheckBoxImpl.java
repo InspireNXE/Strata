@@ -38,11 +38,11 @@ import java.util.function.Consumer;
  */
 public final class CheckBoxImpl extends CustomComponent<CheckBox> implements CheckBox {
     /**
-     * The gap between the box and the caption, as in vanilla Minecraft's check box.
+     * The gap between the box and the caption.
      */
     public static final float GAP = 4f;
     /**
-     * Added to the caption's line height for the default box size, as in vanilla Minecraft's check box.
+     * Added to the caption's line height for the default box size.
      */
     public static final float BOX_PADDING = 8f;
     private static final Set<String> REQUIRED = Set.of(STYLE_NORMAL, STYLE_HOVERED, STYLE_CHECKED, STYLE_CHECKED_HOVERED);

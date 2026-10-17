@@ -37,7 +37,7 @@ import java.util.function.DoubleFunction;
  */
 public final class SliderImpl extends CustomComponent<Slider> implements Slider {
     /**
-     * The thumb's width, as in vanilla Minecraft's slider.
+     * The thumb's width.
      */
     public static final float THUMB_WIDTH = 8f;
     /**
@@ -45,7 +45,7 @@ public final class SliderImpl extends CustomComponent<Slider> implements Slider 
      */
     public static final float DEFAULT_WIDTH = 150f;
     /**
-     * The desired height, as in vanilla Minecraft's slider.
+     * The desired height.
      */
     public static final float DEFAULT_HEIGHT = 20f;
     /**

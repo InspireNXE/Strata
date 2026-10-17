@@ -72,7 +72,7 @@ Strata does not catch exceptions from handlers or hooks. They propagate out of t
 
 | Symptom | Cause |
 |---|---|
-| Magenta square (Swing) | The image is not on the classpath at `assets/<namespace>/textures/gui/sprites/<path>.png`. |
+| Magenta square (Swing) | The image is not on the classpath at `assets/<namespace>/sprites/<path>.png`, or where your `SpriteResolver` points. |
 | Purple and black checkerboard (Minecraft) | The same path is missing from your mod's resources, or the game needs a resource reload. |
 | Nine-slice stretches in Minecraft | The sprite has no `.png.mcmeta` with `nine_slice` scaling. |
 | Nine-slice looks different in Swing and Minecraft | See [Nine-slices](../platforms/differences.md#nine-slices). |

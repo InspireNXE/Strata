@@ -7,7 +7,7 @@ import org.inspirenxe.strata.api.input.Modifiers;
  * {@link EventTypes#CHAR}. Goes only to the focused component, and bubbles.
  *
  * <p>Characters are Unicode code points, so characters outside the Basic Multilingual Plane, such as emoji, arrive
- * as one event. Some engines (Minecraft 26.3 among them) deliver characters only while a component that accepts
+ * as one event. Some engines, SDL-based ones among them, deliver characters only while a component that accepts
  * text input has focus.</p>
  *
  * <p>Only Strata creates events. Do not implement this interface.</p>

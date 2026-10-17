@@ -77,7 +77,7 @@ public final class Root {
      */
     public static final float DRAG_THRESHOLD = 4f;
     /**
-     * How far a tooltip sits from the pointer on each axis, in UI units, as in vanilla Minecraft.
+     * How far a tooltip sits from the pointer on each axis, in UI units.
      */
     public static final float TOOLTIP_OFFSET = 12f;
 

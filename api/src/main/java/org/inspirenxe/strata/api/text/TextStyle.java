@@ -3,8 +3,8 @@ package org.inspirenxe.strata.api.text;
 /**
  * How a span of text looks. Immutable; the {@code with} methods return modified copies.
  *
- * <p>Engines draw what they can: an engine with one font weight may fake or ignore bold. The Minecraft adapter
- * uses Minecraft's own bold, italic, underline, strikethrough and shadow; the Swing adapter derives bold and italic
+ * <p>Engines draw what they can: an engine with one font weight may fake or ignore bold. An adapter may use
+ * the engine's own bold, italic, underline, strikethrough and shadow; the Swing adapter derives bold and italic
  * fonts and draws the lines and shadow itself.</p>
  *
  * @param color the color as ARGB; alpha 0 draws nothing
@@ -12,7 +12,7 @@ package org.inspirenxe.strata.api.text;
  * @param italic whether the text is italic
  * @param underline whether a line is drawn under the text
  * @param strikethrough whether a line is drawn through the text
- * @param shadow whether a darker copy is drawn one unit down and to the right, as Minecraft does
+ * @param shadow whether a darker copy is drawn one unit down and to the right
  */
 public record TextStyle(int color, boolean bold, boolean italic, boolean underline, boolean strikethrough, boolean shadow) {
     /**

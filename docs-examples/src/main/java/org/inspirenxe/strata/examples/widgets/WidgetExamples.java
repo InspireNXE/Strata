@@ -57,7 +57,7 @@ public final class WidgetExamples {
 
     static Image image(final ComponentFactory factory) {
         // --8<-- [start:image]
-        // assets/examplemod/textures/gui/sprites/icon/star.png, drawn at 16 by 16 units
+        // assets/examplemod/sprites/icon/star.png, drawn at 16 by 16 units
         final Image star = factory.image(SpriteId.of("examplemod", "icon/star"));
 
         // The same sprite as a large picture that keeps its shape however it is stretched
