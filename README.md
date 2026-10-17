@@ -3,7 +3,7 @@
 Strata is a GUI library for Java games that does not depend on any engine. You build screens from a tree of components, and an adapter draws them and feeds them input on a particular engine. Strata has:
 
 - two-pass layout with four containers: `AnchorPanel`, `StackPanel`, `GridPanel` and `AbsolutePanel`
-- labels, buttons and a single-line text box
+- labels, images, buttons, check boxes, sliders and a single-line text box
 - click counting, dragging, focus and tab order
 - typed events that handlers can cancel
 - themes that map style keys to colors, gradients and sprites
@@ -12,7 +12,7 @@ There are adapters for Java2D/Swing and for Minecraft 26.3 on NeoForge and Fabri
 
 | Module | What it is |
 |---|---|
-| `api` | What developers compile against: interfaces, value records, the `ComponentFactory`, the widgets (`Label`, `Button`, `TextBox`) and the extension points (`CustomComponent`, `CustomContainer`, `ComponentBehavior`, `Painter`, `Environment`). |
+| `api` | What developers compile against: interfaces, value records, the `ComponentFactory`, the widgets (`Label`, `Image`, `Button`, `CheckBox`, `Slider`, `TextBox`, `ListView`, `ComboBox`, `Window`, `MessageBox`, `TabBar`, `ProgressBar`, `Separator`), the containers (including `ScrollPanel`), overlays and tooltips, and the extension points (`CustomComponent`, `CustomComposite`, `CustomContainer`, `ComponentBehavior`, `Painter`, `Environment`). |
 | `spi` | What engine adapters implement (`Canvas`, `Platform`) and drive (`ScreenHost`, `ScreenStack`), plus contract tests for adapters. |
 | `core` | The implementation behind both. Only adapters use it directly. |
 | `canvas-swing` | The Java2D/Swing adapter: `StrataPanel` and `SwingSnapshot`. |

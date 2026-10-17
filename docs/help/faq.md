@@ -64,9 +64,9 @@ It has no width to wrap to. Give it a fixed or maximum width, or stretch it in a
 
 For small changes, call setters: `label.setText(...)`, `button.setEnabled(...)`. For structural changes, call `handle.invalidate()` to rebuild the tree, or `add` and `remove` children directly. See [Screens](../guides/screens.md#keep-data-on-the-screen-not-in-the-tree).
 
-### Is there a scroll panel, list, check box, slider or dropdown?
+### Is there a scroll panel, list or dropdown?
 
-Not yet. The built-ins are `Label`, `Button`, `TextBox` and four panels. The extending guide builds a [check box](../guides/extending.md#write-a-new-component) as a complete example.
+Not yet. The built-ins are `Label`, `Image`, `Button`, `CheckBox`, `Slider`, `TextBox` and four panels. A scroll panel is next; see [Status and limitations](status.md). The extending guide builds a [switch](../guides/extending.md#write-a-new-component) as a complete example of writing your own.
 
 ### Can I use Strata from Kotlin or another JVM language?
 

@@ -1,12 +1,13 @@
 package org.inspirenxe.strata.api.extension;
 
+import org.inspirenxe.strata.api.input.Modifiers;
 import org.inspirenxe.strata.api.text.TextMetrics;
 
 import java.util.Optional;
 
 /**
- * What a component may ask of the engine outside layout: text measurement, time and the clipboard. Get it with
- * {@link CustomComponent#environment()}.
+ * What a component may ask of the engine outside layout: text measurement, time, the clipboard and the held
+ * modifiers. Get it with {@link CustomComponent#environment()}.
  *
  * <p>It comes from the host, so tests can drive time and the clipboard, and a component written against it works
  * on any engine. Do not read the system clock or AWT clipboard directly in a component.</p>
@@ -41,7 +42,13 @@ public interface Environment {
      * Puts text on the clipboard. Engines without a clipboard ignore it.
      *
      * @param text the text
-     * @throws NullPointerException if {@code text} is null
      */
     void setClipboardText(String text);
+
+    /**
+     * Returns the modifier keys held, as of the latest input the host received.
+     *
+     * @return the held modifiers; {@link Modifiers#NONE} before any input
+     */
+    Modifiers modifiers();
 }

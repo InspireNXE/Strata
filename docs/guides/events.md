@@ -167,7 +167,7 @@ A key handler on the root sees every key that nothing focused consumed, which ma
 
 ## Custom event types
 
-`EventType.bubbling(name, eventClass)` and `EventType.direct(name, eventClass)` create new types, and `CustomComponent.onOtherEvent` is the hook for their default behavior. There is no public way to fire an event yet, though, so custom types are reserved for now. For component-specific notifications, use listeners as the widgets do (`onAction`, `onTextChanged`), as the [check box example](extending.md#write-a-new-component) does with `onChange`.
+`EventType.bubbling(name, eventClass)` and `EventType.direct(name, eventClass)` create new types, and `CustomComponent.onOtherEvent` is the hook for their default behavior. There is no public way to fire an event yet, though, so custom types are reserved for now. For component-specific notifications, use listeners as the widgets do (`onAction`, `onCheckedChanged`, `onValueChanged`, `onTextChanged`), as the [switch example](extending.md#write-a-new-component) does with `onChange`.
 
 ## All event types
 

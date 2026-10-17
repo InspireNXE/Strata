@@ -40,7 +40,6 @@ public final class EventDispatcher {
      * @param owner a token for {@link #removeOwner(Object)}, or {@code null} for none
      * @param snapshots whether events of this type should take snapshots while this handler is registered
      * @return a subscription that removes this handler; unsubscribing twice does nothing
-     * @throws NullPointerException if {@code type}, {@code phase} or {@code handler} is null
      */
     public <E extends Event> Subscription subscribe(final EventType<E> type, final Phase phase,
                                                     final EventHandler<? super E> handler, final Object owner,
@@ -119,7 +118,6 @@ public final class EventDispatcher {
      * Removes every handler registered with an owner token. Owners compare by identity.
      *
      * @param owner the token passed to {@link #subscribe}
-     * @throws NullPointerException if {@code owner} is null
      */
     public void removeOwner(final Object owner) {
         Objects.requireNonNull(owner, "owner");

@@ -134,4 +134,14 @@ public record Rect(float x, float y, float width, float height) {
         final float bottom = Math.min(this.bottom(), other.bottom());
         return Rect.ofEdges(left, top, Math.max(left, right), Math.max(top, bottom));
     }
+
+    /**
+     * Returns whether two rectangles overlap. Rectangles that only share an edge do not.
+     *
+     * @param other the other rectangle
+     * @return true if some area lies inside both
+     */
+    public boolean intersects(final Rect other) {
+        return this.x < other.right() && other.x < this.right() && this.y < other.bottom() && other.y < this.bottom();
+    }
 }

@@ -5,6 +5,7 @@ import org.inspirenxe.strata.api.component.Component;
 import org.inspirenxe.strata.api.component.ComponentSnapshot;
 import org.inspirenxe.strata.api.component.Container;
 import org.inspirenxe.strata.api.component.CursorKind;
+import org.inspirenxe.strata.api.component.Tooltip;
 import org.inspirenxe.strata.api.event.CharEvent;
 import org.inspirenxe.strata.api.event.DragEvent;
 import org.inspirenxe.strata.api.event.Event;
@@ -25,6 +26,7 @@ import org.inspirenxe.strata.api.geom.Rect;
 import org.inspirenxe.strata.api.geom.Size;
 import org.inspirenxe.strata.api.layout.HorizontalAlignment;
 import org.inspirenxe.strata.api.layout.VerticalAlignment;
+import org.inspirenxe.strata.api.theme.Border;
 import org.inspirenxe.strata.api.theme.Paint;
 import org.inspirenxe.strata.api.theme.Theme;
 
@@ -99,7 +101,6 @@ public abstract class CustomComponent<T extends Component<T>> implements Compone
      * Creates the component and its peer.
      *
      * @param factory the factory of the host that will show this component
-     * @throws NullPointerException if {@code factory} is null
      */
     protected CustomComponent(final ComponentFactory factory) {
         this(factory, null);
@@ -111,7 +112,6 @@ public abstract class CustomComponent<T extends Component<T>> implements Compone
      *
      * @param factory the factory of the host that will show this component
      * @param behavior wraps this component's hooks; {@code null} for none
-     * @throws NullPointerException if {@code factory} is null
      */
     protected CustomComponent(final ComponentFactory factory, final ComponentBehavior<T> behavior) {
         this(factory, behavior, false);
@@ -350,11 +350,21 @@ public abstract class CustomComponent<T extends Component<T>> implements Compone
         return null;
     }
 
-    // Overridden by CustomContainer
+    // Overridden by CustomComposite
     void arrangeHook(final ArrangeContext context, final Rect bounds) {
     }
 
     void childRemovedHook(final Component<?> child) {
+    }
+
+    Rect childClipHook() {
+        return this.bounds();
+    }
+
+    void paintOverChildrenHook(final Painter painter, final Rect bounds) {
+    }
+
+    void descendantFocusedHook(final Component<?> descendant) {
     }
 
     private void handleEvent(final EventType<?> type, final Event event) {
@@ -438,6 +448,21 @@ public abstract class CustomComponent<T extends Component<T>> implements Compone
         @Override
         public void childRemoved(final Component<?> child) {
             CustomComponent.this.childRemovedHook(child);
+        }
+
+        @Override
+        public Rect childClip() {
+            return CustomComponent.this.childClipHook();
+        }
+
+        @Override
+        public void paintOverChildren(final Painter painter, final Rect bounds) {
+            CustomComponent.this.paintOverChildrenHook(painter, bounds);
+        }
+
+        @Override
+        public void descendantFocused(final Component<?> descendant) {
+            CustomComponent.this.descendantFocusedHook(descendant);
         }
     }
 
@@ -543,6 +568,11 @@ public abstract class CustomComponent<T extends Component<T>> implements Compone
     }
 
     @Override
+    public final boolean isHoverWithin() {
+        return this.peer.isHoverWithin();
+    }
+
+    @Override
     public final boolean isPressed() {
         return this.peer.isPressed();
     }
@@ -625,6 +655,44 @@ public abstract class CustomComponent<T extends Component<T>> implements Compone
     @Override
     public final T setAlignment(final HorizontalAlignment horizontal, final VerticalAlignment vertical) {
         this.peer.setAlignment(horizontal, vertical);
+        return this.self();
+    }
+
+    @Override
+    public final float offsetX() {
+        return this.peer.offsetX();
+    }
+
+    @Override
+    public final float offsetY() {
+        return this.peer.offsetY();
+    }
+
+    @Override
+    public final T setOffset(final float offsetX, final float offsetY) {
+        this.peer.setOffset(offsetX, offsetY);
+        return this.self();
+    }
+
+    @Override
+    public final Border border() {
+        return this.peer.border();
+    }
+
+    @Override
+    public final T setBorder(final Border border) {
+        this.peer.setBorder(border);
+        return this.self();
+    }
+
+    @Override
+    public final Tooltip tooltip() {
+        return this.peer.tooltip();
+    }
+
+    @Override
+    public final T setTooltip(final Tooltip tooltip) {
+        this.peer.setTooltip(tooltip);
         return this.self();
     }
 

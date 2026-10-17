@@ -48,7 +48,6 @@ public interface Event {
      *
      * @param component the component to look up
      * @return the component's snapshot, or empty if none was taken of it for this event
-     * @throws NullPointerException if {@code component} is null
      */
     Optional<ComponentSnapshot> snapshotOf(Component<?> component);
 

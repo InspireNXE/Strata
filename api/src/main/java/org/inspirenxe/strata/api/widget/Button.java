@@ -77,7 +77,6 @@ public interface Button extends Component<Button> {
      *
      * @param text the caption, on one line
      * @return this button
-     * @throws NullPointerException if {@code text} is null
      */
     Button setText(String text);
 
@@ -86,7 +85,6 @@ public interface Button extends Component<Button> {
      *
      * @param padding the padding; 8 left and right, 5 top and bottom by default
      * @return this button
-     * @throws NullPointerException if {@code padding} is null
      */
     Button setTextPadding(Insets padding);
 
@@ -96,7 +94,6 @@ public interface Button extends Component<Button> {
      *
      * @param action the action
      * @return this button
-     * @throws NullPointerException if {@code action} is null
      */
     Button onAction(Runnable action);
 
@@ -116,8 +113,6 @@ public interface Button extends Component<Button> {
 
         /**
          * Checks the text.
-         *
-         * @throws NullPointerException if {@code text} is null
          */
         public State {
             Objects.requireNonNull(text, "text");

@@ -12,24 +12,53 @@ import org.inspirenxe.strata.api.layout.AbsolutePanel;
 import org.inspirenxe.strata.api.layout.GridPanel;
 import org.inspirenxe.strata.api.layout.Orientation;
 import org.inspirenxe.strata.api.layout.AnchorPanel;
+import org.inspirenxe.strata.api.layout.ScrollPanel;
 import org.inspirenxe.strata.api.layout.StackPanel;
+import org.inspirenxe.strata.api.overlay.Overlays;
+import org.inspirenxe.strata.api.theme.SpriteId;
 import org.inspirenxe.strata.api.theme.Theme;
 import org.inspirenxe.strata.api.widget.Button;
 import org.inspirenxe.strata.api.widget.ButtonBehavior;
+import org.inspirenxe.strata.api.widget.CheckBox;
+import org.inspirenxe.strata.api.widget.CheckBoxBehavior;
+import org.inspirenxe.strata.api.widget.ComboBox;
+import org.inspirenxe.strata.api.widget.Image;
+import org.inspirenxe.strata.api.widget.ImageBehavior;
 import org.inspirenxe.strata.api.widget.Label;
 import org.inspirenxe.strata.api.widget.LabelBehavior;
+import org.inspirenxe.strata.api.widget.ListView;
+import org.inspirenxe.strata.api.widget.MessageBox;
+import org.inspirenxe.strata.api.widget.ProgressBar;
+import org.inspirenxe.strata.api.widget.Separator;
+import org.inspirenxe.strata.api.widget.Slider;
+import org.inspirenxe.strata.api.widget.SliderBehavior;
+import org.inspirenxe.strata.api.widget.TabBar;
 import org.inspirenxe.strata.api.widget.TextBox;
 import org.inspirenxe.strata.api.widget.TextBoxBehavior;
+import org.inspirenxe.strata.api.widget.Window;
+import org.inspirenxe.strata.api.visual.Visual;
 import org.inspirenxe.strata.core.layout.AbsolutePanelImpl;
 import org.inspirenxe.strata.core.layout.GridPanelImpl;
 import org.inspirenxe.strata.core.layout.AnchorPanelImpl;
+import org.inspirenxe.strata.core.layout.ScrollPanelImpl;
 import org.inspirenxe.strata.core.layout.StackPanelImpl;
 import org.inspirenxe.strata.core.widget.ButtonImpl;
+import org.inspirenxe.strata.core.widget.CheckBoxImpl;
+import org.inspirenxe.strata.core.widget.ComboBoxImpl;
+import org.inspirenxe.strata.core.widget.ImageImpl;
 import org.inspirenxe.strata.core.widget.LabelImpl;
+import org.inspirenxe.strata.core.widget.ListViewImpl;
+import org.inspirenxe.strata.core.widget.MessageBoxImpl;
+import org.inspirenxe.strata.core.widget.ProgressBarImpl;
+import org.inspirenxe.strata.core.widget.SeparatorImpl;
+import org.inspirenxe.strata.core.widget.SliderImpl;
+import org.inspirenxe.strata.core.widget.TabBarImpl;
 import org.inspirenxe.strata.core.widget.TextBoxImpl;
+import org.inspirenxe.strata.core.widget.WindowImpl;
 import org.inspirenxe.strata.spi.Platform;
 
 import java.util.Objects;
+import java.util.function.Function;
 import java.util.function.Supplier;
 
 /**
@@ -39,6 +68,7 @@ import java.util.function.Supplier;
 public final class ComponentFactoryImpl implements ComponentFactory {
     private final Supplier<Theme> theme;
     private final Environment environment;
+    private Root root;
 
     /**
      * Creates the factory for a host.
@@ -46,11 +76,32 @@ public final class ComponentFactoryImpl implements ComponentFactory {
      * @param theme supplies the host's current theme; read each time {@link #theme()} is called, so a theme change
      *     shows up without a new factory
      * @param platform the host's platform, which backs {@link #environment()}
-     * @throws NullPointerException if {@code theme} is null
      */
     public ComponentFactoryImpl(final Supplier<Theme> theme, final Platform platform) {
         this.theme = Objects.requireNonNull(theme, "theme");
-        this.environment = new EnvironmentImpl(platform);
+        this.environment = new EnvironmentImpl(platform, this);
+    }
+
+    /**
+     * Ties the factory to the root of its host. {@link Root}'s constructor calls this.
+     *
+     * @param root the host's root
+     * @throws IllegalStateException if the factory already has a root
+     */
+    void bindRoot(final Root root) {
+        if (this.root != null) {
+            throw new IllegalStateException("This factory already belongs to a root");
+        }
+        this.root = Objects.requireNonNull(root, "root");
+    }
+
+    /**
+     * Returns the root of this factory's host.
+     *
+     * @return the root, or {@code null} before the host made it
+     */
+    public Root root() {
+        return this.root;
     }
 
     /**
@@ -65,6 +116,14 @@ public final class ComponentFactoryImpl implements ComponentFactory {
     @Override
     public Theme theme() {
         return this.theme.get();
+    }
+
+    @Override
+    public Overlays overlays() {
+        if (this.root == null) {
+            throw new IllegalStateException("This factory has no host yet");
+        }
+        return this.root.overlays();
     }
 
     @Override
@@ -93,6 +152,11 @@ public final class ComponentFactoryImpl implements ComponentFactory {
     }
 
     @Override
+    public ScrollPanel scrollPanel() {
+        return new ScrollPanelImpl(this);
+    }
+
+    @Override
     public Label label(final String text) {
         return new LabelImpl(this, text, null);
     }
@@ -100,6 +164,21 @@ public final class ComponentFactoryImpl implements ComponentFactory {
     @Override
     public Label label(final String text, final LabelBehavior behavior) {
         return new LabelImpl(this, text, Objects.requireNonNull(behavior, "behavior"));
+    }
+
+    @Override
+    public Image image(final SpriteId sprite) {
+        return new ImageImpl(this, sprite, null);
+    }
+
+    @Override
+    public Image image(final SpriteId sprite, final ImageBehavior behavior) {
+        return new ImageImpl(this, sprite, Objects.requireNonNull(behavior, "behavior"));
+    }
+
+    @Override
+    public Image image(final Visual visual) {
+        return new ImageImpl(this, visual, null);
     }
 
     @Override
@@ -113,6 +192,26 @@ public final class ComponentFactoryImpl implements ComponentFactory {
     }
 
     @Override
+    public CheckBox checkBox(final String text) {
+        return new CheckBoxImpl(this, text, null);
+    }
+
+    @Override
+    public CheckBox checkBox(final String text, final CheckBoxBehavior behavior) {
+        return new CheckBoxImpl(this, text, Objects.requireNonNull(behavior, "behavior"));
+    }
+
+    @Override
+    public Slider slider() {
+        return new SliderImpl(this, null);
+    }
+
+    @Override
+    public Slider slider(final SliderBehavior behavior) {
+        return new SliderImpl(this, Objects.requireNonNull(behavior, "behavior"));
+    }
+
+    @Override
     public TextBox textBox() {
         return new TextBoxImpl(this, null);
     }
@@ -120,6 +219,42 @@ public final class ComponentFactoryImpl implements ComponentFactory {
     @Override
     public TextBox textBox(final TextBoxBehavior behavior) {
         return new TextBoxImpl(this, Objects.requireNonNull(behavior, "behavior"));
+    }
+
+    @Override
+    public <T> ListView<T> listView(final Function<? super T, ? extends Component<?>> cellFactory) {
+        return new ListViewImpl<>(this, cellFactory);
+    }
+
+    @Override
+    public <T> ComboBox<T> comboBox(final Function<? super T, String> labelFunction) {
+        return new ComboBoxImpl<>(this, labelFunction);
+    }
+
+    @Override
+    public Window window(final String title) {
+        return new WindowImpl(this, title);
+    }
+
+    @Override
+    public MessageBox messageBox(final String title, final String message, final MessageBox.Buttons buttons) {
+        return new MessageBoxImpl(this, Objects.requireNonNull(title, "title"), Objects.requireNonNull(message, "message"),
+                Objects.requireNonNull(buttons, "buttons"));
+    }
+
+    @Override
+    public TabBar tabBar() {
+        return new TabBarImpl(this);
+    }
+
+    @Override
+    public ProgressBar progressBar() {
+        return new ProgressBarImpl(this);
+    }
+
+    @Override
+    public Separator separator(final Orientation orientation) {
+        return new SeparatorImpl(this, orientation);
     }
 
     @Override
@@ -139,7 +274,6 @@ public final class ComponentFactoryImpl implements ComponentFactory {
      *
      * @param component the component
      * @return its node
-     * @throws NullPointerException if {@code component} is null
      * @throws IllegalArgumentException if the component has no core node behind it (it implements a component
      *     interface directly), or another host's factory made it
      */

@@ -15,8 +15,6 @@ import java.util.Objects;
 public record EventType<E extends Event>(String name, Class<E> eventClass, boolean bubbles) {
     /**
      * Checks the arguments.
-     *
-     * @throws NullPointerException if {@code name} or {@code eventClass} is null
      */
     public EventType {
         Objects.requireNonNull(name, "name");

@@ -16,6 +16,21 @@ Every key the built-in widgets and hosts respond to. Control means Control witho
 |---|---|
 | Enter, keypad Enter, Space | Press (not on repeat) |
 
+## CheckBox, while focused
+
+| Keys | Action |
+|---|---|
+| Enter, keypad Enter, Space | Toggle (not on repeat) |
+
+## Slider, while focused
+
+| Keys | Action |
+|---|---|
+| Left, Down | Lower by the key step (repeats) |
+| Right, Up | Raise by the key step (repeats) |
+| Page Down, Page Up | Lower or raise by ten key steps |
+| Home, End | Go to the minimum or maximum |
+
 ## TextBox, while focused
 
 | Keys | Action |

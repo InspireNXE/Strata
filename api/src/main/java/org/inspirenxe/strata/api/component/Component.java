@@ -10,6 +10,7 @@ import org.inspirenxe.strata.api.geom.Rect;
 import org.inspirenxe.strata.api.layout.Anchor;
 import org.inspirenxe.strata.api.layout.HorizontalAlignment;
 import org.inspirenxe.strata.api.layout.VerticalAlignment;
+import org.inspirenxe.strata.api.theme.Border;
 import org.inspirenxe.strata.api.theme.Paint;
 import org.inspirenxe.strata.api.theme.Theme;
 
@@ -197,6 +198,14 @@ public interface Component<T extends Component<T>> {
     boolean isHovered();
 
     /**
+     * Returns whether the pointer is over this component or any of its descendants, so a list can light up the row
+     * whose label is hovered.
+     *
+     * @return true while this component or a descendant is hovered
+     */
+    boolean isHoverWithin();
+
+    /**
      * Returns whether a mouse button went down on this component and has not been released yet. Stays true while
      * the pointer is dragged away.
      *
@@ -234,7 +243,6 @@ public interface Component<T extends Component<T>> {
      *
      * @param margin the margin
      * @return this component
-     * @throws NullPointerException if {@code margin} is null
      */
     T setMargin(Insets margin);
 
@@ -345,7 +353,6 @@ public interface Component<T extends Component<T>> {
      * @param horizontal the horizontal alignment
      * @param vertical the vertical alignment
      * @return this component
-     * @throws NullPointerException if either alignment is null
      */
     T setAlignment(HorizontalAlignment horizontal, VerticalAlignment vertical);
 
@@ -360,6 +367,30 @@ public interface Component<T extends Component<T>> {
     }
 
     /**
+     * Returns the horizontal offset.
+     *
+     * @return how far the component is moved right of where layout puts it; 0 by default
+     */
+    float offsetX();
+
+    /**
+     * Returns the vertical offset.
+     *
+     * @return how far the component is moved down from where layout puts it; 0 by default
+     */
+    float offsetY();
+
+    /**
+     * Moves the component from where its parent's layout puts it, along with everything inside it. Siblings and the
+     * parent's size do not change, so this suits nudges and dragging, such as moving a window by its title bar.
+     *
+     * @param offsetX the distance to move right, in UI units; negative moves left
+     * @param offsetY the distance to move down, in UI units; negative moves up
+     * @return this component
+     */
+    T setOffset(float offsetX, float offsetY);
+
+    /**
      * Returns the background paint.
      *
      * @return the background; {@link Paint#NONE} by default
@@ -372,9 +403,51 @@ public interface Component<T extends Component<T>> {
      *
      * @param background the background, or {@link Paint#NONE} for none
      * @return this component
-     * @throws NullPointerException if {@code background} is null
      */
     T setBackground(Paint background);
+
+    /**
+     * Returns the border.
+     *
+     * @return the border; {@link Border#NONE} by default
+     */
+    Border border();
+
+    /**
+     * Sets the lines drawn along the inside of the component's edges, over its background and under its content.
+     * A border takes no space in layout, so give a container padding at least as wide as its border to keep
+     * children off it.
+     *
+     * @param border the border, or {@link Border#NONE} for none
+     * @return this component
+     */
+    T setBorder(Border border);
+
+    /**
+     * Returns the tooltip.
+     *
+     * @return the tooltip, or {@code null} for none
+     */
+    Tooltip tooltip();
+
+    /**
+     * Sets what the host shows near the pointer while it rests on this component. A descendant without a tooltip
+     * shows its nearest ancestor's.
+     *
+     * @param tooltip the tooltip, or {@code null} for none
+     * @return this component
+     */
+    T setTooltip(Tooltip tooltip);
+
+    /**
+     * Sets a plain-text tooltip. Line breaks ({@code \n}) start new lines.
+     *
+     * @param text the text, or {@code null} for no tooltip
+     * @return this component
+     */
+    default T setTooltip(final String text) {
+        return this.setTooltip(text == null ? null : Tooltip.text(text));
+    }
 
     /**
      * Returns where the component sits, in the host's coordinates, as of the last layout. Before the first layout
@@ -442,7 +515,6 @@ public interface Component<T extends Component<T>> {
      * @param handler the handler
      * @param owner a token for {@link #removeHandlers(Object)}, or {@code null}
      * @return a subscription that removes the handler when closed; closing it twice does nothing
-     * @throws NullPointerException if {@code type}, {@code phase} or {@code handler} is null
      */
     <E extends Event> Subscription on(EventType<E> type, Phase phase, EventHandler<? super E> handler, Object owner);
 
@@ -490,7 +562,6 @@ public interface Component<T extends Component<T>> {
      * @param handler the handler
      * @param owner a token for {@link #removeHandlers(Object)}, or {@code null}
      * @return a subscription that removes the handler when closed; closing it twice does nothing
-     * @throws NullPointerException if {@code type}, {@code phase} or {@code handler} is null
      */
     <E extends Event> Subscription onWithSnapshot(EventType<E> type, Phase phase, EventHandler<? super E> handler,
                                                   Object owner);
@@ -499,7 +570,6 @@ public interface Component<T extends Component<T>> {
      * Removes every handler on this component registered with the given owner. Compared by identity.
      *
      * @param owner the token passed to {@link #on(EventType, Phase, EventHandler, Object)}
-     * @throws NullPointerException if {@code owner} is null
      */
     void removeHandlers(Object owner);
 }

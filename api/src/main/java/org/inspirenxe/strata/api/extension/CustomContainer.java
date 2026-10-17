@@ -3,15 +3,15 @@ package org.inspirenxe.strata.api.extension;
 import org.inspirenxe.strata.api.ComponentFactory;
 import org.inspirenxe.strata.api.component.Component;
 import org.inspirenxe.strata.api.component.Container;
-import org.inspirenxe.strata.api.extension.peer.ContainerPeer;
 import org.inspirenxe.strata.api.geom.Insets;
 import org.inspirenxe.strata.api.geom.Rect;
 
 import java.util.List;
 
 /**
- * Base class for new layouts: a {@link CustomComponent} that also measures and places children. Strata's
- * {@code AnchorPanel}, {@code StackPanel}, {@code GridPanel} and {@code AbsolutePanel} are built on it.
+ * Base class for new layouts: a {@link CustomComposite} whose children callers add and remove. Strata's
+ * {@code AnchorPanel}, {@code StackPanel}, {@code GridPanel}, {@code AbsolutePanel} and {@code ScrollPanel} are
+ * built on it.
  *
  * <pre>{@code
  * // Lays children out in a row from right to left
@@ -42,28 +42,21 @@ import java.util.List;
  * }</pre>
  *
  * <h2>Requirements for subclasses</h2>
- * <p>Everything required of a {@link CustomComponent}, and:</p>
+ * <p>Everything required of a {@link CustomComposite}, and:</p>
  * <ul>
- *     <li>In {@link #measure}, measure every child, visible or not, with {@link MeasureContext#measure}. A child that
- *     is not measured keeps a stale size.</li>
- *     <li>In {@link #arrange}, give every child a slot with {@link ArrangeContext#arrange}, hidden children
- *     included. A child that is not arranged keeps stale bounds.</li>
  *     <li>Include the {@linkplain #padding() padding} yourself: subtract it from the space you offer children, add
  *     it to the size you return, and place children inside {@link #contentBox()}.</li>
- *     <li>Keep per-child data (such as a grid cell) in your own map, and drop it in {@link #onChildRemoved}.</li>
- *     <li>Leave drawing children to Strata. {@link #paint} draws under them; they are drawn on top, clipped to the
- *     bounds while {@link #clipsChildren()} is true.</li>
+ *     <li>Expect callers to add and remove children at any time outside layout.</li>
  * </ul>
  *
  * @param <T> the type callers see the container as
  */
-public abstract class CustomContainer<T extends Container<T>> extends CustomComponent<T> implements Container<T> {
+public abstract class CustomContainer<T extends Container<T>> extends CustomComposite<T> implements Container<T> {
 
     /**
      * Creates the container and its peer.
      *
      * @param factory the factory of the host that will show this container
-     * @throws NullPointerException if {@code factory} is null
      */
     protected CustomContainer(final ComponentFactory factory) {
         this(factory, null);
@@ -74,30 +67,9 @@ public abstract class CustomContainer<T extends Container<T>> extends CustomComp
      *
      * @param factory the factory of the host that will show this container
      * @param behavior wraps this container's hooks; {@code null} for none
-     * @throws NullPointerException if {@code factory} is null
      */
     protected CustomContainer(final ComponentFactory factory, final ComponentBehavior<T> behavior) {
-        super(factory, behavior, true);
-    }
-
-    private ContainerPeer containerPeer() {
-        return (ContainerPeer) this.peer();
-    }
-
-    /**
-     * Gives every child its slot. Called after {@link #measure}, with the container's final bounds.
-     *
-     * @param context child sizes and slot assignment
-     * @param bounds the container's bounds, the same as {@link #bounds()}
-     */
-    protected abstract void arrange(ArrangeContext context, Rect bounds);
-
-    /**
-     * Called after a child is removed, to drop any data kept about it. The default does nothing.
-     *
-     * @param child the removed child
-     */
-    protected void onChildRemoved(final Component<?> child) {
+        super(factory, behavior);
     }
 
     /**
@@ -108,16 +80,6 @@ public abstract class CustomContainer<T extends Container<T>> extends CustomComp
      */
     protected final Rect contentBox() {
         return this.bounds().shrink(this.padding());
-    }
-
-    @Override
-    final void arrangeHook(final ArrangeContext context, final Rect bounds) {
-        this.arrange(context, bounds);
-    }
-
-    @Override
-    final void childRemovedHook(final Component<?> child) {
-        this.onChildRemoved(child);
     }
 
     // ------------------------------------------------------------------

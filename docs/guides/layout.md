@@ -26,8 +26,15 @@ A change that affects size, such as new label text, a new child or a different m
 | Fixed width and height | unset (`NaN`) | Replaces the measured size and overrides `STRETCH` |
 | Horizontal alignment | `LEFT` | Where it sits across its slot's width |
 | Vertical alignment | `TOP` | Where it sits across its slot's height |
+| Offset | 0, 0 | Moves it after layout places it; see [Offset](#offset) |
 
 Containers add padding (`Insets.NONE` by default): space inside their edges that children stay out of.
+
+Every component also has a border (`setBorder(Border.of(argb, width))`, a width per side with `new Border(argb, insets)`). It draws along the inside of the bounds, over the background, and takes no space in layout, so give a container padding at least as wide as its border.
+
+### Offset
+
+`setOffset(dx, dy)` moves a component, and everything inside it, from where its parent's layout puts it. Siblings and the parent's size do not change, and the move needs no new measure. Use it for small nudges and for dragging; a [window](widgets.md#window) moves by its offset when its title bar is dragged.
 
 ### How a component's size is decided
 
@@ -161,9 +168,31 @@ Each child sits at a fixed position measured from the top-left corner of the con
 
 Use it for free placement, such as a board of draggable pieces. For forms and menus, the other containers adapt to text and screen size, so prefer them.
 
+## ScrollPanel
+
+Shows part of content larger than itself. Children are laid out as in an `AnchorPanel`, each given the whole scrolled area; most panels hold one `StackPanel` or `GridPanel`.
+
+```java
+StackPanel rows = factory.stackPanel().setSpacing(1);
+rows.setAlignment(HorizontalAlignment.STRETCH, VerticalAlignment.TOP);
+ScrollPanel scroll = factory.scrollPanel().add(rows);
+scroll.setHeight(200);
+```
+
+Each axis has a policy: `NEVER` (the axis does not scroll, and children get the viewport's size on it, so text wraps), `AUTO` (it scrolls, and its bar shows only when needed) or `ALWAYS`. The default is vertical `AUTO`, horizontal `NEVER`. The panel asks for its content's size, but no more than it is offered on a scrolling axis, so give it a height or stretch it in a parent with room.
+
+| Input | Scrolls |
+|---|---|
+| Wheel | 10 units a notch, set with `setScrollRate`. A scroll past the end is not consumed, so it reaches an outer panel. |
+| The bar | Drag the thumb, or press the track to page |
+| Up, Down, Page Up, Page Down, Home, End | When no focused descendant used them |
+| Focus | A descendant that gains focus is scrolled into view |
+
+`setScroll(x, y)`, `scrollBy`, `scrollToVisible(component)` and `onScrollChanged` work from code. Scrolling moves the children's real bounds without measuring them again, so pointer positions and `bounds()` stay in host coordinates inside a scroll panel. Children are clipped to the viewport, the bounds less the padding and the bar's gutter. For long lists of similar rows, use a [`ListView`](widgets.md#listview), which builds only the rows in view.
+
 ## Clipping
 
-Containers clip their children to their own bounds by default. A clipped part of a child is neither drawn nor hit by the pointer, so a child scrolled out of view cannot be clicked. `setClipChildren(false)` lets children draw outside, for example a focus glow or a tooltip that hangs over the edge.
+Containers clip their children to their own bounds by default. A clipped part of a child is neither drawn nor hit by the pointer, so a child scrolled out of view cannot be clicked, and a child entirely outside the clip is not drawn at all. `setClipChildren(false)` lets children draw outside, for example a focus glow. For something that must hang over everything, such as a menu, use a [popup](overlays.md#popups).
 
 ## Recipes
 

@@ -52,7 +52,6 @@ public interface GridPanel extends Container<GridPanel> {
      *
      * @param length the column's length
      * @return this grid
-     * @throws NullPointerException if {@code length} is null
      */
     GridPanel addColumn(GridLength length);
 
@@ -61,7 +60,6 @@ public interface GridPanel extends Container<GridPanel> {
      *
      * @param length the row's length
      * @return this grid
-     * @throws NullPointerException if {@code length} is null
      */
     GridPanel addRow(GridLength length);
 
@@ -167,8 +165,6 @@ public interface GridPanel extends Container<GridPanel> {
 
         /**
          * Copies the definitions.
-         *
-         * @throws NullPointerException if either list is null or holds null
          */
         public State {
             columns = List.copyOf(columns);

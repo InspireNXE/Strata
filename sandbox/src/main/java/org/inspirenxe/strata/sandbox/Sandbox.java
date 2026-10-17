@@ -1,6 +1,7 @@
 package org.inspirenxe.strata.sandbox;
 
 import org.inspirenxe.strata.api.theme.Themes;
+import org.inspirenxe.strata.sandbox.almura.AlmuraMocks;
 import org.inspirenxe.strata.swing.StrataPanel;
 import org.inspirenxe.strata.swing.SwingTextMetrics;
 import org.inspirenxe.strata.swing.SwingPlatform;
@@ -14,7 +15,7 @@ import javax.swing.SwingUtilities;
 
 /**
  * Opens the demo screen in a window. {@code --snapshot <file.png>} renders one frame to a PNG instead, without a
- * display.
+ * display, and {@code --mocks <directory>} renders the Almura mock-ups in several states.
  */
 public final class Sandbox {
     private static final float SCALE = 2f;
@@ -29,13 +30,17 @@ public final class Sandbox {
             System.out.println("Wrote " + out.getAbsolutePath());
             return;
         }
+        if (args.length == 2 && args[0].equals("--mocks")) {
+            AlmuraMocks.snapshots(new File(args[1]), Themes.flat());
+            return;
+        }
         SwingUtilities.invokeLater(Sandbox::openWindow);
     }
 
     private static void openWindow() {
         final SwingPlatform platform = new SwingPlatform(SwingTextMetrics.defaults());
         final StrataPanel panel = new StrataPanel(platform, Themes.flat(), SCALE);
-        panel.screens().push(new DemoScreen());
+        panel.screens().push(new DemoScreen(screen -> panel.screens().push(screen)));
 
         final JFrame frame = new JFrame("Strata sandbox");
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);

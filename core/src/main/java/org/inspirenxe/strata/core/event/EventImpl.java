@@ -23,7 +23,6 @@ public abstract class EventImpl implements Event {
      * Creates an event aimed at a component. {@link #current()} starts as the target.
      *
      * @param target the component the event is fired at
-     * @throws NullPointerException if {@code target} is null
      */
     protected EventImpl(final Component<?> target) {
         this.target = Objects.requireNonNull(target, "target");

@@ -33,7 +33,6 @@ public final class ScreenStackImpl implements ScreenStack {
      *
      * @param platform the engine's platform, shared by every screen's host
      * @param theme the theme for every screen pushed
-     * @throws NullPointerException if {@code platform} or {@code theme} is null
      */
     public ScreenStackImpl(final Platform platform, final Theme theme) {
         this.platform = Objects.requireNonNull(platform, "platform");

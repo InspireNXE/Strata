@@ -63,7 +63,6 @@ public final class ButtonImpl extends CustomComponent<Button> implements Button 
      * @param ui the factory that owns the button
      * @param text the caption
      * @param behavior the decorator for the button's hooks, or {@code null} for none
-     * @throws NullPointerException if {@code text} is null
      */
     @SuppressWarnings("this-escape")
     public ButtonImpl(final ComponentFactory ui, final String text, final ButtonBehavior behavior) {

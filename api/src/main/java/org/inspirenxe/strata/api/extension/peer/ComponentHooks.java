@@ -87,4 +87,26 @@ public interface ComponentHooks {
      * @param child the removed child
      */
     void childRemoved(Component<?> child);
+
+    /**
+     * Forwards to {@code CustomComposite.childClip}; returns the bounds for a leaf component.
+     *
+     * @return the rectangle children are clipped and hit-tested against
+     */
+    Rect childClip();
+
+    /**
+     * Forwards to {@code CustomComposite.paintOverChildren}; does nothing for a leaf component.
+     *
+     * @param painter the painter
+     * @param bounds the component's bounds
+     */
+    void paintOverChildren(Painter painter, Rect bounds);
+
+    /**
+     * Forwards to {@code CustomComposite.onDescendantFocused}; does nothing for a leaf component.
+     *
+     * @param descendant the component inside this one that gained focus
+     */
+    void descendantFocused(Component<?> descendant);
 }

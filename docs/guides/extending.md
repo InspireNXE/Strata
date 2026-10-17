@@ -10,7 +10,7 @@ There are three ways to extend Strata. Pick the lightest one that does the job.
 
 Strata's own widgets and panels are written the third way, on the same public base classes, so you have everything they have.
 
-![A custom check box and a custom wrapping layout](../assets/images/extending-custom.png)
+![A custom switch and a custom wrapping layout](../assets/images/extending-custom.png)
 
 ## Decorate a built-in with a behavior
 
@@ -64,11 +64,11 @@ The class is not a `Component`, so you add `field.component()` rather than `fiel
 Subclass `CustomComponent<T>`. To let other code see your component as a type of its own, declare an interface that extends `Component<YourInterface>` and implement it:
 
 ```java
---8<-- "extending/CheckBox.java:interface"
+--8<-- "extending/ToggleSwitch.java:interface"
 ```
 
 ```java
---8<-- "extending/CheckBoxImpl.java:impl"
+--8<-- "extending/ToggleSwitchImpl.java:impl"
 ```
 
 Using it looks like using a built-in:

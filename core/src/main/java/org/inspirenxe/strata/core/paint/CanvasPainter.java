@@ -5,6 +5,7 @@ import org.inspirenxe.strata.api.geom.Insets;
 import org.inspirenxe.strata.api.geom.Rect;
 import org.inspirenxe.strata.api.text.TextSpan;
 import org.inspirenxe.strata.api.theme.SpriteId;
+import org.inspirenxe.strata.api.visual.Visual;
 import org.inspirenxe.strata.spi.Canvas;
 
 /**
@@ -84,5 +85,24 @@ public final class CanvasPainter implements Painter {
         } finally {
             this.canvas.popTransform();
         }
+    }
+
+    @Override
+    public void scaled(final float scale, final Runnable draw) {
+        if (scale == 1f) {
+            draw.run();
+            return;
+        }
+        this.canvas.pushScale(scale);
+        try {
+            draw.run();
+        } finally {
+            this.canvas.popTransform();
+        }
+    }
+
+    @Override
+    public void visual(final Visual visual, final Rect rect, final int tint) {
+        this.canvas.visual(visual, rect, tint);
     }
 }

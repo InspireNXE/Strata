@@ -5,6 +5,7 @@ import org.inspirenxe.strata.api.geom.Insets;
 import org.inspirenxe.strata.api.geom.Rect;
 import org.inspirenxe.strata.api.text.TextSpan;
 import org.inspirenxe.strata.api.theme.SpriteId;
+import org.inspirenxe.strata.api.visual.Visual;
 
 /**
  * What an engine draws for Strata. A host calls it during {@code render}; components never see it (they get a
@@ -105,9 +106,30 @@ public interface Canvas {
     void pushTranslation(float dx, float dy);
 
     /**
-     * Restores the transform in place before the matching {@link #pushTranslation(float, float)}.
+     * Multiplies every later coordinate and size by a factor, about the current origin, until the matching
+     * {@link #popTransform()}. Factors multiply when nested, and translations pushed inside are scaled too. Text
+     * drawn while scaled must come out at the scaled size, matching the platform's text widths times the factor.
+     *
+     * @param scale the factor, greater than 0
+     */
+    void pushScale(float scale);
+
+    /**
+     * Restores the transform in place before the matching {@link #pushTranslation(float, float)} or
+     * {@link #pushScale(float)}.
      */
     void popTransform();
+
+    /**
+     * Draws an engine visual stretched over a rectangle. Draw the visuals this adapter makes; for any other visual
+     * draw a visible placeholder instead of throwing, as for a missing sprite.
+     *
+     * @param visual the visual
+     * @param rect the area
+     * @param tint an ARGB color multiplied with the visual where the engine supports tinting it; opaque white leaves
+     *             it unchanged
+     */
+    void visual(Visual visual, Rect rect, int tint);
 
     /**
      * Starts a new layer: everything drawn after this call must appear above everything drawn before it, even if

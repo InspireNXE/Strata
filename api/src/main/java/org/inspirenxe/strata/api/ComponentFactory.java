@@ -1,5 +1,6 @@
 package org.inspirenxe.strata.api;
 
+import org.inspirenxe.strata.api.component.Component;
 import org.inspirenxe.strata.api.extension.ComponentBehavior;
 import org.inspirenxe.strata.api.extension.CustomComponent;
 import org.inspirenxe.strata.api.extension.peer.ComponentHooks;
@@ -9,14 +10,33 @@ import org.inspirenxe.strata.api.layout.AbsolutePanel;
 import org.inspirenxe.strata.api.layout.AnchorPanel;
 import org.inspirenxe.strata.api.layout.GridPanel;
 import org.inspirenxe.strata.api.layout.Orientation;
+import org.inspirenxe.strata.api.layout.ScrollPanel;
 import org.inspirenxe.strata.api.layout.StackPanel;
+import org.inspirenxe.strata.api.overlay.Overlays;
+import org.inspirenxe.strata.api.theme.SpriteId;
 import org.inspirenxe.strata.api.theme.Theme;
 import org.inspirenxe.strata.api.widget.Button;
 import org.inspirenxe.strata.api.widget.ButtonBehavior;
+import org.inspirenxe.strata.api.widget.CheckBox;
+import org.inspirenxe.strata.api.widget.CheckBoxBehavior;
+import org.inspirenxe.strata.api.widget.ComboBox;
+import org.inspirenxe.strata.api.widget.Image;
+import org.inspirenxe.strata.api.widget.ImageBehavior;
 import org.inspirenxe.strata.api.widget.Label;
 import org.inspirenxe.strata.api.widget.LabelBehavior;
+import org.inspirenxe.strata.api.widget.ListView;
+import org.inspirenxe.strata.api.widget.MessageBox;
+import org.inspirenxe.strata.api.widget.ProgressBar;
+import org.inspirenxe.strata.api.widget.Separator;
+import org.inspirenxe.strata.api.widget.Slider;
+import org.inspirenxe.strata.api.widget.SliderBehavior;
+import org.inspirenxe.strata.api.widget.TabBar;
 import org.inspirenxe.strata.api.widget.TextBox;
 import org.inspirenxe.strata.api.widget.TextBoxBehavior;
+import org.inspirenxe.strata.api.widget.Window;
+import org.inspirenxe.strata.api.visual.Visual;
+
+import java.util.function.Function;
 
 /**
  * Makes components. Every host has its own factory; a screen receives it in
@@ -42,6 +62,13 @@ public interface ComponentFactory {
     Theme theme();
 
     /**
+     * Returns the overlays of the host this factory belongs to, for opening popups and dialogs over its screen.
+     *
+     * @return the host's overlays
+     */
+    Overlays overlays();
+
+    /**
      * Makes an {@link AnchorPanel}.
      *
      * @return a new anchor panel
@@ -60,7 +87,6 @@ public interface ComponentFactory {
      *
      * @param orientation the direction to lay out children
      * @return a new stack panel
-     * @throws NullPointerException if {@code orientation} is null
      */
     StackPanel stackPanel(Orientation orientation);
 
@@ -79,11 +105,17 @@ public interface ComponentFactory {
     AbsolutePanel absolutePanel();
 
     /**
+     * Makes a {@link ScrollPanel} that scrolls vertically.
+     *
+     * @return a new scroll panel
+     */
+    ScrollPanel scrollPanel();
+
+    /**
      * Makes a {@link Label}.
      *
      * @param text the text; {@code \n} starts a new line
      * @return a new label
-     * @throws NullPointerException if {@code text} is null
      */
     Label label(String text);
 
@@ -93,16 +125,39 @@ public interface ComponentFactory {
      * @param text the text
      * @param behavior the behavior
      * @return a new label
-     * @throws NullPointerException if an argument is null
      */
     Label label(String text, LabelBehavior behavior);
+
+    /**
+     * Makes an {@link Image}, 16 by 16 units until {@linkplain Image#setImageSize resized}.
+     *
+     * @param sprite the sprite to draw
+     * @return a new image
+     */
+    Image image(SpriteId sprite);
+
+    /**
+     * Makes an {@link Image} decorated with a behavior.
+     *
+     * @param sprite the sprite to draw
+     * @param behavior the behavior
+     * @return a new image
+     */
+    Image image(SpriteId sprite, ImageBehavior behavior);
+
+    /**
+     * Makes an {@link Image} of an engine visual, at the visual's natural size.
+     *
+     * @param visual the visual to draw
+     * @return a new image
+     */
+    Image image(Visual visual);
 
     /**
      * Makes a {@link Button}.
      *
      * @param text the caption
      * @return a new button
-     * @throws NullPointerException if {@code text} is null
      */
     Button button(String text);
 
@@ -112,9 +167,40 @@ public interface ComponentFactory {
      * @param text the caption
      * @param behavior the behavior
      * @return a new button
-     * @throws NullPointerException if an argument is null
      */
     Button button(String text, ButtonBehavior behavior);
+
+    /**
+     * Makes an unchecked {@link CheckBox}.
+     *
+     * @param text the caption
+     * @return a new check box
+     */
+    CheckBox checkBox(String text);
+
+    /**
+     * Makes an unchecked {@link CheckBox} decorated with a behavior.
+     *
+     * @param text the caption
+     * @param behavior the behavior
+     * @return a new check box
+     */
+    CheckBox checkBox(String text, CheckBoxBehavior behavior);
+
+    /**
+     * Makes a {@link Slider} over the range 0 to 1, at 0, with no step.
+     *
+     * @return a new slider
+     */
+    Slider slider();
+
+    /**
+     * Makes a {@link Slider} decorated with a behavior, over the range 0 to 1, at 0, with no step.
+     *
+     * @param behavior the behavior
+     * @return a new slider
+     */
+    Slider slider(SliderBehavior behavior);
 
     /**
      * Makes an empty {@link TextBox}.
@@ -128,9 +214,67 @@ public interface ComponentFactory {
      *
      * @param behavior the behavior
      * @return a new text box
-     * @throws NullPointerException if {@code behavior} is null
      */
     TextBox textBox(TextBoxBehavior behavior);
+
+    /**
+     * Makes an empty {@link ListView}.
+     *
+     * @param <T> the type of the items
+     * @param cellFactory makes the component for an item's row
+     * @return a new list
+     */
+    <T> ListView<T> listView(Function<? super T, ? extends Component<?>> cellFactory);
+
+    /**
+     * Makes a {@link ComboBox} with no options.
+     *
+     * @param <T> the type of the options
+     * @param labelFunction returns the text for an option
+     * @return a new combo box
+     */
+    <T> ComboBox<T> comboBox(Function<? super T, String> labelFunction);
+
+    /**
+     * Makes an empty {@link Window}.
+     *
+     * @param title the title
+     * @return a new window
+     */
+    Window window(String title);
+
+    /**
+     * Makes a {@link MessageBox}. Show it with {@link Overlays#dialog}.
+     *
+     * @param title the window's title
+     * @param message the message; it wraps, and {@code \n} starts a new line
+     * @param buttons which buttons it has
+     * @return a new message box
+     */
+    MessageBox messageBox(String title, String message, MessageBox.Buttons buttons);
+
+    /**
+     * Makes a {@link TabBar} with no tabs.
+     *
+     * @return a new tab bar
+     */
+    TabBar tabBar();
+
+    /**
+     * Makes an empty {@link ProgressBar}.
+     *
+     * @return a new progress bar
+     */
+    ProgressBar progressBar();
+
+    /**
+     * Makes a {@link Separator}.
+     *
+     * @param orientation {@link Orientation#HORIZONTAL} for a line across, {@link Orientation#VERTICAL} for one
+     *                    down
+     * @return a new separator
+     */
+    Separator separator(Orientation orientation);
 
     /**
      * Creates the peer of a new leaf component. Called by {@link CustomComponent}'s constructor; do not call it
@@ -144,8 +288,8 @@ public interface ComponentFactory {
     ComponentPeer createPeer(CustomComponent<?> owner, ComponentHooks hooks, ComponentBehavior<?> behavior);
 
     /**
-     * Creates the peer of a new container. Called by {@link org.inspirenxe.strata.api.extension.CustomContainer}'s
-     * constructor; do not call it yourself.
+     * Creates the peer of a new container or composite. Called by
+     * {@link org.inspirenxe.strata.api.extension.CustomComposite}'s constructor; do not call it yourself.
      *
      * @param owner the container being constructed
      * @param hooks how the peer reaches the container's protected methods

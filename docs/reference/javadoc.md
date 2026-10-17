@@ -2,6 +2,8 @@
 
 The Javadoc is the contract. Every public and protected type and member in the library modules is documented, and the build fails on a missing comment. The API and SPI docs state what implementors must guarantee: threading, null handling, units, coordinate spaces and what happens on bad input.
 
+No parameter accepts null unless its documentation says so, and passing null where it isn't allowed throws `NullPointerException`. The Javadoc doesn't repeat this on every method.
+
 | Module | For | Javadoc |
 |---|---|---|
 | `api` | Everyone writing screens and components | [Open](../javadoc/api/index.html) |

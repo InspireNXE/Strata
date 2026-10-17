@@ -74,6 +74,12 @@ public final class EventTypes {
      * The target lost keyboard focus. Direct.
      */
     public static final EventType<FocusEvent> FOCUS_LOST = EventType.direct("focus_lost", FocusEvent.class);
+    /**
+     * The held modifier keys changed, by a modifier key going down or up or by input arriving with different
+     * modifiers. Fired at the screen's content and at the content of each open overlay. Direct. No default
+     * behavior.
+     */
+    public static final EventType<ModifiersEvent> MODIFIERS_CHANGED = EventType.direct("modifiers_changed", ModifiersEvent.class);
 
     private EventTypes() {
     }

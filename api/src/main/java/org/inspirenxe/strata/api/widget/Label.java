@@ -2,8 +2,11 @@ package org.inspirenxe.strata.api.widget;
 
 import org.inspirenxe.strata.api.component.Component;
 import org.inspirenxe.strata.api.layout.HorizontalAlignment;
+import org.inspirenxe.strata.api.text.TextOverflow;
+import org.inspirenxe.strata.api.text.TextSpan;
 import org.inspirenxe.strata.api.text.TextStyle;
 
+import java.util.List;
 import java.util.Objects;
 
 /**
@@ -11,7 +14,15 @@ import java.util.Objects;
  *
  * <p>The text breaks into lines at each {@code \n}. With {@linkplain #setWrap(boolean) wrapping} on, it also breaks
  * between words to fit the width it is offered, and breaks a single word that is wider than a whole line between
- * characters. The label's desired size is its widest line by the number of lines times the line height.</p>
+ * characters. The label's desired size is its widest line by the number of lines times the line height, all times
+ * the {@linkplain #setTextScale text scale}.</p>
+ *
+ * <p>Text is either plain, drawn in the label's {@linkplain #style() style}, or made of
+ * {@linkplain #setSpans spans} that each keep their own style, such as a white item name followed by a gray count.
+ * Spans wrap and break like plain text.</p>
+ *
+ * <p>With {@link TextOverflow#ELLIPSIS}, a line wider than the label's bounds is cut short and ends in
+ * {@code ...}, and the label asks for no more width than it is offered.</p>
  *
  * <p>A label is not focusable and has no default behavior for input, so clicks and keys pass through to its
  * ancestors.</p>
@@ -27,6 +38,8 @@ import java.util.Objects;
  *         .setStyle(TextStyle.DEFAULT.withBold(true));
  * Label help = factory.label(longText).setWrap(true);
  * help.setAlignment(HorizontalAlignment.STRETCH, VerticalAlignment.TOP);
+ * Label row = factory.label("").setSpans(List.of(
+ *         new TextSpan("Diamond", white), new TextSpan(" x 64", gray)));
  * }</pre>
  *
  * <p>Get one from {@link org.inspirenxe.strata.api.ComponentFactory#label(String)}. Do not implement this
@@ -46,13 +59,60 @@ public interface Label extends Component<Label> {
     String text();
 
     /**
-     * Replaces the text. A new layout runs if it changed.
+     * Replaces the text with plain text in the label's style, dropping any spans. A new layout runs if it changed.
      *
      * @param text the new text; {@code \n} starts a new line
      * @return this label
-     * @throws NullPointerException if {@code text} is null
      */
     Label setText(String text);
+
+    /**
+     * Returns the spans.
+     *
+     * @return the spans set with {@link #setSpans}, or an empty list while the text is plain
+     */
+    List<TextSpan> spans();
+
+    /**
+     * Replaces the text with spans drawn one after another, each in its own style. {@link #text()} then returns
+     * their text joined. A {@code \n} inside a span starts a new line. A new layout runs if they changed.
+     *
+     * @param spans the spans, in reading order
+     * @return this label
+     */
+    Label setSpans(List<TextSpan> spans);
+
+    /**
+     * Returns the text scale.
+     *
+     * @return the factor text is drawn and measured at; 1 by default
+     */
+    float textScale();
+
+    /**
+     * Draws the text larger or smaller than the font's size, such as 0.8 for small print or 2 for a banner. The
+     * label measures at the scaled size.
+     *
+     * @param scale the factor
+     * @return this label
+     * @throws IllegalArgumentException if the scale is not greater than 0 or not finite
+     */
+    Label setTextScale(float scale);
+
+    /**
+     * Returns what happens to a line wider than the label.
+     *
+     * @return the overflow; {@link TextOverflow#VISIBLE} by default
+     */
+    TextOverflow overflow();
+
+    /**
+     * Sets what happens to a line wider than the label's bounds.
+     *
+     * @param overflow the overflow
+     * @return this label
+     */
+    Label setOverflow(TextOverflow overflow);
 
     /**
      * Returns the style the text is drawn in.
@@ -99,7 +159,6 @@ public interface Label extends Component<Label> {
      *
      * @param textAlignment the alignment
      * @return this label
-     * @throws NullPointerException if {@code textAlignment} is null
      */
     Label setTextAlignment(HorizontalAlignment textAlignment);
 
@@ -116,8 +175,6 @@ public interface Label extends Component<Label> {
 
         /**
          * Checks the fields that must not be null.
-         *
-         * @throws NullPointerException if {@code text} or {@code textAlignment} is null
          */
         public State {
             Objects.requireNonNull(text, "text");

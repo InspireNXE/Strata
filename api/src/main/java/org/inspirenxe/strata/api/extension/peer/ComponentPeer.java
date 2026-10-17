@@ -2,6 +2,7 @@ package org.inspirenxe.strata.api.extension.peer;
 
 import org.inspirenxe.strata.api.component.Container;
 import org.inspirenxe.strata.api.component.CursorKind;
+import org.inspirenxe.strata.api.component.Tooltip;
 import org.inspirenxe.strata.api.event.Event;
 import org.inspirenxe.strata.api.event.EventHandler;
 import org.inspirenxe.strata.api.event.EventType;
@@ -12,6 +13,7 @@ import org.inspirenxe.strata.api.geom.Insets;
 import org.inspirenxe.strata.api.geom.Rect;
 import org.inspirenxe.strata.api.layout.HorizontalAlignment;
 import org.inspirenxe.strata.api.layout.VerticalAlignment;
+import org.inspirenxe.strata.api.theme.Border;
 import org.inspirenxe.strata.api.theme.Paint;
 import org.inspirenxe.strata.api.theme.Theme;
 
@@ -159,6 +161,13 @@ public interface ComponentPeer {
     boolean isHovered();
 
     /**
+     * See {@link org.inspirenxe.strata.api.component.Component#isHoverWithin()}.
+     *
+     * @return true while this component or a descendant is hovered
+     */
+    boolean isHoverWithin();
+
+    /**
      * See {@link org.inspirenxe.strata.api.component.Component#isPressed()}.
      *
      * @return true while pressed
@@ -274,6 +283,56 @@ public interface ComponentPeer {
     void setAlignment(HorizontalAlignment horizontal, VerticalAlignment vertical);
 
     /**
+     * See {@link org.inspirenxe.strata.api.component.Component#offsetX()}.
+     *
+     * @return the horizontal offset
+     */
+    float offsetX();
+
+    /**
+     * See {@link org.inspirenxe.strata.api.component.Component#offsetY()}.
+     *
+     * @return the vertical offset
+     */
+    float offsetY();
+
+    /**
+     * See {@link org.inspirenxe.strata.api.component.Component#setOffset(float, float)}.
+     *
+     * @param offsetX the horizontal offset
+     * @param offsetY the vertical offset
+     */
+    void setOffset(float offsetX, float offsetY);
+
+    /**
+     * See {@link org.inspirenxe.strata.api.component.Component#border()}.
+     *
+     * @return the border
+     */
+    Border border();
+
+    /**
+     * See {@link org.inspirenxe.strata.api.component.Component#setBorder(Border)}.
+     *
+     * @param border the border
+     */
+    void setBorder(Border border);
+
+    /**
+     * See {@link org.inspirenxe.strata.api.component.Component#tooltip()}.
+     *
+     * @return the tooltip, or null
+     */
+    Tooltip tooltip();
+
+    /**
+     * See {@link org.inspirenxe.strata.api.component.Component#setTooltip(Tooltip)}.
+     *
+     * @param tooltip the tooltip, or null
+     */
+    void setTooltip(Tooltip tooltip);
+
+    /**
      * See {@link org.inspirenxe.strata.api.component.Component#background()}.
      *
      * @return the background
@@ -312,6 +371,11 @@ public interface ComponentPeer {
      * See {@link org.inspirenxe.strata.api.component.Component#invalidateLayout()}.
      */
     void invalidateLayout();
+
+    /**
+     * See {@code CustomComposite.invalidateArrangement()}.
+     */
+    void invalidateArrangement();
 
     /**
      * See {@link org.inspirenxe.strata.api.component.Component#on(EventType, Phase, EventHandler, Object)}.

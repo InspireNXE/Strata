@@ -18,7 +18,6 @@ public record SpriteId(String namespace, String path) {
     /**
      * Checks the parts.
      *
-     * @throws NullPointerException if either part is null
      * @throws IllegalArgumentException if either part is empty
      */
     public SpriteId {

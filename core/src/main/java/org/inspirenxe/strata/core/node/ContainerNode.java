@@ -6,6 +6,7 @@ import org.inspirenxe.strata.api.extension.peer.ComponentHooks;
 import org.inspirenxe.strata.api.extension.peer.ContainerPeer;
 import org.inspirenxe.strata.api.extension.CustomComponent;
 import org.inspirenxe.strata.api.geom.Insets;
+import org.inspirenxe.strata.api.geom.Rect;
 import org.inspirenxe.strata.core.paint.CanvasPainter;
 import org.inspirenxe.strata.spi.Canvas;
 
@@ -15,8 +16,10 @@ import java.util.List;
 import java.util.Objects;
 
 /**
- * Core's half of a container: the child list, padding and clipping. Children are kept twice in the same order, as
- * nodes for core and as public components for callers. A new container has no padding and clips its children.
+ * Core's half of a container or composite: the child list, padding and clipping. Children are kept twice in the
+ * same order, as nodes for core and as public components for callers. A new container has no padding and clips its
+ * children to its {@code childClip}, which is its bounds unless the component says otherwise. While clipping, a
+ * child whose bounds miss the clip entirely is not painted.
  */
 public final class ContainerNode extends Node implements ContainerPeer {
     private final List<Node> childNodes;
@@ -133,10 +136,15 @@ public final class ContainerNode extends Node implements ContainerPeer {
             this.paintEach(painter);
             return;
         }
+        final Rect clip = this.hooks().childClip();
         final Canvas canvas = painter.canvas();
-        canvas.pushClip(this.bounds());
+        canvas.pushClip(clip);
         try {
-            this.paintEach(painter);
+            for (final Node child : this.childNodes) {
+                if (child.bounds().intersects(clip)) {
+                    child.paint(painter);
+                }
+            }
         } finally {
             canvas.popClip();
         }
@@ -149,8 +157,8 @@ public final class ContainerNode extends Node implements ContainerPeer {
     }
 
     /**
-     * Children later in the list are drawn on top, so they are tested first. A child outside a clipping
-     * container's bounds cannot be hit, because the container's own bounds are checked first.
+     * Children later in the list are drawn on top, so they are tested first. A clipping container's children can
+     * only be hit inside its child clip, and nothing can be hit outside its bounds.
      */
     @Override
     public Node hitTest(final float x, final float y) {
@@ -158,8 +166,8 @@ public final class ContainerNode extends Node implements ContainerPeer {
             return null;
         }
         final boolean inside = this.bounds().contains(x, y);
-        if (!inside && this.clipChildren) {
-            return null;
+        if (this.clipChildren && (!inside || !this.hooks().childClip().contains(x, y))) {
+            return inside ? this : null;
         }
         for (int i = this.childNodes.size() - 1; i >= 0; i--) {
             final Node hit = this.childNodes.get(i).hitTest(x, y);

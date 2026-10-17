@@ -29,7 +29,6 @@ public interface StackPanel extends Container<StackPanel> {
      *
      * @param orientation the orientation
      * @return this panel
-     * @throws NullPointerException if {@code orientation} is null
      */
     StackPanel setOrientation(Orientation orientation);
 
@@ -60,8 +59,6 @@ public interface StackPanel extends Container<StackPanel> {
 
         /**
          * Checks the orientation.
-         *
-         * @throws NullPointerException if {@code orientation} is null
          */
         public State {
             Objects.requireNonNull(orientation, "orientation");

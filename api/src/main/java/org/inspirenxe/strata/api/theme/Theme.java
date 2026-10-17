@@ -38,7 +38,6 @@ public final class Theme {
      *
      * @param name a name for messages and debugging
      * @return a builder
-     * @throws NullPointerException if {@code name} is null
      */
     public static Builder builder(final String name) {
         return new Builder(name);
@@ -154,7 +153,6 @@ public final class Theme {
          * @param key the style key
          * @param paint the paint
          * @return this builder
-         * @throws NullPointerException if either argument is null
          */
         public Builder paint(final String key, final Paint paint) {
             this.paints.put(Objects.requireNonNull(key, "key"), Objects.requireNonNull(paint, "paint"));
@@ -167,7 +165,6 @@ public final class Theme {
          * @param key the style key
          * @param style the text style
          * @return this builder
-         * @throws NullPointerException if either argument is null
          */
         public Builder textStyle(final String key, final TextStyle style) {
             this.textStyles.put(Objects.requireNonNull(key, "key"), Objects.requireNonNull(style, "style"));

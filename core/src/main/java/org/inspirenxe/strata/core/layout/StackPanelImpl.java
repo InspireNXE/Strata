@@ -27,7 +27,6 @@ public final class StackPanelImpl extends CustomContainer<StackPanel> implements
      *
      * @param ui the factory that owns the panel
      * @param orientation the stacking direction
-     * @throws NullPointerException if {@code orientation} is null
      */
     public StackPanelImpl(final ComponentFactory ui, final Orientation orientation) {
         super(ui);

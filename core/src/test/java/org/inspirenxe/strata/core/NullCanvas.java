@@ -5,21 +5,28 @@ import org.inspirenxe.strata.api.geom.Insets;
 import org.inspirenxe.strata.api.geom.Rect;
 import org.inspirenxe.strata.api.text.TextSpan;
 import org.inspirenxe.strata.api.theme.SpriteId;
+import org.inspirenxe.strata.api.visual.Visual;
 import org.inspirenxe.strata.spi.Canvas;
 
 import java.util.ArrayList;
 import java.util.List;
 
 /**
- * A canvas that records fills, and checks clip and transform pushes stay balanced.
+ * A canvas that records fills and text, and checks clip and transform pushes stay balanced.
  */
 public final class NullCanvas implements Canvas {
     private final List<Rect> fills;
+    private final List<TextSpan> texts;
     private int clipDepth;
     private int transformDepth;
 
     public NullCanvas() {
         this.fills = new ArrayList<>();
+        this.texts = new ArrayList<>();
+    }
+
+    public List<TextSpan> texts() {
+        return this.texts;
     }
 
     public List<Rect> fills() {
@@ -49,6 +56,7 @@ public final class NullCanvas implements Canvas {
 
     @Override
     public void text(final TextSpan span, final float x, final float y) {
+        this.texts.add(span);
     }
 
     @Override
@@ -66,6 +74,15 @@ public final class NullCanvas implements Canvas {
     @Override
     public void pushTranslation(final float dx, final float dy) {
         this.transformDepth++;
+    }
+
+    @Override
+    public void pushScale(final float scale) {
+        this.transformDepth++;
+    }
+
+    @Override
+    public void visual(final Visual visual, final Rect rect, final int tint) {
     }
 
     @Override

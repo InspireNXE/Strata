@@ -14,6 +14,7 @@ import org.inspirenxe.strata.api.geom.Insets;
 import org.inspirenxe.strata.api.geom.Rect;
 import org.inspirenxe.strata.api.geom.Size;
 import org.inspirenxe.strata.api.input.Key;
+import org.inspirenxe.strata.api.input.KeyAction;
 import org.inspirenxe.strata.api.input.Modifiers;
 import org.inspirenxe.strata.api.input.MouseButton;
 import org.inspirenxe.strata.api.text.TextMetrics;
@@ -29,6 +30,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 import java.util.function.Consumer;
+import java.util.function.UnaryOperator;
 
 /**
  * The core {@link TextBox}, a single-line field ported from Wintergreen's {@code TextBox}.
@@ -63,11 +65,20 @@ public final class TextBoxImpl extends CustomComponent<TextBox> implements TextB
 
     private final StringBuilder buffer;
     private final List<Consumer<String>> listeners;
+    private final List<Consumer<String>> submitListeners;
     private final Runnable drawContent;
     private int maxLength;
     private boolean password;
     private int maskCodePoint;
     private Insets textPadding;
+    private UnaryOperator<String> filter;
+    private boolean readOnly;
+    private boolean selectAllOnFocus;
+
+    // The text and selection before the edit in progress, for the filter to fall back to
+    private String beforeText;
+    private int beforeCaret;
+    private int beforeAnchor;
 
     private int caret;
     private int anchor;
@@ -87,6 +98,7 @@ public final class TextBoxImpl extends CustomComponent<TextBox> implements TextB
     private Paint caretPaint;
     private TextStyle textStyle;
     private TextStyle disabledTextStyle;
+    private TextStyle readOnlyTextStyle;
 
     // Derived from text and caret, recomputed only after a change
     private boolean visualsDirty;
@@ -112,6 +124,7 @@ public final class TextBoxImpl extends CustomComponent<TextBox> implements TextB
         super(ui, behavior);
         this.buffer = new StringBuilder();
         this.listeners = new ArrayList<>();
+        this.submitListeners = new ArrayList<>();
         this.drawContent = this::drawContent;
         this.maxLength = Integer.MAX_VALUE;
         this.maskCodePoint = '*';
@@ -123,6 +136,7 @@ public final class TextBoxImpl extends CustomComponent<TextBox> implements TextB
         this.caretPaint = DEFAULT_CARET;
         this.textStyle = TextStyle.DEFAULT;
         this.disabledTextStyle = TextStyle.DEFAULT;
+        this.readOnlyTextStyle = TextStyle.DEFAULT;
         this.display = TextSpan.of("");
         this.contentBox = Rect.ZERO;
         this.visualsDirty = true;
@@ -245,6 +259,41 @@ public final class TextBoxImpl extends CustomComponent<TextBox> implements TextB
         return this;
     }
 
+    @Override
+    public TextBox setFilter(final UnaryOperator<String> filter) {
+        this.filter = filter;
+        return this;
+    }
+
+    @Override
+    public TextBox onSubmit(final Consumer<String> listener) {
+        this.submitListeners.add(Objects.requireNonNull(listener, "listener"));
+        return this;
+    }
+
+    @Override
+    public boolean isReadOnly() {
+        return this.readOnly;
+    }
+
+    @Override
+    public TextBox setReadOnly(final boolean readOnly) {
+        this.readOnly = readOnly;
+        this.visualsDirty = true;
+        return this;
+    }
+
+    @Override
+    public boolean selectsAllOnFocus() {
+        return this.selectAllOnFocus;
+    }
+
+    @Override
+    public TextBox setSelectAllOnFocus(final boolean selectAll) {
+        this.selectAllOnFocus = selectAll;
+        return this;
+    }
+
     // ------------------------------------------------------------------
     // Theme, layout and painting
     // ------------------------------------------------------------------
@@ -268,6 +317,7 @@ public final class TextBoxImpl extends CustomComponent<TextBox> implements TextB
         this.caretPaint = theme.paintOr(STYLE_CARET, DEFAULT_CARET);
         this.textStyle = theme.textStyleOr(STYLE_TEXT, TextStyle.DEFAULT);
         this.disabledTextStyle = theme.textStyleOr(STYLE_TEXT_DISABLED, this.textStyle);
+        this.readOnlyTextStyle = theme.textStyleOr(STYLE_TEXT_READ_ONLY, this.disabledTextStyle);
         this.visualsDirty = true;
     }
 
@@ -301,7 +351,7 @@ public final class TextBoxImpl extends CustomComponent<TextBox> implements TextB
             this.painter = null;
         }
 
-        if (this.isFocused() && this.isEnabled() && this.caretShown()) {
+        if (this.isFocused() && this.isEnabled() && !this.readOnly && this.caretShown()) {
             final float x = Math.max(this.contentBox.x(),
                     Math.min(this.contentBox.right() - 1f, this.contentBox.x() + this.caretX - this.scrollX));
             this.caretPaint.paint(painter, new Rect(x, this.textY, 1f, this.lineHeight));
@@ -352,7 +402,10 @@ public final class TextBoxImpl extends CustomComponent<TextBox> implements TextB
     }
 
     private TextStyle style() {
-        return this.isEnabled() ? this.textStyle : this.disabledTextStyle;
+        if (!this.isEnabled()) {
+            return this.disabledTextStyle;
+        }
+        return this.readOnly ? this.readOnlyTextStyle : this.textStyle;
     }
 
     private String displayPrefix(final int index) {
@@ -468,8 +521,8 @@ public final class TextBoxImpl extends CustomComponent<TextBox> implements TextB
     @Override
     protected void onFocusGained(final FocusEvent event) {
         // A press that gave focus places the caret right after this; keyboard focus starts at the end
-        this.anchor = this.buffer.length();
-        this.caret = this.anchor;
+        this.anchor = this.selectAllOnFocus ? 0 : this.buffer.length();
+        this.caret = this.buffer.length();
         this.moved();
     }
 
@@ -480,6 +533,14 @@ public final class TextBoxImpl extends CustomComponent<TextBox> implements TextB
         }
         final Key key = event.key();
         final Modifiers modifiers = event.modifiers();
+        if (key.isEnter() && event.action() == KeyAction.PRESS && !this.submitListeners.isEmpty()) {
+            final String text = this.buffer.toString();
+            for (final Consumer<String> listener : List.copyOf(this.submitListeners)) {
+                listener.accept(text);
+            }
+            event.consume();
+            return;
+        }
         final boolean shift = modifiers.shift();
         final boolean handled;
         if (modifiers.control() && !modifiers.alt()) {
@@ -581,6 +642,9 @@ public final class TextBoxImpl extends CustomComponent<TextBox> implements TextB
     // ------------------------------------------------------------------
 
     private void insert(final String text) {
+        if (!this.beginEdit()) {
+            return;
+        }
         if (this.hasSelection()) {
             this.removeSelection();
         }
@@ -590,7 +654,7 @@ public final class TextBoxImpl extends CustomComponent<TextBox> implements TextB
             this.caret += fitted.length();
         }
         this.anchor = this.caret;
-        this.changed();
+        this.edited();
     }
 
     private void copy() {
@@ -600,7 +664,7 @@ public final class TextBoxImpl extends CustomComponent<TextBox> implements TextB
     }
 
     private void cut() {
-        if (this.hasSelection() && !this.password) {
+        if (this.hasSelection() && !this.password && !this.readOnly) {
             this.copy();
             this.deleteSelection();
         }
@@ -611,8 +675,11 @@ public final class TextBoxImpl extends CustomComponent<TextBox> implements TextB
     }
 
     private void deleteSelection() {
+        if (!this.beginEdit()) {
+            return;
+        }
         this.removeSelection();
-        this.changed();
+        this.edited();
     }
 
     private void removeSelection() {
@@ -623,12 +690,57 @@ public final class TextBoxImpl extends CustomComponent<TextBox> implements TextB
     }
 
     private void deleteRange(final int start, final int end) {
-        if (start >= end) {
+        if (start >= end || !this.beginEdit()) {
             return;
         }
         this.buffer.delete(start, end);
         this.caret = start;
         this.anchor = start;
+        this.edited();
+    }
+
+    /**
+     * Remembers the text and selection before a user edit, for the filter to fall back to.
+     *
+     * @return false if the box is read-only and the edit must not happen
+     */
+    private boolean beginEdit() {
+        if (this.readOnly) {
+            return false;
+        }
+        this.beforeText = this.buffer.toString();
+        this.beforeCaret = this.caret;
+        this.beforeAnchor = this.anchor;
+        return true;
+    }
+
+    /**
+     * Ends a user edit: runs the filter, then tells listeners if the text changed.
+     */
+    private void edited() {
+        if (this.filter != null) {
+            final String candidate = this.buffer.toString();
+            final String result = this.filter.apply(candidate);
+            if (result == null || result.equals(this.beforeText)) {
+                this.buffer.setLength(0);
+                this.buffer.append(this.beforeText);
+                this.caret = this.beforeCaret;
+                this.anchor = this.beforeAnchor;
+                this.moved();
+                return;
+            }
+            if (!result.equals(candidate)) {
+                final int fromEnd = this.buffer.length() - this.caret;
+                this.buffer.setLength(0);
+                this.buffer.append(truncate(sanitize(result), this.maxLength));
+                this.caret = this.snap(this.buffer.length() - fromEnd);
+                this.anchor = this.caret;
+            }
+        }
+        if (this.buffer.toString().equals(this.beforeText)) {
+            this.moved();
+            return;
+        }
         this.changed();
     }
 

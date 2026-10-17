@@ -110,15 +110,15 @@ public final class ExtendingExamples {
     // --8<-- [end:compose]
 
     /**
-     * The check box and wrap panel in use.
+     * The switch and wrap panel in use.
      *
      * @return the screen
      */
     public static Screen customComponents() {
         return factory -> {
             // --8<-- [start:use]
-            final CheckBox music = new CheckBoxImpl(factory, "Music").setChecked(true);
-            final CheckBox sounds = new CheckBoxImpl(factory, "Sound effects");
+            final ToggleSwitch music = new ToggleSwitchImpl(factory, "Music").setOn(true);
+            final ToggleSwitch sounds = new ToggleSwitchImpl(factory, "Sound effects");
             final Label summary = factory.label("Music on");
             music.onChange(on -> summary.setText(on ? "Music on" : "Music off"));
 
@@ -140,7 +140,7 @@ public final class ExtendingExamples {
     }
 
     /**
-     * A theme with the check box's keys added.
+     * A theme with the switch's keys added.
      *
      * @return the theme
      */
@@ -148,8 +148,9 @@ public final class ExtendingExamples {
         // --8<-- [start:theme]
         // The host refuses a tree whose theme lacks a required key, so add your component's keys to the theme
         return Themes.flat().toBuilder()
-                .paint(CheckBox.STYLE_BOX, Paint.solid(0xFF1B1C1F))
-                .paint(CheckBox.STYLE_CHECK, Paint.solid(0xFF6A9FFF))
+                .paint(ToggleSwitch.STYLE_TRACK, Paint.solid(0xFF1B1C1F))
+                .paint(ToggleSwitch.STYLE_TRACK_ON, Paint.solid(0xFF2E7D32))
+                .paint(ToggleSwitch.STYLE_KNOB, Paint.solid(0xFFE0E0E0))
                 .build();
         // --8<-- [end:theme]
     }

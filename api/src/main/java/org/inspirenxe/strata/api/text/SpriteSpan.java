@@ -16,8 +16,6 @@ import java.util.Objects;
 public record SpriteSpan(SpriteId sprite, float width, float height, int tint) implements InlineElement {
     /**
      * Checks the sprite.
-     *
-     * @throws NullPointerException if {@code sprite} is null
      */
     public SpriteSpan {
         Objects.requireNonNull(sprite, "sprite");

@@ -45,7 +45,7 @@ A host checks the theme before it shows anything. When it opens a screen, it col
 --8<-- "theming/ThemeExamples.java:missing"
 ```
 
-Your own components declare required keys through `requiredStyleKeys()`. Remember to add them to the theme you use, as the [check box example](extending.md#write-a-new-component) does.
+Your own components declare required keys through `requiredStyleKeys()`. Remember to add them to the theme you use, as the [switch example](extending.md#write-a-new-component) does.
 
 A key may have a paint, a text style, or both; `has(key)` is true for either. Look keys up with `paint(key)` and `textStyle(key)`, which return `Optional`, or with `paintOr` and `textStyleOr`, which take a fallback.
 

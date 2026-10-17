@@ -1,8 +1,8 @@
 site_name: Strata
 site_description: An engine-agnostic GUI library for Java games, with adapters for Swing and Minecraft 26.3.
-site_url: https://inspirenxe.github.io/strata/
-repo_url: https://github.com/InspireNXE/strata
-repo_name: InspireNXE/strata
+site_url: https://inspirenxe.github.io/Strata/
+repo_url: https://github.com/InspireNXE/Strata
+repo_name: InspireNXE/Strata
 edit_uri: edit/main/docs/
 copyright: Copyright InspireNXE. Released under the MIT License.
 
@@ -98,6 +98,7 @@ nav:
       - Components: guides/components.md
       - Layout: guides/layout.md
       - Widgets: guides/widgets.md
+      - Overlays and tooltips: guides/overlays.md
       - Events: guides/events.md
       - Event snapshots: guides/snapshots.md
       - Input and focus: guides/input-focus.md
@@ -126,4 +127,5 @@ nav:
   - Project:
       - project/index.md
       - Design: DESIGN.md
+      - Roadmap: ROADMAP.md
       - Contributing: project/contributing.md

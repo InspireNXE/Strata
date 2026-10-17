@@ -17,8 +17,8 @@ Strata itself has no other dependencies. The Swing adapter uses only the JDK.
 Strata is not published to a public Maven repository yet. Until it is, build it from source.
 
 ```bash
-git clone https://github.com/InspireNXE/strata.git
-cd strata
+git clone https://github.com/InspireNXE/Strata.git
+cd Strata
 ./gradlew build
 ```
 

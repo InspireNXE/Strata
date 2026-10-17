@@ -65,11 +65,15 @@ protected void paint(Painter painter, Rect bounds) {
 }
 ```
 
-`Painter.text(span, x, y)` puts the top-left corner of the line box at the point: `y` is the top of the line, not the baseline. Build spans during measure and keep them for painting, so painting does not allocate. The [check box example](extending.md#write-a-new-component) does this.
+`Painter.text(span, x, y)` puts the top-left corner of the line box at the point: `y` is the top of the line, not the baseline. Build spans during measure and keep them for painting, so painting does not allocate. The [switch example](extending.md#write-a-new-component) does this.
 
 ## Wrapping
 
 `Label` wraps greedily by word when wrapping is on: it fills each line with as many words as fit the available width, and breaks a single word wider than a whole line between characters. It always breaks at `\n`. See [Wrapping text](layout.md#wrapping-text) for giving it a width.
+
+## Mixed styles
+
+A label made with `setSpans` draws its spans one after another, each in its own style, and wraps them by the same rules, so a piece of a span keeps the span's style on any line. Use it for text like a white item name followed by a gray count, or a gold price followed by `/ea`. `setTextScale` draws a label larger or smaller, and `TextOverflow.ELLIPSIS` ends a line that does not fit with `...`, in the style of the last character kept. See [Label](widgets.md#label).
 
 Wrapping is part of the label, not a public utility. A custom component that needs wrapped text can measure and break the text itself, or contain a wrapping label.
 
@@ -82,7 +86,7 @@ Strata has no font API. Each adapter decides:
 
 ## Not supported yet
 
-- Rich text that mixes styles or inline images in one line. `SpriteSpan` and `InlineElement` are reserved for it, but nothing draws them yet.
+- Inline images in a line of text. `SpriteSpan` and `InlineElement` are reserved for it, but nothing draws them yet.
 - Markup such as BBCode. Avoid Minecraft's `§` formatting codes in text too: Strata does not interpret them, and vanilla's own text drawing may, so the same text would look different on each engine.
 - Right-to-left text and complex shaping beyond what the engine's own text drawing does.
 - Multi-line editing.

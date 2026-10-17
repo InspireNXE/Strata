@@ -6,6 +6,7 @@ import org.inspirenxe.strata.api.geom.Insets;
 import org.inspirenxe.strata.api.geom.Rect;
 import org.inspirenxe.strata.api.text.TextSpan;
 import org.inspirenxe.strata.api.theme.SpriteId;
+import org.inspirenxe.strata.api.visual.Visual;
 import org.inspirenxe.strata.spi.Canvas;
 
 import java.util.ArrayDeque;
@@ -14,15 +15,16 @@ import java.util.Deque;
 import java.util.List;
 
 /**
- * A canvas for an imaginary engine that takes a list of draw commands each frame. It keeps its own translation
+ * A canvas for an imaginary engine that takes a list of draw commands each frame. It keeps its own transform
  * and clip stacks, since the commands use absolute coordinates.
  */
 public final class RecordingCanvas implements Canvas {
     private final List<String> commands = new ArrayList<>();
-    private final Deque<float[]> translations = new ArrayDeque<>();
+    private final Deque<float[]> transforms = new ArrayDeque<>();
     private final Deque<Rect> clips = new ArrayDeque<>();
     private float dx;
     private float dy;
+    private float scale = 1f;
     private CursorKind cursor = CursorKind.ARROW;
 
     /** Starts a frame. A frame without a cursor request shows the default cursor. */
@@ -67,7 +69,8 @@ public final class RecordingCanvas implements Canvas {
 
     @Override
     public void text(final TextSpan span, final float x, final float y) {
-        this.commands.add("text '" + span.text() + "' at " + (x + this.dx) + "," + (y + this.dy));
+        this.commands.add("text '" + span.text() + "' at " + (x * this.scale + this.dx) + "," + (y * this.scale + this.dy)
+                + (this.scale == 1f ? "" : " scaled " + this.scale));
     }
 
     @Override
@@ -86,16 +89,29 @@ public final class RecordingCanvas implements Canvas {
 
     @Override
     public void pushTranslation(final float x, final float y) {
-        this.translations.push(new float[] {this.dx, this.dy});
-        this.dx += x;
-        this.dy += y;
+        this.transforms.push(new float[] {this.dx, this.dy, this.scale});
+        this.dx += x * this.scale;
+        this.dy += y * this.scale;
+    }
+
+    @Override
+    public void pushScale(final float factor) {
+        this.transforms.push(new float[] {this.dx, this.dy, this.scale});
+        this.scale *= factor;
     }
 
     @Override
     public void popTransform() {
-        final float[] previous = this.translations.pop();
+        final float[] previous = this.transforms.pop();
         this.dx = previous[0];
         this.dy = previous[1];
+        this.scale = previous[2];
+    }
+
+    @Override
+    public void visual(final Visual visual, final Rect rect, final int tint) {
+        // This engine knows no visuals of its own, so every one gets the placeholder
+        this.commands.add("placeholder " + this.place(rect));
     }
 
     @Override
@@ -109,7 +125,8 @@ public final class RecordingCanvas implements Canvas {
     }
 
     private Rect place(final Rect rect) {
-        return rect.translate(this.dx, this.dy);
+        return new Rect(rect.x() * this.scale + this.dx, rect.y() * this.scale + this.dy,
+                rect.width() * this.scale, rect.height() * this.scale);
     }
 }
 // --8<-- [end:canvas]

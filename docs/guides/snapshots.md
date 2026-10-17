@@ -70,6 +70,9 @@ The `state` is what the component's kind adds. The built-ins record a nested `St
 |---|---|---|
 | `TextBox` | `TextBox.State` | `text` (unmasked even in password mode), `caret`, `anchor`, `maxLength`, `password`, plus `selectionStart()`, `selectionEnd()` and `hasSelection()` |
 | `Button` | `Button.State` | `text` |
+| `CheckBox` | `CheckBox.State` | `checked`, `text` |
+| `Slider` | `Slider.State` | `value`, `min`, `max`, `step` |
+| `Image` | `Image.State` | `sprite`, `tint`, `imageWidth`, `imageHeight`, `scaling` |
 | `Label` | `Label.State` | `text`, `style`, `wraps`, `textAlignment` |
 | `StackPanel` | `StackPanel.State` | `orientation`, `spacing` |
 | `GridPanel` | `GridPanel.State` | `columns`, `rows`, `columnSpacing`, `rowSpacing`. Not the children or their cells. |
@@ -98,7 +101,7 @@ protected Object snapshotState() {
 }
 ```
 
-Strata calls it only when the component is captured, before any handler runs. Return an immutable value, such as a record, and copy any mutable data: a live list would change along with the component. Record only the component's own state; a container must not include its children, which are captured on their own. Do not change any component from it. The default returns null. The [check box example](extending.md#write-a-new-component) shows a complete component with a snapshot state.
+Strata calls it only when the component is captured, before any handler runs. Return an immutable value, such as a record, and copy any mutable data: a live list would change along with the component. Record only the component's own state; a container must not include its children, which are captured on their own. Do not change any component from it. The default returns null. The [switch example](extending.md#write-a-new-component) shows a complete component with a snapshot state.
 
 ## When there is no snapshot
 

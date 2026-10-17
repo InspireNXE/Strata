@@ -5,9 +5,9 @@ import org.inspirenxe.strata.api.event.EventTypes;
 import org.inspirenxe.strata.api.event.Phase;
 import org.inspirenxe.strata.api.layout.StackPanel;
 import org.inspirenxe.strata.api.widget.Button;
+import org.inspirenxe.strata.api.widget.CheckBox;
 import org.inspirenxe.strata.api.widget.Label;
 import org.inspirenxe.strata.api.widget.TextBox;
-import org.inspirenxe.strata.examples.extending.CheckBox;
 
 import java.util.ArrayList;
 import java.util.List;

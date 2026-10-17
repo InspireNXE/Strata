@@ -12,8 +12,6 @@ import java.util.Objects;
 public record TextSpan(String text, TextStyle style) implements InlineElement {
     /**
      * Checks the arguments.
-     *
-     * @throws NullPointerException if {@code text} or {@code style} is null
      */
     public TextSpan {
         Objects.requireNonNull(text, "text");

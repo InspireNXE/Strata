@@ -67,7 +67,6 @@ public interface Container<T extends Container<T>> extends Component<T> {
      *
      * @param padding the padding
      * @return this container
-     * @throws NullPointerException if {@code padding} is null
      */
     T setPadding(Insets padding);
 

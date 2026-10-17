@@ -39,7 +39,6 @@ public final class ScreenHostImpl implements ScreenHost {
      * @param theme the starting theme
      * @param closeRequested runs when the open screen asks to close through its handle, or {@code null} to have
      *     the host close the screen itself
-     * @throws NullPointerException if {@code platform} or {@code theme} is null
      */
     public ScreenHostImpl(final Platform platform, final Theme theme, final Runnable closeRequested) {
         this.theme = Objects.requireNonNull(theme, "theme");

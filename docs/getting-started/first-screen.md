@@ -89,7 +89,7 @@ To get a PNG instead of a window, for example in a test or on a build server, us
 --8<-- "minecraft/MinecraftExamples.java:open"
 ```
 
-`MinecraftThemes.vanilla()` draws buttons and text boxes with vanilla's own sprites, so the form looks like part of the game. One UI unit is one GUI pixel, so the 200-unit column is 200 GUI pixels wide and follows the player's GUI scale setting. Escape closes the screen as it does for any vanilla screen, because Strata passes on input it does not use.
+`MinecraftThemes.vanilla()` draws buttons, check boxes, sliders and text boxes with vanilla's own sprites, so the form looks like part of the game. One UI unit is one GUI pixel, so the 200-unit column is 200 GUI pixels wide and follows the player's GUI scale setting. Escape closes the screen as it does for any vanilla screen, because Strata passes on input it does not use.
 
 Code that runs on another thread, such as a network handler, must move onto the client thread first:
 

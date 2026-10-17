@@ -107,8 +107,6 @@ public sealed interface Paint {
     record Sprite(SpriteId sprite, int tint) implements Paint {
         /**
          * Checks the sprite.
-         *
-         * @throws NullPointerException if {@code sprite} is null
          */
         public Sprite {
             Objects.requireNonNull(sprite, "sprite");
@@ -129,8 +127,6 @@ public sealed interface Paint {
     record NineSlice(SpriteId sprite, Insets border, int tint) implements Paint {
         /**
          * Checks the arguments.
-         *
-         * @throws NullPointerException if {@code sprite} or {@code border} is null
          */
         public NineSlice {
             Objects.requireNonNull(sprite, "sprite");

@@ -28,6 +28,18 @@ public interface ArrangeContext {
     Size outerSize(Component<?> child);
 
     /**
+     * Measures a child, for one added during arrange, such as a row that scrolled into view. Measure such a child
+     * before giving it a slot.
+     *
+     * @param child a child of the component being arranged
+     * @param availableWidth the width offered to the child, margin included; may be infinite
+     * @param availableHeight the height offered to the child, margin included; may be infinite
+     * @return the space the child needs: its desired size plus its margin, or zero if it is hidden
+     * @throws IllegalArgumentException if {@code child} was made by another factory or has no Strata implementation
+     */
+    Size measure(Component<?> child, float availableWidth, float availableHeight);
+
+    /**
      * Gives a child its slot. The child shrinks the slot by its margin and places itself in what remains by its
      * alignment and size limits, which sets its bounds. A slot smaller than the child's desired size is allowed;
      * the child then overflows it unless it stretches.

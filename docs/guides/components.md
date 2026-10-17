@@ -57,8 +57,8 @@ Removing a component does not remove its event handlers. Close the subscriptions
 |---|---|---|
 | `setVisible(false)` | visible | Not drawn, cannot be hovered or focused, takes no space in layout, and its bounds become empty |
 | `setEnabled(false)` | enabled | Still drawn (built-in widgets draw a disabled look) and still takes space, but gets no pointer or keyboard input and cannot be focused |
-| `setFocusable(true)` | buttons and text boxes only | Can take keyboard focus by a click or `requestFocus()` |
-| `setTabbable(true)` | buttons and text boxes only | Tab and Shift+Tab stop here. Only matters if it is also focusable. |
+| `setFocusable(true)` | buttons, check boxes, sliders and text boxes only | Can take keyboard focus by a click or `requestFocus()` |
+| `setTabbable(true)` | buttons, check boxes, sliders and text boxes only | Tab and Shift+Tab stop here. Only matters if it is also focusable. |
 | `setTabIndex(n)` | 0 | Tab visits lower indexes first, then tree order among equal indexes. Negative values are allowed. |
 
 Hiding or disabling a component also hides or disables everything inside it, and clears focus if the focused component is inside.
@@ -80,7 +80,7 @@ Read-only state:
 
 ## Cursors
 
-`setCursor(CursorKind)` picks the mouse cursor shown while the pointer is over the component. A component with no cursor of its own uses its nearest ancestor's, and the default is `ARROW`. Buttons show `HAND`, and text boxes show `TEXT`.
+`setCursor(CursorKind)` picks the mouse cursor shown while the pointer is over the component. A component with no cursor of its own uses its nearest ancestor's, and the default is `ARROW`. Buttons, check boxes and sliders show `HAND`, and text boxes show `TEXT`.
 
 | `CursorKind` | Meaning |
 |---|---|

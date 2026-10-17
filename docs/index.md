@@ -5,7 +5,7 @@ hide:
 
 # Strata
 
-Strata is a GUI library for Java games that does not depend on any engine. You describe a screen as a tree of components: labels, buttons, text boxes and the panels that lay them out. An adapter then draws that tree and feeds it input on a particular engine. The same screen code runs in a Swing window on your desktop and inside Minecraft 26.3 on NeoForge or Fabric.
+Strata is a GUI library for Java games that does not depend on any engine. You describe a screen as a tree of components: labels, images, buttons, check boxes, sliders, text boxes and the panels that lay them out. An adapter then draws that tree and feeds it input on a particular engine. The same screen code runs in a Swing window on your desktop and inside Minecraft 26.3 on NeoForge or Fabric.
 
 ![A small form drawn by Strata](assets/images/quickstart.png)
 
@@ -16,7 +16,7 @@ Strata is a GUI library for Java games that does not depend on any engine. You d
 ## What you get
 
 - Two-pass layout (measure, then arrange) with four containers: `AnchorPanel`, `StackPanel`, `GridPanel` and `AbsolutePanel`.
-- Labels with word wrapping, buttons, and a single-line text box with selection, clipboard, word movement and a password mode.
+- Labels with word wrapping, images, buttons, check boxes, sliders with steps and labels, and a single-line text box with selection, clipboard, word movement and a password mode.
 - Click counting, dragging, hover, keyboard focus and tab order, handled the same way on every engine.
 - Typed events with a before and an after phase, cancellation that really skips the default behavior, and bubbling to ancestors.
 - Lazy event snapshots, so a handler can compare a component's state at the moment an event fired with its state now.

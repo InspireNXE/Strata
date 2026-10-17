@@ -80,9 +80,6 @@ public record ComponentSnapshot(
 
     /**
      * Checks the fields that must not be null.
-     *
-     * @throws NullPointerException if {@code component}, {@code margin}, an alignment, {@code background} or
-     *                              {@code bounds} is null
      */
     public ComponentSnapshot {
         Objects.requireNonNull(component, "component");
@@ -103,7 +100,6 @@ public record ComponentSnapshot(
      * @param <S> the state type
      * @param type the class the state is expected to be
      * @return the state, or empty if there is none or it is not an instance of {@code type}
-     * @throws NullPointerException if {@code type} is null
      */
     public <S> Optional<S> state(final Class<S> type) {
         Objects.requireNonNull(type, "type");

@@ -17,12 +17,32 @@ import org.inspirenxe.strata.api.widget.Button;
 import org.inspirenxe.strata.api.widget.ButtonBehavior;
 import org.inspirenxe.strata.api.widget.Label;
 import org.inspirenxe.strata.api.widget.TextBox;
+import org.inspirenxe.strata.sandbox.almura.AlmuraMocks;
+
+import java.util.function.Consumer;
 
 /**
  * Exercises the layouts, buttons, focus, labels, a decorated built-in and a custom component, using the API only.
  */
 public final class DemoScreen implements Screen {
+    private final Consumer<Screen> open;
     private int clicks;
+
+    /**
+     * Creates the demo without the buttons that open the Almura mock-ups, for snapshots.
+     */
+    public DemoScreen() {
+        this(null);
+    }
+
+    /**
+     * Creates the demo.
+     *
+     * @param open pushes a screen over this one, or {@code null} to leave out the mock-up buttons
+     */
+    public DemoScreen(final Consumer<Screen> open) {
+        this.open = open;
+    }
 
     @Override
     public boolean hidesBackground() {
@@ -97,9 +117,16 @@ public final class DemoScreen implements Screen {
                 .add(buttons)
                 .add(swatches)
                 .add(counter);
+        if (this.open != null) {
+            column.add(ui.label("Almura mock-ups"));
+            column.add(AlmuraMocks.buttons(ui, this.open));
+            column.setWidth(400);
+        }
         column.setBackground(Paint.solid(0xFF2B2D31));
         column.setAlignment(HorizontalAlignment.CENTER, VerticalAlignment.MIDDLE);
-        column.setWidth(320);
+        if (this.open == null) {
+            column.setWidth(320);
+        }
 
         final var screen = ui.anchorPanel().add(column);
         screen.setAnchor(Anchor.FILL);

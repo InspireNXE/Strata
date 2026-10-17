@@ -4,6 +4,7 @@ import org.inspirenxe.strata.api.geom.Insets;
 import org.inspirenxe.strata.api.geom.Rect;
 import org.inspirenxe.strata.api.text.TextSpan;
 import org.inspirenxe.strata.api.theme.SpriteId;
+import org.inspirenxe.strata.api.visual.Visual;
 
 /**
  * What a component draws with during {@link CustomComponent#paint}. Coordinates are in the host's coordinates, in
@@ -84,4 +85,23 @@ public interface Painter {
      * @param draw the drawing to shift
      */
     void translated(float dx, float dy, Runnable draw);
+
+    /**
+     * Runs {@code draw} with every coordinate and size multiplied by a factor, about the origin. To draw text at
+     * 0.8 size at a point, draw it at the point divided by 0.8 inside this call. Clips set inside are scaled too.
+     *
+     * @param scale the factor; 1 changes nothing
+     * @param draw the drawing to scale
+     */
+    void scaled(float scale, Runnable draw);
+
+    /**
+     * Draws an engine visual stretched over a rectangle. A visual the engine cannot draw shows a placeholder.
+     *
+     * @param visual the visual
+     * @param rect the area
+     * @param tint an ARGB color multiplied with the visual where the engine supports it; opaque white leaves it
+     *             unchanged
+     */
+    void visual(Visual visual, Rect rect, int tint);
 }

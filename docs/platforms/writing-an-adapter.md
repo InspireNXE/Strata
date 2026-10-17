@@ -73,7 +73,9 @@ Requirements:
 - Later calls draw over earlier ones. An engine that batches or sorts must keep this order, at least across `nextLayer()`.
 - Calls may be recorded and replayed later, as Minecraft does. Nothing requires immediate drawing.
 - Clips and transforms are stacks. Strata balances every push with a pop within a frame, in reverse order, even when a component throws. A clip applies in the transform current when it was pushed and intersects the clip already in place.
+- Transforms are translations and uniform scales. A scale multiplies every later coordinate and size about the current origin, translations pushed inside it included, and text drawn while scaled comes out at the scaled size. Labels use it for their text scale.
 - Never throw for missing resources. Draw something visible instead, so the problem shows on screen.
+- `visual` draws the visuals your adapter makes, such as images or engine objects, and a placeholder for any other. Offer a public class that makes them, as `SwingVisuals` does, so code with an engine object in hand can show it through the API.
 - A nine-slice smaller than its borders shrinks the borders rather than drawing outside its rectangle. An engine that knows a sprite's slicing natively may ignore the `border` argument.
 - `text` puts the top-left of the line box at the point, not the baseline, applies every style the engine supports, and lines up with the platform's text metrics.
 - `requestCursor` is called at most once per frame, after drawing, while the pointer is over a component. In a frame without a request, show the default cursor.

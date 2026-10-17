@@ -3,6 +3,7 @@ package org.inspirenxe.strata.core.node;
 import org.inspirenxe.strata.api.component.ComponentSnapshot;
 import org.inspirenxe.strata.api.component.Container;
 import org.inspirenxe.strata.api.component.CursorKind;
+import org.inspirenxe.strata.api.component.Tooltip;
 import org.inspirenxe.strata.api.layout.HorizontalAlignment;
 import org.inspirenxe.strata.api.layout.VerticalAlignment;
 import org.inspirenxe.strata.api.event.CharEvent;
@@ -27,6 +28,7 @@ import org.inspirenxe.strata.api.extension.Next;
 import org.inspirenxe.strata.api.geom.Insets;
 import org.inspirenxe.strata.api.geom.Rect;
 import org.inspirenxe.strata.api.geom.Size;
+import org.inspirenxe.strata.api.theme.Border;
 import org.inspirenxe.strata.api.theme.Paint;
 import org.inspirenxe.strata.api.theme.Theme;
 import org.inspirenxe.strata.core.event.EventDispatcher;
@@ -44,7 +46,12 @@ import java.util.Set;
  * has one.
  *
  * <p>A new node is visible, enabled, not focusable and not tabbable, with tab index 0, no cursor, no margin, no
- * size limits, no fixed size, left and top alignment, and no background.</p>
+ * size limits, no fixed size, left and top alignment, no offset, no background, no border and no tooltip.</p>
+ *
+ * <p>Layout is incremental. A node measured again with the same available space, with nothing inside it changed
+ * since, keeps its last desired size without calling its hook. A node arranged again into the same slot, with
+ * nothing inside it changed since, keeps its bounds without arranging its children. {@link #invalidateLayout()}
+ * marks the node and every ancestor as changed.</p>
  *
  * <p>Every method must be called on the UI thread.</p>
  */
@@ -88,13 +95,21 @@ public class Node implements ComponentPeer {
     private float explicitHeight;
     private HorizontalAlignment horizontalAlignment;
     private VerticalAlignment verticalAlignment;
+    private float offsetX;
+    private float offsetY;
     private Paint background;
+    private Border border;
+    private Tooltip tooltip;
 
-    // Layout outputs
+    // Layout outputs, and what they were computed from
     private float desiredWidth;
     private float desiredHeight;
     private Rect bounds;
-    private boolean layoutDirty;
+    private boolean measureDirty;
+    private boolean arrangeDirty;
+    private float lastAvailableWidth;
+    private float lastAvailableHeight;
+    private Rect lastSlot;
 
     /**
      * Creates the node behind a component. Only {@link ComponentFactoryImpl#createPeer} and subclasses call this.
@@ -103,7 +118,6 @@ public class Node implements ComponentPeer {
      * @param facade the public component this node implements
      * @param hooks the component's protected hooks
      * @param behavior the decorator around those hooks, or {@code null} for none
-     * @throws NullPointerException if {@code ui}, {@code facade} or {@code hooks} is null
      */
     public Node(final ComponentFactoryImpl ui, final CustomComponent<?> facade, final ComponentHooks hooks,
                 final ComponentBehavior<?> behavior) {
@@ -123,8 +137,12 @@ public class Node implements ComponentPeer {
         this.horizontalAlignment = HorizontalAlignment.LEFT;
         this.verticalAlignment = VerticalAlignment.TOP;
         this.background = Paint.NONE;
+        this.border = Border.NONE;
         this.bounds = Rect.ZERO;
-        this.layoutDirty = true;
+        this.measureDirty = true;
+        this.arrangeDirty = true;
+        this.lastAvailableWidth = Float.NaN;
+        this.lastAvailableHeight = Float.NaN;
     }
 
     /**
@@ -162,7 +180,7 @@ public class Node implements ComponentPeer {
      * Measures the component and stores its desired size. The hook gets the available space minus the margin,
      * replaced by the fixed size where one is set and capped by the maximum size. The result is replaced by the
      * fixed size where one is set, then clamped to the minimum and maximum. A hidden component measures as 0 by 0
-     * without calling its hook.
+     * without calling its hook. Nothing is measured if nothing changed since the last measure with the same space.
      *
      * @param pass the layout context
      * @param availableWidth the width the parent offers, margin included; may be infinite
@@ -170,6 +188,14 @@ public class Node implements ComponentPeer {
      */
     @SuppressWarnings("unchecked")
     public final void measure(final LayoutPass pass, final float availableWidth, final float availableHeight) {
+        if (!this.measureDirty && availableWidth == this.lastAvailableWidth && availableHeight == this.lastAvailableHeight) {
+            return;
+        }
+        this.lastAvailableWidth = availableWidth;
+        this.lastAvailableHeight = availableHeight;
+        this.measureDirty = false;
+        // A new desired size can change the bounds even in the same slot
+        this.arrangeDirty = true;
         if (!this.visible) {
             this.desiredWidth = 0f;
             this.desiredHeight = 0f;
@@ -193,14 +219,18 @@ public class Node implements ComponentPeer {
     /**
      * Places the component in a slot and arranges its children. The slot is shrunk by the margin; the component
      * then takes its desired size, or the whole inner slot on an axis set to stretch with no fixed size (still
-     * clamped), and is aligned inside. A hidden component gets an empty rectangle at the slot's origin. Arranging
-     * clears the layout dirty flag.
+     * clamped), and is aligned inside, then moved by its offset. A hidden component gets an empty rectangle at the
+     * slot's origin. Nothing is arranged if nothing changed since the last arrange into the same slot.
      *
      * @param pass the layout context
      * @param slot the space the parent assigns, margin included, in the host's coordinates
      */
     public final void arrange(final LayoutPass pass, final Rect slot) {
-        this.layoutDirty = false;
+        if (!this.arrangeDirty && slot.equals(this.lastSlot)) {
+            return;
+        }
+        this.arrangeDirty = false;
+        this.lastSlot = slot;
         if (!this.visible) {
             this.bounds = new Rect(slot.x(), slot.y(), 0f, 0f);
             return;
@@ -226,29 +256,57 @@ public class Node implements ComponentPeer {
             case BOTTOM -> inner.bottom() - height;
         };
 
-        this.bounds = new Rect(x, y, width, height);
+        this.bounds = new Rect(x + this.offsetX, y + this.offsetY, width, height);
         this.hooks.arrange(pass, this.bounds);
+    }
+
+    /**
+     * Returns the slot the parent gave in the last arrange, margin included.
+     *
+     * @return the slot, or {@link Rect#ZERO} before the first arrange
+     */
+    public final Rect slot() {
+        return this.lastSlot == null ? Rect.ZERO : this.lastSlot;
+    }
+
+    /**
+     * Arranges the component again in the slot it last had, as {@link #invalidateArrangement()} asks. Does nothing
+     * if it was never arranged.
+     *
+     * @param pass the layout context
+     */
+    final void rearrange(final LayoutPass pass) {
+        if (this.lastSlot != null) {
+            this.arrangeDirty = true;
+            this.arrange(pass, this.lastSlot);
+        }
     }
 
     @Override
     public final void invalidateLayout() {
-        Node node = this;
-        while (node != null && !node.layoutDirty) {
-            node.layoutDirty = true;
-            node = node.parent;
+        for (Node node = this; node != null; node = node.parent) {
+            node.measureDirty = true;
+            node.arrangeDirty = true;
         }
         if (this.root != null) {
             this.root.requestLayout();
         }
     }
 
+    @Override
+    public final void invalidateArrangement() {
+        if (this.root != null) {
+            this.root.requestArrangement(this);
+        }
+    }
+
     /**
-     * Returns whether this component, or something inside it, changed in a way that needs a new layout.
+     * Returns whether this component, or something inside it, changed in a way that needs a new measure.
      *
-     * @return true until the next arrange
+     * @return true until the next measure
      */
     public final boolean isLayoutDirty() {
-        return this.layoutDirty;
+        return this.measureDirty;
     }
 
     @Override
@@ -297,8 +355,9 @@ public class Node implements ComponentPeer {
     // ------------------------------------------------------------------
 
     /**
-     * Paints the component: its background, then its paint hook (through its behavior if it has one), then its
-     * children. Hidden components and components with empty bounds paint nothing.
+     * Paints the component: its background and border, then its paint hook (through its behavior if it has one),
+     * then its children, then its over-children hook. Hidden components and components with empty bounds paint
+     * nothing.
      *
      * @param painter the painter for this frame
      */
@@ -308,6 +367,7 @@ public class Node implements ComponentPeer {
             return;
         }
         this.background.paint(painter, this.bounds);
+        this.border.paint(painter, this.bounds);
         if (this.behavior == null) {
             this.hooks.paint(painter, this.bounds);
         } else {
@@ -315,6 +375,7 @@ public class Node implements ComponentPeer {
             this.behavior.paint(this.facade, painter, paintBounds, () -> this.hooks.paint(painter, paintBounds));
         }
         this.paintChildren(painter);
+        this.hooks.paintOverChildren(painter, this.bounds);
     }
 
     /**
@@ -471,7 +532,6 @@ public class Node implements ComponentPeer {
      * Gives the component a theme and marks its layout dirty, since styles can change sizes.
      *
      * @param theme the theme
-     * @throws NullPointerException if {@code theme} is null
      */
     public final void applyTheme(final Theme theme) {
         this.theme = Objects.requireNonNull(theme, "theme");
@@ -565,6 +625,11 @@ public class Node implements ComponentPeer {
 
     final void setHovered(final boolean hovered) {
         this.hovered = hovered;
+    }
+
+    @Override
+    public final boolean isHoverWithin() {
+        return this.root != null && this.root.isHoverWithin(this);
     }
 
     @Override
@@ -741,6 +806,48 @@ public class Node implements ComponentPeer {
         this.horizontalAlignment = Objects.requireNonNull(horizontal, "horizontal");
         this.verticalAlignment = Objects.requireNonNull(vertical, "vertical");
         this.invalidateLayout();
+    }
+
+    @Override
+    public final float offsetX() {
+        return this.offsetX;
+    }
+
+    @Override
+    public final float offsetY() {
+        return this.offsetY;
+    }
+
+    @Override
+    public final void setOffset(final float offsetX, final float offsetY) {
+        if (this.offsetX != offsetX || this.offsetY != offsetY) {
+            this.offsetX = offsetX;
+            this.offsetY = offsetY;
+            this.invalidateArrangement();
+        }
+    }
+
+    @Override
+    public final Border border() {
+        return this.border;
+    }
+
+    @Override
+    public final void setBorder(final Border border) {
+        this.border = Objects.requireNonNull(border, "border");
+    }
+
+    @Override
+    public final Tooltip tooltip() {
+        return this.tooltip;
+    }
+
+    @Override
+    public final void setTooltip(final Tooltip tooltip) {
+        this.tooltip = tooltip;
+        if (this.root != null) {
+            this.root.tooltipChanged(this);
+        }
     }
 
     @Override

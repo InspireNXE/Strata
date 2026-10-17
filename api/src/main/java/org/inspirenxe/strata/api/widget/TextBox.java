@@ -5,6 +5,7 @@ import org.inspirenxe.strata.api.geom.Insets;
 
 import java.util.Objects;
 import java.util.function.Consumer;
+import java.util.function.UnaryOperator;
 
 /**
  * A single-line text field.
@@ -20,16 +21,22 @@ import java.util.function.Consumer;
  *     <li>Ctrl+A selects all. Ctrl+C copies, Ctrl+X cuts and Ctrl+V pastes, through the host's clipboard. Pasted
  *     line breaks are removed.</li>
  *     <li>Typing replaces the selection. Text past {@link #maxLength()} is dropped.</li>
+ *     <li>A {@linkplain #setFilter filter} sees the text each edit would produce and may accept, change or reject
+ *     it, so a box can take only digits.</li>
+ *     <li>Enter, or keypad Enter, tells the {@linkplain #onSubmit submit listeners}.</li>
  * </ul>
+ * <p>A {@linkplain #setReadOnly read-only} box still takes focus, selects and copies, but does not edit and shows no
+ * caret.</p>
  * <p>The caret blinks every half second on the host's clock and shows again after each edit or move. When the text
  * is wider than the box, it scrolls sideways to keep the caret in view.</p>
  *
  * <h2>Focus and the engine</h2>
  * <p>The box is focusable and tabbable and shows the text cursor. Focus by Tab puts the caret at the end; focus by
- * a click puts it at the click. While focused it asks the engine for text input (required on Minecraft 26.3, which
- * sends no characters otherwise) and consumes every key that types a character, so engine shortcuts on those keys,
- * such as Minecraft's inventory key, do not fire. Tab, Escape and Enter are not consumed: Tab moves focus and
- * Escape still reaches the engine. A disabled box ignores input.</p>
+ * a click puts it at the click, unless the box {@linkplain #setSelectAllOnFocus selects all on focus}. While focused
+ * it asks the engine for text input (required on Minecraft 26.3, which sends no characters otherwise) and consumes
+ * every key that types a character, so engine shortcuts on those keys, such as Minecraft's inventory key, do not
+ * fire. Tab and Escape are not consumed: Tab moves focus and Escape still reaches the engine. Enter is consumed only
+ * when the box has submit listeners. A disabled box ignores input.</p>
  *
  * <h2>Text and indexes</h2>
  * <p>Caret and selection indexes count UTF-16 chars, like {@link String} indexes, but never fall inside a surrogate
@@ -45,6 +52,8 @@ import java.util.function.Consumer;
  *     <li>{@value #STYLE_TEXT} (text style, optional): the text. Falls back to the default text style.</li>
  *     <li>{@value #STYLE_TEXT_DISABLED} (text style, optional): the text when disabled. Falls back to
  *     {@value #STYLE_TEXT}.</li>
+ *     <li>{@value #STYLE_TEXT_READ_ONLY} (text style, optional): the text when read-only. Falls back to
+ *     {@value #STYLE_TEXT_DISABLED}.</li>
  *     <li>{@value #STYLE_SELECTION} (paint, optional): drawn behind selected text. Falls back to translucent blue.</li>
  *     <li>{@value #STYLE_CARET} (paint, optional): the one-unit-wide caret. Falls back to light gray.</li>
  * </ul>
@@ -85,6 +94,10 @@ public interface TextBox extends Component<TextBox> {
      */
     String STYLE_TEXT_DISABLED = "textbox.text.disabled";
     /**
+     * Style key for the text when read-only (text style, optional).
+     */
+    String STYLE_TEXT_READ_ONLY = "textbox.text.readonly";
+    /**
      * Style key for the selection highlight (paint, optional).
      */
     String STYLE_SELECTION = "textbox.selection";
@@ -106,7 +119,6 @@ public interface TextBox extends Component<TextBox> {
      *
      * @param text the new text
      * @return this box
-     * @throws NullPointerException if {@code text} is null
      */
     TextBox setText(String text);
 
@@ -156,7 +168,6 @@ public interface TextBox extends Component<TextBox> {
      *
      * @param padding the padding; 4 left and right, 5 top and bottom by default
      * @return this box
-     * @throws NullPointerException if {@code padding} is null
      */
     TextBox setTextPadding(Insets padding);
 
@@ -212,9 +223,67 @@ public interface TextBox extends Component<TextBox> {
      *
      * @param listener receives the new text
      * @return this box
-     * @throws NullPointerException if {@code listener} is null
      */
     TextBox onTextChanged(Consumer<String> listener);
+
+    /**
+     * Sets a filter for the edits the user makes: typing, deleting, cutting and pasting. After each edit the filter
+     * gets the text the edit produced and returns the text to keep: the same string to accept it, another string to
+     * replace it, or {@code null} to reject the edit and keep the text and selection as they were. Replaced text is
+     * cleaned of line breaks and cut to {@link #maxLength()}, and the caret keeps its distance from the end of the
+     * text. An edit the filter turns back into the old text changes nothing and tells no listener.
+     * {@link #setText} is not filtered.
+     *
+     * <pre>{@code
+     * // Up to four digits
+     * box.setFilter(text -> text.matches("\\d{0,4}") ? text : null);
+     * }</pre>
+     *
+     * @param filter the filter, or {@code null} for none
+     * @return this box
+     */
+    TextBox setFilter(UnaryOperator<String> filter);
+
+    /**
+     * Adds a listener told the text when Enter or keypad Enter is pressed (not repeated) while the box has focus.
+     * Once a box has a submit listener it consumes those presses.
+     *
+     * @param listener receives the text
+     * @return this box
+     */
+    TextBox onSubmit(Consumer<String> listener);
+
+    /**
+     * Returns whether the box is read-only.
+     *
+     * @return false by default
+     */
+    boolean isReadOnly();
+
+    /**
+     * Makes the box read-only or editable. A read-only box can be focused, selected and copied from, but typing,
+     * deleting, cutting and pasting do nothing, and no caret shows. {@link #setText} still works.
+     *
+     * @param readOnly true to stop editing
+     * @return this box
+     */
+    TextBox setReadOnly(boolean readOnly);
+
+    /**
+     * Returns whether gaining focus selects all the text.
+     *
+     * @return false by default
+     */
+    boolean selectsAllOnFocus();
+
+    /**
+     * Sets whether gaining focus selects all the text, so typing replaces it. A click that gives focus still places
+     * the caret where it lands.
+     *
+     * @param selectAll true to select all on focus
+     * @return this box
+     */
+    TextBox setSelectAllOnFocus(boolean selectAll);
 
     /**
      * A text box's own state in a {@link org.inspirenxe.strata.api.component.ComponentSnapshot}. Indexes follow
@@ -231,8 +300,6 @@ public interface TextBox extends Component<TextBox> {
 
         /**
          * Checks the text.
-         *
-         * @throws NullPointerException if {@code text} is null
          */
         public State {
             Objects.requireNonNull(text, "text");
