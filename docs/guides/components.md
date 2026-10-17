@@ -91,7 +91,7 @@ Read-only state:
 | `RESIZE_HORIZONTAL`, `RESIZE_VERTICAL`, `RESIZE_ALL` | Resizing and moving |
 | `NOT_ALLOWED` | Something that cannot be used now |
 
-Engines without a shape show the closest one they have. Swing has no "not allowed" cursor and shows the default arrow; Minecraft has all of them.
+Engines without a shape show the closest one they have. Swing has no "not allowed" cursor and shows the default arrow.
 
 ## Backgrounds
 

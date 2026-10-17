@@ -1,5 +1,5 @@
 plugins {
-    id 'strata-shared'
+    id 'strata-java'
     id 'strata-documented'
 }
 

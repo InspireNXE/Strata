@@ -8,7 +8,7 @@ Strata is a GUI library for Java games that does not depend on any engine. You b
 - typed events that handlers can cancel
 - themes that map style keys to colors, gradients and sprites
 
-There are adapters for Java2D/Swing and for Minecraft 26.3 on NeoForge and Fabric.
+This repository has the Java2D/Swing adapter. The Minecraft adapter lives in the [Strata-Minecraft](https://github.com/InspireNXE/Strata-Minecraft) repository.
 
 | Module | What it is |
 |---|---|
@@ -17,8 +17,7 @@ There are adapters for Java2D/Swing and for Minecraft 26.3 on NeoForge and Fabri
 | `core` | The implementation behind both. Only adapters use it directly. |
 | `canvas-swing` | The Java2D/Swing adapter: `StrataPanel` and `SwingSnapshot`. |
 | `sandbox` | A demo app written against the API only. |
-| `mc-common` | The Minecraft 26.3 adapter: `StrataScreen`, `MinecraftCanvas` and `MinecraftThemes.vanilla()`. |
-| `mc-neoforge`, `mc-fabric` | One `strata` mod jar per loader, containing `api`, `spi`, `core` and `mc-common`. |
+| `docs-examples` | The code the documentation site shows, compiled and tested by the build. |
 
 [docs/DESIGN.md](docs/DESIGN.md) covers the design and where its ideas come from (MalisisCore and Wintergreen). The Javadoc of `api` and `spi` is the contract, including what adapters must guarantee.
 
@@ -45,17 +44,6 @@ You can extend Strata in three ways, from lightest to heaviest:
 - Write a new type by extending `CustomComponent<T>`, or `CustomContainer<T>` for a layout. The class can implement an interface of your own, so other code sees it as its own type.
 
 Do not implement the component interfaces directly. Strata rejects such a class when it is added to a container.
-
-## Showing it in Minecraft
-
-`StrataScreen` is a vanilla `Screen`, so you open it like any other:
-
-```java
-Minecraft.getInstance().gui.setScreen(
-        new StrataScreen(Component.literal("Settings"), new SettingsScreen(), MinecraftThemes.vanilla()));
-```
-
-Input that Strata does not use goes on to vanilla, so Escape still closes the screen.
 
 ## Showing it in Swing
 

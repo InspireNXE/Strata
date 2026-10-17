@@ -12,7 +12,7 @@ Strata has three layers, and you only ever compile against the first one.
 | SPI | `org.inspirenxe.strata.spi` | People writing an engine adapter. |
 | Core | `org.inspirenxe.strata.core` | Nobody directly. It implements both, and adapters create hosts from it. |
 
-Adapters add one more package per engine: `org.inspirenxe.strata.swing` and `org.inspirenxe.strata.minecraft`. You use a few classes from your engine's adapter to show screens (`StrataPanel`, `StrataScreen`) and nothing else from it.
+Each adapter adds one more package for its engine, such as `org.inspirenxe.strata.swing`. You use a few classes from your engine's adapter to show screens (`StrataPanel` on Swing) and nothing else from it.
 
 Because the API is interfaces, the implementation can change between versions without breaking your code.
 
@@ -26,16 +26,16 @@ Components are interfaces such as `Button` and `Label`. You get them from a fact
 
 A host shows a screen: it owns the tree, runs layout, routes input, tracks focus and draws. Every host has its own `ComponentFactory`, which a screen receives in `build`. A component belongs to the factory that made it and can only join trees in that factory's host. That is why there is no `Strata.button(...)` static method.
 
-You rarely see a host. On Swing, `StrataPanel` holds a stack of them. On Minecraft, each `StrataScreen` holds one.
+You rarely see a host. On Swing, `StrataPanel` holds a stack of them. An adapter for an engine with its own screen system may give each engine screen a host of its own.
 
 ## UI units
 
 All positions and sizes are floats in UI units, with the origin at the top left of the host, x growing right and y growing down. The adapter decides how big a unit is:
 
-- In Minecraft, one unit is one GUI pixel, so layouts scale with the player's GUI scale.
 - In Swing, one unit is `scale` pixels, a number you pass to `StrataPanel`.
+- Other adapters usually tie a unit to the engine's pixels and the player's scale setting.
 
-Layout happens in floats. The Minecraft adapter rounds to whole GUI pixels when it draws.
+Layout happens in floats. An adapter for an engine that draws whole pixels rounds when it draws.
 
 ## Layout in two passes
 
@@ -50,7 +50,7 @@ Setters that affect size schedule a new layout automatically. Margin is space ou
 
 Input reaches components as events. For every component an event reaches, three steps run in order: the component's `BEFORE` handlers, then its default behavior (a button pressing, a text box inserting a character) unless a handler canceled the event, then its `AFTER` handlers. Bubbling events then move on to the parent. Built-in widgets consume the input they act on, which stops it there.
 
-When an event finishes, the host tells the adapter whether it was handled. Unhandled input goes on to the engine, which is how Escape still closes a Minecraft screen. See [Events](../guides/events.md).
+When an event finishes, the host tells the adapter whether it was handled. Unhandled input goes on to the engine, so an engine that closes screens on Escape still does. See [Events](../guides/events.md).
 
 ## Focus
 
@@ -58,11 +58,11 @@ At most one component per host has keyboard focus. Key events go to it, or to th
 
 ## Themes
 
-A theme maps style keys, such as `button.hovered`, to paints (solid colors, gradients, sprites, nine-slices) and text styles. Every component in a host shares the host's theme. Widgets mark some keys as required, and a host refuses to show a tree whose theme lacks any of them, listing every missing key at once. `Themes.flat()` works on any engine, and `MinecraftThemes.vanilla()` uses vanilla's widget sprites. See [Themes](../guides/theming.md).
+A theme maps style keys, such as `button.hovered`, to paints (solid colors, gradients, sprites, nine-slices) and text styles. Every component in a host shares the host's theme. Widgets mark some keys as required, and a host refuses to show a tree whose theme lacks any of them, listing every missing key at once. `Themes.flat()` works on any engine, and adapters can ship themes that match their engine's own widgets. See [Themes](../guides/theming.md).
 
 ## Threading
 
-Strata is single-threaded and does no locking. Create, change and read components only on the engine's UI thread: the Swing event dispatch thread, or Minecraft's render thread. Handlers run on that thread too.
+Strata is single-threaded and does no locking. Create, change and read components only on the engine's UI thread: such as the Swing event dispatch thread, or a game's render thread. Handlers run on that thread too.
 
 ## What Strata leaves out
 

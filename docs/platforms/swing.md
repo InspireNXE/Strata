@@ -14,7 +14,7 @@ The Swing adapter draws Strata with Java2D and takes input from AWT. It is the f
 |---|---|
 | `SwingPlatform` | Text metrics, clipboard and clock. Its text metrics also draw the text. |
 | `Theme` | The theme for every screen pushed |
-| `scale` | Pixels per UI unit, which must be positive. 2 matches a Minecraft GUI scale of 2. |
+| `scale` | Pixels per UI unit, which must be positive |
 
 `panel.screens()` is the [screen stack](../guides/screens.md#stacks-of-screens): push to show a screen, pop to close the top one. Only the top screen gets input.
 
@@ -39,9 +39,9 @@ Use the panel on the Swing event dispatch thread only, the same as any Swing com
 --8<-- "swing/SwingExamples.java:font"
 ```
 
-`SwingTextMetrics.defaults()` is the logical Dialog font at 9 units, close to Minecraft's text size. Widths are fractional advance widths with antialiasing and fractional metrics on, the same settings the panel draws with. The line height is the font's height. Underline, strikethrough and the shadow are drawn by the adapter and do not change widths.
+`SwingTextMetrics.defaults()` is the logical Dialog font at 9 units. Widths are fractional advance widths with antialiasing and fractional metrics on, the same settings the panel draws with. The line height is the font's height. Underline, strikethrough and the shadow are drawn by the adapter and do not change widths.
 
-Text will not look like Minecraft's pixel font, and its widths differ. Layouts built on measured text adapt; layouts that assume widths will not.
+Other adapters use other fonts with other widths. Layouts built on measured text adapt; layouts that assume widths will not.
 
 ## Sprites
 
@@ -49,7 +49,7 @@ Text will not look like Minecraft's pixel font, and its widths differ. Layouts b
 
 The panel and `SwingSnapshot` look images up through the class loader that loaded the Swing adapter. In an ordinary application, where everything shares one class path, that finds images in your own jar. Under a plugin system that gives each plugin its own class loader, it may not.
 
-Tints multiply each channel of the image, and tinted copies are cached per sprite and tint. Nine-slice borders are in the image's pixels; borders wider than the rectangle shrink in proportion so nothing draws outside it. Swing stretches the edges and the center of a nine-slice, where vanilla Minecraft tiles them by default.
+Tints multiply each channel of the image, and tinted copies are cached per sprite and tint. Nine-slice borders are in the image's pixels; borders wider than the rectangle shrink in proportion so nothing draws outside it. Swing stretches the edges and the center of a nine-slice.
 
 ## Clipboard
 

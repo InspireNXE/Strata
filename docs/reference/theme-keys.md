@@ -213,66 +213,6 @@ The open list also uses the `ListView` and `ScrollPanel` keys.
 
 Text styles are otherwise plain: no bold, italic, underline, strikethrough or shadow. `tooltip.background` is not set, so tooltips use the fallback box.
 
-### `MinecraftThemes.vanilla()`
-
-| Key | Value |
-|---|---|
-| `button.normal` | nine-slice `minecraft:widget/button`, border 3 |
-| `button.hovered` | nine-slice `minecraft:widget/button_highlighted`, border 3 |
-| `button.pressed` | nine-slice `minecraft:widget/button_highlighted`, border 3 |
-| `button.disabled` | nine-slice `minecraft:widget/button_disabled`, border 1 |
-| `button.text` | `0xFFFFFFFF` with shadow |
-| `button.text.disabled` | `0xFFA0A0A0` with shadow |
-| `label.text` | `0xFFFFFFFF` with shadow |
-| `checkbox.normal` | sprite `minecraft:widget/checkbox` |
-| `checkbox.hovered` | sprite `minecraft:widget/checkbox_highlighted` |
-| `checkbox.checked` | sprite `minecraft:widget/checkbox_selected` |
-| `checkbox.checked.hovered` | sprite `minecraft:widget/checkbox_selected_highlighted` |
-| `checkbox.text` | `0xFFFFFFFF` with shadow |
-| `checkbox.text.disabled` | `0xFFA0A0A0` with shadow |
-| `slider.track` | nine-slice `minecraft:widget/slider`, border 1 |
-| `slider.track.focused` | nine-slice `minecraft:widget/slider_highlighted`, border 1 |
-| `slider.thumb` | nine-slice `minecraft:widget/slider_handle`, border 2 (3 at the bottom) |
-| `slider.thumb.hovered` | nine-slice `minecraft:widget/slider_handle_highlighted`, border 2 (3 at the bottom) |
-| `slider.text` | `0xFFFFFFFF` with shadow |
-| `slider.text.disabled` | `0xFFA0A0A0` with shadow |
-| `textbox.normal` | nine-slice `minecraft:widget/text_field`, border 1 |
-| `textbox.focused` | nine-slice `minecraft:widget/text_field_highlighted`, border 1 |
-| `textbox.disabled` | nine-slice `minecraft:widget/text_field`, border 1 |
-| `textbox.selection` | solid `0x800000FF` |
-| `textbox.caret` | solid `0xFFD0D0D0` |
-| `textbox.text` | `0xFFE0E0E0` with shadow |
-| `textbox.text.disabled` | `0xFF707070` with shadow |
-| `textbox.text.readonly` | `0xFFA0A0A0` with shadow |
-| `scroll.thumb` | nine-slice `minecraft:widget/scroller`, border 1 |
-| `scroll.track` | nine-slice `minecraft:widget/scroller_background`, border 1 |
-| `list.row.hovered` | solid `0x30FFFFFF` |
-| `list.row.selected` | solid `0x60FFFFFF` |
-| `list.placeholder` | `0xFFA0A0A0` with shadow |
-| `combobox.normal` | nine-slice `minecraft:widget/button`, border 3 |
-| `combobox.hovered` | nine-slice `minecraft:widget/button_highlighted`, border 3 |
-| `combobox.disabled` | nine-slice `minecraft:widget/button_disabled`, border 1 |
-| `combobox.popup` | solid `0xF0101010` |
-| `combobox.text` | `0xFFFFFFFF` with shadow |
-| `combobox.text.disabled` | `0xFFA0A0A0` with shadow |
-| `window.background` | nine-slice `minecraft:popup/background`, border 6 |
-| `window.title.text` | `0xFFFFFFFF` with shadow |
-| `window.close` | `0xFFA0A0A0` with shadow |
-| `window.close.hovered` | `0xFFFFFFFF` with shadow |
-| `tab.normal` | nine-slice `minecraft:widget/tab`, border 2 (0 at the bottom) |
-| `tab.hovered` | nine-slice `minecraft:widget/tab_highlighted`, border 2 (0 at the bottom) |
-| `tab.selected` | nine-slice `minecraft:widget/tab_selected`, border 2 (0 at the bottom) |
-| `tab.text` | `0xFFA0A0A0` with shadow |
-| `tab.text.selected` | `0xFFFFFFFF` with shadow |
-| `tab.text.disabled` | `0xFF606060` with shadow |
-| `progress.track` | solid `0xFF000000` |
-| `progress.fill` | solid `0xFF008200` |
-| `progress.text` | `0xFFFFFFFF` with shadow |
-| `separator` | solid `0xB9FFFFFF` |
-| `overlay.backdrop` | solid `0x60000000` |
-
-`button.focus` and `checkbox.focus` are not set, so vanilla-themed buttons and check boxes show focus through their hovered sprites only. Vanilla's check box sprites include the check mark, so `checkbox.mark` is not set either, and vanilla has no disabled check box or slider sprites. Vanilla has no sprites for list rows, progress bars or separators, so they are plain colors, and the tooltip keys are not set, so tooltips use the fallback, which matches vanilla's classic tooltip colors. The borders match the sprites' `.png.mcmeta` files in 26.3. Minecraft reads the `.mcmeta`; other engines use the borders.
-
 ## Naming your own keys
 
-Prefix keys for your own components with your mod or project id, such as `examplemod.switch.track`, so they never collide with Strata's keys or another mod's.
+Prefix keys for your own components with your project id, such as `examplemod.switch.track`, so they never collide with Strata's keys or another project's.

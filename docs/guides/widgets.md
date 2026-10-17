@@ -56,17 +56,14 @@ Strata cannot ask the engine how big an image file is, so set the image size you
 
 ### Engine visuals
 
-A `Visual` is something only the engine can draw, such as a Minecraft item stack. The API never names the engine's type: the adapter makes the visual from the engine object, and Strata hands it back to the adapter's canvas to draw. `factory.image(visual)` shows one at its natural size.
+A `Visual` is something only the engine can draw, such as a game's item icon. The API never names the engine's type: the adapter makes the visual from the engine object, and Strata hands it back to the adapter's canvas to draw. `factory.image(visual)` shows one at its natural size.
 
 ```java
 // On Swing, any image
 Image icon = factory.image(SwingVisuals.image(bufferedImage));
-
-// On Minecraft, an item stack with its count and damage bar
-Image item = factory.image(MinecraftVisuals.item(itemStack));
 ```
 
-A canvas draws a placeholder for a visual it did not make. Item visuals are described on the [Minecraft page](../platforms/minecraft.md#items).
+A canvas draws a placeholder for a visual it did not make. Each adapter documents the visuals it makes.
 
 ## Button
 
@@ -110,7 +107,7 @@ A box that is checked or not, with a caption to its right.
 | `setText(text)` | | One line. May be empty for a box alone. |
 | `setChecked(boolean)` | unchecked | Listeners run if the state changed. Works while disabled, so code can keep a disabled box in step with its setting. |
 | `toggle()` | | Flips it as if clicked. Does nothing while disabled. Fires no events. |
-| `setBoxSize(size)` | line height plus 8 | The square box's size. `Float.NaN` goes back to the default, which is 17 with Minecraft's font, the size of vanilla's check box. |
+| `setBoxSize(size)` | line height plus 8 | The square box's size. `Float.NaN` goes back to the default, which is 17 with a 9-unit line height. |
 | `onCheckedChanged(listener)` | | Told the new state after every change, by input, `toggle()` or `setChecked` |
 
 A left click anywhere on the check box, caption included, toggles it, and so does a press of Enter, keypad Enter or Space while it has focus. It consumes those inputs. It is focusable and tabbable and shows the hand cursor. The caption sits 4 units right of the box, both centered vertically.
@@ -123,7 +120,7 @@ A left click anywhere on the check box, caption included, toggles it, and so doe
 | `checkbox.mark`, `checkbox.mark.disabled` (optional) | Drawn over a checked box, inset by a fifth of its size |
 | `checkbox.focus` (optional) | A one-unit ring inside the box's edge while focused |
 
-Themes built from images draw the check mark into the checked faces, as vanilla's sprites do, and leave `checkbox.mark` out. Themes built from colors use `checkbox.mark`.
+Themes built from images can draw the check mark into the checked faces and leave `checkbox.mark` out. Themes built from colors use `checkbox.mark`.
 
 ## Slider
 
@@ -241,10 +238,10 @@ Shortcuts need Control held without Alt, so AltGr combinations, which many layou
 
 The box is focusable and tabbable and shows the text cursor. Focus by Tab or `requestFocus()` puts the caret at the end; focus by a click puts it at the click. While focused, it:
 
-- asks the engine for text input, which Minecraft 26.3 needs before it sends any characters;
-- consumes every key press that types a character (any printable key without Control or Alt), so engine shortcuts on those keys, such as Minecraft's inventory or chat keys, do not fire while you type;
+- asks the engine for text input, which some engines need before they send any characters;
+- consumes every key press that types a character (any printable key without Control or Alt), so engine shortcuts on those keys do not fire while you type;
 - consumes the editing keys and shortcuts in the table above;
-- does not consume Tab, Escape, Up, Down, Page Up or Page Down. Tab moves focus and Escape reaches the engine, so a Minecraft screen still closes. Enter is consumed only when the box has a submit listener; otherwise it bubbles to ancestors.
+- does not consume Tab, Escape, Up, Down, Page Up or Page Down. Tab moves focus and Escape reaches the engine, which may close the screen. Enter is consumed only when the box has a submit listener; otherwise it bubbles to ancestors.
 
 A disabled box ignores input.
 

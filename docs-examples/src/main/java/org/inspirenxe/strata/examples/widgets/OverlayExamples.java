@@ -68,7 +68,7 @@ public final class OverlayExamples {
         final TextStyle blue = TextStyle.DEFAULT.withColor(0xFF5555FF).withItalic(true);
         price.setTooltip(Tooltip.lines(List.of(
                 List.of(new TextSpan("Diamond", white)),
-                List.of(new TextSpan("Minecraft", blue)))));
+                List.of(new TextSpan("Example Mod", blue)))));
         // --8<-- [end:tooltips]
         return price;
     }

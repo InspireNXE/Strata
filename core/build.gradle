@@ -1,16 +1,12 @@
 plugins {
-    id 'strata-shared'
+    id 'strata-java'
     id 'strata-documented'
 }
 
 description = 'The Strata implementation. Adapters use it; developers compile against api only.'
 
 dependencies {
-    // compileOnly: loaders compile every shared project's sources themselves, so nothing may leak in transitively
-    compileOnly(project(':api'))
-    compileOnly(project(':spi'))
-    testImplementation(project(':api'))
-    testImplementation(project(':spi'))
+    api(project(':spi'))
     // Run the SPI contracts against the test platform, which checks both
     testImplementation(testFixtures(project(':spi')))
 }

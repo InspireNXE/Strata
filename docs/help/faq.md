@@ -4,15 +4,11 @@
 
 ### What engines does Strata support?
 
-Swing (Java2D) on any desktop JVM, and Minecraft 26.3 on NeoForge and Fabric. Other engines need an adapter, which is a small amount of code; see [Writing an adapter](../platforms/writing-an-adapter.md).
-
-### Which Minecraft versions?
-
-26.3 only. The mod metadata accepts `[26.3, 26.4)`. Versions before 26.x will not be supported: 26.3 changed the GUI and input APIs (`GuiGraphicsExtractor`, SDL scancodes) that the adapter is built on.
+This repository has the Swing (Java2D) adapter, which runs on any desktop JVM. [Platforms](../platforms/index.md) lists the adapters that live elsewhere. Other engines need an adapter, which is a small amount of code; see [Writing an adapter](../platforms/writing-an-adapter.md).
 
 ### Is it ready for production?
 
-Not yet. Strata is at 0.1.0, unreleased, and the API will change. Nothing has been run inside a Minecraft client yet. See [Status and limitations](status.md).
+Not yet. Strata is at 0.1.0, unreleased, and the API will change. See [Status and limitations](status.md).
 
 ### Is it a port of MalisisCore?
 
@@ -30,7 +26,7 @@ Components are interfaces with a hidden implementation. You get them from the `C
 
 ### Why is there no static way to get a factory?
 
-Mod loaders give each mod its own class loader, and one game can show several hosts at once. Passing the factory keeps every tree tied to the host that shows it, and leaves no global state behind when a screen closes.
+Plugin systems often give each plugin its own class loader, and one application can show several hosts at once. Passing the factory keeps every tree tied to the host that shows it, and leaves no global state behind when a screen closes.
 
 ### Can I implement `Component` or `Button` myself?
 
@@ -114,69 +110,15 @@ Not yet. You can create `EventType`s, but there is no public way to fire them. U
 
 No. A closed screen's tree is dropped, along with its handlers. Remove handlers only from components you keep and reuse.
 
-## Minecraft
-
-### How do I open a Strata screen?
-
-`Minecraft.getInstance().gui.setScreen(new StrataScreen(title, screen, MinecraftThemes.vanilla()))`, on the client thread. See [Opening a screen](../platforms/minecraft.md#opening-a-screen).
-
-### Why does closing my screen go back to the game instead of the previous screen?
-
-That is vanilla's default `onClose()`. Subclass `StrataScreen` and override it. See [Returning to a parent screen](../platforms/minecraft.md#returning-to-a-parent-screen).
-
-### Why does Escape close my screen while I'm typing?
-
-The text box does not consume Escape, so vanilla gets it. Consume it in a root handler, or override `shouldCloseOnEsc()`. See [Escape](../platforms/minecraft.md#escape).
-
-### Why do I get no `CHAR` events in my custom component?
-
-Minecraft 26.3 sends characters only while a text field reports focus. Override `acceptsTextInput()` to return true. See [Typed characters need text input mode](../platforms/minecraft.md#typed-characters-need-text-input-mode).
-
-### Why doesn't Shift+scroll or Ctrl+drag work in game?
-
-Minecraft sends no modifiers with pointer moves, scrolls or characters. See [Modifier keys](../platforms/differences.md#modifier-keys).
-
-### Why doesn't Command+C work in a text box on my Mac?
-
-Strata's text box uses Control on every platform for now. Use Control+C.
-
-### Does the world keep running behind a Strata screen?
-
-In single player it pauses, as with most vanilla screens. Override `isPauseScreen()` to return false. See [Pausing](../platforms/minecraft.md#pausing).
-
-### Where do I put my sprites?
-
-`assets/<modid>/textures/gui/sprites/<path>.png`, named `SpriteId.of("<modid>", "<path>")`. Add a `.png.mcmeta` for nine-slices. See [Your own sprites](../platforms/minecraft.md#your-own-sprites).
-
-### Can I put vanilla buttons in a Strata screen, or Strata components in a vanilla screen?
-
-Not yet. Both directions are planned as hosting adapters. See [Not available yet](../platforms/minecraft.md#not-available-yet).
-
-### Can I draw on the HUD?
-
-Not yet. HUD layers are planned.
-
-### Does Strata need Fabric API?
-
-No. The Fabric jar depends only on Fabric Loader, Minecraft and Java.
-
-### Does Strata use mixins?
-
-No. It hosts screens through vanilla's own `Screen` class.
-
-### Does it work on a dedicated server?
-
-Strata is client-only. Keep classes that touch it out of server code.
-
 ## Swing
 
 ### What does the scale argument of `StrataPanel` mean?
 
-Pixels per UI unit. At 2, a 100-unit button is 200 pixels wide, like Minecraft at GUI scale 2.
+Pixels per UI unit. At 2, a 100-unit button is 200 pixels wide.
 
-### Why does text look different from Minecraft?
+### Why does text look different from other adapters?
 
-Swing draws with an AWT font, Dialog 9 by default, not Minecraft's pixel font. Widths differ too, so leave slack around text. See [Platform differences](../platforms/differences.md#text).
+Swing draws with an AWT font, Dialog 9 by default, while other adapters use their engine's font. Widths differ too, so leave slack around text. See [Platform differences](../platforms/differences.md#text).
 
 ### My sprite draws as a magenta square.
 

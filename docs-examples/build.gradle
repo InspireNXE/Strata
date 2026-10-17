@@ -1,20 +1,13 @@
 plugins {
     id 'strata-java'
-    // Vanilla classes for the Minecraft examples
-    id 'net.neoforged.moddev'
 }
 
 description = 'The code shown on the documentation site. Pages include it by section, so every example compiles.'
-
-neoForge {
-    neoFormVersion = neo_form_version
-}
 
 dependencies {
     // What a mod or game compiles against
     implementation(project(':api'))
     implementation(project(':canvas-swing'))
-    compileOnly(project(':mc-common'))
     // The adapter guide's example engine creates hosts and runs the SPI contract tests
     implementation(project(':spi'))
     implementation(project(':core'))

@@ -9,7 +9,6 @@ No parameter accepts null unless its documentation says so, and passing null whe
 | `api` | Everyone writing screens and components | [Open](../javadoc/api/index.html) |
 | `spi` | Adapter authors | [Open](../javadoc/spi/index.html) |
 | `canvas-swing` | Swing applications | [Open](../javadoc/canvas-swing/index.html) |
-| `mc-common` | Minecraft mods | [Open](../javadoc/mc-common/index.html) |
 | `core` | Contributors. Not part of the API. | [Open](../javadoc/core/index.html) |
 
 Good starting points in the API Javadoc:

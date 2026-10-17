@@ -47,7 +47,7 @@ A [`MessageBox`](widgets.md#messagebox) is a ready-made dialog for confirmations
 
 Content must be new: a component already in a tree is refused. Closing or rebuilding the screen closes every overlay.
 
-On Minecraft, dialogs are overlays inside one vanilla screen, so they do not need a screen of their own, and the screen behind keeps updating.
+Dialogs are overlays inside the screen's host, so they need no engine screen of their own, and the screen behind keeps updating.
 
 ## Tooltips
 
@@ -63,9 +63,9 @@ Any component can have a tooltip. It shows while the pointer rests on the compon
 | Styled lines | `Tooltip.lines(lines)` | Each span in its own style |
 | A component | `Tooltip.of(factory -> component)` | Built again each time the tooltip shows, with no box of its own |
 
-Text tooltips draw on the `tooltip.background` paint with 4 units of padding, or on a dark box with a purple edge, like vanilla's classic tooltip, when the theme lacks the key.
+Text tooltips draw on the `tooltip.background` paint with 4 units of padding, or on a dark box with a purple edge when the theme lacks the key.
 
-On Minecraft, `MinecraftTooltips.item(stack)` makes a styled-lines tooltip from an item's vanilla tooltip; see [Item tooltips](../platforms/minecraft.md#item-tooltips).
+Adapters can make styled-lines tooltips from the engine's own tooltip text, for objects such as an engine visual.
 
 ## Held modifiers
 

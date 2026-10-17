@@ -3,11 +3,6 @@
 build/
 !gradle/wrapper/gradle-wrapper.jar
 
-# Loader dev runs
-runs/
-run/
-logs/
-
 # IDEs
 .idea/
 *.iml

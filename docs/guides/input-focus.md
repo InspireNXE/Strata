@@ -6,7 +6,7 @@ Components never see engine input codes. Each adapter maps its engine's keys, bu
 
 `Key` names physical keys by their position on a US keyboard. `Key.A` is the key labeled A on a US layout, whatever the user's own layout prints on it, so on a French AZERTY keyboard it is the key labeled Q. Use keys for shortcuts and navigation, and [characters](#characters) for text.
 
-The constants cover letters, digits (`NUM_0` to `NUM_9`), punctuation, `SPACE`, `ENTER`, `TAB`, `BACKSPACE`, `ESCAPE`, `INSERT`, `DELETE`, arrows, `HOME`, `END`, `PAGE_UP`, `PAGE_DOWN`, the lock keys, `PRINT_SCREEN`, `PAUSE`, `F1` to `F12`, the keypad (`KP_0` to `KP_9`, `KP_ENTER` and friends), left and right modifiers, and `MENU`. Keys an adapter cannot identify arrive as `Key.UNKNOWN`. On Minecraft that includes F13 to F24 and the keypad comma.
+The constants cover letters, digits (`NUM_0` to `NUM_9`), punctuation, `SPACE`, `ENTER`, `TAB`, `BACKSPACE`, `ESCAPE`, `INSERT`, `DELETE`, arrows, `HOME`, `END`, `PAGE_UP`, `PAGE_DOWN`, the lock keys, `PRINT_SCREEN`, `PAUSE`, `F1` to `F12`, the keypad (`KP_0` to `KP_9`, `KP_ENTER` and friends), left and right modifiers, and `MENU`. Keys an adapter cannot identify, such as F13 to F24 on most adapters, arrive as `Key.UNKNOWN`.
 
 A few helpers: `isEnter()` is true for `ENTER` and `KP_ENTER`, and `isPrintable()` for keys that usually type a character.
 
@@ -30,10 +30,10 @@ Each `KEY` event has a `KeyAction`:
 Strata delivers repeats on every engine. Engines differ in how they report a held key, and the adapter evens that out:
 
 - If the engine sends real repeats, the adapter passes them on.
-- If the engine reports a held key as more presses (AWT and Minecraft do), the adapter uses the SPI's `HeldKeys` to turn the second and later presses into `REPEAT`.
+- If the engine reports a held key as more presses (AWT does), the adapter uses the SPI's `HeldKeys` to turn the second and later presses into `REPEAT`.
 - If the engine sends no repeats at all, the host makes them: after 400 ms, then every 33 ms, for Left, Right, Up, Down, Backspace, Delete, Home, End, Page Up and Page Down only. These timings follow the host's clock and need `render` to be called every frame.
 
-Both shipped adapters fall in the second group, so you see the user's system repeat rate there.
+The Swing adapter falls in the second group, so you see the user's system repeat rate there.
 
 ## Modifiers
 
@@ -50,7 +50,7 @@ Modifiers.of(Modifier.CONTROL, Modifier.SHIFT);
 Modifiers.NONE.with(Modifier.ALT).without(Modifier.ALT);
 ```
 
-Some engines do not report modifiers with every kind of input. Minecraft gives none with pointer moves, scrolls or typed characters, and those events report `Modifiers.NONE` there. See [Platform differences](../platforms/differences.md#modifier-keys).
+Some engines do not report modifiers with every kind of input. An adapter for such an engine reports `Modifiers.NONE` for those events, typically pointer moves, scrolls or typed characters. See [Platform differences](../platforms/differences.md#modifier-keys).
 
 ## Shortcuts
 
@@ -79,7 +79,7 @@ A key press and its character are separate events: typing "a" produces a `KEY` p
 
 ### Text input mode
 
-Some engines send no characters at all until a text field asks for them. Minecraft 26.3 is one, as are other SDL-based engines. Others use the signal to show an on-screen keyboard or input method window.
+Some engines send no characters at all until a text field asks for them, as SDL-based engines do. Others use the signal to show an on-screen keyboard or input method window.
 
 Strata handles this through focus. When a component that accepts text input gains focus, the host tells the engine to start text input, at the component's bounds. When focus leaves the last such component, it tells the engine to stop. The built-in text box accepts text input; a custom component opts in by overriding `acceptsTextInput()` to return true.
 
@@ -130,4 +130,4 @@ Every input call into the host returns whether Strata used it, and adapters pass
 | Key | A component consumed it, or Tab moved focus |
 | Character | The focused component consumed it |
 
-A screen whose root fills the host is "a component" everywhere, so it claims every press. On Minecraft that means vanilla widgets added to the same vanilla screen would never be clicked. See [Minecraft](../platforms/minecraft.md#input).
+A screen whose root fills the host is "a component" everywhere, so it claims every press. On an engine that shows its own widgets in the same screen as a Strata host, those widgets would never be clicked.

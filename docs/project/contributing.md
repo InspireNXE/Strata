@@ -14,8 +14,6 @@ This compiles every module, runs every test, runs Javadoc with every doclint che
 |---|---|
 | `./gradlew :sandbox:run` | Opens the demo screen in a window |
 | `./gradlew :sandbox:run --args="--snapshot out.png"` | Renders the demo screen to a PNG, without a display |
-| `./gradlew :mc-neoforge:runClient` | Starts a NeoForge client with Strata loaded |
-| `./gradlew :mc-fabric:runClient` | Starts a Fabric client with Strata loaded |
 | `./gradlew javadoc` | Builds each module's Javadoc into its `build/docs/javadoc` |
 | `./gradlew publishToMavenLocal` | Publishes every module to your local Maven repository |
 
@@ -27,9 +25,8 @@ This compiles every module, runs every test, runs Javadoc with every doclint che
 | `spi` | What engine adapters implement and drive, plus the contract test fixtures |
 | `core` | The implementation |
 | `canvas-swing`, `sandbox` | The Java2D adapter, and a demo written against the API only |
-| `mc-common`, `mc-neoforge`, `mc-fabric` | The Minecraft adapter and one mod jar per loader |
 | `docs-examples` | The code this site shows, compiled and tested |
-| `build-logic` | The `strata-java`, `strata-shared`, `strata-loader` and `strata-documented` convention plugins |
+| `build-logic` | The `strata-java` and `strata-documented` convention plugins |
 
 ## Rules worth knowing before you change code
 
@@ -40,8 +37,6 @@ This compiles every module, runs every test, runs Javadoc with every doclint che
 - Painting should not allocate. Cache spans and rectangles during layout.
 - Clip and transform pushes are balanced in `try`/`finally`.
 - A canceled event skips the component's default `on...` hook. Tests rely on this.
-- Minecraft input codes are SDL scancodes. Always map them through the `InputConstants` names.
-- Check every Minecraft 26.3 API against the vanilla sources before using it.
 
 ## Code style
 

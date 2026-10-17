@@ -1,6 +1,6 @@
 # Your first screen
 
-This page builds the form below, then shows it in a Swing window and in Minecraft. It assumes you have [installed](installation.md) Strata.
+This page builds the form below, then shows it in a Swing window. It assumes you have [installed](installation.md) Strata.
 
 ![The finished form](../assets/images/quickstart.png)
 
@@ -20,7 +20,7 @@ public final class SettingsScreen implements Screen {
     public Component<?> build(final ComponentFactory factory) {
 ```
 
-A `Screen` describes one full screen of UI. You never construct components with `new`. The host that shows the screen calls `build` and passes in its `ComponentFactory`, and every component in the tree must come from that factory. That ties the tree to the host that shows it, which matters on Minecraft, where mod loaders give each mod its own class loader. For the same reason, Strata has no static way to get a factory.
+A `Screen` describes one full screen of UI. You never construct components with `new`. The host that shows the screen calls `build` and passes in its `ComponentFactory`, and every component in the tree must come from that factory. That ties the tree to the host that shows it, which matters under plugin systems that give each plugin its own class loader, and when one application shows several hosts at once. For the same reason, Strata has no static way to get a factory.
 
 `build` may be called more than once: every time the screen is opened, and again whenever the screen asks for a rebuild. Keep the data your screen shows in fields on the screen object, and make the components fresh in `build`. See [Screens](../guides/screens.md).
 
@@ -81,25 +81,9 @@ To get a PNG instead of a window, for example in a test or on a build server, us
 --8<-- "swing/SwingExamples.java:snapshot"
 ```
 
-## Show it in Minecraft
-
-`StrataScreen` is a vanilla `Screen` subclass that hosts one Strata screen. Open it like any other vanilla screen, from client code on the render thread:
-
-```java
---8<-- "minecraft/MinecraftExamples.java:open"
-```
-
-`MinecraftThemes.vanilla()` draws buttons, check boxes, sliders and text boxes with vanilla's own sprites, so the form looks like part of the game. One UI unit is one GUI pixel, so the 200-unit column is 200 GUI pixels wide and follows the player's GUI scale setting. Escape closes the screen as it does for any vanilla screen, because Strata passes on input it does not use.
-
-Code that runs on another thread, such as a network handler, must move onto the client thread first:
-
-```java
---8<-- "minecraft/MinecraftExamples.java:thread"
-```
-
 ## Next steps
 
 - [Core concepts](concepts.md) explains the model behind what you just wrote.
 - [Layout](../guides/layout.md) covers every container and how sizes are decided.
 - [Events](../guides/events.md) goes beyond `onAction`.
-- [Minecraft](../platforms/minecraft.md) has everything specific to the game.
+- [Platforms](../platforms/index.md) covers the adapters and how engines differ.

@@ -10,7 +10,7 @@ A record of how a span of text looks:
 |---|---|
 | `color` | `0xFFFFFFFF`, opaque white. Alpha 0 draws nothing. |
 | `bold`, `italic`, `underline`, `strikethrough` | off |
-| `shadow` | off. A darker copy one unit down and to the right, as Minecraft draws it. |
+| `shadow` | off. A darker copy one unit down and to the right. |
 
 `with` methods return modified copies:
 
@@ -20,12 +20,14 @@ TextStyle heading = TextStyle.DEFAULT.withColor(0xFFFFD54F).withBold(true).withS
 
 Engines draw what they can:
 
-| Style | Minecraft | Swing |
-|---|---|---|
-| Bold | Vanilla bold, one pixel wider per character | A bold font derived from the base font |
-| Italic | Vanilla italic | An italic font derived from the base font |
-| Underline, strikethrough | Vanilla's | Drawn by the adapter |
-| Shadow | Vanilla's | Drawn by the adapter |
+| Style | Swing |
+|---|---|
+| Bold | A bold font derived from the base font |
+| Italic | An italic font derived from the base font |
+| Underline, strikethrough | Drawn by the adapter |
+| Shadow | Drawn by the adapter |
+
+Other adapters use the engine's own text styles where it has them.
 
 ## TextSpan
 
@@ -46,8 +48,9 @@ Components get it from `MeasureContext.text()` during measure and from `environm
 
 | Engine | Widths | Line height |
 |---|---|---|
-| Minecraft | Whole GUI pixels, from the player's font, including vanilla's extra pixel for bold | The font's line height, 9 for the default font |
 | Swing | Fractional advance widths of the AWT font | The font's height: ascent, descent and leading |
+
+Engines with pixel fonts often report whole-pixel widths, and some make bold text wider.
 
 ## Drawing text in a custom component
 
@@ -79,14 +82,11 @@ Wrapping is part of the label, not a public utility. A custom component that nee
 
 ## Fonts
 
-Strata has no font API. Each adapter decides:
-
-- Minecraft draws with the screen's font, which follows the player's resource packs.
-- Swing draws with the font given to `SwingTextMetrics`. `SwingTextMetrics.defaults()` is the logical Dialog font at 9 units, close to Minecraft's size. See [Swing](../platforms/swing.md#fonts).
+Strata has no font API, so each adapter picks its fonts. Swing draws with the font given to `SwingTextMetrics`. `SwingTextMetrics.defaults()` is the logical Dialog font at 9 units. See [Swing](../platforms/swing.md#fonts). Other adapters usually draw with the engine's own font.
 
 ## Not supported yet
 
 - Inline images in a line of text. `SpriteSpan` and `InlineElement` are reserved for it, but nothing draws them yet.
-- Markup such as BBCode. Avoid Minecraft's `§` formatting codes in text too: Strata does not interpret them, and vanilla's own text drawing may, so the same text would look different on each engine.
+- Markup such as BBCode. Avoid an engine's own formatting codes in text too: Strata does not interpret them, and the engine's text drawing may, so the same text would look different on each engine.
 - Right-to-left text and complex shaping beyond what the engine's own text drawing does.
 - Multi-line editing.

@@ -28,7 +28,7 @@ public final class SwingExamples {
         // Swing components must be created and used on the event dispatch thread
         SwingUtilities.invokeLater(() -> {
             final SwingPlatform platform = new SwingPlatform(SwingTextMetrics.defaults());
-            // 2 pixels per UI unit, like a GUI scale of 2 in Minecraft
+            // 2 pixels per UI unit
             final StrataPanel panel = new StrataPanel(platform, Themes.flat(), 2f);
             panel.screens().push(new SettingsScreen());
 

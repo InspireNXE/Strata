@@ -52,7 +52,7 @@ A handle belongs to one opening. Once that opening ends, because the screen clos
 --8<-- "events/EventExamples.java:handle"
 ```
 
-What closing means depends on the host. A Swing screen stack pops the screen. On Minecraft, `StrataScreen` calls vanilla's `onClose()`, which by default leaves the screen and returns to the game, not to the screen that opened it. To go back to a parent screen, override `onClose()`; see [Returning to a parent screen](../platforms/minecraft.md#returning-to-a-parent-screen).
+What closing means depends on the host. A Swing screen stack pops the screen. An adapter that holds each Strata screen in an engine screen usually closes that engine screen, and the engine decides what shows next.
 
 ## Stacks of screens
 
@@ -80,8 +80,8 @@ A stack draws from the topmost screen that hides the background, or from the bot
 --8<-- "screens/ScreenExamples.java:opaque"
 ```
 
-Minecraft has its own screen stack. Each vanilla `StrataScreen` holds exactly one Strata screen, and `hidesBackground` has no effect there. Vanilla decides what is drawn behind a screen.
+Engines with a screen stack of their own may hold one Strata screen per engine screen. There `hidesBackground` has no effect, and the engine decides what is drawn behind a screen.
 
 ## Changing the theme
 
-Screens cannot change their host's theme. Adapters can: `ScreenStack.setTheme` and `ScreenHost.setTheme` swap it, components re-read their keys, and a new layout runs. `StrataScreen` takes its theme in the constructor and has no setter yet. A new theme that lacks keys the open tree needs throws `ThemeException`, and the old theme stays.
+Screens cannot change their host's theme. Adapters can: `ScreenStack.setTheme` and `ScreenHost.setTheme` swap it, components re-read their keys, and a new layout runs. A new theme that lacks keys the open tree needs throws `ThemeException`, and the old theme stays.

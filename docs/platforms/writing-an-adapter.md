@@ -2,7 +2,7 @@
 
 An adapter runs Strata on an engine. It implements two SPI interfaces, `Platform` and `Canvas`, creates a host from `core`, and forwards the engine's frames and input to it. This page builds a complete adapter for an imaginary engine. Its code is compiled and passes Strata's contract tests as part of the build.
 
-You need this only to bring Strata to a new engine: LWJGL directly, libGDX, a game of your own, or an ImGui backend. To use Strata on Minecraft or Swing, see those pages instead.
+You need this only to bring Strata to a new engine: LWJGL directly, libGDX, a game of your own, or an ImGui backend. To use Strata with an adapter that already exists, see the [Platforms](index.md) page instead.
 
 ## What an adapter depends on
 
@@ -71,7 +71,7 @@ Requirements:
 - Coordinates are UI units in the current transform. Round to the engine's pixel grid if it needs whole pixels, the same way for drawing and clipping.
 - Colors are ARGB. Alpha 0 draws nothing; partial alpha blends over what is already drawn.
 - Later calls draw over earlier ones. An engine that batches or sorts must keep this order, at least across `nextLayer()`.
-- Calls may be recorded and replayed later, as Minecraft does. Nothing requires immediate drawing.
+- Calls may be recorded and replayed later. Nothing requires immediate drawing.
 - Clips and transforms are stacks. Strata balances every push with a pop within a frame, in reverse order, even when a component throws. A clip applies in the transform current when it was pushed and intersects the clip already in place.
 - Transforms are translations and uniform scales. A scale multiplies every later coordinate and size about the current origin, translations pushed inside it included, and text drawn while scaled comes out at the scaled size. Labels use it for their text scale.
 - Never throw for missing resources. Draw something visible instead, so the problem shows on screen.
@@ -87,7 +87,7 @@ Create a host with `StrataCore`:
 | Factory | For |
 |---|---|
 | `createScreenHost(platform, theme)` | One screen at a time. A screen that asks to close is closed by the host. |
-| `createScreenHost(platform, theme, closeRequested)` | The same, but you decide what closing means. Minecraft uses it to close the vanilla screen. |
+| `createScreenHost(platform, theme, closeRequested)` | The same, but you decide what closing means, such as closing the engine screen that holds the host. |
 | `createScreenStack(platform, theme)` | A stack of screens, for engines with no screen system |
 
 Then forward the engine's callbacks:
@@ -122,4 +122,4 @@ The SPI's test fixtures hold `TextMetricsContract`, `PlatformContract` and `Canv
 
 ## Naming
 
-Strata's adapters name classes after the engine and the SPI role they fill (`SwingCanvas`, `MinecraftPlatform`), and the engine-native component a developer adds to their engine is `Strata` plus the engine's base class (`StrataPanel`, `StrataScreen`). Following that keeps adapters easy to recognize.
+Strata's adapters name classes after the engine and the SPI role they fill (`SwingCanvas`, `SwingPlatform`), and the engine-native component a developer adds to their engine is `Strata` plus the engine's base class (`StrataPanel`, a Swing `JPanel`). Following that keeps adapters easy to recognize.

@@ -7,9 +7,8 @@ A theme decides how components look. It maps style keys, such as `button.hovered
 | Theme | Where | Look |
 |---|---|---|
 | `Themes.flat()` | `api` | Dark, solid colors only. Works on any engine without image assets. |
-| `MinecraftThemes.vanilla()` | `mc-common` | Vanilla's own widget sprites with their real nine-slice borders, white shadowed text |
 
-Both define every key of every built-in widget.
+It defines every key of every built-in widget. Adapters may ship themes of their own that use the engine's widget images.
 
 ![The flat theme](../assets/images/theme-flat.png)
 
@@ -66,7 +65,7 @@ A `Paint` fills a rectangle. There are four kinds:
 
 ### Colors
 
-Colors are ARGB ints, `0xAARRGGBB`, as in Minecraft. The alpha byte comes first: `0xFF000000` is opaque black, and `0x80FFFFFF` is half-transparent white.
+Colors are ARGB ints, `0xAARRGGBB`. The alpha byte comes first: `0xFF000000` is opaque black, and `0x80FFFFFF` is half-transparent white.
 
 A color with alpha 0 draws nothing, so be careful with `0xRRGGBB` literals: `0xFF0000` has alpha 0 and is invisible. Write `0xFFFF0000` for opaque red.
 
@@ -92,24 +91,7 @@ A `SpriteResolver` given to `SwingSprites` maps ids to any other layout. A missi
 
 A nine-slice keeps its corners at their size, stretches its edges along one axis and its center both ways, so one small image can frame a rectangle of any size. `border` gives the width of each fixed edge in the image's pixels.
 
-On Minecraft, the slicing comes from the sprite's `.png.mcmeta` file and `border` is ignored. Keep the two in agreement so both engines draw the same:
-
-```json
-{
-  "gui": {
-    "scaling": {
-      "type": "nine_slice",
-      "width": 200,
-      "height": 20,
-      "border": 4
-    }
-  }
-}
-```
-
-This is vanilla's format, checked against the 26.3 sources. `width` and `height` are the size, in GUI pixels, that the image represents. `border` is either one number for all four sides or an object with `left`, `top`, `right` and `bottom`, and the left and right borders together must be narrower than `width` (top and bottom likewise against `height`). An optional `"stretch_inner": true` stretches the edges and center instead of tiling them.
-
-Without an `.mcmeta`, Minecraft stretches the image like a plain sprite, so a nine-slice paint with no `.mcmeta` looks the same as a sprite paint there. When a rectangle is smaller than the borders, the Swing adapter shrinks the borders to fit.
+Some engines store the slicing with the image and ignore `border`. Keep the two in agreement so every engine draws the same. When a rectangle is smaller than the borders, the Swing adapter shrinks the borders to fit.
 
 ## Text styles
 

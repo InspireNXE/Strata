@@ -159,5 +159,5 @@ Everything required of a custom component applies, plus:
 - Implement `Component`, `Container` or a widget interface directly. Strata rejects such classes.
 - Subclass the built-in widgets. Their implementations are hidden in `core`. Decorate them with a behavior, or write your own.
 - Fire your own events. See [Custom event types](events.md#custom-event-types).
-- Draw arbitrary geometry, such as lines or textured triangles. The painter offers rectangles, gradients, sprites and text only, because that is what every engine, including vanilla Minecraft, can draw. See [Status and limitations](../help/status.md).
+- Draw arbitrary geometry, such as lines or textured triangles. The painter offers rectangles, gradients, sprites and text only, because every engine can draw those. See [Status and limitations](../help/status.md).
 - Use `ComponentFactory.createPeer`, `createContainerPeer`, `CustomComponent.peer()` or anything in `api.extension.peer`. They are plumbing between the base classes and core.

@@ -59,7 +59,7 @@ Every number Strata picks for you.
 | `Image` | Image size and desired size | 16 by 16 |
 | | Scaling | `STRETCH` |
 | | Tint | `0xFFFFFFFF` |
-| `CheckBox` | Box size | caption line height plus 8 (17 with Minecraft's font) |
+| `CheckBox` | Box size | caption line height plus 8 (17 with a 9-unit line height) |
 | | Gap between box and caption | 4 |
 | | Mark inset | a fifth of the box size on each side |
 | | Cursor | `HAND` |
@@ -110,21 +110,19 @@ Every number Strata picks for you.
 | Tooltip position | 12 right of and 12 above the pointer, flipped left at the right edge, kept inside the host |
 | Tooltip padding | 4, with 1 between lines |
 
-The host synthesizes repeats only for engines whose platform reports `sendsKeyRepeat == false`. Swing and Minecraft both send their own.
+The host synthesizes repeats only for engines whose platform reports `sendsKeyRepeat == false`. Swing sends its own.
 
 ## Text
 
 | Setting | Value |
 |---|---|
 | `TextStyle.DEFAULT` | opaque white, no decoration, no shadow |
-| Minecraft line height | the font's, 9 for the default font |
 | Swing default font | logical Dialog, 9 units |
 
 ## Adapters
 
 | Setting | Value |
 |---|---|
-| Minecraft unit | one GUI pixel |
 | `StrataPanel` preferred size | 960 by 600 pixels |
 | `StrataPanel` background | `0xFF1E1F22` |
 | `StrataPanel` repaint rate | about 60 per second (every 16 ms) |

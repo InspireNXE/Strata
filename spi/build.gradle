@@ -1,5 +1,5 @@
 plugins {
-    id 'strata-shared'
+    id 'strata-java'
     id 'strata-documented'
     // Contract tests every engine adapter runs against its own implementations
     id 'java-test-fixtures'
@@ -8,12 +8,10 @@ plugins {
 description = 'The Strata SPI: what an engine adapter implements and drives.'
 
 dependencies {
-    // compileOnly: loaders compile every shared project's sources themselves, so nothing may leak in transitively
-    compileOnly(project(':api'))
+    api(project(':api'))
 
     testFixturesApi(project(':api'))
     testFixturesApi(platform("org.junit:junit-bom:${junit_version}"))
     testFixturesApi('org.junit.jupiter:junit-jupiter')
 
-    testImplementation(project(':api'))
 }

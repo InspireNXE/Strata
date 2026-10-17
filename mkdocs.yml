@@ -1,5 +1,5 @@
 site_name: Strata
-site_description: An engine-agnostic GUI library for Java games, with adapters for Swing and Minecraft 26.3.
+site_description: An engine-agnostic GUI library for Java games, with a Swing adapter.
 site_url: https://inspirenxe.github.io/Strata/
 repo_url: https://github.com/InspireNXE/Strata
 repo_name: InspireNXE/Strata
@@ -108,7 +108,6 @@ nav:
       - Extending Strata: guides/extending.md
   - Platforms:
       - platforms/index.md
-      - Minecraft: platforms/minecraft.md
       - Swing: platforms/swing.md
       - Platform differences: platforms/differences.md
       - Writing an adapter: platforms/writing-an-adapter.md
