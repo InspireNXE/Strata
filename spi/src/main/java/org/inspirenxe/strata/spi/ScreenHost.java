@@ -4,6 +4,7 @@ import org.inspirenxe.strata.api.ComponentFactory;
 import org.inspirenxe.strata.api.component.Component;
 import org.inspirenxe.strata.api.screen.Screen;
 import org.inspirenxe.strata.api.theme.Theme;
+import org.inspirenxe.strata.api.theme.ThemeRef;
 
 import java.util.Optional;
 
@@ -66,6 +67,24 @@ public interface ScreenHost extends InputSink {
      *                                                         theme stays
      */
     void setTheme(Theme theme);
+
+    /**
+     * Replaces the theme with one resolved from the platform's {@link ThemeSource}. The host resolves the ref
+     * again whenever {@link ThemeSource#version()} changes. A reload that fails, or that leaves out keys the open
+     * tree needs, is logged and the host keeps its current theme.
+     *
+     * @param theme the theme to resolve
+     * @throws org.inspirenxe.strata.api.theme.ThemeException if the ref cannot be resolved now, or the result
+     *                                                         lacks keys the open tree needs; the old theme stays
+     */
+    void setTheme(ThemeRef theme);
+
+    /**
+     * Returns the ref the theme was resolved from.
+     *
+     * @return the ref, or empty if the theme was set as a {@link Theme}
+     */
+    Optional<ThemeRef> themeRef();
 
     /**
      * Sets the size of the area the host fills, in UI units. A change schedules a layout.

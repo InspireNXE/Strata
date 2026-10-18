@@ -107,6 +107,50 @@ Backgrounds and label text styles can be set per component, outside the theme:
 
 There is no per-component theme or per-subtree theme. To give one button a different face, decorate it with a behavior that paints something else, or write a component that reads its own keys.
 
+## Themes by id
+
+A `Theme` built in code is fixed. To let players restyle your screens with packs, name the theme by id instead and hand the host a `ThemeRef`:
+
+```java
+ThemeRef theme = ThemeRef.of(ThemeId.of("mymod", "shop"))
+        .override(Button.STYLE_NORMAL, Paint.solid(0xFF2E7D32));
+```
+
+The host resolves the ref when it opens. It starts from the theme registered under the id, applies every theme file the engine finds for that id, and applies the ref's overrides last. `Themes.FLAT` (`strata:flat`) is registered on every engine, and adapters register their engine themes under ids of their own. An id with nothing registered is defined by its files alone and names its starting theme as `parent`.
+
+When the engine reloads its assets, every host with a ref resolves it again and keeps the overrides. A reload whose result lacks a key the open screen needs is logged and ignored, so the screen keeps its old theme.
+
+### Theme files
+
+A theme file sets only the keys it changes. Where the files live depends on the engine: Swing reads `assets/<namespace>/themes/<path>.json` from the class path. A file whose id has a registered theme changes that theme key by key, and when several packs ship the same file, the higher-priority pack wins per key.
+
+```json
+{
+  "parent": "strata:flat",
+  "paints": {
+    "button.normal": { "nine_slice": "mymod:button", "border": [3, 3, 3, 3] },
+    "button.hovered": { "sprite": "mymod:button_hover", "tint": "#FFE0E0FF" },
+    "button.focus": "none",
+    "list.row": "#1F2024",
+    "window.background": { "gradient": ["#F0101010", "#F0202020"] }
+  },
+  "text": {
+    "button.text": { "color": "#FFFFFF", "shadow": true }
+  }
+}
+```
+
+| Value | Written as |
+|---|---|
+| Color | `"#RRGGBB"` (opaque) or `"#AARRGGBB"` |
+| No paint | `"none"` |
+| Sprite | `{ "sprite": "ns:path" }`, with an optional `"tint"` color |
+| Nine-slice | `{ "nine_slice": "ns:path", "border": ... }`, with an optional `"tint"`. The border is one number, `[horizontal, vertical]` or `[left, top, right, bottom]` |
+| Gradient | `{ "gradient": [top, bottom] }` |
+| Text style | Any of `color`, `bold`, `italic`, `underline`, `strikethrough` and `shadow`. Fields you leave out keep the inherited style for that key |
+
+A misspelled member, a bad color or broken JSON makes the whole file invalid. The engine logs it and skips that file, and the other packs still apply.
+
 ## Changing the theme at run time
 
-The host owns the theme. Adapters can change it with `ScreenHost.setTheme` or `ScreenStack.setTheme`; components then re-read their keys in `onApplyTheme` and a new layout runs. See [Screens](screens.md#changing-the-theme).
+The host owns the theme. Adapters can change it with `ScreenHost.setTheme` or `ScreenStack.setTheme`, which take either a `Theme` or a `ThemeRef`; components then re-read their keys in `onApplyTheme` and a new layout runs. See [Screens](screens.md#changing-the-theme).

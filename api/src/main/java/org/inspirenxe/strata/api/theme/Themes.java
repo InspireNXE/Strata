@@ -21,6 +21,11 @@ import org.inspirenxe.strata.api.widget.Window;
  */
 public final class Themes {
 
+    /**
+     * The id {@link #flat()} is registered under on every engine. Theme files can name it as their parent.
+     */
+    public static final ThemeId FLAT = ThemeId.of("strata", "flat");
+
     private Themes() {
     }
 
@@ -31,7 +36,7 @@ public final class Themes {
      * @return the flat theme
      */
     public static Theme flat() {
-        return Theme.builder("flat")
+        return Theme.builder(FLAT.toString())
                 .paint(Button.STYLE_NORMAL, Paint.solid(0xFF3C3F44))
                 .paint(Button.STYLE_HOVERED, Paint.solid(0xFF4E525A))
                 .paint(Button.STYLE_PRESSED, Paint.solid(0xFF2B2D31))

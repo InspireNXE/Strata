@@ -10,12 +10,16 @@ import org.inspirenxe.strata.api.input.ScrollKind;
 import org.inspirenxe.strata.api.screen.Screen;
 import org.inspirenxe.strata.api.screen.ScreenHandle;
 import org.inspirenxe.strata.api.theme.Theme;
+import org.inspirenxe.strata.api.theme.ThemeException;
+import org.inspirenxe.strata.api.theme.ThemeRef;
 import org.inspirenxe.strata.core.node.ComponentFactoryImpl;
 import org.inspirenxe.strata.core.node.Node;
 import org.inspirenxe.strata.core.node.Root;
+import org.inspirenxe.strata.core.theme.ThemeResolver;
 import org.inspirenxe.strata.spi.Canvas;
 import org.inspirenxe.strata.spi.Platform;
 import org.inspirenxe.strata.spi.ScreenHost;
+import org.inspirenxe.strata.spi.ThemeSource;
 
 import java.util.Objects;
 import java.util.Optional;
@@ -23,12 +27,22 @@ import java.util.Optional;
 /**
  * The core {@link ScreenHost}. It owns one factory and one {@link Root}, and passes engine input and frames to the
  * root. Opening a screen closes the one before it, so components from different screens never share a tree.
+ *
+ * <p>A host given a {@link ThemeRef} compares the platform's {@link ThemeSource#version()} at the start of every
+ * layout and render, and resolves the ref again when it changed. If that fails, or the new theme lacks keys the
+ * open tree needs, the host logs a warning and keeps its theme until the next change.</p>
  */
 public final class ScreenHostImpl implements ScreenHost {
+    private static final System.Logger LOGGER = System.getLogger(ScreenHostImpl.class.getName());
+
     private final ComponentFactoryImpl ui;
     private final Root root;
     private final Runnable closeRequested;
+    private final ThemeSource themes;
+    private final ThemeResolver resolver;
     private Theme theme;
+    private ThemeRef themeRef;
+    private long themeVersion;
     private Screen screen;
     private boolean rebuild;
 
@@ -42,9 +56,27 @@ public final class ScreenHostImpl implements ScreenHost {
      */
     public ScreenHostImpl(final Platform platform, final Theme theme, final Runnable closeRequested) {
         this.theme = Objects.requireNonNull(theme, "theme");
+        this.themes = platform.themes();
+        this.resolver = new ThemeResolver(this.themes);
         this.ui = new ComponentFactoryImpl(() -> this.theme, platform);
         this.root = new Root(platform, theme, this.ui);
         this.closeRequested = closeRequested == null ? this::close : closeRequested;
+    }
+
+    /**
+     * Creates a host whose theme is resolved from a ref and follows the platform's theme source. Adapters use
+     * {@code StrataCore} instead.
+     *
+     * @param platform the engine's platform
+     * @param theme the theme to resolve
+     * @param closeRequested runs when the open screen asks to close through its handle, or {@code null} to have
+     *     the host close the screen itself
+     * @throws ThemeException if the ref cannot be resolved
+     */
+    public ScreenHostImpl(final Platform platform, final ThemeRef theme, final Runnable closeRequested) {
+        this(platform, new ThemeResolver(platform.themes()).resolve(theme), closeRequested);
+        this.themeRef = theme;
+        this.themeVersion = this.themes.version();
     }
 
     /**
@@ -96,6 +128,45 @@ public final class ScreenHostImpl implements ScreenHost {
     public void setTheme(final Theme theme) {
         this.root.setTheme(theme);
         this.theme = theme;
+        this.themeRef = null;
+    }
+
+    @Override
+    public void setTheme(final ThemeRef theme) {
+        Objects.requireNonNull(theme, "theme");
+        final long version = this.themes.version();
+        final Theme resolved = this.resolver.resolve(theme);
+        this.root.setTheme(resolved);
+        this.theme = resolved;
+        this.themeRef = theme;
+        this.themeVersion = version;
+    }
+
+    @Override
+    public Optional<ThemeRef> themeRef() {
+        return Optional.ofNullable(this.themeRef);
+    }
+
+    /**
+     * Resolves the ref again if the theme source changed since the last time.
+     */
+    private void refreshTheme() {
+        if (this.themeRef == null) {
+            return;
+        }
+        final long version = this.themes.version();
+        if (version == this.themeVersion) {
+            return;
+        }
+        this.themeVersion = version;
+        try {
+            final Theme resolved = this.resolver.resolve(this.themeRef);
+            this.root.setTheme(resolved);
+            this.theme = resolved;
+        } catch (final ThemeException e) {
+            LOGGER.log(System.Logger.Level.WARNING, "Keeping theme " + this.theme.name() + " after a reload: "
+                    + e.getMessage());
+        }
     }
 
     @Override
@@ -105,12 +176,14 @@ public final class ScreenHostImpl implements ScreenHost {
 
     @Override
     public void layout() {
+        this.refreshTheme();
         this.rebuildIfNeeded();
         this.root.layout();
     }
 
     @Override
     public void render(final Canvas canvas) {
+        this.refreshTheme();
         this.rebuildIfNeeded();
         this.root.render(canvas);
     }

@@ -2,6 +2,7 @@ package org.inspirenxe.strata.spi;
 
 import org.inspirenxe.strata.api.screen.Screen;
 import org.inspirenxe.strata.api.theme.Theme;
+import org.inspirenxe.strata.api.theme.ThemeRef;
 
 import java.util.Optional;
 
@@ -61,6 +62,16 @@ public interface ScreenStack extends InputSink {
      * @throws org.inspirenxe.strata.api.theme.ThemeException if the theme lacks keys a screen's tree needs
      */
     void setTheme(Theme theme);
+
+    /**
+     * Replaces the theme of every screen in the stack and of screens pushed later with one resolved from the
+     * platform's {@link ThemeSource}, as {@link ScreenHost#setTheme(ThemeRef)} does.
+     *
+     * @param theme the theme to resolve
+     * @throws org.inspirenxe.strata.api.theme.ThemeException if the ref cannot be resolved, or the result lacks
+     *                                                         keys a screen's tree needs
+     */
+    void setTheme(ThemeRef theme);
 
     /**
      * Sets the size of every screen, and of screens pushed later.

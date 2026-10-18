@@ -8,6 +8,7 @@ import org.inspirenxe.strata.spi.Clipboard;
 import org.inspirenxe.strata.spi.Clock;
 import org.inspirenxe.strata.spi.Platform;
 import org.inspirenxe.strata.spi.TextInputSink;
+import org.inspirenxe.strata.spi.ThemeSource;
 
 import java.util.Optional;
 
@@ -67,6 +68,11 @@ public final class ToyPlatform implements Platform {
     @Override
     public Capabilities capabilities() {
         return CAPABILITIES;
+    }
+
+    @Override
+    public ThemeSource themes() {
+        return ThemeSource.NONE;
     }
 }
 // --8<-- [end:platform]

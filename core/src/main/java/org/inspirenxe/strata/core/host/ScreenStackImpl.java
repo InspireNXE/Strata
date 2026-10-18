@@ -7,6 +7,8 @@ import org.inspirenxe.strata.api.input.MouseButton;
 import org.inspirenxe.strata.api.input.ScrollKind;
 import org.inspirenxe.strata.api.screen.Screen;
 import org.inspirenxe.strata.api.theme.Theme;
+import org.inspirenxe.strata.api.theme.ThemeRef;
+import org.inspirenxe.strata.core.theme.ThemeResolver;
 import org.inspirenxe.strata.spi.Canvas;
 import org.inspirenxe.strata.spi.Platform;
 import org.inspirenxe.strata.spi.ScreenStack;
@@ -25,6 +27,7 @@ public final class ScreenStackImpl implements ScreenStack {
     private final Platform platform;
     private final List<ScreenHostImpl> hosts;
     private Theme theme;
+    private ThemeRef themeRef;
     private float width;
     private float height;
 
@@ -40,11 +43,27 @@ public final class ScreenStackImpl implements ScreenStack {
         this.hosts = new ArrayList<>();
     }
 
+    /**
+     * Creates an empty stack of size 0 by 0 whose screens resolve their theme from a ref. Adapters use
+     * {@code StrataCore} instead.
+     *
+     * @param platform the engine's platform, shared by every screen's host
+     * @param theme the theme ref for every screen pushed
+     * @throws org.inspirenxe.strata.api.theme.ThemeException if the ref cannot be resolved
+     */
+    public ScreenStackImpl(final Platform platform, final ThemeRef theme) {
+        this(platform, new ThemeResolver(platform.themes()).resolve(theme));
+        this.themeRef = theme;
+    }
+
     @Override
     public void push(final Screen screen) {
         Objects.requireNonNull(screen, "screen");
         final ScreenHostImpl[] self = new ScreenHostImpl[1];
-        final ScreenHostImpl host = new ScreenHostImpl(this.platform, this.theme, () -> this.remove(self[0]));
+        final Runnable close = () -> this.remove(self[0]);
+        final ScreenHostImpl host = this.themeRef != null
+                ? new ScreenHostImpl(this.platform, this.themeRef, close)
+                : new ScreenHostImpl(this.platform, this.theme, close);
         self[0] = host;
         host.resize(this.width, this.height);
         host.open(screen);
@@ -88,9 +107,20 @@ public final class ScreenStackImpl implements ScreenStack {
     @Override
     public void setTheme(final Theme theme) {
         this.theme = Objects.requireNonNull(theme, "theme");
+        this.themeRef = null;
         for (final ScreenHostImpl host : this.hosts) {
             host.setTheme(theme);
         }
+    }
+
+    @Override
+    public void setTheme(final ThemeRef theme) {
+        final Theme resolved = new ThemeResolver(this.platform.themes()).resolve(theme);
+        for (final ScreenHostImpl host : this.hosts) {
+            host.setTheme(theme);
+        }
+        this.theme = resolved;
+        this.themeRef = theme;
     }
 
     @Override

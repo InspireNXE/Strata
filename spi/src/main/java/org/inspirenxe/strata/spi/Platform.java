@@ -50,4 +50,11 @@ public interface Platform {
      * @return the capabilities; constant for the platform's life
      */
     Capabilities capabilities();
+
+    /**
+     * Returns where hosts look up themes named by id.
+     *
+     * @return the theme source, or {@link ThemeSource#NONE} if the engine has no themes or theme files of its own
+     */
+    ThemeSource themes();
 }

@@ -55,6 +55,7 @@ dependencies {
 | `clock()` | Monotonic, never backward, advancing in real time. `Clock.SYSTEM` is `System.nanoTime`. Click counting, caret blinking and synthesized key repeat stall on a clock that stops. |
 | `textInput()` | Told when a text field gains and loses focus. `start` and `stop` may arrive repeatedly; a second `start` moves the input area. After `start`, the adapter must forward typed characters. Use `TextInputSink.NONE` if the engine always sends characters. |
 | `capabilities()` | Constant for the platform's life. `sendsKeyRepeat` is true when the adapter delivers `REPEAT` itself. |
+| `themes()` | Where themes named by id come from: themes the adapter builds in code (`base`), theme files from the engine's packs, lowest priority first (`documents`), and a `version()` that changes when either may have. Hosts read `version()` on every layout and render, so keep it cheap. Never throws for an unknown id. Use `ThemeSource.NONE` if the engine has no themes or packs. |
 
 Return the same objects every time; hosts may keep what they get.
 

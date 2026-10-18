@@ -9,6 +9,7 @@ import org.inspirenxe.strata.spi.Clipboard;
 import org.inspirenxe.strata.spi.Clock;
 import org.inspirenxe.strata.spi.Platform;
 import org.inspirenxe.strata.spi.TextInputSink;
+import org.inspirenxe.strata.spi.ThemeSource;
 
 import java.util.Optional;
 
@@ -23,6 +24,7 @@ public final class TestPlatform implements Platform {
     private long nanos;
     private String clipboard;
     private Rect textInputArea;
+    private ThemeSource themes = ThemeSource.NONE;
 
     public TestPlatform() {
         this(true);
@@ -96,5 +98,14 @@ public final class TestPlatform implements Platform {
     @Override
     public Capabilities capabilities() {
         return new Capabilities(this.sendsKeyRepeat);
+    }
+
+    public void setThemes(final ThemeSource themes) {
+        this.themes = themes;
+    }
+
+    @Override
+    public ThemeSource themes() {
+        return this.themes;
     }
 }

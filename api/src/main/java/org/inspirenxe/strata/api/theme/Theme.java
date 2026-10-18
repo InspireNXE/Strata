@@ -95,6 +95,24 @@ public final class Theme {
     }
 
     /**
+     * Returns every paint this theme sets, by style key.
+     *
+     * @return an immutable map
+     */
+    public Map<String, Paint> paints() {
+        return this.paints;
+    }
+
+    /**
+     * Returns every text style this theme sets, by style key.
+     *
+     * @return an immutable map
+     */
+    public Map<String, TextStyle> textStyles() {
+        return this.textStyles;
+    }
+
+    /**
      * Returns whether a key has a paint or a text style.
      *
      * @param key the style key
