@@ -1,6 +1,10 @@
 package org.inspirenxe.strata.api.control.window;
 
 import org.inspirenxe.strata.api.component.Container;
+import org.inspirenxe.strata.api.event.EventType;
+import org.inspirenxe.strata.api.event.ValueEvent;
+import org.inspirenxe.strata.api.event.ValueRequestEvent;
+import org.inspirenxe.strata.api.geom.Size;
 import org.inspirenxe.strata.api.control.attribute.popup.Closable;
 import org.inspirenxe.strata.api.control.attribute.text.Titled;
 
@@ -22,6 +26,17 @@ import org.inspirenxe.strata.api.control.attribute.text.Titled;
  *     {@link #CLOSED} is registered on the window or an ancestor, or the window is shown in an overlay; otherwise
  *     Escape goes on to the engine, which usually closes the screen. Either way the window fires {@link #CLOSE}
  *     first.</li>
+ *     <li>While the window {@linkplain #setResizable is resizable}, dragging the grip, a {@value #GRIP_SIZE} unit
+ *     square in the bottom-right corner, resizes it with its top-left corner in place. With
+ *     {@linkplain #setEdgeResizable edge resizing} on, dragging any edge within {@value #EDGE_SIZE} units resizes it
+ *     too, and so does a corner, the part of an edge within {@value #GRIP_SIZE} units of the next edge; the edge
+ *     opposite the dragged one stays in place. The new size is kept within the window's minimum and maximum sizes,
+ *     never below the width its title bar asks for or the bar's height plus the grip, and inside the slot its parent
+ *     gives it. Each resize sets the window's {@linkplain #setSize fixed size} and moves it by its
+ *     {@linkplain #setOffset offset}, so its alignment in the slot no longer matters. The pointer shows
+ *     {@link org.inspirenxe.strata.api.component.CursorKind#RESIZE_ALL} over the grip and the corners, and
+ *     {@code RESIZE_HORIZONTAL} or {@code RESIZE_VERTICAL} over an edge. A child under the grip or an edge that
+ *     consumes the press, such as a button, takes it instead, and one with its own cursor shows that.</li>
  * </ul>
  *
  * <h2>Events</h2>
@@ -35,6 +50,9 @@ import org.inspirenxe.strata.api.control.attribute.text.Titled;
  *     for the user's actions.</li>
  *     <li>{@link Closable#CLOSED}: Reported each time the window closes, before the overlay showing it closes. Fires
  *     for {@link #close()} called from code too.</li>
+ *     <li>{@link #RESIZE}: Requested on each move of a resize drag that would change the window's size. Cancel it to
+ *     keep the size for that move, or set another size.</li>
+ *     <li>{@link #RESIZED}: Reported after each resize by the user.</li>
  * </ul>
  *
  * <h2>Theme keys</h2>
@@ -47,6 +65,10 @@ import org.inspirenxe.strata.api.control.attribute.text.Titled;
  *     {@value #STYLE_TITLE_TEXT}.</li>
  *     <li>{@value #STYLE_CLOSE_HOVERED} (text style, optional): the {@code x} while hovered. Falls back to
  *     {@value #STYLE_CLOSE}.</li>
+ *     <li>{@value #STYLE_GRIP} (paint, optional): the grip of a resizable window, drawn over the children as six
+ *     2 by 2 squares in a triangle against the bottom-right corner. Nothing is drawn if it is missing.</li>
+ *     <li>{@value #STYLE_GRIP_HOVERED} (paint, optional): the grip while the pointer is over the grip or an edge that
+ *     resizes, and during a resize. Falls back to {@value #STYLE_GRIP}.</li>
  * </ul>
  *
  * <pre>{@code
@@ -80,9 +102,42 @@ public interface Window extends Container<Window>, Titled<Window>, Closable<Wind
      */
     String STYLE_CLOSE_HOVERED = "window.close.hovered";
     /**
+     * Style key for the resize grip (paint, optional).
+     */
+    String STYLE_GRIP = "window.grip";
+    /**
+     * Style key for the resize grip while the pointer is over a part that resizes, or during a resize (paint,
+     * optional).
+     */
+    String STYLE_GRIP_HOVERED = "window.grip.hovered";
+    /**
      * The space above and below the title in the title bar, in UI units.
      */
     float TITLE_PADDING = 3f;
+    /**
+     * The width and height of the resize grip in the bottom-right corner, in UI units.
+     */
+    float GRIP_SIZE = 10f;
+    /**
+     * How far in from each edge a press starts resizing that edge, with edge resizing on, in UI units.
+     */
+    float EDGE_SIZE = 3f;
+
+    /**
+     * Fired on each move of a resize drag with the left button that would change the window's size, before it
+     * changes. The value is the size the window is about to take, its bounds without the margin, already kept within
+     * the limits described in the class documentation. Not fired while the size would stay the same. Canceling it
+     * leaves the window as it is for that move; the drag goes on, and the next move asks again. A handler may set
+     * another size, which the window keeps within the same limits, with the edges opposite the dragged ones in
+     * place; null and NaN sizes are ignored, as if the request were canceled. Fires only for the user's actions.
+     */
+    EventType<ValueRequestEvent<Window, Size>> RESIZE = EventType.valueRequest("window.resize");
+    /**
+     * Fired after the user resized the window. The value is the new size and the previous value the size before
+     * this move, each the window's bounds without the margin. A size set from code with {@link #setSize}, or a new
+     * slot for a stretched window, is layout and fires nothing.
+     */
+    EventType<ValueEvent<Window, Size>> RESIZED = EventType.valueReport("window.resized");
 
     /**
      * Returns the title.
@@ -129,6 +184,38 @@ public interface Window extends Container<Window>, Titled<Window>, Closable<Wind
      * @return this window
      */
     Window setMovable(boolean movable);
+
+    /**
+     * Returns whether the user can resize the window by dragging its grip.
+     *
+     * @return false by default
+     */
+    boolean isResizable();
+
+    /**
+     * Sets whether the user can resize the window by dragging its grip in the bottom-right corner, and its edges
+     * while {@linkplain #isEdgeResizable edge resizing} is on. A resizable window draws the grip.
+     *
+     * @param resizable true to let the user resize the window
+     * @return this window
+     */
+    Window setResizable(boolean resizable);
+
+    /**
+     * Returns whether dragging an edge or corner of a resizable window resizes it too.
+     *
+     * @return false by default
+     */
+    boolean isEdgeResizable();
+
+    /**
+     * Sets whether dragging an edge or corner of a resizable window resizes it too, on top of the grip. It has no
+     * effect while the window is not {@linkplain #setResizable resizable}.
+     *
+     * @param edgeResizable true to resize from every edge as well
+     * @return this window
+     */
+    Window setEdgeResizable(boolean edgeResizable);
 
     /**
      * Closes the window: reports {@link #CLOSED}, then closes the overlay showing it, if it is in one. A window that

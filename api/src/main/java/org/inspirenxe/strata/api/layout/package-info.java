@@ -13,6 +13,8 @@
  *     <li>{@link org.inspirenxe.strata.api.layout.AbsolutePanel}: children sit at fixed positions.</li>
  *     <li>{@link org.inspirenxe.strata.api.layout.ScrollPanel}: children larger than the panel scroll.</li>
  * </ul>
+ * <p>A {@link org.inspirenxe.strata.api.layout.Spacer} is an empty component that keeps a gap, or takes the room
+ * left in a stack panel.</p>
  * <p>To write another layout, extend {@link org.inspirenxe.strata.api.extension.CustomContainer}.</p>
  */
 package org.inspirenxe.strata.api.layout;

@@ -128,6 +128,8 @@ The open list also uses the `ListView` and `ScrollPanel` keys.
 | `window.title.text` | `Window.STYLE_TITLE_TEXT` | text style | no | `TextStyle.DEFAULT` |
 | `window.close` | `Window.STYLE_CLOSE` | text style | no | `window.title.text` |
 | `window.close.hovered` | `Window.STYLE_CLOSE_HOVERED` | text style | no | `window.close` |
+| `window.grip` | `Window.STYLE_GRIP` | paint | no | Nothing |
+| `window.grip.hovered` | `Window.STYLE_GRIP_HOVERED` | paint | no | `window.grip` |
 
 ## TabBar
 
@@ -329,6 +331,8 @@ A dual list's rows also use the `ListView` and `ScrollPanel` keys and its button
 | `window.title.text` | `0xFFFFFFFF` |
 | `window.close` | `0xFFA0A0A0` |
 | `window.close.hovered` | `0xFFFFFFFF` |
+| `window.grip` | solid `0xFF5A5E66` |
+| `window.grip.hovered` | solid `0xFF6A9FFF` |
 | `tab.normal` | solid `0xFF24262A` |
 | `tab.hovered` | solid `0xFF3C3F44` |
 | `tab.selected` | solid `0xFF3A4D6E` |

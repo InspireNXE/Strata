@@ -45,6 +45,7 @@ import org.inspirenxe.strata.api.layout.AnchorPanel;
 import org.inspirenxe.strata.api.layout.GridPanel;
 import org.inspirenxe.strata.api.layout.Orientation;
 import org.inspirenxe.strata.api.layout.ScrollPanel;
+import org.inspirenxe.strata.api.layout.Spacer;
 import org.inspirenxe.strata.api.layout.StackPanel;
 import org.inspirenxe.strata.api.overlay.Overlays;
 import org.inspirenxe.strata.api.theme.SpriteId;
@@ -125,6 +126,25 @@ public interface ComponentFactory {
      * @return a new scroll panel
      */
     ScrollPanel scrollPanel();
+
+    /**
+     * Makes a {@link Spacer} with no size, for taking the room left in a stack panel through a
+     * {@linkplain StackPanel#setWeight weight}.
+     *
+     * @return a new spacer
+     */
+    Spacer spacer();
+
+    /**
+     * Makes a {@link Spacer} with a fixed size, as {@code spacer().setSize(width, height)} does.
+     *
+     * @param width the width in UI units
+     * @param height the height in UI units
+     * @return a new spacer
+     */
+    default Spacer spacer(final float width, final float height) {
+        return this.spacer().setSize(width, height);
+    }
 
     /**
      * Makes a {@link Label} with no text, as {@code label("")} does.
