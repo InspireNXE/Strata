@@ -1,6 +1,9 @@
 package org.inspirenxe.strata.api.control.field;
 
 import org.inspirenxe.strata.api.component.Component;
+import org.inspirenxe.strata.api.component.Focusable;
+import org.inspirenxe.strata.api.component.HasCursor;
+import org.inspirenxe.strata.api.component.HasTooltip;
 import org.inspirenxe.strata.api.control.attribute.text.TextInput;
 import org.inspirenxe.strata.api.geometry.Insets;
 
@@ -52,7 +55,8 @@ import java.util.Objects;
  * <p>Get one from {@link org.inspirenxe.strata.api.ComponentFactory#textArea()}. Do not implement this
  * interface.</p>
  */
-public interface TextArea extends Component<TextArea>, TextInput<TextArea> {
+public interface TextArea extends Component<TextArea>, Focusable<TextArea>, HasCursor<TextArea>, HasTooltip<TextArea>,
+        TextInput<TextArea> {
     /**
      * The width, in UI units, a text area asks for.
      */

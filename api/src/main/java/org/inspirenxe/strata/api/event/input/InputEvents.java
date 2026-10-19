@@ -69,14 +69,6 @@ public final class InputEvents {
      */
     public static final EventType<CharEvent> CHAR = EventType.bubbling("char", CharEvent.class);
     /**
-     * The target gained keyboard focus. Direct. Default behavior: a text box moves its caret to the end.
-     */
-    public static final EventType<FocusEvent> FOCUS_GAINED = EventType.direct("focus_gained", FocusEvent.class);
-    /**
-     * The target lost keyboard focus. Direct.
-     */
-    public static final EventType<FocusEvent> FOCUS_LOST = EventType.direct("focus_lost", FocusEvent.class);
-    /**
      * The held modifier keys changed, by a modifier key going down or up or by input arriving with different
      * modifiers. Fired at the screen's content and at the content of each open overlay. Direct. No default
      * behavior.

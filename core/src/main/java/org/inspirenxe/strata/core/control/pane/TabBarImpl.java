@@ -2,6 +2,8 @@ package org.inspirenxe.strata.core.control.pane;
 
 import java.util.Optional;
 import org.inspirenxe.strata.api.ComponentFactory;
+import org.inspirenxe.strata.api.component.HasCursor;
+import org.inspirenxe.strata.api.component.HasTooltip;
 import org.inspirenxe.strata.api.component.CursorKind;
 import org.inspirenxe.strata.api.control.pane.Tab;
 import org.inspirenxe.strata.api.control.pane.TabBar;
@@ -56,8 +58,6 @@ public final class TabBarImpl extends CustomComposite<TabBar> implements TabBar 
         this.ui = ui;
         this.views = new ArrayList<>();
         this.selectedIndex = -1;
-        this.setFocusable(true);
-        this.setTabbable(true);
     }
 
     @Override
@@ -249,7 +249,8 @@ public final class TabBarImpl extends CustomComposite<TabBar> implements TabBar 
     /**
      * The component that draws one tab. It stretches over the slot the bar gives it.
      */
-    private static final class TabView extends CustomComponent<TabView> {
+    private static final class TabView extends CustomComponent<TabView> implements HasCursor<TabView>,
+            HasTooltip<TabView> {
         private final TabBarImpl bar;
         private final TabImpl tab;
         private Paint normal;

@@ -614,4 +614,19 @@ public final class WindowImpl extends CustomContainer<Window> implements Window 
             this.userClose();
         }
     }
+
+    @Override
+    public float offsetX() {
+        return super.offsetX();
+    }
+
+    @Override
+    public float offsetY() {
+        return super.offsetY();
+    }
+
+    @Override
+    public Window setOffset(final float offsetX, final float offsetY) {
+        return super.setOffset(offsetX, offsetY);
+    }
 }

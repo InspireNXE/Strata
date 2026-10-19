@@ -5,6 +5,8 @@ import org.inspirenxe.strata.api.component.Component;
 import org.inspirenxe.strata.api.component.Container;
 import org.inspirenxe.strata.api.geometry.Insets;
 import org.inspirenxe.strata.api.geometry.Rect;
+import org.inspirenxe.strata.api.theme.Border;
+import org.inspirenxe.strata.api.theme.Paint;
 
 import java.util.List;
 
@@ -119,5 +121,25 @@ public abstract class CustomContainer<T extends Container<T>> extends CustomComp
     public final T setClipChildren(final boolean clipChildren) {
         this.containerPeer().setClipChildren(clipChildren);
         return this.self();
+    }
+
+    @Override
+    public final Paint background() {
+        return super.background();
+    }
+
+    @Override
+    public final T setBackground(final Paint background) {
+        return super.setBackground(background);
+    }
+
+    @Override
+    public final Border border() {
+        return super.border();
+    }
+
+    @Override
+    public final T setBorder(final Border border) {
+        return super.setBorder(border);
     }
 }

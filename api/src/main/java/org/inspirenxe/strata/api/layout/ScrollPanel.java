@@ -2,6 +2,7 @@ package org.inspirenxe.strata.api.layout;
 
 import org.inspirenxe.strata.api.component.Component;
 import org.inspirenxe.strata.api.component.Container;
+import org.inspirenxe.strata.api.component.Focusable;
 import org.inspirenxe.strata.api.event.EventType;
 import org.inspirenxe.strata.api.event.control.ValueEvent;
 import org.inspirenxe.strata.api.geometry.Rect;
@@ -57,7 +58,7 @@ import org.inspirenxe.strata.api.geometry.Rect;
  * <p>Get one from {@link org.inspirenxe.strata.api.ComponentFactory#scrollPanel()}. Do not implement this
  * interface.</p>
  */
-public interface ScrollPanel extends Container<ScrollPanel> {
+public interface ScrollPanel extends Container<ScrollPanel>, Focusable<ScrollPanel> {
     /**
      * Style key for the scroll bar thumb (paint, required).
      */

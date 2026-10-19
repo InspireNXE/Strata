@@ -1,6 +1,8 @@
 package org.inspirenxe.strata.api.control.collection;
 
 import org.inspirenxe.strata.api.component.Component;
+import org.inspirenxe.strata.api.component.HasCursor;
+import org.inspirenxe.strata.api.component.HasTooltip;
 import org.inspirenxe.strata.api.control.attribute.item.CellSource;
 import org.inspirenxe.strata.api.control.attribute.item.SingleSelection;
 import org.inspirenxe.strata.api.event.EventType;
@@ -86,7 +88,8 @@ import java.util.function.Function;
  *
  * @param <T> the type of the items
  */
-public interface DualList<T> extends Component<DualList<T>>, CellSource<T, DualList<T>>,
+public interface DualList<T> extends Component<DualList<T>>, HasCursor<DualList<T>>, HasTooltip<DualList<T>>,
+        CellSource<T, DualList<T>>,
         SingleSelection<T, DualList<T>> {
     /**
      * Style key for behind each list (paint, optional).

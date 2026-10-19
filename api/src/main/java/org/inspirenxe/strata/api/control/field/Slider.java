@@ -1,6 +1,9 @@
 package org.inspirenxe.strata.api.control.field;
 
 import org.inspirenxe.strata.api.component.Component;
+import org.inspirenxe.strata.api.component.Focusable;
+import org.inspirenxe.strata.api.component.HasCursor;
+import org.inspirenxe.strata.api.component.HasTooltip;
 import org.inspirenxe.strata.api.control.attribute.value.Ranged;
 import org.inspirenxe.strata.api.control.attribute.value.Stepped;
 import org.inspirenxe.strata.api.layout.Orientation;
@@ -79,7 +82,8 @@ import java.util.function.DoubleFunction;
  * <p>Get one from {@link org.inspirenxe.strata.api.ComponentFactory#slider()}. Do not implement this
  * interface.</p>
  */
-public interface Slider extends Component<Slider>, Stepped<Slider> {
+public interface Slider extends Component<Slider>, Focusable<Slider>, HasCursor<Slider>, HasTooltip<Slider>,
+        Stepped<Slider> {
     /**
      * Style key for the track (paint, required).
      */

@@ -1,6 +1,8 @@
 package org.inspirenxe.strata.api.control.window;
 
 import org.inspirenxe.strata.api.component.Component;
+import org.inspirenxe.strata.api.component.HasCursor;
+import org.inspirenxe.strata.api.component.HasTooltip;
 import org.inspirenxe.strata.api.control.attribute.text.Titled;
 import org.inspirenxe.strata.api.control.button.Button;
 import org.inspirenxe.strata.api.control.display.Label;
@@ -36,7 +38,8 @@ import java.util.List;
  * <p>Get one from {@link org.inspirenxe.strata.api.ComponentFactory#messageBox}. Do not implement this
  * interface.</p>
  */
-public interface MessageBox extends Component<MessageBox>, Titled<MessageBox> {
+public interface MessageBox extends Component<MessageBox>, HasCursor<MessageBox>, HasTooltip<MessageBox>,
+        Titled<MessageBox> {
     /**
      * The width the message wraps at, in UI units.
      */

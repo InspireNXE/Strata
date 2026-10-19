@@ -102,8 +102,6 @@ public final class ButtonImpl extends CustomComponent<Button> implements Button 
         this.caption = TextSpan.of(text);
         this.disabledCaption = this.caption;
         this.hoveredCaption = this.caption;
-        this.setFocusable(true);
-        this.setTabbable(true);
         this.setCursor(CursorKind.HAND);
         this.setMinSize(20f, 20f);
     }

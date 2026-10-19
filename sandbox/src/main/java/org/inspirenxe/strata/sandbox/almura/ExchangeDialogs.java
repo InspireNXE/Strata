@@ -261,9 +261,9 @@ final class ExchangeDialogs {
                     .setSpacing(4, 3)
                     .add(inventoryLabel, 0, 0)
                     .add(unlistedLabel, 0, 2)
-                    .add(this.left, 1, 0)
+                    .add(Look.framed(this.ui, this.left), 1, 0)
                     .add(middle, 1, 1)
-                    .add(this.right, 1, 2)
+                    .add(Look.framed(this.ui, this.right), 1, 2)
                     .add(this.leftBar, 2, 0)
                     .add(this.rightBar, 2, 2);
 
@@ -292,9 +292,8 @@ final class ExchangeDialogs {
             final ListView<Stock> list = this.ui.<Stock>listView(this::cell)
                     .setRowHeight(24)
                     .setRowSpacing(1)
-                    .setKeyFunction(Stock::record)
-                    .setAnchor(Anchor.FILL);
-            return Look.panel(list);
+                    .setKeyFunction(Stock::record);
+            return list;
         }
 
         private Component<?> cell(final Stock stock) {

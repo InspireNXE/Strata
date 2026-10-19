@@ -1,6 +1,9 @@
 package org.inspirenxe.strata.api.control.collection;
 
 import org.inspirenxe.strata.api.component.Component;
+import org.inspirenxe.strata.api.component.Focusable;
+import org.inspirenxe.strata.api.component.HasCursor;
+import org.inspirenxe.strata.api.component.HasTooltip;
 import org.inspirenxe.strata.api.control.attribute.item.Activatable;
 import org.inspirenxe.strata.api.control.attribute.item.CellSource;
 import org.inspirenxe.strata.api.control.attribute.item.ItemSource;
@@ -91,7 +94,8 @@ import java.util.function.Function;
  *
  * @param <T> the type of the items
  */
-public interface ListView<T> extends Component<ListView<T>>, ItemSource<T, ListView<T>>, CellSource<T, ListView<T>>,
+public interface ListView<T> extends Component<ListView<T>>, Focusable<ListView<T>>, HasCursor<ListView<T>>,
+        HasTooltip<ListView<T>>, ItemSource<T, ListView<T>>, CellSource<T, ListView<T>>,
         SingleSelection<T, ListView<T>>, Activatable<ListView<T>>, RowView<ListView<T>> {
     /**
      * Style key for an unselected row (paint, optional).

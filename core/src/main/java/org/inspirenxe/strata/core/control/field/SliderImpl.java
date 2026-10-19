@@ -103,8 +103,6 @@ public final class SliderImpl extends CustomComponent<Slider> implements Slider 
         this.thumbDisabled = Paint.NONE;
         this.textStyle = TextStyle.DEFAULT;
         this.disabledTextStyle = TextStyle.DEFAULT;
-        this.setFocusable(true);
-        this.setTabbable(true);
         this.setCursor(CursorKind.HAND);
     }
 

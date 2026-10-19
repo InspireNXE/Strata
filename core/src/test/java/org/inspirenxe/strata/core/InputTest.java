@@ -110,11 +110,11 @@ class InputTest {
         this.test.host().pointerMoved(50, 10, Modifiers.NONE);
         this.test.host().pointerButton(50, 10, MouseButton.RIGHT, false, Modifiers.NONE);
         assertEquals(List.of(MouseButton.RIGHT), ended);
-        assertTrue(box.isPressed(), "left is still held");
+        assertTrue(box.pressed(), "left is still held");
 
         this.test.host().pointerButton(50, 10, MouseButton.LEFT, false, Modifiers.NONE);
         assertEquals(List.of(MouseButton.RIGHT, MouseButton.LEFT), ended);
-        assertFalse(box.isPressed());
+        assertFalse(box.pressed());
     }
 
     @Test

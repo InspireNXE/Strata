@@ -118,8 +118,6 @@ public final class ListViewImpl<T> extends CustomComposite<ListView<T>> implemen
         this.thumbHovered = Paint.NONE;
         this.track = Paint.NONE;
         this.placeholderStyle = TextStyle.DEFAULT;
-        this.setFocusable(true);
-        this.setTabbable(true);
     }
 
     // ------------------------------------------------------------------

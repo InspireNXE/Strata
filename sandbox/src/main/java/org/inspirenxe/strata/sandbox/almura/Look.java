@@ -2,6 +2,8 @@ package org.inspirenxe.strata.sandbox.almura;
 
 import org.inspirenxe.strata.api.ComponentFactory;
 import org.inspirenxe.strata.api.component.Component;
+import org.inspirenxe.strata.api.component.Container;
+import org.inspirenxe.strata.api.layout.AnchorPanel;
 import org.inspirenxe.strata.api.control.button.Button;
 import org.inspirenxe.strata.api.control.display.Label;
 import org.inspirenxe.strata.api.geometry.Insets;
@@ -71,9 +73,19 @@ final class Look {
     /**
      * Almura's bordered black panel.
      */
-    static <T extends Component<T>> T panel(final T component) {
+    static <T extends Container<T>> T panel(final T component) {
         return component.setBackground(PANEL)
                 .setBorder(PANEL_BORDER);
+    }
+
+    /**
+     * Almura's bordered black panel around a control that fills it, such as a list.
+     */
+    static AnchorPanel framed(final ComponentFactory ui, final Component<?> content) {
+        return Look.panel(ui.anchorPanel())
+                .setPadding(1)
+                .setAnchor(Anchor.FILL)
+                .add(content.setAnchor(Anchor.FILL));
     }
 
     static Button button(final ComponentFactory ui, final String text, final float width) {

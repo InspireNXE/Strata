@@ -1,7 +1,7 @@
 package org.inspirenxe.strata.api.component;
 
 /**
- * Mouse cursor shapes a component can ask for with {@link Component#setCursor}. An engine without one of these
+ * Mouse cursor shapes a component can ask for with {@link HasCursor#setCursor}. An engine without one of these
  * shapes shows the closest it has; the Swing adapter shows the default arrow for {@link #NOT_ALLOWED}.
  */
 public enum CursorKind {

@@ -1,14 +1,17 @@
 package org.inspirenxe.strata.core;
 
 import org.inspirenxe.strata.api.ComponentFactory;
+import org.inspirenxe.strata.api.component.HasTooltip;
 import org.inspirenxe.strata.api.extension.CustomComponent;
 import org.inspirenxe.strata.api.extension.MeasureContext;
 import org.inspirenxe.strata.api.geometry.Size;
+import org.inspirenxe.strata.api.theme.Border;
 
 /**
- * A leaf with a fixed natural size, built on the public extension point.
+ * A leaf with a fixed natural size, built on the public extension point. It opens up the protected border, offset
+ * and press state so tests can reach them.
  */
-public final class Box extends CustomComponent<Box> {
+public final class Box extends CustomComponent<Box> implements HasTooltip<Box> {
     private final float naturalWidth;
     private final float naturalHeight;
 
@@ -16,6 +19,20 @@ public final class Box extends CustomComponent<Box> {
         super(ui);
         this.naturalWidth = naturalWidth;
         this.naturalHeight = naturalHeight;
+    }
+
+    @Override
+    public Box setBorder(final Border border) {
+        return super.setBorder(border);
+    }
+
+    @Override
+    public Box setOffset(final float offsetX, final float offsetY) {
+        return super.setOffset(offsetX, offsetY);
+    }
+
+    public boolean pressed() {
+        return this.isPressed();
     }
 
     @Override

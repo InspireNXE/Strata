@@ -58,6 +58,10 @@ class EventSystemTest {
             super(ui);
         }
 
+        void relayout() {
+            this.invalidateLayout();
+        }
+
         @Override
         public int count() {
             return this.count;
@@ -391,7 +395,7 @@ class EventSystemTest {
         void measuredHandlersChangeTheSizeTheComponentAsksFor() {
             final CounterImpl counter = EventSystemTest.this.counter();
             counter.onEvent(Component.MEASURED, e -> e.setWidth(Math.max(80f, e.width())));
-            counter.invalidateLayout();
+            counter.relayout();
             EventSystemTest.this.test.host().render(new NullCanvas());
             assertEquals(80f, counter.desiredWidth());
             assertEquals(10f, counter.desiredHeight());

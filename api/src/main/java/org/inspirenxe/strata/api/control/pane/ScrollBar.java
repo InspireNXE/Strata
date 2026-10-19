@@ -1,6 +1,9 @@
 package org.inspirenxe.strata.api.control.pane;
 
 import org.inspirenxe.strata.api.component.Component;
+import org.inspirenxe.strata.api.component.Focusable;
+import org.inspirenxe.strata.api.component.HasCursor;
+import org.inspirenxe.strata.api.component.HasTooltip;
 import org.inspirenxe.strata.api.control.attribute.value.Ranged;
 import org.inspirenxe.strata.api.layout.Orientation;
 import org.inspirenxe.strata.api.layout.ScrollPanel;
@@ -25,7 +28,7 @@ import org.inspirenxe.strata.api.layout.ScrollPanel;
  *     value changed, so a scroll at the end reaches its ancestors.</li>
  *     <li>While focused: Up and Down (vertical) or Left and Right (horizontal) move by the scroll rate, Page Up and
  *     Page Down by a page, and Home and End go to the ends. Up and Left move toward the start. A bar is not focusable
- *     unless {@linkplain #setFocusable made so}, since the content it scrolls usually takes the keys.</li>
+ *     unless {@linkplain #setFocusable(boolean) made so}, since the content it scrolls usually takes the keys.</li>
  * </ul>
  * <p>A page is the visible amount less one scroll rate, and at least one scroll rate. A disabled bar ignores input
  * and draws its thumb with the disabled look, as does a bar with nothing to scroll.</p>
@@ -78,7 +81,8 @@ import org.inspirenxe.strata.api.layout.ScrollPanel;
  * <p>Get one from {@link org.inspirenxe.strata.api.ComponentFactory#scrollBar()}. Do not implement this
  * interface.</p>
  */
-public interface ScrollBar extends Component<ScrollBar>, Ranged<ScrollBar> {
+public interface ScrollBar extends Component<ScrollBar>, Focusable<ScrollBar>, HasCursor<ScrollBar>,
+        HasTooltip<ScrollBar>, Ranged<ScrollBar> {
     /**
      * Style key for the track (paint, optional). The same key as {@link ScrollPanel#STYLE_TRACK}.
      */

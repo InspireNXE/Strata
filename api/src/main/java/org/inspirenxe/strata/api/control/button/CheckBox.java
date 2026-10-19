@@ -1,6 +1,9 @@
 package org.inspirenxe.strata.api.control.button;
 
 import org.inspirenxe.strata.api.component.Component;
+import org.inspirenxe.strata.api.component.Focusable;
+import org.inspirenxe.strata.api.component.HasCursor;
+import org.inspirenxe.strata.api.component.HasTooltip;
 import org.inspirenxe.strata.api.control.attribute.text.HasText;
 import org.inspirenxe.strata.api.control.attribute.value.Toggle;
 
@@ -50,7 +53,8 @@ import java.util.Objects;
  * <p>Get one from {@link org.inspirenxe.strata.api.ComponentFactory#checkBox(String)}. Do not implement this
  * interface.</p>
  */
-public interface CheckBox extends Component<CheckBox>, HasText<CheckBox>, Toggle<CheckBox> {
+public interface CheckBox extends Component<CheckBox>, Focusable<CheckBox>, HasCursor<CheckBox>, HasTooltip<CheckBox>,
+        HasText<CheckBox>, Toggle<CheckBox> {
     /**
      * Style key for the unchecked box (paint, required).
      */

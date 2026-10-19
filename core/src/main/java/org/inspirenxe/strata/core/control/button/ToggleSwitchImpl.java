@@ -82,8 +82,6 @@ public final class ToggleSwitchImpl extends CustomComponent<ToggleSwitch> implem
         this.disabledTextStyle = TextStyle.DEFAULT;
         this.caption = TextSpan.of(text);
         this.disabledCaption = this.caption;
-        this.setFocusable(true);
-        this.setTabbable(true);
         this.setCursor(CursorKind.HAND);
     }
 

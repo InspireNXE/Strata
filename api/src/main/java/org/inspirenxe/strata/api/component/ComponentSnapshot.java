@@ -4,7 +4,6 @@ import org.inspirenxe.strata.api.geometry.Insets;
 import org.inspirenxe.strata.api.geometry.Rect;
 import org.inspirenxe.strata.api.layout.HorizontalAlignment;
 import org.inspirenxe.strata.api.layout.VerticalAlignment;
-import org.inspirenxe.strata.api.theme.Paint;
 
 import java.util.Objects;
 import java.util.Optional;
@@ -16,7 +15,8 @@ import java.util.Optional;
  * <p>A snapshot covers only the component itself. A container's snapshot holds the container's own state and
  * nothing about its children; each child that was captured has a snapshot of its own.</p>
  *
- * <p>Each field holds what the {@link Component} getter of the same name returned when the snapshot was taken.
+ * <p>Each field holds what the component's getter of the same name returned when the snapshot was taken, or for
+ * hover, press and focus, what the component's own code would have read.
  * {@link #state()} holds what the component's kind adds, such as a text box's text and caret: the built-in controls
  * and panels record a nested {@code State} type (for example
  * {@link org.inspirenxe.strata.api.control.field.TextBox.State}), and a
@@ -27,16 +27,11 @@ import java.util.Optional;
  * reference to the live component, so keeping one keeps the component reachable.</p>
  *
  * @param component the live component this snapshot was taken of; never null
- * @param id the component's {@linkplain Component#id() id}, or null
  * @param visible whether the component was {@linkplain Component#isVisible() visible}
  * @param enabled whether the component was {@linkplain Component#isEnabled() enabled}
- * @param focusable whether the component was {@linkplain Component#isFocusable() focusable}
- * @param tabbable whether the component was {@linkplain Component#isTabbable() tabbable}
- * @param tabIndex the component's {@linkplain Component#tabIndex() tab index}
- * @param cursor the component's {@linkplain Component#cursor() cursor}, or null
- * @param hovered whether the component was {@linkplain Component#isHovered() hovered}
- * @param pressed whether the component was {@linkplain Component#isPressed() pressed}
- * @param focused whether the component had {@linkplain Component#isFocused() focus}
+ * @param hovered whether the pointer was over the component, and not over a descendant
+ * @param pressed whether a mouse button was held down that went down on the component
+ * @param focused whether the component had keyboard focus; always false for one that is not {@link Focusable}
  * @param margin the component's {@linkplain Component#margin() margin}; never null
  * @param minWidth the component's {@linkplain Component#minWidth() minimum width}
  * @param maxWidth the component's {@linkplain Component#maxWidth() maximum width}
@@ -46,7 +41,6 @@ import java.util.Optional;
  *                            never null
  * @param verticalAlignment the component's {@linkplain Component#verticalAlignment() vertical alignment}; never
  *                          null
- * @param background the component's {@linkplain Component#background() background}; never null
  * @param bounds the component's {@linkplain Component#bounds() bounds}, in the host's coordinates; never null
  * @param desiredWidth the component's {@linkplain Component#desiredWidth() desired width}
  * @param desiredHeight the component's {@linkplain Component#desiredHeight() desired height}
@@ -54,13 +48,8 @@ import java.util.Optional;
  */
 public record ComponentSnapshot(
         Component<?> component,
-        String id,
         boolean visible,
         boolean enabled,
-        boolean focusable,
-        boolean tabbable,
-        int tabIndex,
-        CursorKind cursor,
         boolean hovered,
         boolean pressed,
         boolean focused,
@@ -71,7 +60,6 @@ public record ComponentSnapshot(
         float maxHeight,
         HorizontalAlignment horizontalAlignment,
         VerticalAlignment verticalAlignment,
-        Paint background,
         Rect bounds,
         float desiredWidth,
         float desiredHeight,
@@ -86,7 +74,6 @@ public record ComponentSnapshot(
         Objects.requireNonNull(margin, "margin");
         Objects.requireNonNull(horizontalAlignment, "horizontalAlignment");
         Objects.requireNonNull(verticalAlignment, "verticalAlignment");
-        Objects.requireNonNull(background, "background");
         Objects.requireNonNull(bounds, "bounds");
     }
 

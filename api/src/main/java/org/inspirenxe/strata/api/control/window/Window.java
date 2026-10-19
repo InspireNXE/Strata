@@ -226,4 +226,28 @@ public interface Window extends Container<Window>, Titled<Window>, Closable<Wind
      */
     @Override
     Window close();
+
+    /**
+     * Returns how far the window is moved right of where its parent's layout puts it.
+     *
+     * @return the horizontal offset in UI units; 0 for a new window
+     */
+    float offsetX();
+
+    /**
+     * Returns how far the window is moved down from where its parent's layout puts it.
+     *
+     * @return the vertical offset in UI units; 0 for a new window
+     */
+    float offsetY();
+
+    /**
+     * Moves the window from where its parent's layout puts it, as dragging its title bar does. Siblings and the
+     * parent's size do not change. Dragging keeps the window inside its slot; this method does not.
+     *
+     * @param offsetX the distance to move right, in UI units; negative moves left
+     * @param offsetY the distance to move down, in UI units; negative moves up
+     * @return this window
+     */
+    Window setOffset(float offsetX, float offsetY);
 }

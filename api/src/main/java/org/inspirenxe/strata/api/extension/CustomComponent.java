@@ -5,6 +5,9 @@ import org.inspirenxe.strata.api.component.Component;
 import org.inspirenxe.strata.api.component.ComponentSnapshot;
 import org.inspirenxe.strata.api.component.Container;
 import org.inspirenxe.strata.api.component.CursorKind;
+import org.inspirenxe.strata.api.component.Focusable;
+import org.inspirenxe.strata.api.component.HasCursor;
+import org.inspirenxe.strata.api.component.HasTooltip;
 import org.inspirenxe.strata.api.component.Tooltip;
 import org.inspirenxe.strata.api.event.Event;
 import org.inspirenxe.strata.api.event.EventHandler;
@@ -45,7 +48,7 @@ import java.util.function.Consumer;
  * it here:</p>
  *
  * <pre>{@code
- * public interface ColorPicker extends Component<ColorPicker> {
+ * public interface ColorPicker extends Component<ColorPicker>, Focusable<ColorPicker> {
  *     int color();
  * }
  *
@@ -54,7 +57,6 @@ import java.util.function.Consumer;
  *
  *     ColorPickerImpl(ComponentFactory factory) {
  *         super(factory);
- *         this.setFocusable(true);
  *     }
  *
  *     public int color() {
@@ -79,6 +81,11 @@ import java.util.function.Consumer;
  * <p>The constructor asks the factory for a <em>peer</em>, Strata's half of the component, which holds its bounds,
  * state and handlers. Every {@link Component} method is {@code final} here and goes to the peer, so the component
  * behaves like every other one in layout, focus and events.</p>
+ *
+ * <p>The methods of {@link Focusable}, {@link HasCursor} and {@link HasTooltip} are here too, so a subclass takes
+ * part in focus, chooses a cursor or shows a tooltip just by declaring the interface, as {@code ColorPicker} does
+ * above. Strata ignores them on a subclass that does not declare the interface. A component that implements
+ * {@link Focusable} starts out focusable and tabbable.</p>
  *
  * <h2>Requirements for subclasses</h2>
  * <ul>
@@ -115,6 +122,10 @@ public abstract class CustomComponent<T extends Component<T>> implements Compone
         Objects.requireNonNull(factory, "factory");
         final Hooks hooks = new Hooks();
         this.peer = container ? factory.createContainerPeer(this, hooks) : factory.createPeer(this, hooks);
+        if (this instanceof Focusable<?>) {
+            this.peer.setFocusable(true);
+            this.peer.setTabbable(true);
+        }
     }
 
     /**
@@ -164,8 +175,8 @@ public abstract class CustomComponent<T extends Component<T>> implements Compone
     protected abstract Size measure(MeasureContext context, float availableWidth, float availableHeight);
 
     /**
-     * Draws the component. The {@linkplain #background() background} is already drawn, and a container's children
-     * are drawn after this returns, on top. The default draws nothing.
+     * Draws the component. The {@linkplain #background() background} and border are already drawn, and a
+     * container's children are drawn after this returns, on top. The default draws nothing.
      *
      * @param painter what to draw with; valid only during this call
      * @param bounds the component's bounds, the same as {@link #bounds()}
@@ -302,7 +313,7 @@ public abstract class CustomComponent<T extends Component<T>> implements Compone
     }
 
     /**
-     * Default behavior for {@link InputEvents#FOCUS_GAINED}. The default does nothing.
+     * Default behavior for {@link Focusable#FOCUS_GAINED}. The default does nothing.
      *
      * @param event the event
      */
@@ -310,7 +321,7 @@ public abstract class CustomComponent<T extends Component<T>> implements Compone
     }
 
     /**
-     * Default behavior for {@link InputEvents#FOCUS_LOST}. The default does nothing.
+     * Default behavior for {@link Focusable#FOCUS_LOST}. The default does nothing.
      *
      * @param event the event
      */
@@ -318,7 +329,8 @@ public abstract class CustomComponent<T extends Component<T>> implements Compone
     }
 
     /**
-     * Default behavior for event types other than those in {@link InputEvents}. The default does nothing.
+     * Default behavior for event types other than those in {@link InputEvents} and the focus events. The default
+     * does nothing.
      *
      * @param type the event's type
      * @param event the event
@@ -385,9 +397,9 @@ public abstract class CustomComponent<T extends Component<T>> implements Compone
             this.onKey((KeyEvent) event);
         } else if (type == InputEvents.CHAR) {
             this.onChar((CharEvent) event);
-        } else if (type == InputEvents.FOCUS_GAINED) {
+        } else if (type == Focusable.FOCUS_GAINED) {
             this.onFocusGained((FocusEvent) event);
-        } else if (type == InputEvents.FOCUS_LOST) {
+        } else if (type == Focusable.FOCUS_LOST) {
             this.onFocusLost((FocusEvent) event);
         } else {
             this.onOtherEvent(type, event);
@@ -474,22 +486,6 @@ public abstract class CustomComponent<T extends Component<T>> implements Compone
     }
 
     @Override
-    public final Theme theme() {
-        return this.peer.theme();
-    }
-
-    @Override
-    public final String id() {
-        return this.peer.id();
-    }
-
-    @Override
-    public final T setId(final String id) {
-        this.peer.setId(id);
-        return this.self();
-    }
-
-    @Override
     public final boolean isVisible() {
         return this.peer.isVisible();
     }
@@ -509,75 +505,6 @@ public abstract class CustomComponent<T extends Component<T>> implements Compone
     public final T setEnabled(final boolean enabled) {
         this.peer.setEnabled(enabled);
         return this.self();
-    }
-
-    @Override
-    public final boolean isFocusable() {
-        return this.peer.isFocusable();
-    }
-
-    @Override
-    public final T setFocusable(final boolean focusable) {
-        this.peer.setFocusable(focusable);
-        return this.self();
-    }
-
-    @Override
-    public final boolean isTabbable() {
-        return this.peer.isTabbable();
-    }
-
-    @Override
-    public final T setTabbable(final boolean tabbable) {
-        this.peer.setTabbable(tabbable);
-        return this.self();
-    }
-
-    @Override
-    public final int tabIndex() {
-        return this.peer.tabIndex();
-    }
-
-    @Override
-    public final T setTabIndex(final int tabIndex) {
-        this.peer.setTabIndex(tabIndex);
-        return this.self();
-    }
-
-    @Override
-    public final CursorKind cursor() {
-        return this.peer.cursor();
-    }
-
-    @Override
-    public final T setCursor(final CursorKind cursor) {
-        this.peer.setCursor(cursor);
-        return this.self();
-    }
-
-    @Override
-    public final boolean isHovered() {
-        return this.peer.isHovered();
-    }
-
-    @Override
-    public final boolean isHoverWithin() {
-        return this.peer.isHoverWithin();
-    }
-
-    @Override
-    public final boolean isPressed() {
-        return this.peer.isPressed();
-    }
-
-    @Override
-    public final boolean isFocused() {
-        return this.peer.isFocused();
-    }
-
-    @Override
-    public final boolean requestFocus() {
-        return this.peer.requestFocus();
     }
 
     @Override
@@ -652,55 +579,6 @@ public abstract class CustomComponent<T extends Component<T>> implements Compone
     }
 
     @Override
-    public final float offsetX() {
-        return this.peer.offsetX();
-    }
-
-    @Override
-    public final float offsetY() {
-        return this.peer.offsetY();
-    }
-
-    @Override
-    public final T setOffset(final float offsetX, final float offsetY) {
-        this.peer.setOffset(offsetX, offsetY);
-        return this.self();
-    }
-
-    @Override
-    public final Border border() {
-        return this.peer.border();
-    }
-
-    @Override
-    public final T setBorder(final Border border) {
-        this.peer.setBorder(border);
-        return this.self();
-    }
-
-    @Override
-    public final Tooltip tooltip() {
-        return this.peer.tooltip();
-    }
-
-    @Override
-    public final T setTooltip(final Tooltip tooltip) {
-        this.peer.setTooltip(tooltip);
-        return this.self();
-    }
-
-    @Override
-    public final Paint background() {
-        return this.peer.background();
-    }
-
-    @Override
-    public final T setBackground(final Paint background) {
-        this.peer.setBackground(background);
-        return this.self();
-    }
-
-    @Override
     public final Rect bounds() {
         return this.peer.bounds();
     }
@@ -715,8 +593,249 @@ public abstract class CustomComponent<T extends Component<T>> implements Compone
         return this.peer.desiredHeight();
     }
 
-    @Override
-    public final void invalidateLayout() {
+    // ------------------------------------------------------------------
+    // Focusable, HasCursor and HasTooltip, for subclasses that declare them. Strata ignores these on the rest.
+    // ------------------------------------------------------------------
+
+    /**
+     * Returns whether the component can take keyboard focus. See {@link Focusable#isFocusable()}.
+     *
+     * @return true if focusable; always false unless the subclass implements {@link Focusable}
+     */
+    public final boolean isFocusable() {
+        return this.peer.isFocusable();
+    }
+
+    /**
+     * Sets whether the component can take keyboard focus. See {@link Focusable#setFocusable(boolean)}.
+     *
+     * @param focusable false to refuse focus
+     * @return this component
+     */
+    public final T setFocusable(final boolean focusable) {
+        this.peer.setFocusable(focusable);
+        return this.self();
+    }
+
+    /**
+     * Returns whether Tab and Shift+Tab stop at this component. See {@link Focusable#isTabbable()}.
+     *
+     * @return true if tabbable
+     */
+    public final boolean isTabbable() {
+        return this.peer.isTabbable();
+    }
+
+    /**
+     * Sets whether Tab and Shift+Tab stop at this component. See {@link Focusable#setTabbable(boolean)}.
+     *
+     * @param tabbable false to leave the component out of tab order
+     * @return this component
+     */
+    public final T setTabbable(final boolean tabbable) {
+        this.peer.setTabbable(tabbable);
+        return this.self();
+    }
+
+    /**
+     * Returns the tab index. See {@link Focusable#tabIndex()}.
+     *
+     * @return the tab index; 0 by default
+     */
+    public final int tabIndex() {
+        return this.peer.tabIndex();
+    }
+
+    /**
+     * Sets the tab index. See {@link Focusable#setTabIndex(int)}.
+     *
+     * @param tabIndex the tab index
+     * @return this component
+     */
+    public final T setTabIndex(final int tabIndex) {
+        this.peer.setTabIndex(tabIndex);
+        return this.self();
+    }
+
+    /**
+     * Returns whether this component has keyboard focus. See {@link Focusable#isFocused()}.
+     *
+     * @return true while focused
+     */
+    public final boolean isFocused() {
+        return this.peer.isFocused();
+    }
+
+    /**
+     * Asks the host to give this component keyboard focus. See {@link Focusable#requestFocus()}.
+     *
+     * @return true if the component now has focus; always false unless the subclass implements {@link Focusable}
+     */
+    public final boolean requestFocus() {
+        return this.peer.requestFocus();
+    }
+
+    /**
+     * Returns the cursor shown over this component. See {@link HasCursor#cursor()}.
+     *
+     * @return the cursor, or {@code null} to use the nearest ancestor's
+     */
+    public final CursorKind cursor() {
+        return this.peer.cursor();
+    }
+
+    /**
+     * Sets the cursor shown over this component. See {@link HasCursor#setCursor(CursorKind)}.
+     *
+     * @param cursor the cursor, or {@code null} to use the nearest ancestor's
+     * @return this component
+     */
+    public final T setCursor(final CursorKind cursor) {
+        this.peer.setCursor(cursor);
+        return this.self();
+    }
+
+    /**
+     * Returns the tooltip. See {@link HasTooltip#tooltip()}.
+     *
+     * @return the tooltip, or {@code null} for none
+     */
+    public final Tooltip tooltip() {
+        return this.peer.tooltip();
+    }
+
+    /**
+     * Sets the tooltip. See {@link HasTooltip#setTooltip(Tooltip)}.
+     *
+     * @param tooltip the tooltip, or {@code null} for none
+     * @return this component
+     */
+    public final T setTooltip(final Tooltip tooltip) {
+        this.peer.setTooltip(tooltip);
+        return this.self();
+    }
+
+    // ------------------------------------------------------------------
+    // State for the subclass's own use
+    // ------------------------------------------------------------------
+
+    /**
+     * Returns the theme applied to this component, for reading styles outside {@link #onApplyTheme}.
+     *
+     * @return the host's theme, or {@code null} before the component is first attached
+     */
+    protected final Theme theme() {
+        return this.peer.theme();
+    }
+
+    /**
+     * Returns whether the pointer is over this component. Only the deepest component under the pointer counts as
+     * hovered; its ancestors do not.
+     *
+     * @return true while hovered
+     */
+    protected final boolean isHovered() {
+        return this.peer.isHovered();
+    }
+
+    /**
+     * Returns whether the pointer is over this component or any of its descendants, so a list can light up the row
+     * whose label is hovered.
+     *
+     * @return true while this component or a descendant is hovered
+     */
+    protected final boolean isHoverWithin() {
+        return this.peer.isHoverWithin();
+    }
+
+    /**
+     * Returns whether a mouse button went down on this component and has not been released yet. Stays true while
+     * the pointer is dragged away.
+     *
+     * @return true while pressed
+     */
+    protected final boolean isPressed() {
+        return this.peer.isPressed();
+    }
+
+    /**
+     * Returns the horizontal offset.
+     *
+     * @return how far the component is moved right of where layout puts it; 0 by default
+     */
+    protected float offsetX() {
+        return this.peer.offsetX();
+    }
+
+    /**
+     * Returns the vertical offset.
+     *
+     * @return how far the component is moved down from where layout puts it; 0 by default
+     */
+    protected float offsetY() {
+        return this.peer.offsetY();
+    }
+
+    /**
+     * Moves the component from where its parent's layout puts it, along with everything inside it. Siblings and the
+     * parent's size do not change, so this suits dragging, such as moving a window by its title bar. A subclass may
+     * make it public, as {@link org.inspirenxe.strata.api.control.window.Window} does.
+     *
+     * @param offsetX the distance to move right, in UI units; negative moves left
+     * @param offsetY the distance to move down, in UI units; negative moves up
+     * @return this component
+     */
+    protected T setOffset(final float offsetX, final float offsetY) {
+        this.peer.setOffset(offsetX, offsetY);
+        return this.self();
+    }
+
+    /**
+     * Returns the background paint.
+     *
+     * @return the background; {@link Paint#NONE} by default
+     */
+    protected Paint background() {
+        return this.peer.background();
+    }
+
+    /**
+     * Sets the paint drawn over the component's bounds before anything else of it. Containers make this public.
+     *
+     * @param background the background, or {@link Paint#NONE} for none
+     * @return this component
+     */
+    protected T setBackground(final Paint background) {
+        this.peer.setBackground(background);
+        return this.self();
+    }
+
+    /**
+     * Returns the border.
+     *
+     * @return the border; {@link Border#NONE} by default
+     */
+    protected Border border() {
+        return this.peer.border();
+    }
+
+    /**
+     * Sets the lines drawn along the inside of the component's edges, over its background and under its content.
+     * Containers make this public.
+     *
+     * @param border the border, or {@link Border#NONE} for none
+     * @return this component
+     */
+    protected T setBorder(final Border border) {
+        this.peer.setBorder(border);
+        return this.self();
+    }
+
+    /**
+     * Schedules a new layout before the next frame. Call it whenever something that {@link #measure} reads
+     * changes. The component's own setters for size, margin and the like already do this.
+     */
+    protected final void invalidateLayout() {
         this.peer.invalidateLayout();
     }
 
@@ -802,13 +921,12 @@ public abstract class CustomComponent<T extends Component<T>> implements Compone
     }
 
     /**
-     * Returns the class name and, if set, the id, for debugging.
+     * Returns the class name, for debugging.
      *
-     * @return for example {@code ColorPickerImpl#accent}
+     * @return for example {@code ColorPickerImpl}
      */
     @Override
     public String toString() {
-        final String id = this.peer.id();
-        return this.getClass().getSimpleName() + (id == null ? "" : "#" + id);
+        return this.getClass().getSimpleName();
     }
 }

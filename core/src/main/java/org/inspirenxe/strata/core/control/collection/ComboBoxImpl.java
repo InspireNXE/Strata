@@ -25,6 +25,7 @@ import org.inspirenxe.strata.api.text.TextStyle;
 import org.inspirenxe.strata.api.theme.Paint;
 import org.inspirenxe.strata.api.theme.Theme;
 import org.inspirenxe.strata.core.text.RichText;
+import org.inspirenxe.strata.core.node.ComponentFactoryImpl;
 
 import java.util.List;
 import java.util.Objects;
@@ -103,8 +104,6 @@ public final class ComboBoxImpl<T> extends CustomComponent<ComboBox<T>> implemen
         this.textStyle = TextStyle.DEFAULT;
         this.disabledTextStyle = TextStyle.DEFAULT;
         this.shownForWidth = Float.NaN;
-        this.setFocusable(true);
-        this.setTabbable(true);
         this.setCursor(CursorKind.HAND);
     }
 
@@ -241,7 +240,7 @@ public final class ComboBoxImpl<T> extends CustomComponent<ComboBox<T>> implemen
         options.setRowHeight(rowHeight);
         options.setActivateOnClick(true);
         options.setItems(this.options);
-        options.setBackground(this.popupPaint);
+        ((ComponentFactoryImpl) this.ui).nodeOf(options).setBackground(this.popupPaint);
         options.setMinSize(this.bounds().width(), 0f);
         options.setHeight(rowHeight * Math.min(this.maxVisible, this.options.size()));
         if (this.selectedIndex >= 0) {

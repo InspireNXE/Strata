@@ -69,8 +69,6 @@ public final class ExpanderImpl extends CustomComposite<Expander> implements Exp
         this.span = TextSpan.of(title);
         this.disabledSpan = this.span;
         this.pointerY = Float.NaN;
-        this.setFocusable(true);
-        this.setTabbable(true);
     }
 
     @Override

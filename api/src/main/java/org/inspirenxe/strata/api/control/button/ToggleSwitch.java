@@ -1,6 +1,9 @@
 package org.inspirenxe.strata.api.control.button;
 
 import org.inspirenxe.strata.api.component.Component;
+import org.inspirenxe.strata.api.component.Focusable;
+import org.inspirenxe.strata.api.component.HasCursor;
+import org.inspirenxe.strata.api.component.HasTooltip;
 import org.inspirenxe.strata.api.control.attribute.text.HasText;
 import org.inspirenxe.strata.api.control.attribute.value.Toggle;
 
@@ -44,7 +47,8 @@ import java.util.Objects;
  * <p>Get one from {@link org.inspirenxe.strata.api.ComponentFactory#toggleSwitch(String)}. Do not implement this
  * interface.</p>
  */
-public interface ToggleSwitch extends Component<ToggleSwitch>, HasText<ToggleSwitch>, Toggle<ToggleSwitch> {
+public interface ToggleSwitch extends Component<ToggleSwitch>, Focusable<ToggleSwitch>, HasCursor<ToggleSwitch>,
+        HasTooltip<ToggleSwitch>, HasText<ToggleSwitch>, Toggle<ToggleSwitch> {
     /**
      * Style key for the track when off (paint, required).
      */

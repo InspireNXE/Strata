@@ -29,6 +29,7 @@ import org.inspirenxe.strata.api.text.TextStyle;
 import org.inspirenxe.strata.api.theme.Paint;
 import org.inspirenxe.strata.api.theme.Theme;
 import org.inspirenxe.strata.core.control.collection.ListViewImpl;
+import org.inspirenxe.strata.core.node.ComponentFactoryImpl;
 
 import java.util.List;
 import java.util.Objects;
@@ -173,8 +174,6 @@ public final class TextBoxImpl extends CustomComponent<TextBox> implements TextB
         this.display = TextSpan.of("");
         this.contentBox = Rect.ZERO;
         this.visualsDirty = true;
-        this.setFocusable(true);
-        this.setTabbable(true);
         this.setCursor(CursorKind.TEXT);
         this.setMinSize(20f, 20f);
     }
@@ -372,7 +371,7 @@ public final class TextBoxImpl extends CustomComponent<TextBox> implements TextB
             list.setFocusable(false);
             list.setTabbable(false);
             list.setActivateOnClick(true);
-            list.setBackground(this.suggestionsPaint);
+            ((ComponentFactoryImpl) this.ui).nodeOf(list).setBackground(this.suggestionsPaint);
             list.setItems(found);
             this.suggestionList = list;
             final Overlay popup = this.ui.overlays().popup(list, this.bounds());
@@ -553,7 +552,7 @@ public final class TextBoxImpl extends CustomComponent<TextBox> implements TextB
         this.suggestionsPaint = theme.paintOr(STYLE_SUGGESTIONS, theme.paintOr(ComboBox.STYLE_POPUP, Paint.NONE));
         this.suggestionTextStyle = theme.textStyleOr(STYLE_SUGGESTION_TEXT, this.textStyle);
         if (this.suggestionList != null) {
-            this.suggestionList.setBackground(this.suggestionsPaint);
+            ((ComponentFactoryImpl) this.ui).nodeOf(this.suggestionList).setBackground(this.suggestionsPaint);
         }
         this.visualsDirty = true;
     }
@@ -770,7 +769,8 @@ public final class TextBoxImpl extends CustomComponent<TextBox> implements TextB
     @Override
     protected void onFocusLost(final FocusEvent event) {
         // A press on the list takes focus first; keep the list open for it
-        if (this.suggestionList == null || !this.suggestionList.isHoverWithin()) {
+        if (this.suggestionList == null
+                || !((ComponentFactoryImpl) this.ui).nodeOf(this.suggestionList).isHoverWithin()) {
             this.hideSuggestions();
         }
     }

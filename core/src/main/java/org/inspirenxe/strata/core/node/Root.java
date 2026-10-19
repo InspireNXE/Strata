@@ -2,6 +2,7 @@ package org.inspirenxe.strata.core.node;
 
 import org.inspirenxe.strata.api.component.Component;
 import org.inspirenxe.strata.api.component.CursorKind;
+import org.inspirenxe.strata.api.component.Focusable;
 import org.inspirenxe.strata.api.component.Tooltip;
 import org.inspirenxe.strata.api.event.Event;
 import org.inspirenxe.strata.api.event.EventHandler;
@@ -994,14 +995,16 @@ public final class Root {
             if (previous.acceptsTextInput() && (next == null || !next.acceptsTextInput())) {
                 this.platform.textInput().stop();
             }
-            previous.fire(InputEvents.FOCUS_LOST, new FocusEventImpl(previous.facade(), next == null ? null : next.facade()));
+            previous.fire(Focusable.FOCUS_LOST, new FocusEventImpl(previous.facade(),
+                    next == null ? null : next.facade()));
         }
         if (next != null) {
             next.setFocused(true);
             if (next.acceptsTextInput()) {
                 this.platform.textInput().start(next.bounds());
             }
-            next.fire(InputEvents.FOCUS_GAINED, new FocusEventImpl(next.facade(), previous == null ? null : previous.facade()));
+            next.fire(Focusable.FOCUS_GAINED, new FocusEventImpl(next.facade(),
+                    previous == null ? null : previous.facade()));
             for (Node ancestor = next.parentNode(); ancestor != null && this.focused == next; ancestor = ancestor.parentNode()) {
                 ancestor.hooks().descendantFocused(next.facade());
             }

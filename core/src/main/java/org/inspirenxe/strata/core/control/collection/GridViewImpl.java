@@ -1,6 +1,7 @@
 package org.inspirenxe.strata.core.control.collection;
 
 import org.inspirenxe.strata.api.ComponentFactory;
+import org.inspirenxe.strata.api.component.HasTooltip;
 import org.inspirenxe.strata.api.component.Component;
 import org.inspirenxe.strata.api.component.Tooltip;
 import org.inspirenxe.strata.api.control.collection.GridView;
@@ -15,6 +16,7 @@ import org.inspirenxe.strata.api.geometry.Size;
 import org.inspirenxe.strata.api.input.MouseButton;
 import org.inspirenxe.strata.api.theme.Paint;
 import org.inspirenxe.strata.api.theme.Theme;
+import org.inspirenxe.strata.core.node.ComponentFactoryImpl;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -253,7 +255,7 @@ public final class GridViewImpl<T> extends CustomComposite<GridView<T>> implemen
     @Override
     public int hoveredIndex() {
         for (final Slot<T> slot : this.slots) {
-            if (slot.isHoverWithin()) {
+            if (((ComponentFactoryImpl) this.ui).nodeOf(slot).isHoverWithin()) {
                 return slot.index;
             }
         }
@@ -348,7 +350,7 @@ public final class GridViewImpl<T> extends CustomComposite<GridView<T>> implemen
     /**
      * One slot and its cell, if it holds an item.
      */
-    private static final class Slot<T> extends CustomComposite<Slot<T>> {
+    private static final class Slot<T> extends CustomComposite<Slot<T>> implements HasTooltip<Slot<T>> {
         private final GridViewImpl<T> grid;
         private final int index;
         private Component<?> content;

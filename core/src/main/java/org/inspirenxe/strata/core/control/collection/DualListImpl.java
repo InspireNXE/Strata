@@ -15,6 +15,7 @@ import org.inspirenxe.strata.api.text.TextOverflow;
 import org.inspirenxe.strata.api.text.TextStyle;
 import org.inspirenxe.strata.api.theme.Paint;
 import org.inspirenxe.strata.api.theme.Theme;
+import org.inspirenxe.strata.core.node.ComponentFactoryImpl;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -413,8 +414,8 @@ public final class DualListImpl<T> extends CustomComposite<DualList<T>> implemen
     @Override
     protected void onApplyTheme(final Theme theme) {
         final Paint background = theme.paintOr(STYLE_LIST, Paint.NONE);
-        this.left.setBackground(background);
-        this.right.setBackground(background);
+        ((ComponentFactoryImpl) this.ui).nodeOf(this.left).setBackground(background);
+        ((ComponentFactoryImpl) this.ui).nodeOf(this.right).setBackground(background);
         final TextStyle titleStyle = theme.textStyleOr(STYLE_TITLE, theme.textStyleOr(Label.STYLE_TEXT, TextStyle.DEFAULT));
         this.leftTitle.setStyle(titleStyle);
         this.rightTitle.setStyle(titleStyle);

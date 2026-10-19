@@ -4,6 +4,9 @@ import org.inspirenxe.strata.api.component.Component;
 import org.inspirenxe.strata.api.component.ComponentSnapshot;
 import org.inspirenxe.strata.api.component.Container;
 import org.inspirenxe.strata.api.component.CursorKind;
+import org.inspirenxe.strata.api.component.Focusable;
+import org.inspirenxe.strata.api.component.HasCursor;
+import org.inspirenxe.strata.api.component.HasTooltip;
 import org.inspirenxe.strata.api.component.Tooltip;
 import org.inspirenxe.strata.api.event.Event;
 import org.inspirenxe.strata.api.event.EventHandler;
@@ -74,7 +77,6 @@ public class Node implements ComponentPeer {
     private MeasureEventImpl measureEvent;
     private Theme theme;
 
-    private String id;
     private boolean visible;
     private boolean enabled;
     private boolean focusable;
@@ -517,10 +519,10 @@ public class Node implements ComponentPeer {
      * @return a new snapshot
      */
     public final ComponentSnapshot snapshot() {
-        return new ComponentSnapshot(this.facade, this.id, this.visible, this.enabled, this.focusable, this.tabbable,
-                this.tabIndex, this.cursor, this.hovered, this.pressed, this.focused, this.margin, this.minWidth,
-                this.maxWidth, this.minHeight, this.maxHeight, this.horizontalAlignment, this.verticalAlignment,
-                this.background, this.bounds, this.desiredWidth, this.desiredHeight, this.hooks.snapshotState());
+        return new ComponentSnapshot(this.facade, this.visible, this.enabled, this.hovered, this.pressed,
+                this.focused, this.margin, this.minWidth, this.maxWidth, this.minHeight, this.maxHeight,
+                this.horizontalAlignment, this.verticalAlignment, this.bounds, this.desiredWidth, this.desiredHeight,
+                this.hooks.snapshotState());
     }
 
     /**
@@ -710,16 +712,6 @@ public class Node implements ComponentPeer {
     // ------------------------------------------------------------------
 
     @Override
-    public final String id() {
-        return this.id;
-    }
-
-    @Override
-    public final void setId(final String id) {
-        this.id = id;
-    }
-
-    @Override
     public final boolean isVisible() {
         return this.visible;
     }
@@ -748,7 +740,7 @@ public class Node implements ComponentPeer {
 
     @Override
     public final boolean isFocusable() {
-        return this.focusable;
+        return this.focusable && this.facade instanceof Focusable<?>;
     }
 
     @Override
@@ -781,7 +773,7 @@ public class Node implements ComponentPeer {
 
     @Override
     public final CursorKind cursor() {
-        return this.cursor;
+        return this.facade instanceof HasCursor<?> ? this.cursor : null;
     }
 
     @Override
@@ -894,7 +886,7 @@ public class Node implements ComponentPeer {
 
     @Override
     public final Tooltip tooltip() {
-        return this.tooltip;
+        return this.facade instanceof HasTooltip<?> ? this.tooltip : null;
     }
 
     @Override

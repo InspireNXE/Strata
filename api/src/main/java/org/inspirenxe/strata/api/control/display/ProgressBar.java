@@ -1,6 +1,8 @@
 package org.inspirenxe.strata.api.control.display;
 
 import org.inspirenxe.strata.api.component.Component;
+import org.inspirenxe.strata.api.component.HasCursor;
+import org.inspirenxe.strata.api.component.HasTooltip;
 import org.inspirenxe.strata.api.control.attribute.text.HasText;
 import org.inspirenxe.strata.api.control.attribute.value.Ranged;
 
@@ -36,7 +38,8 @@ import org.inspirenxe.strata.api.control.attribute.value.Ranged;
  * <p>Get one from {@link org.inspirenxe.strata.api.ComponentFactory#progressBar()}. Do not implement this
  * interface.</p>
  */
-public interface ProgressBar extends Component<ProgressBar>, HasText<ProgressBar>, Ranged<ProgressBar> {
+public interface ProgressBar extends Component<ProgressBar>, HasCursor<ProgressBar>, HasTooltip<ProgressBar>,
+        HasText<ProgressBar>, Ranged<ProgressBar> {
     /**
      * Style key for the bar's track (paint, required).
      */

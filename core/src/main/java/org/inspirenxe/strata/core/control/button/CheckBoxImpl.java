@@ -89,8 +89,6 @@ public final class CheckBoxImpl extends CustomComponent<CheckBox> implements Che
         this.disabledTextStyle = TextStyle.DEFAULT;
         this.caption = TextSpan.of(text);
         this.disabledCaption = this.caption;
-        this.setFocusable(true);
-        this.setTabbable(true);
         this.setCursor(CursorKind.HAND);
     }
 

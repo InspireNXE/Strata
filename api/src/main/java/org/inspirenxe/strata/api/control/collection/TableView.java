@@ -1,6 +1,8 @@
 package org.inspirenxe.strata.api.control.collection;
 
 import org.inspirenxe.strata.api.component.Component;
+import org.inspirenxe.strata.api.component.HasCursor;
+import org.inspirenxe.strata.api.component.HasTooltip;
 import org.inspirenxe.strata.api.control.attribute.item.Activatable;
 import org.inspirenxe.strata.api.control.attribute.item.ItemSource;
 import org.inspirenxe.strata.api.control.attribute.item.RowView;
@@ -81,7 +83,8 @@ import java.util.function.Function;
  *
  * @param <T> the type of the items
  */
-public interface TableView<T> extends Component<TableView<T>>, ItemSource<T, TableView<T>>,
+public interface TableView<T> extends Component<TableView<T>>, HasCursor<TableView<T>>, HasTooltip<TableView<T>>,
+        ItemSource<T, TableView<T>>,
         SingleSelection<T, TableView<T>>, Activatable<TableView<T>>, RowView<TableView<T>> {
     /**
      * Style key for the header behind each title (paint, required).

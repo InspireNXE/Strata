@@ -2,6 +2,7 @@ package org.inspirenxe.strata.core.control.collection;
 
 import java.util.Optional;
 import org.inspirenxe.strata.api.ComponentFactory;
+import org.inspirenxe.strata.api.component.HasCursor;
 import org.inspirenxe.strata.api.component.Component;
 import org.inspirenxe.strata.api.component.CursorKind;
 import org.inspirenxe.strata.api.control.collection.ListView;
@@ -26,6 +27,7 @@ import org.inspirenxe.strata.api.theme.Paint;
 import org.inspirenxe.strata.api.theme.Theme;
 import org.inspirenxe.strata.core.control.Rings;
 import org.inspirenxe.strata.core.text.RichText;
+import org.inspirenxe.strata.core.node.ComponentFactoryImpl;
 
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -463,7 +465,7 @@ public final class TableViewImpl<T> extends CustomComposite<TableView<T>> implem
         final float headHeight = ListView.DEFAULT_ROW_HEIGHT;
         final Rect body = new Rect(bounds.x(), bounds.y() + headHeight, bounds.width(), Math.max(0f, bounds.height() - headHeight));
         this.layoutColumns(context.text(), this.list.rowWidthFor(body));
-        this.rowsX = body.x() + this.list.border().widths().left();
+        this.rowsX = body.x() + ((ComponentFactoryImpl) this.ui).nodeOf(this.list).border().widths().left();
         context.arrange(this.header, new Rect(bounds.x(), bounds.y(), bounds.width(), headHeight));
         context.arrange(this.list, body);
     }
@@ -517,7 +519,7 @@ public final class TableViewImpl<T> extends CustomComposite<TableView<T>> implem
     /**
      * The column titles. Sortable titles show the hand cursor while the pointer is over the header.
      */
-    private static final class Header extends CustomComponent<Header> {
+    private static final class Header extends CustomComponent<Header> implements HasCursor<Header> {
         private final TableViewImpl<?> table;
         private float pointerX;
         private float lineHeight;

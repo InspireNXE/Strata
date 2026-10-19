@@ -174,8 +174,6 @@ public final class StoreScreen implements Screen {
                 .setKeyFunction(StoreItem::record)
                 .onEvent(SingleSelection.SELECTED, e -> this.updateControls())
                 .onEvent(Activatable.ACTIVATED, e -> this.transact(this.items.items().get(e.value()), 1));
-        Look.panel(this.items)
-                .setAnchor(Anchor.FILL);
 
         this.one = Look.button(ui, "Buy 1", 60)
                 .onEvent(Button.PRESSED, event -> this.selected()
@@ -205,7 +203,7 @@ public final class StoreScreen implements Screen {
                 .setSpacing(0, 3)
                 .add(this.tabs, 0, 0)
                 .add(searchRow, 1, 0)
-                .add(this.items, 2, 0)
+                .add(Look.framed(ui, this.items), 2, 0)
                 .add(buttons, 3, 0);
         Look.panel(store)
                 .setPadding(3);
@@ -227,8 +225,6 @@ public final class StoreScreen implements Screen {
                 .setKeyFunction(Item::name)
                 .onEvent(SingleSelection.SELECTED, e -> this.updateAdminControls())
                 .onEvent(Activatable.ACTIVATED, e -> this.listOrModify(this.adminItems.items().get(e.value())));
-        Look.panel(this.adminItems)
-                .setAnchor(Anchor.FILL);
         this.list = Look.button(ui, "List", 50)
                 .onEvent(Button.PRESSED, event -> this.adminItems.selected().ifPresent(this::listOrModify));
         this.unlist = Look.button(ui, "Unlist", 50)
@@ -257,7 +253,7 @@ public final class StoreScreen implements Screen {
                 .setSpacing(0, 3)
                 .add(type, 0, 0)
                 .add(this.adminSearch, 1, 0)
-                .add(this.adminItems, 2, 0)
+                .add(Look.framed(ui, this.adminItems), 2, 0)
                 .add(bottom, 3, 0);
         Look.panel(pane)
                 .setPadding(3);

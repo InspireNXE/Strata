@@ -1,6 +1,9 @@
 package org.inspirenxe.strata.api.control.field;
 
 import org.inspirenxe.strata.api.component.Component;
+import org.inspirenxe.strata.api.component.Focusable;
+import org.inspirenxe.strata.api.component.HasCursor;
+import org.inspirenxe.strata.api.component.HasTooltip;
 import org.inspirenxe.strata.api.control.attribute.text.TextInput;
 import org.inspirenxe.strata.api.event.EventType;
 import org.inspirenxe.strata.api.event.control.RequestEvent;
@@ -135,7 +138,8 @@ import java.util.Objects;
  * <p>Get one from {@link org.inspirenxe.strata.api.ComponentFactory#textBox()}. Do not implement this
  * interface.</p>
  */
-public interface TextBox extends Component<TextBox>, TextInput<TextBox> {
+public interface TextBox extends Component<TextBox>, Focusable<TextBox>, HasCursor<TextBox>, HasTooltip<TextBox>,
+        TextInput<TextBox> {
     /**
      * Style key for the background when not focused (paint, required).
      */

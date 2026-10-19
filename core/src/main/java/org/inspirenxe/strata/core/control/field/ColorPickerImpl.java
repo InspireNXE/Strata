@@ -5,7 +5,7 @@ import org.inspirenxe.strata.api.component.CursorKind;
 import org.inspirenxe.strata.api.control.field.ColorPicker;
 import org.inspirenxe.strata.api.control.field.TextBox;
 import org.inspirenxe.strata.api.event.input.DragEvent;
-import org.inspirenxe.strata.api.event.input.InputEvents;
+import org.inspirenxe.strata.api.component.Focusable;
 import org.inspirenxe.strata.api.event.input.PointerButtonEvent;
 import org.inspirenxe.strata.api.extension.ArrangeContext;
 import org.inspirenxe.strata.api.extension.CustomComposite;
@@ -111,7 +111,7 @@ public final class ColorPickerImpl extends CustomComposite<ColorPicker> implemen
         this.field.setAnchor(Anchor.FILL);
         this.field.setInternalFilter(text -> text.matches("#?[0-9a-fA-F]{0,8}") ? text : null);
         this.field.onEvent(TextBox.SUBMITTED, event -> this.commitHex());
-        this.field.onEvent(InputEvents.FOCUS_LOST, event -> this.commitHex());
+        this.field.onEvent(Focusable.FOCUS_LOST, event -> this.commitHex());
         this.addChild(this.field);
         this.showHex();
         this.setCursor(CursorKind.CROSSHAIR);

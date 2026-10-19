@@ -8,7 +8,7 @@ import java.util.Objects;
 import java.util.function.Function;
 
 /**
- * What a host shows near the pointer while it rests on a component; see {@link Component#setTooltip(Tooltip)}.
+ * What a host shows near the pointer while it rests on a component; see {@link HasTooltip#setTooltip(Tooltip)}.
  *
  * <p>The host shows a tooltip as soon as the pointer is over its component, and moves it with the pointer: 12 units
  * right of and 12 units above the pointer, flipped to the left side when it would leave the host on the right, and

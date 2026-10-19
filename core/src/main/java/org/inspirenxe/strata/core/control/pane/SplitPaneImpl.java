@@ -1,6 +1,7 @@
 package org.inspirenxe.strata.core.control.pane;
 
 import org.inspirenxe.strata.api.ComponentFactory;
+import org.inspirenxe.strata.api.component.HasCursor;
 import org.inspirenxe.strata.api.component.Component;
 import org.inspirenxe.strata.api.component.CursorKind;
 import org.inspirenxe.strata.api.control.display.Separator;
@@ -227,7 +228,7 @@ public final class SplitPaneImpl extends CustomComposite<SplitPane> implements S
     /**
      * The divider. A drag moves it by the pointer, keeping the point grabbed under the pointer.
      */
-    private static final class Divider extends CustomComponent<Divider> {
+    private static final class Divider extends CustomComponent<Divider> implements HasCursor<Divider> {
         private final SplitPaneImpl pane;
         private Paint paint;
         private Paint hovered;

@@ -1,6 +1,8 @@
 package org.inspirenxe.strata.api.control.display;
 
 import org.inspirenxe.strata.api.component.Component;
+import org.inspirenxe.strata.api.component.HasCursor;
+import org.inspirenxe.strata.api.component.HasTooltip;
 import org.inspirenxe.strata.api.theme.SpriteId;
 import org.inspirenxe.strata.api.visual.Visual;
 
@@ -25,7 +27,7 @@ import java.util.Objects;
  * <p>Get one from {@link org.inspirenxe.strata.api.ComponentFactory#image(SpriteId)} or
  * {@link org.inspirenxe.strata.api.ComponentFactory#image(Visual)}. Do not implement this interface.</p>
  */
-public interface Image extends Component<Image> {
+public interface Image extends Component<Image>, HasCursor<Image>, HasTooltip<Image> {
 
     /**
      * Returns the sprite.

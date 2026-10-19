@@ -1,6 +1,8 @@
 package org.inspirenxe.strata.api.control.pane;
 
 import org.inspirenxe.strata.api.component.Component;
+import org.inspirenxe.strata.api.component.HasCursor;
+import org.inspirenxe.strata.api.component.HasTooltip;
 import org.inspirenxe.strata.api.control.display.Separator;
 import org.inspirenxe.strata.api.event.EventType;
 import org.inspirenxe.strata.api.event.control.ValueEvent;
@@ -37,7 +39,7 @@ import org.inspirenxe.strata.api.layout.Orientation;
  * <p>Get one from {@link org.inspirenxe.strata.api.ComponentFactory#splitPane(Orientation)}. Do not implement this
  * interface.</p>
  */
-public interface SplitPane extends Component<SplitPane> {
+public interface SplitPane extends Component<SplitPane>, HasCursor<SplitPane>, HasTooltip<SplitPane> {
     /**
      * Style key for the divider (paint, optional).
      */

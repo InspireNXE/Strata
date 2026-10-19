@@ -1,6 +1,9 @@
 package org.inspirenxe.strata.api.control.pane;
 
 import org.inspirenxe.strata.api.component.Component;
+import org.inspirenxe.strata.api.component.Focusable;
+import org.inspirenxe.strata.api.component.HasCursor;
+import org.inspirenxe.strata.api.component.HasTooltip;
 import org.inspirenxe.strata.api.control.attribute.item.SingleSelection;
 
 import java.util.List;
@@ -55,7 +58,8 @@ import java.util.Optional;
  * <p>Get one from {@link org.inspirenxe.strata.api.ComponentFactory#tabBar()}. Do not implement this
  * interface.</p>
  */
-public interface TabBar extends Component<TabBar>, SingleSelection<Tab, TabBar> {
+public interface TabBar extends Component<TabBar>, Focusable<TabBar>, HasCursor<TabBar>, HasTooltip<TabBar>,
+        SingleSelection<Tab, TabBar> {
     /**
      * Style key for an unselected tab (paint, required).
      */

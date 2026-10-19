@@ -5,7 +5,7 @@ import org.inspirenxe.strata.api.component.CursorKind;
 import org.inspirenxe.strata.api.control.button.Button;
 import org.inspirenxe.strata.api.control.field.Spinner;
 import org.inspirenxe.strata.api.control.field.TextBox;
-import org.inspirenxe.strata.api.event.input.InputEvents;
+import org.inspirenxe.strata.api.component.Focusable;
 import org.inspirenxe.strata.api.event.input.KeyEvent;
 import org.inspirenxe.strata.api.event.input.PointerButtonEvent;
 import org.inspirenxe.strata.api.event.input.PointerEvent;
@@ -78,7 +78,7 @@ public final class SpinnerImpl extends CustomComposite<Spinner> implements Spinn
         this.field.setAnchor(Anchor.FILL);
         this.field.setInternalFilter(text -> this.accepted.matcher(text).matches() ? text : null);
         this.field.onEvent(TextBox.SUBMITTED, event -> this.commit(true));
-        this.field.onEvent(InputEvents.FOCUS_LOST, event -> this.commit(true));
+        this.field.onEvent(Focusable.FOCUS_LOST, event -> this.commit(true));
         this.addChild(this.field);
         this.updatePattern();
         this.show();

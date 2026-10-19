@@ -47,6 +47,10 @@ class ScrollTest {
         final float height;
         int measures;
 
+        void relayout() {
+            this.invalidateLayout();
+        }
+
         Counted(final ComponentFactory ui, final float width, final float height) {
             super(ui);
             this.width = width;
@@ -252,7 +256,7 @@ class ScrollTest {
             final AbsolutePanel root = ScrollTest.this.ui.absolutePanel().add(left, 0, 0).add(right, 100, 0);
             ScrollTest.this.test.show(root);
             final int rightMeasures = right.measures;
-            left.invalidateLayout();
+            left.relayout();
             ScrollTest.this.test.host().layout();
             assertEquals(rightMeasures, right.measures);
             assertTrue(left.measures > 1);

@@ -72,6 +72,8 @@ public final class ScrollBarImpl extends CustomComponent<ScrollBar> implements S
     @SuppressWarnings("this-escape")
     public ScrollBarImpl(final ComponentFactory ui) {
         super(ui);
+        // The content a bar scrolls usually takes the keys, so the bar takes focus only when asked to
+        this.setFocusable(false);
         this.rate = ScrollPanel.DEFAULT_SCROLL_RATE;
         this.orientation = Orientation.VERTICAL;
         this.track = this.newTrack();

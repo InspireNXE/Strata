@@ -1,6 +1,9 @@
 package org.inspirenxe.strata.api.control.button;
 
 import org.inspirenxe.strata.api.component.Component;
+import org.inspirenxe.strata.api.component.Focusable;
+import org.inspirenxe.strata.api.component.HasCursor;
+import org.inspirenxe.strata.api.component.HasTooltip;
 import org.inspirenxe.strata.api.control.attribute.item.ItemSource;
 import org.inspirenxe.strata.api.control.attribute.item.SingleSelection;
 import org.inspirenxe.strata.api.control.attribute.text.HasText;
@@ -53,7 +56,8 @@ import java.util.function.Function;
  *
  * @param <T> the type of the values
  */
-public interface CycleButton<T> extends Component<CycleButton<T>>, HasText<CycleButton<T>>,
+public interface CycleButton<T> extends Component<CycleButton<T>>, Focusable<CycleButton<T>>,
+        HasCursor<CycleButton<T>>, HasTooltip<CycleButton<T>>, HasText<CycleButton<T>>,
         ItemSource<T, CycleButton<T>>, SingleSelection<T, CycleButton<T>> {
 
     /**

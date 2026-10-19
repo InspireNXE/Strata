@@ -88,8 +88,6 @@ public final class CycleButtonImpl<T> extends CustomComponent<CycleButton<T>> im
         this.focusRing = Paint.NONE;
         this.textStyle = TextStyle.DEFAULT;
         this.disabledTextStyle = TextStyle.DEFAULT;
-        this.setFocusable(true);
-        this.setTabbable(true);
         this.setCursor(CursorKind.HAND);
         this.setMinSize(20f, 20f);
     }

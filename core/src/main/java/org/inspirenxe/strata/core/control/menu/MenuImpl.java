@@ -2,6 +2,7 @@ package org.inspirenxe.strata.core.control.menu;
 
 import org.inspirenxe.strata.api.ComponentFactory;
 import org.inspirenxe.strata.api.component.Component;
+import org.inspirenxe.strata.api.component.Focusable;
 import org.inspirenxe.strata.api.control.display.Separator;
 import org.inspirenxe.strata.api.control.menu.Menu;
 import org.inspirenxe.strata.api.control.menu.MenuEntry;
@@ -104,7 +105,7 @@ public final class MenuImpl extends CustomComponent<Menu> implements Menu {
         this.disabledTextStyle = TextStyle.DEFAULT;
         this.shortcutStyle = TextStyle.DEFAULT;
         this.itemTop = new float[0];
-        this.setFocusable(true);
+        this.setTabbable(false);
     }
 
     // ------------------------------------------------------------------
@@ -308,8 +309,8 @@ public final class MenuImpl extends CustomComponent<Menu> implements Menu {
         if (this.returnFocus != null) {
             final Component<?> focus = this.returnFocus;
             this.returnFocus = null;
-            if (focus.isAttached()) {
-                focus.requestFocus();
+            if (focus.isAttached() && focus instanceof final Focusable<?> focusable) {
+                focusable.requestFocus();
             }
         }
         this.report(CLOSED);

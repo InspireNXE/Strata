@@ -1,6 +1,7 @@
 package org.inspirenxe.strata.core;
 
 import org.inspirenxe.strata.api.ComponentFactory;
+import org.inspirenxe.strata.api.component.Focusable;
 import org.inspirenxe.strata.api.component.ComponentSnapshot;
 import org.inspirenxe.strata.api.control.attribute.text.TextInput;
 import org.inspirenxe.strata.api.control.button.Button;
@@ -84,28 +85,28 @@ class SnapshotTest {
 
     @Test
     void ancestorSeesTargetAndItselfAsTheyWereWhenTheEventFired() {
-        final Button button = this.ui.button("Go").setId("button");
-        final StackPanel middle = this.ui.stackPanel().setId("middle").add(button);
-        final AbsolutePanel outer = this.ui.absolutePanel().setId("outer").add(middle);
+        final Button button = this.ui.button("Go");
+        final StackPanel middle = this.ui.stackPanel().add(button);
+        final AbsolutePanel outer = this.ui.absolutePanel().add(middle);
         this.test.show(outer);
 
         // A handler on the target runs first and changes both components
         button.onEvent(InputEvents.POINTER_PRESS, event -> {
-            button.setId("button-changed");
-            outer.setId("outer-changed");
+            button.setMinSize(30, 30);
+            outer.setMinSize(2, 2);
         });
         final List<String> seen = new ArrayList<>();
         outer.onEvent(InputEvents.POINTER_PRESS, event -> {
-            seen.add(event.snapshot().id());
-            seen.add(event.currentSnapshot().id());
+            seen.add(String.valueOf(event.snapshot().minWidth()));
+            seen.add(String.valueOf(event.currentSnapshot().minWidth()));
             seen.add(String.valueOf(event.snapshot().pressed()));
             seen.add(String.valueOf(event.snapshotOf(middle).isPresent()));
-            seen.add(button.id() + "/" + outer.id());
+            seen.add(button.minWidth() + "/" + outer.minWidth());
         });
 
         this.test.click(5, 5);
 
-        assertEquals(List.of("button", "outer", "true", "false", "button-changed/outer-changed"), seen);
+        assertEquals(List.of("20.0", "0.0", "true", "false", "30.0/2.0"), seen);
     }
 
     @Test
@@ -127,8 +128,8 @@ class SnapshotTest {
         final AbsolutePanel panel = this.ui.absolutePanel().add(box);
         this.test.show(panel);
         final List<String> seen = new ArrayList<>();
-        panel.onEvent(InputEvents.FOCUS_GAINED, event -> seen.add("panel"));
-        box.onEvent(InputEvents.FOCUS_GAINED, event -> seen.add(String.valueOf(event.snapshotOf(panel).isPresent())));
+        panel.onEvent(Focusable.FOCUS_GAINED, event -> seen.add("panel"));
+        box.onEvent(Focusable.FOCUS_GAINED, event -> seen.add(String.valueOf(event.snapshotOf(panel).isPresent())));
 
         box.requestFocus();
 

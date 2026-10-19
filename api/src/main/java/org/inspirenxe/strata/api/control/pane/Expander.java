@@ -1,6 +1,9 @@
 package org.inspirenxe.strata.api.control.pane;
 
 import org.inspirenxe.strata.api.component.Component;
+import org.inspirenxe.strata.api.component.Focusable;
+import org.inspirenxe.strata.api.component.HasCursor;
+import org.inspirenxe.strata.api.component.HasTooltip;
 import org.inspirenxe.strata.api.control.attribute.text.Titled;
 import org.inspirenxe.strata.api.event.EventType;
 import org.inspirenxe.strata.api.event.control.ValueEvent;
@@ -40,7 +43,8 @@ import java.util.Objects;
  * <p>Get one from {@link org.inspirenxe.strata.api.ComponentFactory#expander(String)}. Do not implement this
  * interface.</p>
  */
-public interface Expander extends Component<Expander>, Titled<Expander> {
+public interface Expander extends Component<Expander>, Focusable<Expander>, HasCursor<Expander>, HasTooltip<Expander>,
+        Titled<Expander> {
     /**
      * Style key for the header (paint, optional).
      */

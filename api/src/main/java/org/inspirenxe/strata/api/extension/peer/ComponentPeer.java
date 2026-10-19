@@ -50,25 +50,11 @@ public interface ComponentPeer {
     Environment environment();
 
     /**
-     * See {@link org.inspirenxe.strata.api.component.Component#theme()}.
+     * See {@link org.inspirenxe.strata.api.extension.CustomComponent#theme()}.
      *
      * @return the theme, or null before the first attach
      */
     Theme theme();
-
-    /**
-     * See {@link org.inspirenxe.strata.api.component.Component#id()}.
-     *
-     * @return the id, or null
-     */
-    String id();
-
-    /**
-     * See {@link org.inspirenxe.strata.api.component.Component#setId(String)}.
-     *
-     * @param id the id, or null
-     */
-    void setId(String id);
 
     /**
      * See {@link org.inspirenxe.strata.api.component.Component#isVisible()}.
@@ -99,91 +85,91 @@ public interface ComponentPeer {
     void setEnabled(boolean enabled);
 
     /**
-     * See {@link org.inspirenxe.strata.api.component.Component#isFocusable()}.
+     * See {@link org.inspirenxe.strata.api.component.Focusable#isFocusable()}.
      *
      * @return true if focusable
      */
     boolean isFocusable();
 
     /**
-     * See {@link org.inspirenxe.strata.api.component.Component#setFocusable(boolean)}.
+     * See {@link org.inspirenxe.strata.api.component.Focusable#setFocusable(boolean)}.
      *
      * @param focusable true to allow focus
      */
     void setFocusable(boolean focusable);
 
     /**
-     * See {@link org.inspirenxe.strata.api.component.Component#isTabbable()}.
+     * See {@link org.inspirenxe.strata.api.component.Focusable#isTabbable()}.
      *
      * @return true if tabbable
      */
     boolean isTabbable();
 
     /**
-     * See {@link org.inspirenxe.strata.api.component.Component#setTabbable(boolean)}.
+     * See {@link org.inspirenxe.strata.api.component.Focusable#setTabbable(boolean)}.
      *
      * @param tabbable true to include in tab order
      */
     void setTabbable(boolean tabbable);
 
     /**
-     * See {@link org.inspirenxe.strata.api.component.Component#tabIndex()}.
+     * See {@link org.inspirenxe.strata.api.component.Focusable#tabIndex()}.
      *
      * @return the tab index
      */
     int tabIndex();
 
     /**
-     * See {@link org.inspirenxe.strata.api.component.Component#setTabIndex(int)}.
+     * See {@link org.inspirenxe.strata.api.component.Focusable#setTabIndex(int)}.
      *
      * @param tabIndex the tab index
      */
     void setTabIndex(int tabIndex);
 
     /**
-     * See {@link org.inspirenxe.strata.api.component.Component#cursor()}.
+     * See {@link org.inspirenxe.strata.api.component.HasCursor#cursor()}.
      *
      * @return the cursor, or null
      */
     CursorKind cursor();
 
     /**
-     * See {@link org.inspirenxe.strata.api.component.Component#setCursor(CursorKind)}.
+     * See {@link org.inspirenxe.strata.api.component.HasCursor#setCursor(CursorKind)}.
      *
      * @param cursor the cursor, or null
      */
     void setCursor(CursorKind cursor);
 
     /**
-     * See {@link org.inspirenxe.strata.api.component.Component#isHovered()}.
+     * See {@link org.inspirenxe.strata.api.extension.CustomComponent#isHovered()}.
      *
      * @return true while hovered
      */
     boolean isHovered();
 
     /**
-     * See {@link org.inspirenxe.strata.api.component.Component#isHoverWithin()}.
+     * See {@link org.inspirenxe.strata.api.extension.CustomComponent#isHoverWithin()}.
      *
      * @return true while this component or a descendant is hovered
      */
     boolean isHoverWithin();
 
     /**
-     * See {@link org.inspirenxe.strata.api.component.Component#isPressed()}.
+     * See {@link org.inspirenxe.strata.api.extension.CustomComponent#isPressed()}.
      *
      * @return true while pressed
      */
     boolean isPressed();
 
     /**
-     * See {@link org.inspirenxe.strata.api.component.Component#isFocused()}.
+     * See {@link org.inspirenxe.strata.api.component.Focusable#isFocused()}.
      *
      * @return true while focused
      */
     boolean isFocused();
 
     /**
-     * See {@link org.inspirenxe.strata.api.component.Component#requestFocus()}.
+     * See {@link org.inspirenxe.strata.api.component.Focusable#requestFocus()}.
      *
      * @return true if the component now has focus
      */
@@ -284,21 +270,21 @@ public interface ComponentPeer {
     void setAlignment(HorizontalAlignment horizontal, VerticalAlignment vertical);
 
     /**
-     * See {@link org.inspirenxe.strata.api.component.Component#offsetX()}.
+     * See {@link org.inspirenxe.strata.api.extension.CustomComponent#offsetX()}.
      *
      * @return the horizontal offset
      */
     float offsetX();
 
     /**
-     * See {@link org.inspirenxe.strata.api.component.Component#offsetY()}.
+     * See {@link org.inspirenxe.strata.api.extension.CustomComponent#offsetY()}.
      *
      * @return the vertical offset
      */
     float offsetY();
 
     /**
-     * See {@link org.inspirenxe.strata.api.component.Component#setOffset(float, float)}.
+     * See {@link org.inspirenxe.strata.api.extension.CustomComponent#setOffset(float, float)}.
      *
      * @param offsetX the horizontal offset
      * @param offsetY the vertical offset
@@ -306,42 +292,42 @@ public interface ComponentPeer {
     void setOffset(float offsetX, float offsetY);
 
     /**
-     * See {@link org.inspirenxe.strata.api.component.Component#border()}.
+     * See {@link org.inspirenxe.strata.api.component.Container#border()}.
      *
      * @return the border
      */
     Border border();
 
     /**
-     * See {@link org.inspirenxe.strata.api.component.Component#setBorder(Border)}.
+     * See {@link org.inspirenxe.strata.api.component.Container#setBorder(Border)}.
      *
      * @param border the border
      */
     void setBorder(Border border);
 
     /**
-     * See {@link org.inspirenxe.strata.api.component.Component#tooltip()}.
+     * See {@link org.inspirenxe.strata.api.component.HasTooltip#tooltip()}.
      *
      * @return the tooltip, or null
      */
     Tooltip tooltip();
 
     /**
-     * See {@link org.inspirenxe.strata.api.component.Component#setTooltip(Tooltip)}.
+     * See {@link org.inspirenxe.strata.api.component.HasTooltip#setTooltip(Tooltip)}.
      *
      * @param tooltip the tooltip, or null
      */
     void setTooltip(Tooltip tooltip);
 
     /**
-     * See {@link org.inspirenxe.strata.api.component.Component#background()}.
+     * See {@link org.inspirenxe.strata.api.component.Container#background()}.
      *
      * @return the background
      */
     Paint background();
 
     /**
-     * See {@link org.inspirenxe.strata.api.component.Component#setBackground(Paint)}.
+     * See {@link org.inspirenxe.strata.api.component.Container#setBackground(Paint)}.
      *
      * @param background the background
      */
@@ -369,7 +355,7 @@ public interface ComponentPeer {
     float desiredHeight();
 
     /**
-     * See {@link org.inspirenxe.strata.api.component.Component#invalidateLayout()}.
+     * See {@link org.inspirenxe.strata.api.extension.CustomComponent#invalidateLayout()}.
      */
     void invalidateLayout();
 

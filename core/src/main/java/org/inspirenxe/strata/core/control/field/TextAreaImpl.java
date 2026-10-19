@@ -165,8 +165,6 @@ public final class TextAreaImpl extends CustomComponent<TextArea> implements Tex
         this.contentBox = Rect.ZERO;
         this.viewport = Rect.ZERO;
         this.visualsDirty = true;
-        this.setFocusable(true);
-        this.setTabbable(true);
         this.setCursor(CursorKind.TEXT);
         this.setMinSize(20f, 20f);
     }

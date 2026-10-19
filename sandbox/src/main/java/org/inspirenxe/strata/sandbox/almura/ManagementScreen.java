@@ -112,8 +112,6 @@ public final class ManagementScreen implements Screen {
                 .setKeyFunction(Feature::id)
                 .onEvent(SingleSelection.SELECTED, e -> this.show(this.list.selected()))
                 .onEvent(Activatable.ACTIVATED, e -> this.open());
-        Look.panel(this.list)
-                .setAnchor(Anchor.FILL);
 
         this.id = this.field(0)
                 .onEvent(TextInput.EDIT, event -> {
@@ -185,7 +183,7 @@ public final class ManagementScreen implements Screen {
         final GridPanel layout = Look.grid(ui, GridLength.fixed(120), GridLength.weighted(1))
                 .rows(GridLength.weighted(1), GridLength.auto())
                 .setSpacing(4, 4)
-                .add(this.list, 0, 0)
+                .add(Look.framed(ui, this.list), 0, 0)
                 .add(detail, 0, 1)
                 .add(bottom, 1, 0, 1, 2);
 

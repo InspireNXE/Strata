@@ -1,6 +1,8 @@
 package org.inspirenxe.strata.api.control.collection;
 
 import org.inspirenxe.strata.api.component.Component;
+import org.inspirenxe.strata.api.component.HasCursor;
+import org.inspirenxe.strata.api.component.HasTooltip;
 import org.inspirenxe.strata.api.component.Tooltip;
 import org.inspirenxe.strata.api.control.attribute.item.Activatable;
 import org.inspirenxe.strata.api.control.attribute.item.CellSource;
@@ -69,7 +71,8 @@ import java.util.function.Function;
  *
  * @param <T> the type of the items
  */
-public interface GridView<T> extends Component<GridView<T>>, ItemSource<T, GridView<T>>, CellSource<T, GridView<T>>,
+public interface GridView<T> extends Component<GridView<T>>, HasCursor<GridView<T>>, HasTooltip<GridView<T>>,
+        ItemSource<T, GridView<T>>, CellSource<T, GridView<T>>,
         SingleSelection<T, GridView<T>>, Activatable<GridView<T>> {
     /**
      * Style key for each cell (paint, required).

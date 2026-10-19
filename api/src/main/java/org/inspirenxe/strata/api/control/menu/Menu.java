@@ -1,6 +1,9 @@
 package org.inspirenxe.strata.api.control.menu;
 
 import org.inspirenxe.strata.api.component.Component;
+import org.inspirenxe.strata.api.component.Focusable;
+import org.inspirenxe.strata.api.component.HasCursor;
+import org.inspirenxe.strata.api.component.HasTooltip;
 import org.inspirenxe.strata.api.control.attribute.popup.Closable;
 import org.inspirenxe.strata.api.control.attribute.popup.Openable;
 import org.inspirenxe.strata.api.control.display.Separator;
@@ -70,7 +73,7 @@ import java.util.function.Consumer;
  *
  * <p>Get one from {@link org.inspirenxe.strata.api.ComponentFactory#menu()}. Do not implement this interface.</p>
  */
-public interface Menu extends Component<Menu>, Openable<Menu> {
+public interface Menu extends Component<Menu>, Focusable<Menu>, HasCursor<Menu>, HasTooltip<Menu>, Openable<Menu> {
     /**
      * Style key for the menu's background (paint, required).
      */

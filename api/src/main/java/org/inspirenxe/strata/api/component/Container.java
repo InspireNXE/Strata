@@ -1,6 +1,8 @@
 package org.inspirenxe.strata.api.component;
 
 import org.inspirenxe.strata.api.geometry.Insets;
+import org.inspirenxe.strata.api.theme.Border;
+import org.inspirenxe.strata.api.theme.Paint;
 
 import java.util.List;
 
@@ -14,7 +16,7 @@ import java.util.List;
  *
  * @param <T> the type callers see the container as, so setters can return it for chaining
  */
-public interface Container<T extends Container<T>> extends Component<T> {
+public interface Container<T extends Container<T>> extends Component<T>, HasCursor<T>, HasTooltip<T> {
 
     /**
      * Returns the children in drawing order. The list is a live, unmodifiable view: it reflects later adds and
@@ -96,4 +98,37 @@ public interface Container<T extends Container<T>> extends Component<T> {
      * @return this container
      */
     T setClipChildren(boolean clipChildren);
+
+    /**
+     * Returns the background paint.
+     *
+     * @return the background; {@link Paint#NONE} by default
+     */
+    Paint background();
+
+    /**
+     * Sets the paint drawn over the container's bounds before anything else of it. Changing the background never
+     * changes layout.
+     *
+     * @param background the background, or {@link Paint#NONE} for none
+     * @return this container
+     */
+    T setBackground(Paint background);
+
+    /**
+     * Returns the border.
+     *
+     * @return the border; {@link Border#NONE} by default
+     */
+    Border border();
+
+    /**
+     * Sets the lines drawn along the inside of the container's edges, over its background and under its children.
+     * A border takes no space in layout, so give the container padding at least as wide as its border to keep
+     * children off it.
+     *
+     * @param border the border, or {@link Border#NONE} for none
+     * @return this container
+     */
+    T setBorder(Border border);
 }

@@ -66,6 +66,8 @@ public final class ScrollPanelImpl extends CustomContainer<ScrollPanel> implemen
      */
     public ScrollPanelImpl(final ComponentFactory ui) {
         super(ui);
+        // Keys bubble here from focused content; the panel takes focus itself only when asked to
+        this.setFocusable(false);
         this.verticalBar = new ScrollTrack(true);
         this.horizontalBar = new ScrollTrack(false);
         this.horizontalPolicy = ScrollPolicy.NEVER;
