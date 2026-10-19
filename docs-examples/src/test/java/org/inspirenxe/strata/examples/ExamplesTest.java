@@ -33,7 +33,8 @@ class ExamplesTest {
                 LayoutExamples.absolutePanel(), LayoutExamples.marginAndPadding(), LayoutExamples.wrapping(),
                 LayoutExamples.sizes(), EventExamples.dragging(), new EventExamples.ConfirmScreen(),
                 ExtendingExamples.customComponents(), new ScreenExamples.ShoppingList(), new ScreenExamples.TitleScreen(),
-                ThemeExamples.sampler(0xFF2B2D31), ControlExamples.controls())) {
+                ThemeExamples.sampler(0xFF2B2D31), ControlExamples.controls(), LayoutExamples.frame(),
+                LayoutExamples.spread(), ControlExamples.optionRows())) {
             SwingSnapshot.render(screen, theme, 320, 200, 1f);
         }
         SwingSnapshot.render(ThemeExamples.sampler(0xFF2B2D31), ThemeExamples.derived(), 320, 200, 1f);

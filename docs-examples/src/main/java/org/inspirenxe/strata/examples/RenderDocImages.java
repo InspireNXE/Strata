@@ -42,6 +42,8 @@ public final class RenderDocImages {
         render(out, "layout-grid", LayoutExamples.gridPanel(), flat, 320, 120);
         render(out, "layout-weighted", LayoutExamples.weightedGrid(), flat, 320, 140);
         render(out, "layout-spacer", LayoutExamples.spacer(), flat, 320, 40);
+        render(out, "layout-frame", LayoutExamples.frame(), flat, 320, 140);
+        render(out, "layout-spread", LayoutExamples.spread(), flat, 320, 40);
         render(out, "layout-absolute", LayoutExamples.absolutePanel(), flat, 320, 110);
         render(out, "layout-spacing", LayoutExamples.marginAndPadding(), flat, 320, 80);
         render(out, "layout-wrap", LayoutExamples.wrapping(), flat, 320, 140);
@@ -49,6 +51,7 @@ public final class RenderDocImages {
         render(out, "events-drag", EventExamples.dragging(), flat, 320, 80);
         render(out, "extending-custom", ExtendingExamples.customComponents(), ExtendingExamples.checkBoxTheme(), 320, 190);
         render(out, "controls-basic", ControlExamples.controls(), flat, 320, 200);
+        render(out, "controls-option-rows", ControlExamples.optionRows(), flat, 320, 100);
         render(out, "screens-list", new ScreenExamples.ShoppingList(), flat, 320, 100);
         render(out, "theme-flat", ThemeExamples.sampler(0xFF2B2D31), flat, 200, 120);
         render(out, "theme-derived", ThemeExamples.sampler(0xFF2B2D31), ThemeExamples.derived(), 200, 120);

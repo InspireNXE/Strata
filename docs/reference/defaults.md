@@ -14,7 +14,7 @@ Every number Strata picks for you.
 | Minimum size | 0 by 0 |
 | Maximum size | `Float.POSITIVE_INFINITY` both ways |
 | Fixed size | unset (`Float.NaN`) |
-| Alignment | `LEFT`, `TOP`, except windows and message boxes (centered) and separators (stretched along their line) |
+| Alignment | `LEFT`, `TOP`, except windows and message boxes (centered), separators (stretched along their line) and spacers (stretched both ways) |
 | Offset | 0, 0 |
 | Background | `Paint.NONE` |
 | Border | `Border.NONE` |
@@ -30,6 +30,9 @@ Every number Strata picks for you.
 | Clips children | yes |
 | `StackPanel` orientation | `VERTICAL` from `stackPanel()` |
 | `StackPanel` spacing | 0 |
+| `StackPanel` spreading | off |
+| `StackPanel` child weight | 0 (the child gets its desired size) |
+| `Spacer` size | 0 by 0 from `spacer()` |
 | `GridPanel` rows and columns | none, which acts as one auto cell |
 | `GridPanel` spacing | 0 by 0 |
 | `AbsolutePanel` position from plain `add` | (0, 0) |
@@ -41,6 +44,10 @@ Every number Strata picks for you.
 | `Window` title bar | one line plus 3 above and below |
 | `Window` close button | 12 wide, at the right end of the title bar |
 | `Window` closable, movable | yes, yes |
+| `Window` resizable, edge resizable | no, no |
+| `Window` resize grip | 10 by 10 in the bottom-right corner, drawn as six 2 by 2 squares one unit in from the edges |
+| `Window` resizing edges | 3 in from each edge; within 10 of the next edge they resize both ways |
+| `Window` smallest size by resizing | the title bar's width, and the bar's height plus 10, unless the minimum size is larger |
 
 ## Controls
 

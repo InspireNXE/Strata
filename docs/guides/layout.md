@@ -1,6 +1,6 @@
 # Layout
 
-Strata lays out a tree in two passes, the way WPF and Wintergreen do. This page explains the passes, every input a component has, and each of the four containers.
+Strata lays out a tree in two passes, the way WPF and Wintergreen do. This page explains the passes, every input a component has, each of the containers, and the spacer.
 
 ## The two passes
 
@@ -107,7 +107,7 @@ The root of most screens is an anchor panel with `Anchor.FILL`.
 
 Children follow one another in a column (`Orientation.VERTICAL`, the default) or a row (`Orientation.HORIZONTAL`), with `setSpacing` units between neighbors and none before the first or after the last.
 
-Along the orientation, each child gets exactly the space it asks for, so alignment along that axis has no effect. Across it, each child gets the full content size and aligns itself: in a column, `STRETCH` makes a child as wide as the column, and `CENTER` centers it. Hidden children take no space and no gap.
+Along the orientation, each child gets exactly the space it asks for, so alignment along that axis has no effect, unless the child has a weight (below). Across it, each child gets the full content size and aligns itself: in a column, `STRETCH` makes a child as wide as the column, and `CENTER` centers it. Hidden children take no space and no gap.
 
 ![A column with stretched, centered and right-aligned children](../assets/images/layout-stack.png)
 
@@ -115,8 +115,27 @@ Along the orientation, each child gets exactly the space it asks for, so alignme
 --8<-- "layout/LayoutExamples.java:stack"
 ```
 
-!!! tip "A stack panel never shares out leftover space"
-    In a column, a child cannot ask for "the rest of the height". If you need one child to fill what is left, use a `GridPanel` with a weighted row or column. See [Filling the remaining space](#filling-the-remaining-space).
+### Weights
+
+`add(child, weight)`, or `setWeight(child, weight)` for a child already added, gives a child a share of the room the other children and the gaps leave. Weight 2 gets twice the space of weight 1, and 0 takes the weight away again. A weighted child is placed in its share by its own alignment, so give it `STRETCH` along the orientation to fill it. Its share never goes below zero, and its own desired size does not count once the panel has a size, so a weighted child shrinks first when space runs out. Measured without a limit along its orientation, inside a scroll panel for example, the panel asks for enough room to give each weighted child its desired size while keeping the proportions. `weight(child)` reads a weight back, and removing a child forgets its weight.
+
+This covers a frame with a header and a footer at their own height and a body that takes the rest:
+
+![A header, a scrolling body and a footer](../assets/images/layout-frame.png)
+
+```java
+--8<-- "layout/LayoutExamples.java:frame"
+```
+
+### Spreading
+
+`setSpread(true)` spreads the children across the content box with equal gaps, the first at the start and the last at the end. The panel still asks only for its children and its spacing, so give it room: stretch it or give it a fixed size. The spacing becomes the smallest gap, a single child stays at the start, and spreading does nothing while a visible child has a weight, since that child takes the extra room.
+
+![Three buttons spread across a row](../assets/images/layout-spread.png)
+
+```java
+--8<-- "layout/LayoutExamples.java:spread"
+```
 
 ## GridPanel
 
@@ -152,6 +171,16 @@ Weighted tracks make proportional layouts:
 
 ```java
 --8<-- "layout/LayoutExamples.java:weighted"
+```
+
+## Spacer
+
+`factory.spacer()` makes an empty component that only takes room: it draws nothing of its own, takes no input and asks for no size. It has `Anchor.FILL`, so it fills whatever slot it gets. Give it a weight in a stack panel to take the room that is left, or a fixed size with `factory.spacer(width, height)` to keep a set gap.
+
+![A toolbar with a gap that pushes Help to the right](../assets/images/layout-spacer.png)
+
+```java
+--8<-- "layout/LayoutExamples.java:spacer"
 ```
 
 ## AbsolutePanel
@@ -202,15 +231,7 @@ Put it in a root anchor panel with `Anchor.FILL` and give it `Anchor.CENTER`. Gi
 
 ### Filling the remaining space
 
-Use a grid with a weighted track. For a toolbar with a button pushed to the far right, leave a weighted column empty:
-
-![A toolbar with a gap that pushes Help to the right](../assets/images/layout-spacer.png)
-
-```java
---8<-- "layout/LayoutExamples.java:spacer"
-```
-
-For a header, a body that takes the rest of the height and a footer, use rows `auto()`, `weighted(1)`, `auto()` and stretch the body.
+In a stack panel, give the child that should fill the rest a weight of 1 and stretch it, as the [frame](#weights) does. To push the children after a point to the far end, put a [weighted spacer](#spacer) there. In a grid, use a weighted row or column, which can stay empty for the same effect.
 
 ### Wrapping text
 
@@ -224,7 +245,7 @@ A wrapping label needs a width to wrap to: a fixed width, a maximum width, or `S
 
 ### Equal-width buttons
 
-Put them in a grid with equal weighted columns and give each `Anchor.FILL`, or give each the same fixed width.
+Add them to a stretched row with the same weight each and give each `Anchor.FILL`, or put them in a grid with equal weighted columns, or give each the same fixed width.
 
 ## Common problems
 
@@ -234,7 +255,7 @@ Put them in a grid with equal weighted columns and give each `Anchor.FILL`, or g
 | A stretched child is not stretching | Its parent has no width to give. The root must be `FILL`, or a parent between needs a fixed width or `STRETCH`. |
 | A child is cut off | It is bigger than its slot and an ancestor clips. Give the ancestor more room, or turn clipping off. |
 | Text does not wrap | See [Wrapping text](#wrapping-text). |
-| Alignment along a stack's direction does nothing | A stack panel gives each child exactly its size along that axis. Use a grid. |
+| Alignment along a stack's direction does nothing | A stack panel gives each child exactly its size along that axis. Give the child a [weight](#weights), or use a grid. |
 | `bounds()` is out of date | Layout runs before the next frame. Read bounds in a later frame or in an event handler. |
 
 See [Troubleshooting](../help/troubleshooting.md) for more.

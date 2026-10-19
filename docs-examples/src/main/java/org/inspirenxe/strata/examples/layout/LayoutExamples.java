@@ -11,6 +11,7 @@ import org.inspirenxe.strata.api.layout.GridLength;
 import org.inspirenxe.strata.api.layout.GridPanel;
 import org.inspirenxe.strata.api.layout.HorizontalAlignment;
 import org.inspirenxe.strata.api.layout.Orientation;
+import org.inspirenxe.strata.api.layout.ScrollPanel;
 import org.inspirenxe.strata.api.layout.StackPanel;
 import org.inspirenxe.strata.api.layout.VerticalAlignment;
 import org.inspirenxe.strata.api.screen.Screen;
@@ -145,25 +146,72 @@ public final class LayoutExamples {
     }
 
     /**
-     * A toolbar whose middle column soaks up the free width, pushing the last button to the right edge.
+     * A toolbar whose weighted spacer soaks up the free width, pushing the last button to the right edge.
      *
      * @return the screen
      */
     public static Screen spacer() {
         return factory -> {
             // --8<-- [start:spacer]
-            final GridPanel toolbar = factory.gridPanel()
-                    .columns(GridLength.auto(), GridLength.auto(), GridLength.weighted(1), GridLength.auto())
-                    .setSpacing(4, 0)
-                    .setPadding(4);
-            toolbar.add(factory.button("New"), 0, 0)
-                    .add(factory.button("Open"), 0, 1)
-                    // Column 2 stays empty and takes the leftover width
-                    .add(factory.button("Help"), 0, 3);
+            final StackPanel toolbar = factory.stackPanel(Orientation.HORIZONTAL)
+                    .setSpacing(4)
+                    .setPadding(4)
+                    .add(factory.button("New"))
+                    .add(factory.button("Open"))
+                    // Takes the leftover width
+                    .add(factory.spacer(), 1)
+                    .add(factory.button("Help"));
             toolbar.setBackground(PANEL);
             toolbar.setAlignment(HorizontalAlignment.STRETCH, VerticalAlignment.TOP);
             // --8<-- [end:spacer]
             return factory.anchorPanel().add(toolbar).setAnchor(Anchor.FILL);
+        };
+    }
+
+    /**
+     * A header, a scrolling body that takes the rest of the height, and a footer.
+     *
+     * @return the screen
+     */
+    public static Screen frame() {
+        return factory -> {
+            // --8<-- [start:frame]
+            final StackPanel lines = factory.stackPanel().setSpacing(2);
+            for (int i = 1; i <= 12; i++) {
+                lines.add(factory.label("Entry " + i));
+            }
+            final ScrollPanel body = factory.scrollPanel().add(lines).setPadding(4);
+            body.setBackground(INSET).setAnchor(Anchor.FILL);
+
+            final StackPanel frame = factory.stackPanel().setSpacing(4).setPadding(6)
+                    .add(factory.label("Header").setAnchor(Anchor.TOP_CENTER))
+                    // Weight 1: whatever the header, the footer and the gaps leave
+                    .add(body, 1)
+                    .add(factory.button("Done").setAnchor(Anchor.TOP_CENTER));
+            frame.setBackground(PANEL).setAnchor(Anchor.FILL);
+            // --8<-- [end:frame]
+            return frame;
+        };
+    }
+
+    /**
+     * A row of buttons spread across the width with equal gaps.
+     *
+     * @return the screen
+     */
+    public static Screen spread() {
+        return factory -> {
+            // --8<-- [start:spread]
+            final StackPanel row = factory.stackPanel(Orientation.HORIZONTAL)
+                    .setSpread(true)
+                    .setPadding(4)
+                    .add(factory.button("Back"))
+                    .add(factory.button("Skip"))
+                    .add(factory.button("Next"));
+            row.setBackground(PANEL);
+            row.setAlignment(HorizontalAlignment.STRETCH, VerticalAlignment.TOP);
+            // --8<-- [end:spread]
+            return factory.anchorPanel().add(row).setAnchor(Anchor.FILL);
         };
     }
 

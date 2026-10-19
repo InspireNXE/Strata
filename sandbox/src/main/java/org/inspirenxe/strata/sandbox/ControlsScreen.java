@@ -3,10 +3,13 @@ package org.inspirenxe.strata.sandbox;
 import org.inspirenxe.strata.api.ComponentFactory;
 import org.inspirenxe.strata.api.component.Component;
 import org.inspirenxe.strata.api.component.Tooltip;
+import org.inspirenxe.strata.api.control.attribute.item.SingleSelection;
+import org.inspirenxe.strata.api.control.button.Button;
 import org.inspirenxe.strata.api.control.button.RadioButton;
 import org.inspirenxe.strata.api.control.button.RadioGroup;
 import org.inspirenxe.strata.api.control.button.ToggleSwitch;
 import org.inspirenxe.strata.api.control.collection.GridView;
+import org.inspirenxe.strata.api.control.collection.ListView;
 import org.inspirenxe.strata.api.control.collection.TableColumn;
 import org.inspirenxe.strata.api.control.collection.TableView;
 import org.inspirenxe.strata.api.control.collection.TreeView;
@@ -17,6 +20,7 @@ import org.inspirenxe.strata.api.control.menu.Menu;
 import org.inspirenxe.strata.api.control.menu.MenuBar;
 import org.inspirenxe.strata.api.control.pane.Expander;
 import org.inspirenxe.strata.api.control.pane.SplitPane;
+import org.inspirenxe.strata.api.control.window.Window;
 import org.inspirenxe.strata.api.geom.Insets;
 import org.inspirenxe.strata.api.geom.Rect;
 import org.inspirenxe.strata.api.input.Key;
@@ -80,7 +84,8 @@ public final class ControlsScreen implements Screen {
                 .addItem("Close", () -> this.handle.close());
         final Menu view = ui.menu()
                 .addItem("Zoom in", () -> { })
-                .addItem(ui.menuItem("Zoom out").setEnabled(false));
+                .addItem(ui.menuItem("Zoom out").setEnabled(false))
+                .addItem("Options", () -> ui.overlays().dialog(this.options()));
         this.menuBar = ui.menuBar()
                 .addMenu("File", file)
                 .addMenu("View", view)
@@ -230,7 +235,53 @@ public final class ControlsScreen implements Screen {
     }
 
     /**
-     * Renders the screen as it opens, with the File menu and its submenu open, and with a toast.
+     * Builds the options dialog: a resizable window holding a column with a heading, a list of option rows that takes
+     * the rest of the height, and a button row whose spacer pushes Cancel and Done to the right.
+     */
+    private Window options() {
+        final ComponentFactory ui = this.ui;
+        final ListView<String> rows = ui.<String>listView(name -> {
+                    final Component<?> control = name.equals("Music")
+                            ? ui.toggleSwitch().setSelected(true)
+                            : ui.slider().setRange(0, 100).setValue(80).setLabel(value -> (int) value + "%").setWidth(90);
+                    return ui.stackPanel(Orientation.HORIZONTAL)
+                            .add(ui.label(name).setAnchor(Anchor.MIDDLE_LEFT))
+                            .add(ui.spacer(), 1)
+                            .add(control.setAnchor(Anchor.MIDDLE_LEFT))
+                            .setPadding(Insets.of(4, 0))
+                            .setAnchor(Anchor.FILL);
+                })
+                .setRowHeight(24)
+                .setItems(List.of("Music", "Effects", "Voices", "Ambient", "Interface"))
+                .onEvent(SingleSelection.SELECT, event -> event.cancel())
+                .setAnchor(Anchor.FILL);
+
+        final Window window = ui.window("Options")
+                .setResizable(true)
+                .setEdgeResizable(true);
+        final StackPanel buttons = ui.stackPanel(Orientation.HORIZONTAL)
+                .setSpacing(4)
+                .add(ui.button("Reset"))
+                .add(ui.spacer(), 1)
+                .add(ui.button("Cancel").onEvent(Button.PRESSED, event -> window.close()))
+                .add(ui.button("Done").onEvent(Button.PRESSED, event -> window.close()))
+                .setAlignment(HorizontalAlignment.STRETCH, VerticalAlignment.TOP);
+        final StackPanel frame = ui.stackPanel()
+                .setSpacing(6)
+                .add(ui.label("Sound").setAnchor(Anchor.TOP_CENTER))
+                .add(rows, 1)
+                .add(buttons)
+                .setAnchor(Anchor.FILL);
+        // The bottom padding keeps the buttons clear of the grip
+        return window.add(frame)
+                .setPadding(new Insets(6, 4, 6, 12))
+                .setSize(260, 170)
+                .setMinSize(200, 120);
+    }
+
+    /**
+     * Renders the screen as it opens, with the File menu and its submenu open, with a toast, and with the options
+     * dialog widened by its grip.
      *
      * @param directory where to write the images
      * @param theme the theme to render with
@@ -251,6 +302,20 @@ public final class ControlsScreen implements Screen {
             layout(stack);
             screen.ui.overlays().toast("Listing created");
             screen.ui.overlays().toast("Sold 16 Iron for 200.00, paid into your account");
+            layout(stack);
+        });
+        render(directory, theme, "controls-window", (screen, stack) -> {
+            layout(stack);
+            final Window options = screen.options();
+            screen.ui.overlays().dialog(options);
+            layout(stack);
+            final Rect bounds = options.bounds();
+            final float x = bounds.right() - 4f;
+            final float y = bounds.bottom() - 4f;
+            stack.pointerMoved(x, y, Modifiers.NONE);
+            stack.pointerButton(x, y, MouseButton.LEFT, true, Modifiers.NONE);
+            stack.pointerMoved(x + 80f, y + 40f, Modifiers.NONE);
+            stack.pointerButton(x + 80f, y + 40f, MouseButton.LEFT, false, Modifiers.NONE);
             layout(stack);
         });
     }

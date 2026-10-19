@@ -118,7 +118,7 @@ class SnapshotTest {
 
         this.test.click(5, 5);
 
-        assertEquals(List.of(new StackPanel.State(Orientation.HORIZONTAL, 3)), states);
+        assertEquals(List.of(new StackPanel.State(Orientation.HORIZONTAL, 3, false)), states);
     }
 
     @Test

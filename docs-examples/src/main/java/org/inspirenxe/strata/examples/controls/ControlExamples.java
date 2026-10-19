@@ -1,9 +1,13 @@
 package org.inspirenxe.strata.examples.controls;
 
 import org.inspirenxe.strata.api.ComponentFactory;
+import org.inspirenxe.strata.api.component.Component;
+import org.inspirenxe.strata.api.control.attribute.item.SingleSelection;
 import org.inspirenxe.strata.api.control.attribute.value.Ranged;
 import org.inspirenxe.strata.api.control.attribute.value.Toggle;
+import org.inspirenxe.strata.api.control.button.Button;
 import org.inspirenxe.strata.api.control.button.CheckBox;
+import org.inspirenxe.strata.api.control.collection.ListView;
 import org.inspirenxe.strata.api.control.display.Image;
 import org.inspirenxe.strata.api.control.display.Label;
 import org.inspirenxe.strata.api.control.field.Slider;
@@ -16,8 +20,10 @@ import org.inspirenxe.strata.api.screen.Screen;
 import org.inspirenxe.strata.api.theme.Paint;
 import org.inspirenxe.strata.api.theme.SpriteId;
 
+import java.util.List;
+
 /**
- * The controls guide's examples for images, check boxes and sliders.
+ * The controls guide's examples for images, check boxes, sliders and rows of controls in a list.
  */
 public final class ControlExamples {
 
@@ -107,6 +113,59 @@ public final class ControlExamples {
                 .onEvent(Ranged.CHANGED, event -> settings.setDistance(event.value().intValue()));
         // --8<-- [end:integers]
         return distance;
+    }
+
+    static ListView<String> optionRows(final ComponentFactory factory, final Settings settings) {
+        // --8<-- [start:optionRows]
+        final ListView<String> options = factory.<String>listView(name -> {
+                    // Each control starts from the model and writes back to it
+                    final Component<?> control = switch (name) {
+                        case "Music" -> factory.toggleSwitch()
+                                .setSelected(settings.music())
+                                .onEvent(Toggle.TOGGLED, event -> settings.setMusic(event.value()));
+                        case "Volume" -> factory.slider()
+                                .setRange(0, 100)
+                                .setStep(1)
+                                .setValue(settings.volume())
+                                .setLabel(value -> (int) value + "%")
+                                .onEvent(Ranged.CHANGED, event -> settings.setVolume(event.value()))
+                                .setWidth(100);
+                        default -> factory.button("Reset");
+                    };
+                    return factory.stackPanel(Orientation.HORIZONTAL)
+                            .add(factory.label(name).setAnchor(Anchor.MIDDLE_LEFT))
+                            .add(factory.spacer(), 1)
+                            .add(control.setAnchor(Anchor.MIDDLE_LEFT))
+                            .setAnchor(Anchor.FILL);
+                })
+                .setRowHeight(24)
+                .setItems(List.of("Music", "Volume", "Defaults"))
+                // The rows hold controls, so there is nothing to select
+                .onEvent(SingleSelection.SELECT, event -> event.cancel());
+
+        // One handler around the list hears every row's button
+        options.onEvent(Button.PRESSED, event -> {
+            settings.setMusic(true);
+            settings.setVolume(80);
+            options.refresh();
+        });
+        // --8<-- [end:optionRows]
+        return options;
+    }
+
+    /**
+     * An options list whose rows hold a switch, a slider and a button.
+     *
+     * @return the screen
+     */
+    public static Screen optionRows() {
+        final Settings settings = new Settings();
+        return factory -> {
+            final ListView<String> options = optionRows(factory, settings);
+            options.setSize(240, 74);
+            options.setAnchor(Anchor.CENTER);
+            return factory.anchorPanel().add(options).setAnchor(Anchor.FILL);
+        };
     }
 
     /**

@@ -42,6 +42,7 @@ import org.inspirenxe.strata.api.layout.AnchorPanel;
 import org.inspirenxe.strata.api.layout.GridPanel;
 import org.inspirenxe.strata.api.layout.Orientation;
 import org.inspirenxe.strata.api.layout.ScrollPanel;
+import org.inspirenxe.strata.api.layout.Spacer;
 import org.inspirenxe.strata.api.layout.StackPanel;
 import org.inspirenxe.strata.api.overlay.Overlays;
 import org.inspirenxe.strata.api.theme.SpriteId;
@@ -81,6 +82,7 @@ import org.inspirenxe.strata.core.layout.AbsolutePanelImpl;
 import org.inspirenxe.strata.core.layout.AnchorPanelImpl;
 import org.inspirenxe.strata.core.layout.GridPanelImpl;
 import org.inspirenxe.strata.core.layout.ScrollPanelImpl;
+import org.inspirenxe.strata.core.layout.SpacerImpl;
 import org.inspirenxe.strata.core.layout.StackPanelImpl;
 import org.inspirenxe.strata.spi.Platform;
 
@@ -181,6 +183,11 @@ public final class ComponentFactoryImpl implements ComponentFactory {
     @Override
     public ScrollPanel scrollPanel() {
         return new ScrollPanelImpl(this);
+    }
+
+    @Override
+    public Spacer spacer() {
+        return new SpacerImpl(this);
     }
 
     @Override

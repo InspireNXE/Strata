@@ -363,6 +363,18 @@ A press on a row selects it, unless something in the cell consumed the press. A 
 
 Build each cell fresh from its item, and keep nothing in it that must survive scrolling: a row that scrolls out is dropped and rebuilt when it comes back.
 
+### Rows of controls
+
+A cell can be any component, controls included, so a list of option rows needs nothing more than a cell factory. Each cell is content of the list, so the controls in it behave as they do anywhere else, and their events pass the list: one handler around the list hears every row.
+
+```java
+--8<-- "controls/ControlExamples.java:optionRows"
+```
+
+- Keep the value in your model, not in the control. The row is rebuilt from the item when it scrolls back into view, so set each control from the model in the cell factory and write changes back from a handler.
+- A press that a control does not consume reaches the list and selects the row. Buttons only act on the click, so a press on a button selects its row; sliders, text boxes and the like consume their press and leave the selection alone. To keep rows from ever being selected, cancel `SingleSelection.SELECT` on the list.
+- Give the list a row height that fits the tallest control, and the row panel `Anchor.FILL` so it spans the row. A weighted [spacer](layout.md#spacer) between the label and the control pushes the control to the right edge.
+
 | Key | Required | Used for |
 |---|---|---|
 | `list.row.selected` | yes | The selected row |
@@ -413,10 +425,26 @@ A framed panel with a title bar and a close button. Children are laid out below 
 ```java
 Window window = factory.window("Exchange").add(content);
 window.setSize(600, 370);
-window.onClose(handle::close);
+window.onEvent(Closable.CLOSED, event -> handle.close());
 ```
 
 Dragging the title bar moves the window, through its [offset](layout.md#offset), kept inside the slot its parent gives it (`setMovable(false)` stops that). The close button and an Escape the window acts on fire `Closable.CLOSE`, which a handler can cancel, then call `close()`, which fires `Closable.CLOSED` and closes the overlay showing the window. A window that is a screen's content does not close itself: close the screen from a `CLOSED` handler. With no `CLOSE` or `CLOSED` handler on its path, and outside an overlay, it leaves Escape to the engine. `setClosable(false)` hides the button and ignores Escape. A new window is centered in its slot.
+
+### Resizing
+
+`setResizable(true)` draws a grip in the bottom-right corner, 10 units square, and dragging it resizes the window with its top-left corner in place. `setEdgeResizable(true)` lets the user drag every edge too: a press within 3 units of an edge moves that edge, and one within 10 units of a corner moves both edges there. The opposite edge stays put.
+
+```java
+Window settings = factory.window("Settings")
+        .setResizable(true)
+        .setEdgeResizable(true)
+        .add(content)
+        .setSize(240, 160)
+        .setMinSize(160, 100)
+        .onEvent(Window.RESIZED, event -> this.saveSize(event.value()));
+```
+
+A resize keeps the window within its minimum and maximum sizes and inside the slot its parent gives it, and never makes it narrower than its title bar asks for or shorter than the bar plus the grip. Each resize sets the window's fixed size and moves it by its offset, the same way a move does, so the window stays where the user left it whatever its alignment. The pointer shows `RESIZE_ALL` over the grip and the corners and `RESIZE_HORIZONTAL` or `RESIZE_VERTICAL` over an edge. The grip sits over the window's content, so a control under it that takes the press, such as a button, wins; keep the corner clear, or give the window enough padding.
 
 | Key | Required | Used for |
 |---|---|---|
@@ -424,11 +452,14 @@ Dragging the title bar moves the window, through its [offset](layout.md#offset),
 | `window.title` | no | The title bar. Nothing if missing. |
 | `window.title.text` | no | The title |
 | `window.close`, `window.close.hovered` | no | The close button's `x` |
+| `window.grip`, `window.grip.hovered` | no | The resize grip, drawn as six small squares in a triangle. The hovered paint shows while the pointer is over a part that resizes, and during a resize. |
 
 | Event | Kind | Fires |
 |---|---|---|
 | `Closable.CLOSE` | Pre | When the close button or an Escape the window acts on asks to close it. Cancel to keep it open. |
 | `Closable.CLOSED` | Post | Each time it closes, including `close()` |
+| `Window.RESIZE` | Pre | On each move of a resize drag that would change the size, with the new size. Cancel to keep the size for that move, or set another size, which is kept within the same limits. |
+| `Window.RESIZED` | Post | After each resize by the user, with the new and the previous size. A size set with `setSize` is layout and fires nothing. |
 
 ## MessageBox
 
