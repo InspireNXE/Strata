@@ -85,15 +85,18 @@ final class ExchangeData {
             final Item item = Item.ALL.get(random.nextInt(Item.ALL.size()));
             final long quantity = i == 3 ? 2_500_000L : 1 + random.nextInt(item.maxStack() * 4);
             final BigDecimal price = BigDecimal.valueOf(5 + random.nextInt(40_000), 2);
-            this.market.add(new Listing(this.nextRecord++, item, quantity, price, sellers[random.nextInt(sellers.length)], i));
+            final String seller = sellers[random.nextInt(sellers.length)];
+            this.market.add(new Listing(this.nextRecord++, item, quantity, price, seller, i));
         }
-        this.mine.add(new Stock(this.nextRecord++, Item.ALL.get(0), 12, new BigDecimal("125.50"), new BigDecimal("125.50")));
+        this.mine.add(new Stock(this.nextRecord++, Item.ALL.get(0), 12, new BigDecimal("125.50"),
+                new BigDecimal("125.50")));
         this.mine.add(new Stock(this.nextRecord++, Item.ALL.get(9), 128, null, new BigDecimal("2.00")));
         this.mine.add(new Stock(this.nextRecord++, Item.ALL.get(13), 3, null, null));
         this.mine.add(new Stock(this.nextRecord++, Item.ALL.get(19), 1, new BigDecimal("4999.99"), null));
         for (final int index : new int[] {2, 3, 7, 8, 11, 14, 16, 18, 20}) {
             final Item item = Item.ALL.get(index);
-            this.inventory.add(new Stock(this.nextRecord++, item, Math.min(item.maxStack(), 1 + random.nextInt(64)), null, null));
+            final long quantity = Math.min(item.maxStack(), 1 + random.nextInt(64));
+            this.inventory.add(new Stock(this.nextRecord++, item, quantity, null, null));
         }
     }
 

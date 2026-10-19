@@ -83,7 +83,9 @@ public final class StoreScreen implements Screen {
             }
             return found;
         });
-        this.finders.put("Inventory", () -> this.data.held.stream().distinct().toList());
+        this.finders.put("Inventory", () -> this.data.held.stream()
+                .distinct()
+                .toList());
         for (final String category : Item.CATEGORIES) {
             this.finders.put(category, () -> Item.inCategory(category));
         }
@@ -106,95 +108,155 @@ public final class StoreScreen implements Screen {
     @Override
     public Component<?> build(final ComponentFactory ui) {
         this.ui = ui;
-        final Window window = ui.window(this.data.name);
-        window.setSize(this.admin ? 481 : 257, 300);
-        window.onEvent(Window.CLOSED, event -> {
-            if (this.handle != null) {
-                this.handle.close();
-            }
-        });
+        final Window window = ui.window(this.data.name)
+                .setSize(this.admin ? 481 : 257, 300)
+                .onEvent(Window.CLOSED, event -> {
+                    if (this.handle != null) {
+                        this.handle.close();
+                    }
+                });
 
-        final GridPanel columns = Look.grid(ui, this.admin
+        final GridLength[] widths = this.admin
                 ? new GridLength[] {GridLength.fixed(251), GridLength.weighted(1)}
-                : new GridLength[] {GridLength.weighted(1)}).rows(GridLength.weighted(1)).setSpacing(4, 0);
-        columns.add(this.buildStore(ui), 0, 0);
+                : new GridLength[] {GridLength.weighted(1)};
+        final GridPanel columns = Look.grid(ui, widths)
+                .rows(GridLength.weighted(1))
+                .setSpacing(4, 0)
+                .add(this.buildStore(ui), 0, 0);
         if (this.admin) {
             columns.add(this.buildAdmin(ui), 0, 1);
         }
         window.add(columns);
 
         this.refresh(true);
-        final AnchorPanel screen = ui.anchorPanel().add(window);
-        return screen.setAnchor(Anchor.FILL);
+        return ui.anchorPanel()
+                .add(window)
+                .setAnchor(Anchor.FILL);
     }
 
     private Component<?> buildStore(final ComponentFactory ui) {
-        this.tabs = ui.tabBar().addTab("Buy").addTab("Sell").setSpacing(4).onEvent(TabBar.SELECTED, event -> this.refresh(false));
-        this.tabs.setAlignment(HorizontalAlignment.STRETCH, VerticalAlignment.TOP);
-        this.search = ui.textBox().onEvent(TextBox.SUBMITTED, event -> this.refresh(false));
-        this.sort = ui.<Sort>comboBox(sort -> sort.label).setOptions(List.of(Sort.values()))
-                .onEvent(ComboBox.SELECTED, e -> this.refresh(false));
-        final Button go = Look.button(ui, "Search", 50).onEvent(Button.PRESSED, event -> this.refresh(false));
+        this.tabs = ui.tabBar()
+                .addTab("Buy")
+                .addTab("Sell")
+                .setSpacing(4)
+                .onEvent(TabBar.SELECTED, event -> this.refresh(false))
+                .setAlignment(HorizontalAlignment.STRETCH, VerticalAlignment.TOP);
+        this.search = ui.textBox()
+                .onEvent(TextBox.SUBMITTED, event -> this.refresh(false))
+                .setAnchor(Anchor.FILL);
+        this.sort = ui.<Sort>comboBox(sort -> sort.label)
+                .setOptions(List.of(Sort.values()))
+                .onEvent(ComboBox.SELECTED, e -> this.refresh(false))
+                .setAnchor(Anchor.FILL);
+        final Button go = Look.button(ui, "Search", 50)
+                .onEvent(Button.PRESSED, event -> this.refresh(false))
+                .setAnchor(Anchor.FILL);
 
-        final GridPanel searchRow = Look.grid(ui, GridLength.auto(), GridLength.weighted(1), GridLength.fixed(78), GridLength.auto())
-                .rows(GridLength.auto()).setSpacing(2, 0);
-        searchRow.add(Look.label(ui, "Item Name:", Look.WHITE).setAnchor(Anchor.MIDDLE_LEFT), 0, 0)
-                .add(this.search.setAnchor(Anchor.FILL), 0, 1).add(this.sort.setAnchor(Anchor.FILL), 0, 2)
-                .add(go.setAnchor(Anchor.FILL), 0, 3);
-        searchRow.setAlignment(HorizontalAlignment.STRETCH, VerticalAlignment.TOP);
+        final Label itemNameLabel = Look.label(ui, "Item Name:", Look.WHITE)
+                .setAnchor(Anchor.MIDDLE_LEFT);
+        final GridPanel searchRow = Look.grid(ui, GridLength.auto(), GridLength.weighted(1), GridLength.fixed(78),
+                        GridLength.auto())
+                .rows(GridLength.auto())
+                .setSpacing(2, 0)
+                .add(itemNameLabel, 0, 0)
+                .add(this.search, 0, 1)
+                .add(this.sort, 0, 2)
+                .add(go, 0, 3)
+                .setAlignment(HorizontalAlignment.STRETCH, VerticalAlignment.TOP);
 
-        this.items = ui.<StoreItem>listView(this::storeCell).setRowHeight(24).setRowSpacing(1)
+        this.items = ui.<StoreItem>listView(this::storeCell)
+                .setRowHeight(24)
+                .setRowSpacing(1)
                 .setKeyFunction(StoreItem::record)
                 .onEvent(ListView.SELECTED, e -> this.updateControls())
                 .onEvent(ListView.ACTIVATED, e -> this.transact(this.items.items().get(e.value()), 1));
-        Look.panel(this.items).setAnchor(Anchor.FILL);
+        Look.panel(this.items)
+                .setAnchor(Anchor.FILL);
 
-        this.one = Look.button(ui, "Buy 1", 60).onEvent(Button.PRESSED, event -> this.selected().ifPresent(item -> this.transact(item, 1)));
-        this.stack = Look.button(ui, "Buy 64", 60).onEvent(Button.PRESSED, event -> this.selected()
-                .ifPresent(item -> this.transact(item, item.item().maxStack())));
-        this.quantity = Look.button(ui, "Buy Qty", 60).onEvent(Button.PRESSED, event -> this.selected()
-                .ifPresent(item -> StoreDialogs.transactQuantity(ui, item, this.buySide(), this.maxFor(item),
-                        amount -> this.transact(item, amount))));
-        this.all = Look.button(ui, "Buy All", 60).onEvent(Button.PRESSED, event -> this.selected()
-                .ifPresent(item -> this.transact(item, this.maxFor(item))));
+        this.one = Look.button(ui, "Buy 1", 60)
+                .onEvent(Button.PRESSED, event -> this.selected()
+                        .ifPresent(item -> this.transact(item, 1)));
+        this.stack = Look.button(ui, "Buy 64", 60)
+                .onEvent(Button.PRESSED, event -> this.selected()
+                        .ifPresent(item -> this.transact(item, item.item().maxStack())));
+        this.quantity = Look.button(ui, "Buy Qty", 60)
+                .onEvent(Button.PRESSED, event -> this.selected()
+                        .ifPresent(item -> StoreDialogs.transactQuantity(ui, item, this.buySide(), this.maxFor(item),
+                                amount -> this.transact(item, amount))));
+        this.all = Look.button(ui, "Buy All", 60)
+                .onEvent(Button.PRESSED, event -> this.selected()
+                        .ifPresent(item -> this.transact(item, this.maxFor(item))));
         final GridPanel buttons = Look.grid(ui, GridLength.auto(), GridLength.auto(), GridLength.weighted(1),
-                GridLength.auto(), GridLength.auto()).rows(GridLength.auto()).setSpacing(2, 0);
-        buttons.add(this.one, 0, 0).add(this.stack, 0, 1).add(this.quantity, 0, 3).add(this.all, 0, 4);
-        buttons.setAlignment(HorizontalAlignment.STRETCH, VerticalAlignment.TOP);
+                        GridLength.auto(), GridLength.auto())
+                .rows(GridLength.auto())
+                .setSpacing(2, 0)
+                .add(this.one, 0, 0)
+                .add(this.stack, 0, 1)
+                .add(this.quantity, 0, 3)
+                .add(this.all, 0, 4)
+                .setAlignment(HorizontalAlignment.STRETCH, VerticalAlignment.TOP);
 
         final GridPanel store = Look.grid(ui, GridLength.weighted(1))
-                .rows(GridLength.auto(), GridLength.auto(), GridLength.weighted(1), GridLength.auto()).setSpacing(0, 3);
-        store.add(this.tabs, 0, 0).add(searchRow, 1, 0).add(this.items, 2, 0).add(buttons, 3, 0);
-        Look.panel(store).setPadding(3);
+                .rows(GridLength.auto(), GridLength.auto(), GridLength.weighted(1), GridLength.auto())
+                .setSpacing(0, 3)
+                .add(this.tabs, 0, 0)
+                .add(searchRow, 1, 0)
+                .add(this.items, 2, 0)
+                .add(buttons, 3, 0);
+        Look.panel(store)
+                .setPadding(3);
         return store;
     }
 
     private Component<?> buildAdmin(final ComponentFactory ui) {
-        this.finder = ui.<String>comboBox(name -> name).setOptions(List.copyOf(this.finders.keySet()))
-                .setMaxVisibleOptions(24).onEvent(ComboBox.SELECTED, e -> this.refreshAdmin());
-        this.adminSearch = ui.textBox().onEvent(TextBox.EDITED, event -> this.refreshAdmin());
-        this.adminItems = ui.<Item>listView(this::adminCell).setRowHeight(24).setRowSpacing(1)
+        this.finder = ui.<String>comboBox(name -> name)
+                .setOptions(List.copyOf(this.finders.keySet()))
+                .setMaxVisibleOptions(24)
+                .onEvent(ComboBox.SELECTED, e -> this.refreshAdmin())
+                .setAnchor(Anchor.FILL);
+        this.adminSearch = ui.textBox()
+                .onEvent(TextBox.EDITED, event -> this.refreshAdmin())
+                .setAlignment(HorizontalAlignment.STRETCH, VerticalAlignment.TOP);
+        this.adminItems = ui.<Item>listView(this::adminCell)
+                .setRowHeight(24)
+                .setRowSpacing(1)
                 .setKeyFunction(Item::name)
                 .onEvent(ListView.SELECTED, e -> this.updateAdminControls())
                 .onEvent(ListView.ACTIVATED, e -> this.listOrModify(this.adminItems.items().get(e.value())));
-        Look.panel(this.adminItems).setAnchor(Anchor.FILL);
-        this.list = Look.button(ui, "List", 50).onEvent(Button.PRESSED, event -> this.adminItems.selected().ifPresent(this::listOrModify));
-        this.unlist = Look.button(ui, "Unlist", 50).onEvent(Button.PRESSED, event -> this.adminItems.selected().ifPresent(this::unlist));
-        this.total = Look.label(ui, "Total: 0", Look.WHITE);
+        Look.panel(this.adminItems)
+                .setAnchor(Anchor.FILL);
+        this.list = Look.button(ui, "List", 50)
+                .onEvent(Button.PRESSED, event -> this.adminItems.selected().ifPresent(this::listOrModify));
+        this.unlist = Look.button(ui, "Unlist", 50)
+                .onEvent(Button.PRESSED, event -> this.adminItems.selected().ifPresent(this::unlist));
+        this.total = Look.label(ui, "Total: 0", Look.WHITE)
+                .setAnchor(Anchor.MIDDLE_RIGHT);
 
-        final GridPanel type = Look.grid(ui, GridLength.auto(), GridLength.weighted(1)).rows(GridLength.auto()).setSpacing(4, 0);
-        type.add(Look.label(ui, "Type:", Look.WHITE).setAnchor(Anchor.MIDDLE_LEFT), 0, 0).add(this.finder.setAnchor(Anchor.FILL), 0, 1);
-        type.setAlignment(HorizontalAlignment.STRETCH, VerticalAlignment.TOP);
+        final Label typeLabel = Look.label(ui, "Type:", Look.WHITE)
+                .setAnchor(Anchor.MIDDLE_LEFT);
+        final GridPanel type = Look.grid(ui, GridLength.auto(), GridLength.weighted(1))
+                .rows(GridLength.auto())
+                .setSpacing(4, 0)
+                .add(typeLabel, 0, 0)
+                .add(this.finder, 0, 1)
+                .setAlignment(HorizontalAlignment.STRETCH, VerticalAlignment.TOP);
         final GridPanel bottom = Look.grid(ui, GridLength.auto(), GridLength.auto(), GridLength.weighted(1))
-                .rows(GridLength.auto()).setSpacing(2, 0);
-        bottom.add(this.list, 0, 0).add(this.unlist, 0, 1).add(this.total.setAnchor(Anchor.MIDDLE_RIGHT), 0, 2);
-        bottom.setAlignment(HorizontalAlignment.STRETCH, VerticalAlignment.TOP);
+                .rows(GridLength.auto())
+                .setSpacing(2, 0)
+                .add(this.list, 0, 0)
+                .add(this.unlist, 0, 1)
+                .add(this.total, 0, 2)
+                .setAlignment(HorizontalAlignment.STRETCH, VerticalAlignment.TOP);
 
         final GridPanel pane = Look.grid(ui, GridLength.weighted(1))
-                .rows(GridLength.auto(), GridLength.auto(), GridLength.weighted(1), GridLength.auto()).setSpacing(0, 3);
-        pane.add(type, 0, 0).add(this.adminSearch.setAlignment(HorizontalAlignment.STRETCH, VerticalAlignment.TOP), 1, 0)
-                .add(this.adminItems, 2, 0).add(bottom, 3, 0);
-        Look.panel(pane).setPadding(3);
+                .rows(GridLength.auto(), GridLength.auto(), GridLength.weighted(1), GridLength.auto())
+                .setSpacing(0, 3)
+                .add(type, 0, 0)
+                .add(this.adminSearch, 1, 0)
+                .add(this.adminItems, 2, 0)
+                .add(bottom, 3, 0);
+        Look.panel(pane)
+                .setPadding(3);
         return pane;
     }
 
@@ -203,60 +265,93 @@ public final class StoreScreen implements Screen {
     // ------------------------------------------------------------------
 
     private Component<?> storeCell(final StoreItem item) {
-        final Image icon = this.ui.image(Icons.of(item.item())).setTooltip(item.item().tooltip());
-        final Label name = Look.label(this.ui, item.item().name(), Look.WHITE).setOverflow(TextOverflow.ELLIPSIS);
-        final Label count = Look.label(this.ui, item.quantity() > 0 ? " x " + Look.withSuffix(item.quantity()) : "", Look.GRAY);
+        final Image icon = this.ui.image(Icons.of(item.item()))
+                .setTooltip(item.item().tooltip())
+                .setAnchor(Anchor.MIDDLE_LEFT);
+        final Label name = Look.label(this.ui, item.item().name(), Look.WHITE)
+                .setOverflow(TextOverflow.ELLIPSIS)
+                .setAlignment(HorizontalAlignment.STRETCH, VerticalAlignment.MIDDLE);
+        final String countText = item.quantity() > 0 ? " x " + Look.withSuffix(item.quantity()) : "";
+        final Label count = Look.label(this.ui, countText, Look.GRAY)
+                .setAnchor(Anchor.MIDDLE_LEFT);
         if (item.quantity() >= 1_000_000L) {
             count.setTooltip(Look.currency(BigDecimal.valueOf(item.quantity())));
         }
-        final Label price = Look.rich(this.ui, Look.span(Look.withSuffix(item.price()), Look.GOLD), Look.span("/ea", Look.GRAY))
-                .setTextScale(0.8f);
+        final Label price = Look.rich(this.ui, Look.span(Look.withSuffix(item.price()), Look.GOLD),
+                        Look.span("/ea", Look.GRAY))
+                .setTextScale(0.8f)
+                .setAnchor(Anchor.MIDDLE_RIGHT)
+                .setMargin(new Insets(0, 0, 3, 0));
         if (item.quantity() > 0) {
             price.setTooltip("Total: " + Look.withSuffix(item.price().multiply(BigDecimal.valueOf(item.quantity()))));
         }
-        final GridPanel row = Look.grid(this.ui, GridLength.fixed(16), GridLength.weighted(1), GridLength.auto(), GridLength.auto())
-                .rows(GridLength.weighted(1)).setSpacing(4, 0);
-        row.setPadding(Look.pad(3, 0));
-        row.add(icon.setAnchor(Anchor.MIDDLE_LEFT), 0, 0)
-                .add(name.setAlignment(HorizontalAlignment.STRETCH, VerticalAlignment.MIDDLE), 0, 1)
-                .add(count.setAnchor(Anchor.MIDDLE_LEFT), 0, 2)
-                .add(price.setAnchor(Anchor.MIDDLE_RIGHT).setMargin(new Insets(0, 0, 3, 0)), 0, 3);
+        final GridPanel row = Look.grid(this.ui, GridLength.fixed(16), GridLength.weighted(1), GridLength.auto(),
+                        GridLength.auto())
+                .rows(GridLength.weighted(1))
+                .setSpacing(4, 0)
+                .setPadding(Look.pad(3, 0))
+                .add(icon, 0, 0)
+                .add(name, 0, 1)
+                .add(count, 0, 2)
+                .add(price, 0, 3);
 
-        final AnchorPanel cell = this.ui.anchorPanel().add(row);
+        final AnchorPanel cell = this.ui.anchorPanel()
+                .add(row)
+                .setAnchor(Anchor.FILL);
         if (item.quantity() == 0) {
+            final Label soldOutLabel = Look.label(this.ui, "Sold Out!", Look.RED)
+                    .setTextScale(2f)
+                    .setAnchor(Anchor.CENTER);
             final AnchorPanel soldOut = this.ui.anchorPanel()
-                    .add(Look.label(this.ui, "Sold Out!", Look.RED).setTextScale(2f).setAnchor(Anchor.CENTER));
-            soldOut.setBackground(Paint.solid(0xB4555555));
-            cell.add(soldOut.setAnchor(Anchor.FILL));
+                    .add(soldOutLabel)
+                    .setBackground(Paint.solid(0xB4555555))
+                    .setAnchor(Anchor.FILL);
+            cell.add(soldOut);
         }
-        return cell.setAnchor(Anchor.FILL);
+        return cell;
     }
 
     private Component<?> adminCell(final Item item) {
         final Optional<StoreItem> buy = this.listing(true, item);
         final Optional<StoreItem> sell = this.listing(false, item);
-        final Image icon = this.ui.image(Icons.of(item)).setTooltip(item.tooltip());
-        final Label name = Look.label(this.ui, item.name(), Look.WHITE).setOverflow(TextOverflow.ELLIPSIS);
-        final StackPanel prices = this.ui.stackPanel();
-        buy.ifPresent(listing -> prices.add(Look.rich(this.ui, Look.span("B: ", Look.GRAY),
-                Look.span(Look.withSuffix(listing.price()), Look.GOLD), Look.span("/ea", Look.GRAY)).setTextScale(0.8f)
-                .setAnchor(Anchor.TOP_RIGHT)));
-        sell.ifPresent(listing -> prices.add(Look.rich(this.ui, Look.span("S: ", Look.GRAY),
-                Look.span(Look.withSuffix(listing.price()), Look.GOLD), Look.span("/ea", Look.GRAY)).setTextScale(0.8f)
-                .setAnchor(Anchor.TOP_RIGHT)));
-        final GridPanel row = Look.grid(this.ui, GridLength.fixed(16), GridLength.weighted(1), GridLength.auto(), GridLength.fixed(5))
-                .rows(GridLength.weighted(1)).setSpacing(4, 0);
-        row.setPadding(new Insets(3, 0, 0, 0));
-        row.add(icon.setAnchor(Anchor.MIDDLE_LEFT), 0, 0)
-                .add(name.setAlignment(HorizontalAlignment.STRETCH, VerticalAlignment.MIDDLE), 0, 1)
-                .add(prices.setAnchor(Anchor.MIDDLE_RIGHT), 0, 2);
+        final Image icon = this.ui.image(Icons.of(item))
+                .setTooltip(item.tooltip())
+                .setAnchor(Anchor.MIDDLE_LEFT);
+        final Label name = Look.label(this.ui, item.name(), Look.WHITE)
+                .setOverflow(TextOverflow.ELLIPSIS)
+                .setAlignment(HorizontalAlignment.STRETCH, VerticalAlignment.MIDDLE);
+        final StackPanel prices = this.ui.stackPanel()
+                .setAnchor(Anchor.MIDDLE_RIGHT);
+        buy.ifPresent(listing -> {
+            final Label price = Look.rich(this.ui, Look.span("B: ", Look.GRAY),
+                            Look.span(Look.withSuffix(listing.price()), Look.GOLD), Look.span("/ea", Look.GRAY))
+                    .setTextScale(0.8f)
+                    .setAnchor(Anchor.TOP_RIGHT);
+            prices.add(price);
+        });
+        sell.ifPresent(listing -> {
+            final Label price = Look.rich(this.ui, Look.span("S: ", Look.GRAY),
+                            Look.span(Look.withSuffix(listing.price()), Look.GOLD), Look.span("/ea", Look.GRAY))
+                    .setTextScale(0.8f)
+                    .setAnchor(Anchor.TOP_RIGHT);
+            prices.add(price);
+        });
+        final GridPanel row = Look.grid(this.ui, GridLength.fixed(16), GridLength.weighted(1), GridLength.auto(),
+                        GridLength.fixed(5))
+                .rows(GridLength.weighted(1))
+                .setSpacing(4, 0)
+                .setPadding(new Insets(3, 0, 0, 0))
+                .add(icon, 0, 0)
+                .add(name, 0, 1)
+                .add(prices, 0, 2);
         if (buy.isPresent() || sell.isPresent()) {
-            final AnchorPanel strip = this.ui.anchorPanel();
-            strip.setBackground(Paint.gradient(buy.isPresent() ? Look.DARK_GREEN : Look.DARK_RED,
-                    sell.isPresent() ? Look.DARK_GREEN : Look.DARK_RED));
-            strip.setTooltip(Tooltip.text((buy.isPresent() ? "Sold here" : "Not sold here") + "\n"
-                    + (sell.isPresent() ? "Bought here" : "Not bought here")));
-            row.add(strip.setAnchor(Anchor.FILL), 0, 3);
+            final AnchorPanel strip = this.ui.anchorPanel()
+                    .setBackground(Paint.gradient(buy.isPresent() ? Look.DARK_GREEN : Look.DARK_RED,
+                            sell.isPresent() ? Look.DARK_GREEN : Look.DARK_RED))
+                    .setTooltip(Tooltip.text((buy.isPresent() ? "Sold here" : "Not sold here") + "\n"
+                            + (sell.isPresent() ? "Bought here" : "Not bought here")))
+                    .setAnchor(Anchor.FILL);
+            row.add(strip, 0, 3);
         }
         return row;
     }
@@ -270,7 +365,9 @@ public final class StoreScreen implements Screen {
     }
 
     private Optional<StoreItem> listing(final boolean buy, final Item item) {
-        return this.data.side(buy).stream().filter(listing -> listing.item().equals(item)).findFirst();
+        return this.data.side(buy).stream()
+                .filter(listing -> listing.item().equals(item))
+                .findFirst();
     }
 
     private long maxFor(final StoreItem item) {
@@ -296,7 +393,8 @@ public final class StoreScreen implements Screen {
             this.tabs.setTabTooltip(side, empty ? Tooltip.text(side == 0 ? "There are no items for sale."
                     : "There are no items available for purchase.") : null);
         }
-        this.items.setItems(this.data.search(this.buySide(), this.search.text(), this.sort.selected().orElse(Sort.NAME_ASC)));
+        final Sort order = this.sort.selected().orElse(Sort.NAME_ASC);
+        this.items.setItems(this.data.search(this.buySide(), this.search.text(), order));
         if (this.items.selected().isEmpty() && !this.items.items().isEmpty()) {
             this.items.select(0);
         }
@@ -339,7 +437,9 @@ public final class StoreScreen implements Screen {
     private void refreshAdmin() {
         final List<Item> found = this.finders.get(this.finder.selected().orElse("Store")).get();
         final String text = this.adminSearch.text().toLowerCase(Locale.ROOT);
-        final List<Item> shown = found.stream().filter(item -> item.name().toLowerCase(Locale.ROOT).contains(text)).toList();
+        final List<Item> shown = found.stream()
+                .filter(item -> item.name().toLowerCase(Locale.ROOT).contains(text))
+                .toList();
         this.adminItems.setItems(shown);
         if (this.adminItems.selected().isEmpty() && !shown.isEmpty()) {
             this.adminItems.select(0);
@@ -350,9 +450,11 @@ public final class StoreScreen implements Screen {
 
     private void updateAdminControls() {
         final Optional<Item> selected = this.adminItems.selected();
-        final boolean listed = selected.map(item -> this.listing(true, item).isPresent() || this.listing(false, item).isPresent())
+        final boolean listed = selected
+                .map(item -> this.listing(true, item).isPresent() || this.listing(false, item).isPresent())
                 .orElse(false);
-        this.list.setText(listed ? "Modify" : "List").setEnabled(selected.isPresent());
+        this.list.setText(listed ? "Modify" : "List")
+                .setEnabled(selected.isPresent());
         this.unlist.setEnabled(listed);
     }
 

@@ -14,13 +14,13 @@ import org.inspirenxe.strata.api.theme.Theme;
 import org.inspirenxe.strata.spi.ScreenStack;
 import org.inspirenxe.strata.swing.SwingSnapshot;
 
-import javax.imageio.ImageIO;
 import java.io.File;
 import java.io.IOException;
 import java.util.List;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
+import javax.imageio.ImageIO;
 
 /**
  * Entry points for the Almura mock-ups: buttons that open them, and a set of snapshots of each in interesting
@@ -39,11 +39,15 @@ public final class AlmuraMocks {
      * @return a row of buttons
      */
     public static Component<?> buttons(final ComponentFactory ui, final Consumer<Screen> open) {
-        return Look.row(ui, 4,
-                ui.button("Exchange").onEvent(Button.PRESSED, event -> open.accept(new ExchangeScreen())),
-                ui.button("Store").onEvent(Button.PRESSED, event -> open.accept(new StoreScreen(false))),
-                ui.button("Store (admin)").onEvent(Button.PRESSED, event -> open.accept(new StoreScreen(true))),
-                ui.button("Management").onEvent(Button.PRESSED, event -> open.accept(new ManagementScreen("Exchange"))));
+        final Button exchange = ui.button("Exchange")
+                .onEvent(Button.PRESSED, event -> open.accept(new ExchangeScreen()));
+        final Button store = ui.button("Store")
+                .onEvent(Button.PRESSED, event -> open.accept(new StoreScreen(false)));
+        final Button storeAdmin = ui.button("Store (admin)")
+                .onEvent(Button.PRESSED, event -> open.accept(new StoreScreen(true)));
+        final Button management = ui.button("Management")
+                .onEvent(Button.PRESSED, event -> open.accept(new ManagementScreen("Exchange")));
+        return Look.row(ui, 4, exchange, store, storeAdmin, management);
     }
 
     /**
@@ -53,7 +57,8 @@ public final class AlmuraMocks {
         void render(final File directory, final Theme theme) throws IOException {
             final S screen = this.screen.get();
             final File out = new File(directory, this.name + ".png");
-            ImageIO.write(SwingSnapshot.render(screen, theme, 1280, 800, 2f, stack -> this.input.accept(screen, stack)), "png", out);
+            ImageIO.write(SwingSnapshot.render(screen, theme, 1280, 800, 2f, stack -> this.input.accept(screen, stack)),
+                    "png", out);
             System.out.println("Wrote " + out.getAbsolutePath());
         }
     }

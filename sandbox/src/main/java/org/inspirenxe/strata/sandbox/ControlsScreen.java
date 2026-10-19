@@ -3,13 +3,19 @@ package org.inspirenxe.strata.sandbox;
 import org.inspirenxe.strata.api.ComponentFactory;
 import org.inspirenxe.strata.api.component.Component;
 import org.inspirenxe.strata.api.component.Tooltip;
+import org.inspirenxe.strata.api.control.button.RadioButton;
 import org.inspirenxe.strata.api.control.button.RadioGroup;
+import org.inspirenxe.strata.api.control.button.ToggleSwitch;
 import org.inspirenxe.strata.api.control.collection.SlotGrid;
 import org.inspirenxe.strata.api.control.collection.TableView;
 import org.inspirenxe.strata.api.control.collection.TreeView;
 import org.inspirenxe.strata.api.control.display.Label;
+import org.inspirenxe.strata.api.control.field.Spinner;
+import org.inspirenxe.strata.api.control.field.TextArea;
 import org.inspirenxe.strata.api.control.menu.Menu;
 import org.inspirenxe.strata.api.control.menu.MenuBar;
+import org.inspirenxe.strata.api.control.pane.Expander;
+import org.inspirenxe.strata.api.control.pane.SplitPane;
 import org.inspirenxe.strata.api.geom.Insets;
 import org.inspirenxe.strata.api.geom.Rect;
 import org.inspirenxe.strata.api.input.Key;
@@ -18,9 +24,9 @@ import org.inspirenxe.strata.api.input.Modifiers;
 import org.inspirenxe.strata.api.input.MouseButton;
 import org.inspirenxe.strata.api.layout.Anchor;
 import org.inspirenxe.strata.api.layout.GridLength;
-import org.inspirenxe.strata.api.layout.GridPanel;
 import org.inspirenxe.strata.api.layout.HorizontalAlignment;
 import org.inspirenxe.strata.api.layout.Orientation;
+import org.inspirenxe.strata.api.layout.StackPanel;
 import org.inspirenxe.strata.api.layout.VerticalAlignment;
 import org.inspirenxe.strata.api.screen.Screen;
 import org.inspirenxe.strata.api.screen.ScreenHandle;
@@ -35,6 +41,7 @@ import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
 import java.util.function.BiConsumer;
+import java.util.function.Function;
 import javax.imageio.ImageIO;
 
 /**
@@ -61,66 +68,127 @@ public final class ControlsScreen implements Screen {
     @Override
     public Component<?> build(final ComponentFactory ui) {
         this.ui = ui;
-        final Menu recent = ui.menu().addItem("Exchange", () -> { }).addItem("Store", () -> { });
+        final Menu recent = ui.menu()
+                .addItem("Exchange", () -> { })
+                .addItem("Store", () -> { });
         final Menu file = ui.menu()
                 .addItem("New listing", "Ctrl+N", () -> ui.overlays().toast("Listing created"))
                 .addSubmenu("Open recent", recent)
                 .addSeparator()
                 .addCheckItem("Show prices", true, shown -> { })
                 .addItem("Close", () -> this.handle.close());
-        final Menu view = ui.menu().addItem("Zoom in", () -> { }).addItem("Zoom out", () -> { }).setItemEnabled(1, false);
-        this.menuBar = ui.menuBar().addMenu("File", file).addMenu("View", view);
-        this.menuBar.setAnchor(Anchor.FILL);
+        final Menu view = ui.menu()
+                .addItem("Zoom in", () -> { })
+                .addItem("Zoom out", () -> { })
+                .setItemEnabled(1, false);
+        this.menuBar = ui.menuBar()
+                .addMenu("File", file)
+                .addMenu("View", view)
+                .setAnchor(Anchor.FILL);
 
-        this.tree = ui.<Category>treeView(category -> ui.label(category.name()).setAnchor(Anchor.MIDDLE_LEFT))
+        final Function<Category, Label> row = category -> ui.label(category.name())
+                .setAnchor(Anchor.MIDDLE_LEFT);
+        this.tree = ui.<Category>treeView(row)
                 .setChildren(Category::children)
-                .setRoots(Category.ROOTS);
-        this.tree.setAnchor(Anchor.FILL);
+                .setRoots(Category.ROOTS)
+                .setAnchor(Anchor.FILL);
         this.tree.select(Category.ROOTS.getFirst().children().get(1));
 
-        final var right = ui.stackPanel().setSpacing(6).setPadding(Insets.of(8));
-        right.add(this.choices(ui)).add(this.numbers(ui)).add(this.offers(ui)).add(this.notes(ui));
-        right.setAnchor(Anchor.FILL);
+        final StackPanel right = ui.stackPanel()
+                .setSpacing(6)
+                .setPadding(Insets.of(8))
+                .add(this.choices(ui))
+                .add(this.numbers(ui))
+                .add(this.offers(ui))
+                .add(this.notes(ui))
+                .setAnchor(Anchor.FILL);
 
-        final var split = ui.splitPane(Orientation.HORIZONTAL).setFirst(this.tree).setSecond(right).setPosition(0.24f);
-        split.setAnchor(Anchor.FILL);
+        final SplitPane split = ui.splitPane(Orientation.HORIZONTAL)
+                .setFirst(this.tree)
+                .setSecond(right)
+                .setPosition(0.24f)
+                .setAnchor(Anchor.FILL);
 
-        final GridPanel page = ui.gridPanel().rows(GridLength.auto(), GridLength.weighted(1)).columns(GridLength.weighted(1));
-        page.add(this.menuBar, 0, 0).add(split, 1, 0);
-        page.setAnchor(Anchor.FILL);
-        page.setBackground(Paint.gradient(0xFF1E1F22, 0xFF111214));
-        return page;
+        return ui.gridPanel()
+                .rows(GridLength.auto(), GridLength.weighted(1))
+                .columns(GridLength.weighted(1))
+                .add(this.menuBar, 0, 0)
+                .add(split, 1, 0)
+                .setAnchor(Anchor.FILL)
+                .setBackground(Paint.gradient(0xFF1E1F22, 0xFF111214));
     }
 
     private Component<?> choices(final ComponentFactory ui) {
         final RadioGroup<String> sort = ui.radioGroup();
-        final var radios = ui.stackPanel(Orientation.HORIZONTAL).setSpacing(10);
-        radios.add(ui.label("Sort").setAnchor(Anchor.MIDDLE_LEFT))
-                .add(sort.add("Name", "name"))
-                .add(sort.add("Price", "price"))
-                .add(sort.add("Seller", "seller").setEnabled(false));
+        final Label sortLabel = ui.label("Sort")
+                .setAnchor(Anchor.MIDDLE_LEFT);
+        final RadioButton byName = sort.add("Name", "name");
+        final RadioButton byPrice = sort.add("Price", "price");
+        final RadioButton bySeller = sort.add("Seller", "seller").setEnabled(false);
+        final StackPanel radios = ui.stackPanel(Orientation.HORIZONTAL)
+                .setSpacing(10)
+                .add(sortLabel)
+                .add(byName)
+                .add(byPrice)
+                .add(bySeller);
         sort.select("price");
-        final var toggles = ui.stackPanel(Orientation.HORIZONTAL).setSpacing(10);
-        toggles.add(ui.toggleSwitch("Only mine").setOn(true))
-                .add(ui.toggleSwitch("Hide sold"))
-                .add(ui.toggleSwitch("Locked").setEnabled(false));
-        return ui.stackPanel().setSpacing(6).add(radios).add(toggles);
+
+        final ToggleSwitch onlyMine = ui.toggleSwitch("Only mine")
+                .setOn(true);
+        final ToggleSwitch hideSold = ui.toggleSwitch("Hide sold");
+        final ToggleSwitch locked = ui.toggleSwitch("Locked")
+                .setEnabled(false);
+        final StackPanel toggles = ui.stackPanel(Orientation.HORIZONTAL)
+                .setSpacing(10)
+                .add(onlyMine)
+                .add(hideSold)
+                .add(locked);
+
+        return ui.stackPanel()
+                .setSpacing(6)
+                .add(radios)
+                .add(toggles);
     }
 
     private Component<?> numbers(final ComponentFactory ui) {
-        final SlotGrid<String> hotbar = ui.<String>slotGrid(name -> ui.label(name.substring(0, 1)).setAnchor(Anchor.CENTER))
+        final Function<String, Label> slot = name -> ui.label(name.substring(0, 1))
+                .setAnchor(Anchor.CENTER);
+        final SlotGrid<String> hotbar = ui.<String>slotGrid(slot)
                 .setColumns(9)
                 .setTooltips(Tooltip::text)
                 .setItems(Arrays.asList("Stone", "Iron", null, "Gold", null, null, "Wood", null, "Glass"))
                 .select(3);
-        final var spinners = ui.stackPanel(Orientation.HORIZONTAL).setSpacing(10);
-        spinners.add(ui.label("Quantity").setAnchor(Anchor.MIDDLE_LEFT))
-                .add(ui.spinner().setRange(1, 64).setValue(16))
-                .add(ui.label("Price").setAnchor(Anchor.MIDDLE_LEFT))
-                .add(ui.spinner().setRange(0, 1000).setDecimals(2).setStep(0.25).setValue(12.5));
-        final var slots = ui.stackPanel(Orientation.HORIZONTAL).setSpacing(10);
-        slots.add(ui.label("Hotbar").setAnchor(Anchor.MIDDLE_LEFT)).add(hotbar);
-        return ui.stackPanel().setSpacing(6).add(spinners).add(slots);
+
+        final Label quantityLabel = ui.label("Quantity")
+                .setAnchor(Anchor.MIDDLE_LEFT);
+        final Spinner quantity = ui.spinner()
+                .setRange(1, 64)
+                .setValue(16);
+        final Label priceLabel = ui.label("Price")
+                .setAnchor(Anchor.MIDDLE_LEFT);
+        final Spinner price = ui.spinner()
+                .setRange(0, 1000)
+                .setDecimals(2)
+                .setStep(0.25)
+                .setValue(12.5);
+        final StackPanel spinners = ui.stackPanel(Orientation.HORIZONTAL)
+                .setSpacing(10)
+                .add(quantityLabel)
+                .add(quantity)
+                .add(priceLabel)
+                .add(price);
+
+        final Label hotbarLabel = ui.label("Hotbar")
+                .setAnchor(Anchor.MIDDLE_LEFT);
+        final StackPanel slots = ui.stackPanel(Orientation.HORIZONTAL)
+                .setSpacing(10)
+                .add(hotbarLabel)
+                .add(hotbar);
+
+        return ui.stackPanel()
+                .setSpacing(6)
+                .add(spinners)
+                .add(slots);
     }
 
     private Component<?> offers(final ComponentFactory ui) {
@@ -131,24 +199,31 @@ public final class ControlsScreen implements Screen {
                 .setColumnComparator(2, Comparator.comparingDouble(Offer::price))
                 .setItems(Offer.SAMPLE)
                 .sortBy(2, true)
-                .select(1);
-        this.table.setHeight(84);
-        this.table.setAlignment(HorizontalAlignment.STRETCH, VerticalAlignment.TOP);
+                .select(1)
+                .setHeight(84)
+                .setAlignment(HorizontalAlignment.STRETCH, VerticalAlignment.TOP);
         return this.table;
     }
 
     private Component<?> notes(final ComponentFactory ui) {
-        final var notes = ui.textArea()
+        final TextArea notes = ui.textArea()
                 .setText("Notes wrap at the edge of the box, and the box scrolls when they run past four lines.\n"
                         + "A blank line follows.\n\nThen the end.")
-                .setVisibleLines(3);
-        notes.setAlignment(HorizontalAlignment.STRETCH, VerticalAlignment.TOP);
-        final var expander = ui.expander("Seller notes").setContent(notes).setExpanded(true);
-        expander.setAlignment(HorizontalAlignment.STRETCH, VerticalAlignment.TOP);
+                .setVisibleLines(3)
+                .setAlignment(HorizontalAlignment.STRETCH, VerticalAlignment.TOP);
+        final Expander expander = ui.expander("Seller notes")
+                .setContent(notes)
+                .setExpanded(true)
+                .setAlignment(HorizontalAlignment.STRETCH, VerticalAlignment.TOP);
         final Label collapsed = ui.label("Hidden until expanded");
-        final var more = ui.expander("History").setContent(collapsed);
-        more.setAlignment(HorizontalAlignment.STRETCH, VerticalAlignment.TOP);
-        return ui.stackPanel().setSpacing(2).add(expander).add(more).setAlignment(HorizontalAlignment.STRETCH, VerticalAlignment.TOP);
+        final Expander more = ui.expander("History")
+                .setContent(collapsed)
+                .setAlignment(HorizontalAlignment.STRETCH, VerticalAlignment.TOP);
+        return ui.stackPanel()
+                .setSpacing(2)
+                .add(expander)
+                .add(more)
+                .setAlignment(HorizontalAlignment.STRETCH, VerticalAlignment.TOP);
     }
 
     /**
@@ -181,7 +256,8 @@ public final class ControlsScreen implements Screen {
                                final BiConsumer<ControlsScreen, ScreenStack> input) throws IOException {
         final ControlsScreen screen = new ControlsScreen();
         final File out = new File(directory, name + ".png");
-        ImageIO.write(SwingSnapshot.render(screen, theme, 960, 600, 2f, stack -> input.accept(screen, stack)), "png", out);
+        ImageIO.write(SwingSnapshot.render(screen, theme, 960, 600, 2f, stack -> input.accept(screen, stack)),
+                "png", out);
         System.out.println("Wrote " + out.getAbsolutePath());
     }
 
@@ -204,8 +280,10 @@ public final class ControlsScreen implements Screen {
      */
     record Category(String name, List<Category> children) {
         static final List<Category> ROOTS = List.of(
-                new Category("Building Blocks", new Category("Stone"), new Category("Wood", new Category("Oak"),
-                        new Category("Birch")), new Category("Glass")),
+                new Category("Building Blocks",
+                        new Category("Stone"),
+                        new Category("Wood", new Category("Oak"), new Category("Birch")),
+                        new Category("Glass")),
                 new Category("Ores", new Category("Iron"), new Category("Gold")),
                 new Category("Tools"),
                 new Category("Food"));

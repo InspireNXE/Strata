@@ -4,6 +4,7 @@ import org.inspirenxe.strata.api.ComponentFactory;
 import org.inspirenxe.strata.api.component.Component;
 import org.inspirenxe.strata.api.control.button.Button;
 import org.inspirenxe.strata.api.control.collection.ListView;
+import org.inspirenxe.strata.api.control.display.Image;
 import org.inspirenxe.strata.api.control.display.Label;
 import org.inspirenxe.strata.api.control.display.ProgressBar;
 import org.inspirenxe.strata.api.control.field.TextBox;
@@ -41,44 +42,57 @@ final class ExchangeDialogs {
      */
     static Window window(final ComponentFactory ui, final String title, final float width,
                          final Component<?> content, final Button... buttons) {
-        final Window window = ui.window(title);
-        window.setWidth(width);
-        final StackPanel row = ui.stackPanel(Orientation.HORIZONTAL).setSpacing(2);
+        final Window window = ui.window(title)
+                .setWidth(width);
+        final StackPanel row = ui.stackPanel(Orientation.HORIZONTAL)
+                .setSpacing(2)
+                .setAlignment(HorizontalAlignment.RIGHT, VerticalAlignment.BOTTOM);
         for (int i = buttons.length - 1; i >= 0; i--) {
             row.add(buttons[i]);
         }
-        row.setAlignment(HorizontalAlignment.RIGHT, VerticalAlignment.BOTTOM);
-        final GridPanel layout = Look.grid(ui, GridLength.weighted(1)).rows(GridLength.weighted(1), GridLength.auto())
-                .setSpacing(0, 4);
-        layout.add(content, 0, 0).add(row, 1, 0);
+        final GridPanel layout = Look.grid(ui, GridLength.weighted(1))
+                .rows(GridLength.weighted(1), GridLength.auto())
+                .setSpacing(0, 4)
+                .add(content, 0, 0)
+                .add(row, 1, 0);
         window.add(layout);
         return window;
     }
 
     static void buyQuantity(final ComponentFactory ui, final Listing listing, final LongConsumer buy) {
-        final TextBox amount = ui.textBox().setText("1").setSelectAllOnFocus(true);
-        amount.setWidth(45);
-        amount.onEvent(TextBox.EDIT, event -> {
-            final String digits = event.value().replaceAll("[^0-9]", "");
-            if (digits.isEmpty()) {
-                event.setValue("");
-                return;
-            }
-            final long value = Long.parseLong(digits.length() > 12 ? digits.substring(0, 12) : digits);
-            event.setValue(Long.toString(Math.min(value, listing.quantity())));
-        });
-        final Label per = Look.label(ui, Look.currency(listing.price()), Look.WHITE);
-        final Label total = Look.label(ui, Look.currency(listing.price()), Look.WHITE);
+        final TextBox amount = ui.textBox()
+                .setText("1")
+                .setSelectAllOnFocus(true)
+                .setWidth(45)
+                .setAnchor(Anchor.MIDDLE_RIGHT)
+                .onEvent(TextBox.EDIT, event -> {
+                    final String digits = event.value().replaceAll("[^0-9]", "");
+                    if (digits.isEmpty()) {
+                        event.setValue("");
+                        return;
+                    }
+                    final long value = Long.parseLong(digits.length() > 12 ? digits.substring(0, 12) : digits);
+                    event.setValue(Long.toString(Math.min(value, listing.quantity())));
+                });
+        final Label per = Look.label(ui, Look.currency(listing.price()), Look.WHITE)
+                .setAnchor(Anchor.TOP_RIGHT);
+        final Label total = Look.label(ui, Look.currency(listing.price()), Look.WHITE)
+                .setAnchor(Anchor.TOP_RIGHT);
         final Button confirm = Look.button(ui, "Buy", 40);
         final Button cancel = Look.button(ui, "Cancel", 40);
 
+        final Label quantityLabel = Look.label(ui, "Quantity:", Look.WHITE)
+                .setAnchor(Anchor.MIDDLE_LEFT);
         final GridPanel grid = Look.grid(ui, GridLength.auto(), GridLength.weighted(1))
-                .rows(GridLength.auto(), GridLength.auto(), GridLength.auto()).setSpacing(4, 3);
-        grid.add(Look.label(ui, "Quantity:", Look.WHITE).setAnchor(Anchor.MIDDLE_LEFT), 0, 0)
-                .add(amount.setAnchor(Anchor.MIDDLE_RIGHT), 0, 1)
-                .add(Look.label(ui, "Per:", Look.WHITE), 1, 0).add(per.setAnchor(Anchor.TOP_RIGHT), 1, 1)
-                .add(Look.label(ui, "Total:", Look.WHITE), 2, 0).add(total.setAnchor(Anchor.TOP_RIGHT), 2, 1);
-        grid.setAlignment(HorizontalAlignment.STRETCH, VerticalAlignment.TOP);
+                .rows(GridLength.auto(), GridLength.auto(), GridLength.auto())
+                .setSpacing(4, 3)
+                .add(quantityLabel, 0, 0)
+                .add(amount, 0, 1)
+                .add(Look.label(ui, "Per:", Look.WHITE), 1, 0)
+                .add(per, 1, 1)
+                .add(Look.label(ui, "Total:", Look.WHITE), 2, 0)
+                .add(total, 2, 1)
+                .setAlignment(HorizontalAlignment.STRETCH, VerticalAlignment.TOP);
 
         final Window window = window(ui, "Enter a Quantity", 130, grid, confirm, cancel);
         final Runnable validate = () -> {
@@ -100,21 +114,24 @@ final class ExchangeDialogs {
     }
 
     static void listPrice(final ComponentFactory ui, final Stock stock, final Consumer<BigDecimal> list) {
-        final TextBox price = ui.textBox().setSelectAllOnFocus(true);
-        price.setText(stock.lastPrice() == null ? "" : stock.lastPrice().toPlainString());
-        price.setWidth(65);
-        price.onEvent(TextBox.EDIT, event -> {
-            if (!event.value().matches("\\d{0,12}(\\.\\d{0,2})?")) {
-                event.cancel();
-            }
-        });
+        final TextBox price = ui.textBox()
+                .setSelectAllOnFocus(true)
+                .setText(stock.lastPrice() == null ? "" : stock.lastPrice().toPlainString())
+                .setWidth(65)
+                .onEvent(TextBox.EDIT, event -> {
+                    if (!event.value().matches("\\d{0,12}(\\.\\d{0,2})?")) {
+                        event.cancel();
+                    }
+                });
         final Button confirm = Look.button(ui, "List", 40);
         final Button cancel = Look.button(ui, "Cancel", 40);
-        final StackPanel row = Look.row(ui, 2, price, Look.label(ui, "/ea", Look.WHITE));
-        final Window window = window(ui, "Enter a price", 124, row.setAnchor(Anchor.MIDDLE_LEFT), confirm, cancel);
+        final StackPanel row = Look.row(ui, 2, price, Look.label(ui, "/ea", Look.WHITE))
+                .setAnchor(Anchor.MIDDLE_LEFT);
+        final Window window = window(ui, "Enter a price", 124, row, confirm, cancel);
         final Runnable validate = () -> {
             final BigDecimal value = parse(price.text());
-            confirm.setEnabled(value != null && value.signum() > 0 && value.compareTo(BigDecimal.valueOf(1_000_000_000_000L)) <= 0);
+            final BigDecimal max = BigDecimal.valueOf(1_000_000_000_000L);
+            confirm.setEnabled(value != null && value.signum() > 0 && value.compareTo(max) <= 0);
         };
         price.onEvent(TextBox.EDITED, event -> validate.run());
         validate.run();
@@ -173,63 +190,83 @@ final class ExchangeDialogs {
             this.data = data;
             this.done = done;
             this.inventory = new ArrayList<>(data.inventory);
-            this.unlisted = new ArrayList<>(data.mine.stream().filter(stock -> !stock.listed()).toList());
+            this.unlisted = new ArrayList<>(data.mine.stream()
+                    .filter(stock -> !stock.listed())
+                    .toList());
             this.toRight = true;
         }
 
         void open() {
-            this.left = this.list();
-            this.right = this.list();
-            this.left.onEvent(ListView.SELECTED, e -> this.selected(true, this.left.selected()));
-            this.right.onEvent(ListView.SELECTED, e -> this.selected(false, this.right.selected()));
-            this.left.onEvent(ListView.ACTIVATED, e -> {
-                final Stock stock = this.left.items().get(e.value());
-                this.move(true, stock, stock.quantity());
-            });
-            this.right.onEvent(ListView.ACTIVATED, e -> {
-                final Stock stock = this.right.items().get(e.value());
-                this.move(false, stock, stock.quantity());
-            });
-            this.leftBar = this.ui.progressBar();
-            this.rightBar = this.ui.progressBar();
+            this.left = this.list()
+                    .onEvent(ListView.SELECTED, e -> this.selected(true, this.left.selected()))
+                    .onEvent(ListView.ACTIVATED, e -> {
+                        final Stock stock = this.left.items().get(e.value());
+                        this.move(true, stock, stock.quantity());
+                    });
+            this.right = this.list()
+                    .onEvent(ListView.SELECTED, e -> this.selected(false, this.right.selected()))
+                    .onEvent(ListView.ACTIVATED, e -> {
+                        final Stock stock = this.right.items().get(e.value());
+                        this.move(false, stock, stock.quantity());
+                    });
+            this.leftBar = this.ui.progressBar()
+                    .setAlignment(HorizontalAlignment.STRETCH, VerticalAlignment.TOP);
+            this.rightBar = this.ui.progressBar()
+                    .setAlignment(HorizontalAlignment.STRETCH, VerticalAlignment.TOP);
 
-            this.one = this.mover("1", "Move one");
-            this.stack = this.mover("S", "Move the selected stack");
-            this.type = this.mover("T", "Move every stack of this type");
-            this.all = this.mover("A", "Move everything");
-            this.one.onEvent(Button.PRESSED, event -> this.selection().ifPresent(stock -> this.move(this.toRight, stock, 1)));
-            this.stack.onEvent(Button.PRESSED, event -> this.selection().ifPresent(stock -> this.move(this.toRight, stock, stock.quantity())));
-            this.type.onEvent(Button.PRESSED, event -> this.selection().ifPresent(stock -> {
-                for (final Stock same : List.copyOf(this.toRight ? this.inventory : this.unlisted)) {
-                    if (same.item().equals(stock.item())) {
-                        this.move(this.toRight, same, same.quantity());
-                    }
-                }
-            }));
-            this.all.onEvent(Button.PRESSED, event -> {
-                for (final Stock each : List.copyOf(this.toRight ? this.inventory : this.unlisted)) {
-                    this.move(this.toRight, each, each.quantity());
-                }
-            });
-            this.direction = Look.label(this.ui, "->", Look.WHITE);
+            this.one = this.mover("1", "Move one")
+                    .onEvent(Button.PRESSED, event -> this.selection()
+                            .ifPresent(stock -> this.move(this.toRight, stock, 1)));
+            this.stack = this.mover("S", "Move the selected stack")
+                    .onEvent(Button.PRESSED, event -> this.selection()
+                            .ifPresent(stock -> this.move(this.toRight, stock, stock.quantity())));
+            this.type = this.mover("T", "Move every stack of this type")
+                    .onEvent(Button.PRESSED, event -> this.selection().ifPresent(stock -> {
+                        for (final Stock same : List.copyOf(this.toRight ? this.inventory : this.unlisted)) {
+                            if (same.item().equals(stock.item())) {
+                                this.move(this.toRight, same, same.quantity());
+                            }
+                        }
+                    }));
+            this.all = this.mover("A", "Move everything")
+                    .onEvent(Button.PRESSED, event -> {
+                        for (final Stock each : List.copyOf(this.toRight ? this.inventory : this.unlisted)) {
+                            this.move(this.toRight, each, each.quantity());
+                        }
+                    });
+            this.direction = Look.label(this.ui, "->", Look.WHITE)
+                    .setAnchor(Anchor.TOP_CENTER);
 
-            final StackPanel middle = this.ui.stackPanel().setSpacing(4).add(this.one).add(this.stack)
-                    .add(this.direction.setAnchor(Anchor.TOP_CENTER)).add(this.type).add(this.all);
-            Look.panel(middle).setPadding(Look.pad(9, 6));
-            middle.setAnchor(Anchor.CENTER);
+            final StackPanel middle = this.ui.stackPanel()
+                    .setSpacing(4)
+                    .add(this.one)
+                    .add(this.stack)
+                    .add(this.direction)
+                    .add(this.type)
+                    .add(this.all)
+                    .setPadding(Look.pad(9, 6))
+                    .setAnchor(Anchor.CENTER);
+            Look.panel(middle);
 
-            final GridPanel grid = Look.grid(this.ui, GridLength.weighted(1), GridLength.fixed(40), GridLength.weighted(1))
-                    .rows(GridLength.auto(), GridLength.weighted(1), GridLength.auto()).setSpacing(4, 3);
-            grid.add(Look.label(this.ui, "Inventory", Look.WHITE).setAnchor(Anchor.TOP_CENTER), 0, 0)
-                    .add(Look.label(this.ui, "Unlisted Items", Look.WHITE).setAnchor(Anchor.TOP_CENTER), 0, 2)
-                    .add(this.left, 1, 0).add(middle, 1, 1).add(this.right, 1, 2)
-                    .add(this.leftBar.setAlignment(HorizontalAlignment.STRETCH, VerticalAlignment.TOP), 2, 0)
-                    .add(this.rightBar.setAlignment(HorizontalAlignment.STRETCH, VerticalAlignment.TOP), 2, 2);
+            final Label inventoryLabel = Look.label(this.ui, "Inventory", Look.WHITE)
+                    .setAnchor(Anchor.TOP_CENTER);
+            final Label unlistedLabel = Look.label(this.ui, "Unlisted Items", Look.WHITE)
+                    .setAnchor(Anchor.TOP_CENTER);
+            final GridPanel grid = Look.grid(this.ui, GridLength.weighted(1), GridLength.fixed(40),
+                            GridLength.weighted(1))
+                    .rows(GridLength.auto(), GridLength.weighted(1), GridLength.auto())
+                    .setSpacing(4, 3)
+                    .add(inventoryLabel, 0, 0)
+                    .add(unlistedLabel, 0, 2)
+                    .add(this.left, 1, 0)
+                    .add(middle, 1, 1)
+                    .add(this.right, 1, 2)
+                    .add(this.leftBar, 2, 0)
+                    .add(this.rightBar, 2, 2);
 
             final Button ok = Look.button(this.ui, "OK", 40);
             final Button cancel = Look.button(this.ui, "Cancel", 40);
-            final Window window = window(this.ui, "Offer", 400, grid, ok, cancel);
-            window.setHeight(325);
+            final Window window = window(this.ui, "Offer", 400, grid, ok, cancel).setHeight(325);
             ok.onEvent(Button.PRESSED, event -> {
                 this.data.inventory.clear();
                 this.data.inventory.addAll(this.inventory);
@@ -249,29 +286,37 @@ final class ExchangeDialogs {
         }
 
         private ListView<Stock> list() {
-            final ListView<Stock> list = this.ui.<Stock>listView(this::cell).setRowHeight(24).setRowSpacing(1)
-                    .setKeyFunction(Stock::record);
-            Look.panel(list).setAnchor(Anchor.FILL);
-            return list;
+            final ListView<Stock> list = this.ui.<Stock>listView(this::cell)
+                    .setRowHeight(24)
+                    .setRowSpacing(1)
+                    .setKeyFunction(Stock::record)
+                    .setAnchor(Anchor.FILL);
+            return Look.panel(list);
         }
 
         private Component<?> cell(final Stock stock) {
-            final GridPanel cell = Look.grid(this.ui, GridLength.fixed(16), GridLength.weighted(1), GridLength.auto())
-                    .rows(GridLength.weighted(1)).setSpacing(4, 0);
-            cell.setPadding(Look.pad(3, 0));
-            cell.add(this.ui.image(Icons.of(stock.item())).setTooltip(stock.item().tooltip()).setAnchor(Anchor.MIDDLE_LEFT), 0, 0)
-                    .add(Look.label(this.ui, stock.item().name(), Look.WHITE).setOverflow(TextOverflow.ELLIPSIS)
-                            .setAlignment(HorizontalAlignment.STRETCH, VerticalAlignment.MIDDLE), 0, 1)
-                    .add(Look.label(this.ui, " x " + Look.withSuffix(stock.quantity()), Look.GRAY).setAnchor(Anchor.MIDDLE_LEFT), 0, 2);
-            return cell;
+            final Image icon = this.ui.image(Icons.of(stock.item()))
+                    .setTooltip(stock.item().tooltip())
+                    .setAnchor(Anchor.MIDDLE_LEFT);
+            final Label name = Look.label(this.ui, stock.item().name(), Look.WHITE)
+                    .setOverflow(TextOverflow.ELLIPSIS)
+                    .setAlignment(HorizontalAlignment.STRETCH, VerticalAlignment.MIDDLE);
+            final Label quantity = Look.label(this.ui, " x " + Look.withSuffix(stock.quantity()), Look.GRAY)
+                    .setAnchor(Anchor.MIDDLE_LEFT);
+            return Look.grid(this.ui, GridLength.fixed(16), GridLength.weighted(1), GridLength.auto())
+                    .rows(GridLength.weighted(1))
+                    .setSpacing(4, 0)
+                    .setPadding(Look.pad(3, 0))
+                    .add(icon, 0, 0)
+                    .add(name, 0, 1)
+                    .add(quantity, 0, 2);
         }
 
         private Button mover(final String text, final String tooltip) {
-            final Button button = Look.button(this.ui, text, 20);
-            button.setHeight(20);
-            button.setTooltip(tooltip);
-            button.setEnabled(false);
-            return button;
+            return Look.button(this.ui, text, 20)
+                    .setHeight(20)
+                    .setTooltip(tooltip)
+                    .setEnabled(false);
         }
 
         private Optional<Stock> selection() {
@@ -300,14 +345,17 @@ final class ExchangeDialogs {
             final List<Stock> to = toRight ? this.unlisted : this.inventory;
             final int toLimit = toRight ? this.data.limit - (int) this.data.listedCount() : INVENTORY_SLOTS;
             final long moved = Math.min(amount, stock.quantity());
-            final Optional<Stock> merge = to.stream().filter(other -> other.item().equals(stock.item())).findFirst();
+            final Optional<Stock> merge = to.stream()
+                    .filter(other -> other.item().equals(stock.item()))
+                    .findFirst();
             if (merge.isEmpty() && to.size() >= toLimit) {
                 return;
             }
             ExchangeData.replace(from, stock, old -> old.quantity() - moved <= 0 ? null
                     : new Stock(old.record(), old.item(), old.quantity() - moved, null, old.lastPrice()));
             if (merge.isPresent()) {
-                ExchangeData.replace(to, merge.get(), old -> new Stock(old.record(), old.item(), old.quantity() + moved, null, old.lastPrice()));
+                ExchangeData.replace(to, merge.get(),
+                        old -> new Stock(old.record(), old.item(), old.quantity() + moved, null, old.lastPrice()));
             } else {
                 to.add(new Stock(this.data.newRecord(), stock.item(), moved, null, stock.lastPrice()));
             }
@@ -318,8 +366,11 @@ final class ExchangeDialogs {
             this.left.setItems(this.inventory);
             this.right.setItems(this.unlisted);
             final int rightLimit = this.data.limit - (int) this.data.listedCount();
-            this.leftBar.setValue(this.inventory.size() / (float) INVENTORY_SLOTS).setText(this.inventory.size() + "/" + INVENTORY_SLOTS);
-            this.rightBar.setValue(rightLimit <= 0 ? 1f : this.unlisted.size() / (float) rightLimit)
+            this.leftBar
+                    .setValue(this.inventory.size() / (float) INVENTORY_SLOTS)
+                    .setText(this.inventory.size() + "/" + INVENTORY_SLOTS);
+            this.rightBar
+                    .setValue(rightLimit <= 0 ? 1f : this.unlisted.size() / (float) rightLimit)
                     .setText(this.unlisted.size() + "/" + rightLimit);
         }
     }

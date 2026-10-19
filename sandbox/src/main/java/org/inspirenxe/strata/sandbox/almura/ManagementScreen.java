@@ -10,7 +10,6 @@ import org.inspirenxe.strata.api.control.field.TextBox;
 import org.inspirenxe.strata.api.control.window.MessageBox;
 import org.inspirenxe.strata.api.control.window.Window;
 import org.inspirenxe.strata.api.layout.Anchor;
-import org.inspirenxe.strata.api.layout.AnchorPanel;
 import org.inspirenxe.strata.api.layout.GridLength;
 import org.inspirenxe.strata.api.layout.GridPanel;
 import org.inspirenxe.strata.api.layout.HorizontalAlignment;
@@ -27,6 +26,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.function.Function;
 
 /**
  * A mock-up of Almura's shared {@code IngameFeatureManagementScreen}, the admin editor behind both "Exchange -
@@ -77,8 +77,8 @@ public final class ManagementScreen implements Screen {
         this.features = new ArrayList<>();
         final UUID owner = UUID.nameUUIDFromBytes("Zidane".getBytes());
         final String lower = kind.toLowerCase(Locale.ROOT);
-        this.features.add(new Feature(lower + ".global", "Global Market", "almura." + lower + ".global", false, "Zidane",
-                owner, LocalDateTime.of(2018, 4, 2, 14, 30)));
+        this.features.add(new Feature(lower + ".global", "Global Market", "almura." + lower + ".global", false,
+                "Zidane", owner, LocalDateTime.of(2018, 4, 2, 14, 30)));
         this.features.add(new Feature(lower + ".spawn", "Spawn " + kind, "almura." + lower + ".spawn", false, "Dockter",
                 owner, LocalDateTime.of(2018, 6, 11, 9, 5)));
         this.features.add(new Feature(lower + ".staff", "Staff Only", "almura." + lower + ".staff", true, "Grinch",
@@ -98,34 +98,50 @@ public final class ManagementScreen implements Screen {
     @Override
     public Component<?> build(final ComponentFactory ui) {
         this.ui = ui;
-        this.list = ui.<Feature>listView(feature -> Look.label(ui, feature.name(), Look.WHITE)
-                        .setOverflow(TextOverflow.ELLIPSIS).setMargin(Look.pad(4, 0))
-                        .setAlignment(HorizontalAlignment.STRETCH, VerticalAlignment.MIDDLE))
+        final Function<Feature, Label> row = feature -> Look.label(ui, feature.name(), Look.WHITE)
+                .setOverflow(TextOverflow.ELLIPSIS)
+                .setMargin(Look.pad(4, 0))
+                .setAlignment(HorizontalAlignment.STRETCH, VerticalAlignment.MIDDLE);
+        this.list = ui.<Feature>listView(row)
                 .setRowHeight(20)
                 .setKeyFunction(Feature::id)
                 .onEvent(ListView.SELECTED, e -> this.show(this.list.selected()))
                 .onEvent(ListView.ACTIVATED, e -> this.open());
-        Look.panel(this.list).setAnchor(Anchor.FILL);
+        Look.panel(this.list)
+                .setAnchor(Anchor.FILL);
 
-        this.id = this.field(0).onEvent(TextBox.EDIT,
-                event -> event.setValue(event.value().replaceAll("[^A-Za-z0-9_.]", "").toLowerCase(Locale.ROOT)));
+        this.id = this.field(0)
+                .onEvent(TextBox.EDIT, event -> {
+                    event.setValue(event.value().replaceAll("[^A-Za-z0-9_.]", "").toLowerCase(Locale.ROOT));
+                });
         this.name = this.field(1);
-        this.permission = this.field(2).onEvent(TextBox.EDIT,
-                event -> event.setValue(event.value().replaceAll("[^A-Za-z0-9_.]", "").toLowerCase(Locale.ROOT)));
-        this.creator = this.field(3).setReadOnly(true);
-        this.creatorId = this.field(4).setReadOnly(true);
-        this.created = this.field(5).setReadOnly(true);
+        this.permission = this.field(2)
+                .onEvent(TextBox.EDIT, event -> {
+                    event.setValue(event.value().replaceAll("[^A-Za-z0-9_.]", "").toLowerCase(Locale.ROOT));
+                });
+        this.creator = this.field(3)
+                .setReadOnly(true);
+        this.creatorId = this.field(4)
+                .setReadOnly(true);
+        this.created = this.field(5)
+                .setReadOnly(true);
         this.creatorLabel = Look.label(ui, "Creator:", Look.WHITE);
         this.creatorIdLabel = Look.label(ui, "Creator UUID:", Look.WHITE);
         this.createdLabel = Look.label(ui, "Created:", Look.WHITE);
-        this.hidden = ui.checkBox("Hidden").onEvent(CheckBox.TOGGLED, event -> this.validate());
-        this.save = Look.button(ui, "Save", 40).onEvent(Button.PRESSED, event -> this.save());
-        this.open = Look.button(ui, "Open", 40).onEvent(Button.PRESSED, event -> this.open());
+        this.hidden = ui.checkBox("Hidden")
+                .onEvent(CheckBox.TOGGLED, event -> this.validate())
+                .setAnchor(Anchor.MIDDLE_LEFT);
+        this.save = Look.button(ui, "Save", 40)
+                .onEvent(Button.PRESSED, event -> this.save());
+        this.open = Look.button(ui, "Open", 40)
+                .onEvent(Button.PRESSED, event -> this.open());
 
         final GridPanel detail = Look.grid(ui, GridLength.weighted(1), GridLength.fixed(140))
                 .rows(GridLength.auto(), GridLength.auto(), GridLength.auto(), GridLength.auto(), GridLength.auto(),
                         GridLength.auto(), GridLength.weighted(1), GridLength.auto())
-                .setSpacing(4, 2);
+                .setSpacing(4, 2)
+                .setBorder(Look.PANEL_BORDER)
+                .setPadding(4);
         this.addRow(detail, 0, Look.label(ui, "ID:", Look.WHITE), this.id);
         this.addRow(detail, 1, Look.label(ui, "Title:", Look.WHITE), this.name);
         this.addRow(detail, 2, Look.label(ui, "Permission:", Look.WHITE), this.permission);
@@ -133,61 +149,77 @@ public final class ManagementScreen implements Screen {
         this.addRow(detail, 4, this.creatorIdLabel, this.creatorId);
         this.addRow(detail, 5, this.createdLabel, this.created);
         final GridPanel actions = Look.grid(ui, GridLength.weighted(1), GridLength.auto(), GridLength.auto())
-                .rows(GridLength.auto()).setSpacing(2, 0);
-        actions.add(this.hidden.setAnchor(Anchor.MIDDLE_LEFT), 0, 0).add(this.open, 0, 1).add(this.save, 0, 2);
-        actions.setAlignment(HorizontalAlignment.STRETCH, VerticalAlignment.BOTTOM);
+                .rows(GridLength.auto())
+                .setSpacing(2, 0)
+                .add(this.hidden, 0, 0)
+                .add(this.open, 0, 1)
+                .add(this.save, 0, 2)
+                .setAlignment(HorizontalAlignment.STRETCH, VerticalAlignment.BOTTOM);
         detail.add(actions, 7, 0, 1, 2);
-        detail.setBorder(Look.PANEL_BORDER);
-        detail.setPadding(4);
 
-        final Button add = Look.button(ui, "+", 20).onEvent(Button.PRESSED, event -> {
-            this.list.select(-1);
-            this.id.requestFocus();
-        });
-        add.setTooltip("Add");
-        final Button remove = Look.button(ui, "-", 20).onEvent(Button.PRESSED, event -> this.confirmDelete());
-        remove.setTooltip("Delete");
+        final Button add = Look.button(ui, "+", 20)
+                .onEvent(Button.PRESSED, event -> {
+                    this.list.select(-1);
+                    this.id.requestFocus();
+                })
+                .setTooltip("Add");
+        final Button remove = Look.button(ui, "-", 20)
+                .onEvent(Button.PRESSED, event -> this.confirmDelete())
+                .setTooltip("Delete");
         final Button close = Look.button(ui, "Close", 40);
 
-        final GridPanel bottom = Look.grid(ui, GridLength.auto(), GridLength.auto(), GridLength.weighted(1), GridLength.auto())
-                .rows(GridLength.auto()).setSpacing(2, 0);
-        bottom.add(add, 0, 0).add(remove, 0, 1).add(close, 0, 3);
-        bottom.setAlignment(HorizontalAlignment.STRETCH, VerticalAlignment.TOP);
+        final GridPanel bottom = Look.grid(ui, GridLength.auto(), GridLength.auto(), GridLength.weighted(1),
+                        GridLength.auto())
+                .rows(GridLength.auto())
+                .setSpacing(2, 0)
+                .add(add, 0, 0)
+                .add(remove, 0, 1)
+                .add(close, 0, 3)
+                .setAlignment(HorizontalAlignment.STRETCH, VerticalAlignment.TOP);
 
         final GridPanel layout = Look.grid(ui, GridLength.fixed(120), GridLength.weighted(1))
-                .rows(GridLength.weighted(1), GridLength.auto()).setSpacing(4, 4);
-        layout.add(this.list, 0, 0).add(detail, 0, 1).add(bottom, 1, 0, 1, 2);
+                .rows(GridLength.weighted(1), GridLength.auto())
+                .setSpacing(4, 4)
+                .add(this.list, 0, 0)
+                .add(detail, 0, 1)
+                .add(bottom, 1, 0, 1, 2);
 
-        final Window window = ui.window(this.title).add(layout);
-        window.setWidth(375);
         final Runnable leave = () -> {
             if (this.handle != null) {
                 this.handle.close();
             }
         };
-        window.onEvent(Window.CLOSED, event -> leave.run());
+        final Window window = ui.window(this.title)
+                .add(layout)
+                .setWidth(375)
+                .onEvent(Window.CLOSED, event -> leave.run());
         close.onEvent(Button.PRESSED, event -> leave.run());
 
         this.list.setItems(this.features);
         this.list.select(0);
-        final AnchorPanel screen = ui.anchorPanel().add(window);
-        return screen.setAnchor(Anchor.FILL);
+        return ui.anchorPanel()
+                .add(window)
+                .setAnchor(Anchor.FILL);
     }
 
     private TextBox field(final int tabIndex) {
-        final TextBox box = this.ui.textBox().onEvent(TextBox.EDITED, event -> this.validate())
-                .onEvent(TextBox.SUBMITTED, event -> this.save());
-        box.setTabIndex(tabIndex);
-        return box;
+        return this.ui.textBox()
+                .onEvent(TextBox.EDITED, event -> this.validate())
+                .onEvent(TextBox.SUBMITTED, event -> this.save())
+                .setTabIndex(tabIndex);
     }
 
     private void addRow(final GridPanel grid, final int row, final Label label, final TextBox box) {
-        grid.add(label.setAnchor(Anchor.MIDDLE_LEFT), row, 0).add(box.setAnchor(Anchor.FILL), row, 1);
+        label.setAnchor(Anchor.MIDDLE_LEFT);
+        box.setAnchor(Anchor.FILL);
+        grid.add(label, row, 0)
+                .add(box, row, 1);
     }
 
     private void show(final Optional<Feature> selected) {
         final boolean existing = selected.isPresent();
-        this.id.setText(selected.map(Feature::id).orElse("")).setReadOnly(existing);
+        this.id.setText(selected.map(Feature::id).orElse(""))
+                .setReadOnly(existing);
         this.name.setText(selected.map(Feature::name).orElse(""));
         this.permission.setText(selected.map(Feature::permission).orElse(""));
         this.creator.setText(selected.map(Feature::creator).orElse(""));
@@ -207,7 +239,8 @@ public final class ManagementScreen implements Screen {
         if (this.save == null) {
             return;
         }
-        final boolean filled = !this.id.text().isEmpty() && !this.name.text().isEmpty() && !this.permission.text().isEmpty();
+        final boolean filled = !this.id.text().isEmpty() && !this.name.text().isEmpty()
+                && !this.permission.text().isEmpty();
         final boolean unique = this.list.selected().isPresent()
                 || this.features.stream().noneMatch(feature -> feature.id().equalsIgnoreCase(this.id.text()));
         this.save.setEnabled(filled && unique);
@@ -219,8 +252,9 @@ public final class ManagementScreen implements Screen {
         }
         final boolean adding = this.list.selected().isEmpty();
         final MessageBox confirm = this.ui.messageBox(this.title,
-                "Are you sure you want to " + (adding ? "add" : "modify") + " " + this.name.text() + "?",
-                MessageBox.Buttons.YES_NO).onEvent(MessageBox.ANSWERED, event -> {
+                        "Are you sure you want to " + (adding ? "add" : "modify") + " " + this.name.text() + "?",
+                        MessageBox.Buttons.YES_NO)
+                .onEvent(MessageBox.ANSWERED, event -> {
                     if (event.value() != MessageBox.Result.YES) {
                         return;
                     }
@@ -241,16 +275,20 @@ public final class ManagementScreen implements Screen {
     }
 
     private void confirmDelete() {
-        this.list.selected().ifPresent(feature -> this.ui.overlays().dialog(this.ui.messageBox(this.title,
-                "Are you sure you want to delete " + feature.name() + "?", MessageBox.Buttons.YES_NO).onEvent(MessageBox.ANSWERED, event -> {
-                    if (event.value() == MessageBox.Result.YES) {
-                        this.features.remove(feature);
-                        this.list.setItems(this.features);
-                        if (!this.features.isEmpty()) {
-                            this.list.select(0);
+        this.list.selected().ifPresent(feature -> {
+            final MessageBox confirm = this.ui.messageBox(this.title,
+                            "Are you sure you want to delete " + feature.name() + "?", MessageBox.Buttons.YES_NO)
+                    .onEvent(MessageBox.ANSWERED, event -> {
+                        if (event.value() == MessageBox.Result.YES) {
+                            this.features.remove(feature);
+                            this.list.setItems(this.features);
+                            if (!this.features.isEmpty()) {
+                                this.list.select(0);
+                            }
                         }
-                    }
-                })));
+                    });
+            this.ui.overlays().dialog(confirm);
+        });
     }
 
     private void open() {

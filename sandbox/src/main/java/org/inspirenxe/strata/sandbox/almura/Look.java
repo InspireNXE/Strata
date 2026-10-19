@@ -55,38 +55,41 @@ final class Look {
     }
 
     static Label label(final ComponentFactory ui, final String text, final int color) {
-        return ui.label(text).setStyle(text(color));
+        return ui.label(text)
+                .setStyle(text(color));
     }
 
     /**
      * A label made of colored runs, cut short with dots when it does not fit.
      */
     static Label rich(final ComponentFactory ui, final TextSpan... spans) {
-        return ui.label("").setSpans(List.of(spans)).setOverflow(TextOverflow.ELLIPSIS);
+        return ui.label("")
+                .setSpans(List.of(spans))
+                .setOverflow(TextOverflow.ELLIPSIS);
     }
 
     /**
      * Almura's bordered black panel.
      */
     static <T extends Component<T>> T panel(final T component) {
-        component.setBackground(PANEL);
-        return component.setBorder(PANEL_BORDER);
+        return component.setBackground(PANEL)
+                .setBorder(PANEL_BORDER);
     }
 
     static Button button(final ComponentFactory ui, final String text, final float width) {
-        final Button button = ui.button(text);
-        button.setWidth(width);
-        return button;
+        return ui.button(text)
+                .setWidth(width);
     }
 
     static GridPanel grid(final ComponentFactory ui, final GridLength... columns) {
-        final GridPanel grid = ui.gridPanel().columns(columns);
-        grid.setAlignment(HorizontalAlignment.STRETCH, VerticalAlignment.STRETCH);
-        return grid;
+        return ui.gridPanel()
+                .columns(columns)
+                .setAlignment(HorizontalAlignment.STRETCH, VerticalAlignment.STRETCH);
     }
 
     static StackPanel row(final ComponentFactory ui, final float spacing, final Component<?>... children) {
-        final StackPanel row = ui.stackPanel(Orientation.HORIZONTAL).setSpacing(spacing);
+        final StackPanel row = ui.stackPanel(Orientation.HORIZONTAL)
+                .setSpacing(spacing);
         for (final Component<?> child : children) {
             row.add(child.setAnchor(Anchor.MIDDLE_LEFT));
         }

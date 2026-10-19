@@ -77,26 +77,28 @@ public final class ExchangeScreen implements Screen {
     @Override
     public Component<?> build(final ComponentFactory ui) {
         this.ui = ui;
-        final Window window = ui.window("Exchange: " + this.data.name);
-        window.setSize(600, 370);
-        window.onEvent(Window.CLOSED, event -> {
-            if (this.handle != null) {
-                this.handle.close();
-            }
-        });
+        final Window window = ui.window("Exchange: " + this.data.name)
+                .setSize(600, 370)
+                .onEvent(Window.CLOSED, event -> {
+                    if (this.handle != null) {
+                        this.handle.close();
+                    }
+                });
 
         final GridPanel columns = Look.grid(ui, GridLength.weighted(1), GridLength.weighted(1))
                 .rows(GridLength.weighted(1))
-                .setSpacing(6, 0);
-        columns.add(this.buildMarket(ui), 0, 0).add(this.buildListable(ui), 0, 1);
+                .setSpacing(6, 0)
+                .add(this.buildMarket(ui), 0, 0)
+                .add(this.buildListable(ui), 0, 1);
         window.add(columns);
 
-        final AnchorPanel screen = ui.anchorPanel().add(window);
-        screen.setAnchor(Anchor.FILL);
-        screen.onEvent(EventTypes.MODIFIERS_CHANGED, event -> {
-            this.control = event.modifiers().control();
-            this.updateControls();
-        });
+        final AnchorPanel screen = ui.anchorPanel()
+                .add(window)
+                .setAnchor(Anchor.FILL)
+                .onEvent(EventTypes.MODIFIERS_CHANGED, event -> {
+                    this.control = event.modifiers().control();
+                    this.updateControls();
+                });
         this.search();
         this.refreshListable();
         return screen;
@@ -113,24 +115,37 @@ public final class ExchangeScreen implements Screen {
     // ------------------------------------------------------------------
 
     private Component<?> buildMarket(final ComponentFactory ui) {
-        this.itemName = ui.textBox().onEvent(TextBox.SUBMITTED, event -> this.search());
-        this.itemName.setTabIndex(0);
-        this.seller = ui.textBox().onEvent(TextBox.SUBMITTED, event -> this.search());
-        this.seller.setTabIndex(1);
+        this.itemName = ui.textBox()
+                .onEvent(TextBox.SUBMITTED, event -> this.search())
+                .setTabIndex(0)
+                .setAnchor(Anchor.FILL);
+        this.seller = ui.textBox()
+                .onEvent(TextBox.SUBMITTED, event -> this.search())
+                .setTabIndex(1)
+                .setAnchor(Anchor.FILL);
         this.sort = ui.<Sort>comboBox(sort -> sort.label)
                 .setOptions(List.of(Sort.values()))
-                .onEvent(ComboBox.SELECTED, e -> this.search());
-        final Button search = Look.button(ui, "Search", 80).onEvent(Button.PRESSED, event -> this.search());
+                .onEvent(ComboBox.SELECTED, e -> this.search())
+                .setAnchor(Anchor.FILL);
+        final Button search = Look.button(ui, "Search", 80)
+                .onEvent(Button.PRESSED, event -> this.search())
+                .setAnchor(Anchor.FILL);
 
+        final Label itemNameLabel = Look.label(ui, "Item Name:", Look.WHITE)
+                .setAnchor(Anchor.MIDDLE_RIGHT);
+        final Label sellerLabel = Look.label(ui, "Seller:", Look.WHITE)
+                .setAnchor(Anchor.MIDDLE_RIGHT);
         final GridPanel fields = Look.grid(ui, GridLength.auto(), GridLength.fixed(120), GridLength.weighted(1),
-                GridLength.fixed(90)).rows(GridLength.auto(), GridLength.auto()).setSpacing(4, 3);
-        fields.add(Look.label(ui, "Item Name:", Look.WHITE).setAnchor(Anchor.MIDDLE_RIGHT), 0, 0)
-                .add(this.itemName.setAnchor(Anchor.FILL), 0, 1)
-                .add(this.sort.setAnchor(Anchor.FILL), 0, 3)
-                .add(Look.label(ui, "Seller:", Look.WHITE).setAnchor(Anchor.MIDDLE_RIGHT), 1, 0)
-                .add(this.seller.setAnchor(Anchor.FILL), 1, 1)
-                .add(search.setAnchor(Anchor.FILL), 1, 3);
-        fields.setAlignment(HorizontalAlignment.STRETCH, VerticalAlignment.TOP);
+                        GridLength.fixed(90))
+                .rows(GridLength.auto(), GridLength.auto())
+                .setSpacing(4, 3)
+                .add(itemNameLabel, 0, 0)
+                .add(this.itemName, 0, 1)
+                .add(this.sort, 0, 3)
+                .add(sellerLabel, 1, 0)
+                .add(this.seller, 1, 1)
+                .add(search, 1, 3)
+                .setAlignment(HorizontalAlignment.STRETCH, VerticalAlignment.TOP);
 
         this.forSale = ui.<Listing>listView(this::forSaleCell)
                 .setRowHeight(24)
@@ -138,46 +153,72 @@ public final class ExchangeScreen implements Screen {
                 .setKeyFunction(Listing::record)
                 .setPlaceholder("No results found.")
                 .onEvent(ListView.SELECTED, e -> this.updateControls())
-                .onEvent(ListView.ACTIVATED, e -> this.buy(this.forSale.items().get(e.value()), 1));
-        this.forSale.setAnchor(Anchor.FILL);
+                .onEvent(ListView.ACTIVATED, e -> this.buy(this.forSale.items().get(e.value()), 1))
+                .setAnchor(Anchor.FILL);
 
-        this.first = Look.button(ui, "|<", 20).onEvent(Button.PRESSED, event -> this.setPage(0));
-        this.previous = Look.button(ui, "<", 20).onEvent(Button.PRESSED, event -> this.setPage(this.pageIndex - 1));
-        this.next = Look.button(ui, ">", 20).onEvent(Button.PRESSED, event -> this.setPage(this.pageIndex + 1));
-        this.last = Look.button(ui, ">|", 20).onEvent(Button.PRESSED, event -> this.setPage(Integer.MAX_VALUE));
-        this.page = ui.label("1/1").setTextAlignment(HorizontalAlignment.CENTER);
+        this.first = Look.button(ui, "|<", 20)
+                .onEvent(Button.PRESSED, event -> this.setPage(0));
+        this.previous = Look.button(ui, "<", 20)
+                .onEvent(Button.PRESSED, event -> this.setPage(this.pageIndex - 1));
+        this.next = Look.button(ui, ">", 20)
+                .onEvent(Button.PRESSED, event -> this.setPage(this.pageIndex + 1));
+        this.last = Look.button(ui, ">|", 20)
+                .onEvent(Button.PRESSED, event -> this.setPage(Integer.MAX_VALUE));
+        this.page = ui.label("1/1")
+                .setTextAlignment(HorizontalAlignment.CENTER)
+                .setAnchor(Anchor.CENTER);
         final GridPanel paging = Look.grid(ui, GridLength.auto(), GridLength.auto(), GridLength.weighted(1),
-                GridLength.auto(), GridLength.auto()).rows(GridLength.auto()).setSpacing(2, 0);
-        paging.add(this.first, 0, 0).add(this.previous, 0, 1).add(this.page.setAnchor(Anchor.CENTER), 0, 2)
-                .add(this.next, 0, 3).add(this.last, 0, 4);
-        paging.setAlignment(HorizontalAlignment.STRETCH, VerticalAlignment.TOP);
+                        GridLength.auto(), GridLength.auto())
+                .rows(GridLength.auto())
+                .setSpacing(2, 0)
+                .add(this.first, 0, 0)
+                .add(this.previous, 0, 1)
+                .add(this.page, 0, 2)
+                .add(this.next, 0, 3)
+                .add(this.last, 0, 4)
+                .setAlignment(HorizontalAlignment.STRETCH, VerticalAlignment.TOP);
 
         final GridPanel searching = Look.grid(ui, GridLength.weighted(1))
-                .rows(GridLength.auto(), GridLength.auto(), GridLength.weighted(1), GridLength.auto(), GridLength.auto())
-                .setSpacing(0, 3);
-        searching.add(fields, 0, 0)
+                .rows(GridLength.auto(), GridLength.auto(), GridLength.weighted(1), GridLength.auto(),
+                        GridLength.auto())
+                .setSpacing(0, 3)
+                .add(fields, 0, 0)
                 .add(ui.separator(Orientation.HORIZONTAL), 1, 0)
                 .add(this.forSale, 2, 0)
                 .add(ui.separator(Orientation.HORIZONTAL), 3, 0)
                 .add(paging, 4, 0);
-        Look.panel(searching).setPadding(4);
+        Look.panel(searching)
+                .setPadding(4);
 
-        this.buyOne = Look.button(ui, "Buy 1", 60).onEvent(Button.PRESSED, event -> this.selectedListing().ifPresent(l -> this.buy(l, 1)));
-        this.buyStack = Look.button(ui, "Buy 64", 60).onEvent(Button.PRESSED, event -> this.selectedListing()
-                .ifPresent(l -> this.buy(l, l.item().maxStack())));
-        this.buyQuantity = Look.button(ui, "Buy Qty", 60).onEvent(Button.PRESSED, event -> this.selectedListing()
-                .ifPresent(l -> ExchangeDialogs.buyQuantity(ui, l, quantity -> this.buy(l, quantity))));
-        this.buyAll = Look.button(ui, "Buy All", 50).onEvent(Button.PRESSED, event -> this.selectedListing()
-                .ifPresent(l -> this.buy(l, l.quantity())));
+        this.buyOne = Look.button(ui, "Buy 1", 60)
+                .onEvent(Button.PRESSED, event -> this.selectedListing()
+                        .ifPresent(l -> this.buy(l, 1)));
+        this.buyStack = Look.button(ui, "Buy 64", 60)
+                .onEvent(Button.PRESSED, event -> this.selectedListing()
+                        .ifPresent(l -> this.buy(l, l.item().maxStack())));
+        this.buyQuantity = Look.button(ui, "Buy Qty", 60)
+                .onEvent(Button.PRESSED, event -> this.selectedListing()
+                        .ifPresent(l -> ExchangeDialogs.buyQuantity(ui, l, quantity -> this.buy(l, quantity))));
+        this.buyAll = Look.button(ui, "Buy All", 50)
+                .onEvent(Button.PRESSED, event -> this.selectedListing()
+                        .ifPresent(l -> this.buy(l, l.quantity())));
         final GridPanel buying = Look.grid(ui, GridLength.auto(), GridLength.auto(), GridLength.weighted(1),
-                GridLength.auto(), GridLength.auto()).rows(GridLength.auto()).setSpacing(6, 0);
-        buying.add(this.buyOne, 0, 0).add(this.buyStack, 0, 1).add(this.buyQuantity, 0, 3).add(this.buyAll, 0, 4);
-        Look.panel(buying).setPadding(Look.pad(3, 2));
-        buying.setAlignment(HorizontalAlignment.STRETCH, VerticalAlignment.TOP);
+                        GridLength.auto(), GridLength.auto())
+                .rows(GridLength.auto())
+                .setSpacing(6, 0)
+                .add(this.buyOne, 0, 0)
+                .add(this.buyStack, 0, 1)
+                .add(this.buyQuantity, 0, 3)
+                .add(this.buyAll, 0, 4);
+        Look.panel(buying)
+                .setPadding(Look.pad(3, 2))
+                .setAlignment(HorizontalAlignment.STRETCH, VerticalAlignment.TOP);
 
-        final GridPanel market = Look.grid(ui, GridLength.weighted(1)).rows(GridLength.weighted(1), GridLength.auto())
-                .setSpacing(0, 2);
-        return market.add(searching, 0, 0).add(buying, 1, 0);
+        return Look.grid(ui, GridLength.weighted(1))
+                .rows(GridLength.weighted(1), GridLength.auto())
+                .setSpacing(0, 2)
+                .add(searching, 0, 0)
+                .add(buying, 1, 0);
     }
 
     private Component<?> buildListable(final ComponentFactory ui) {
@@ -187,53 +228,76 @@ public final class ExchangeScreen implements Screen {
                 .setKeyFunction(Stock::record)
                 .setPlaceholder("Nothing to list.")
                 .onEvent(ListView.SELECTED, e -> this.updateControls())
-                .onEvent(ListView.ACTIVATED, e -> this.toggleListing(this.listable.items().get(e.value())));
-        this.listable.setAnchor(Anchor.FILL);
+                .onEvent(ListView.ACTIVATED, e -> this.toggleListing(this.listable.items().get(e.value())))
+                .setAnchor(Anchor.FILL);
 
-        this.list = Look.button(ui, "List", 46).onEvent(Button.PRESSED, event -> this.selectedStock().ifPresent(this::toggleListing));
-        this.limitLabel = ui.label("0/0").setTextAlignment(HorizontalAlignment.CENTER);
-        final Button offer = Look.button(ui, "", 30).onEvent(Button.PRESSED, event -> ExchangeDialogs.offer(ui, this.data, this::refreshListable));
-        offer.setText("+/-");
-        offer.setTooltip("Move items between your inventory and the exchange");
+        this.list = Look.button(ui, "List", 46)
+                .onEvent(Button.PRESSED, event -> this.selectedStock().ifPresent(this::toggleListing));
+        this.limitLabel = ui.label("0/0")
+                .setTextAlignment(HorizontalAlignment.CENTER)
+                .setAnchor(Anchor.CENTER);
+        final Button offer = Look.button(ui, "", 30)
+                .onEvent(Button.PRESSED, event -> ExchangeDialogs.offer(ui, this.data, this::refreshListable))
+                .setText("+/-")
+                .setTooltip("Move items between your inventory and the exchange");
 
         final GridPanel bottom = Look.grid(ui, GridLength.auto(), GridLength.weighted(1), GridLength.auto())
-                .rows(GridLength.auto());
-        bottom.add(this.list, 0, 0).add(this.limitLabel.setAnchor(Anchor.CENTER), 0, 1).add(offer, 0, 2);
-        bottom.setAlignment(HorizontalAlignment.STRETCH, VerticalAlignment.TOP);
+                .rows(GridLength.auto())
+                .add(this.list, 0, 0)
+                .add(this.limitLabel, 0, 1)
+                .add(offer, 0, 2)
+                .setAlignment(HorizontalAlignment.STRETCH, VerticalAlignment.TOP);
 
+        final Label title = Look.label(ui, "Listable Items", Look.WHITE)
+                .setAnchor(Anchor.TOP_CENTER);
         final GridPanel listing = Look.grid(ui, GridLength.weighted(1))
-                .rows(GridLength.auto(), GridLength.auto(), GridLength.weighted(1), GridLength.auto(), GridLength.auto())
-                .setSpacing(0, 3);
-        listing.add(Look.label(ui, "Listable Items", Look.WHITE).setAnchor(Anchor.TOP_CENTER), 0, 0)
+                .rows(GridLength.auto(), GridLength.auto(), GridLength.weighted(1), GridLength.auto(),
+                        GridLength.auto())
+                .setSpacing(0, 3)
+                .add(title, 0, 0)
                 .add(ui.separator(Orientation.HORIZONTAL), 1, 0)
                 .add(this.listable, 2, 0)
                 .add(ui.separator(Orientation.HORIZONTAL), 3, 0)
                 .add(bottom, 4, 0);
-        Look.panel(listing).setPadding(4);
+        Look.panel(listing)
+                .setPadding(4);
         return listing;
     }
 
     private Component<?> forSaleCell(final Listing listing) {
-        final Image icon = this.ui.image(Icons.of(listing.item())).setTooltip(listing.item().tooltip());
-        final Label name = Look.label(this.ui, listing.item().name(), Look.WHITE).setOverflow(TextOverflow.ELLIPSIS);
-        final Label quantity = Look.rich(this.ui, Look.span(" x ", Look.GRAY), Look.span(Look.withSuffix(listing.quantity()), Look.GRAY));
+        final Image icon = this.ui.image(Icons.of(listing.item()))
+                .setTooltip(listing.item().tooltip())
+                .setAnchor(Anchor.MIDDLE_LEFT);
+        final Label name = Look.label(this.ui, listing.item().name(), Look.WHITE)
+                .setOverflow(TextOverflow.ELLIPSIS)
+                .setAlignment(HorizontalAlignment.STRETCH, VerticalAlignment.MIDDLE);
+        final Label quantity = Look.rich(this.ui, Look.span(" x ", Look.GRAY),
+                        Look.span(Look.withSuffix(listing.quantity()), Look.GRAY))
+                .setAnchor(Anchor.MIDDLE_LEFT);
         if (listing.quantity() >= 1_000_000L) {
             quantity.setTooltip(Look.currency(BigDecimal.valueOf(listing.quantity())));
         }
-        final Label seller = this.ui.label(listing.seller()).setStyle(Look.text(Look.GRAY).withItalic(true));
-        final Label price = Look.rich(this.ui, Look.span(Look.withSuffix(listing.price()), Look.GOLD), Look.span("/ea", Look.GRAY))
-                .setTextScale(0.8f);
-        price.setTooltip("Total: " + Look.withSuffix(listing.price().multiply(BigDecimal.valueOf(listing.quantity()))));
+        final Label seller = this.ui.label(listing.seller())
+                .setStyle(Look.text(Look.GRAY).withItalic(true))
+                .setAnchor(Anchor.MIDDLE_RIGHT);
+        final BigDecimal total = listing.price().multiply(BigDecimal.valueOf(listing.quantity()));
+        final Label price = Look.rich(this.ui, Look.span(Look.withSuffix(listing.price()), Look.GOLD),
+                        Look.span("/ea", Look.GRAY))
+                .setTextScale(0.8f)
+                .setTooltip("Total: " + Look.withSuffix(total))
+                .setAnchor(Anchor.MIDDLE_RIGHT);
 
         final GridPanel cell = Look.grid(this.ui, GridLength.fixed(16), GridLength.weighted(1), GridLength.auto(),
-                GridLength.auto(), GridLength.auto()).rows(GridLength.weighted(1)).setSpacing(4, 0);
-        cell.setPadding(Look.pad(3, 0));
-        cell.add(icon.setAnchor(Anchor.MIDDLE_LEFT), 0, 0)
-                .add(name.setAlignment(HorizontalAlignment.STRETCH, VerticalAlignment.MIDDLE), 0, 1)
-                .add(quantity.setAnchor(Anchor.MIDDLE_LEFT), 0, 2)
-                .add(price.setAnchor(Anchor.MIDDLE_RIGHT), 0, 4);
+                        GridLength.auto(), GridLength.auto())
+                .rows(GridLength.weighted(1))
+                .setSpacing(4, 0)
+                .setPadding(Look.pad(3, 0))
+                .add(icon, 0, 0)
+                .add(name, 0, 1)
+                .add(quantity, 0, 2)
+                .add(price, 0, 4);
         if (!listing.seller().equals(ExchangeData.PLAYER)) {
-            cell.add(seller.setAnchor(Anchor.MIDDLE_RIGHT), 0, 3);
+            cell.add(seller, 0, 3);
         } else {
             cell.setBorder(Border.of(Look.AQUA, 1f));
         }
@@ -241,23 +305,35 @@ public final class ExchangeScreen implements Screen {
     }
 
     private Component<?> listableCell(final Stock stock) {
-        final Image icon = this.ui.image(Icons.of(stock.item())).setTooltip(stock.item().tooltip());
-        final Label name = Look.label(this.ui, stock.item().name(), Look.WHITE).setOverflow(TextOverflow.ELLIPSIS);
-        final Label quantity = Look.rich(this.ui, Look.span(" x " + Look.withSuffix(stock.quantity()), Look.GRAY));
+        final Image icon = this.ui.image(Icons.of(stock.item()))
+                .setTooltip(stock.item().tooltip())
+                .setAnchor(Anchor.MIDDLE_LEFT);
+        final Label name = Look.label(this.ui, stock.item().name(), Look.WHITE)
+                .setOverflow(TextOverflow.ELLIPSIS)
+                .setAlignment(HorizontalAlignment.STRETCH, VerticalAlignment.MIDDLE);
+        final Label quantity = Look.rich(this.ui, Look.span(" x " + Look.withSuffix(stock.quantity()), Look.GRAY))
+                .setAnchor(Anchor.MIDDLE_LEFT);
         final GridPanel cell = Look.grid(this.ui, GridLength.fixed(16), GridLength.weighted(1), GridLength.auto(),
-                GridLength.auto(), GridLength.fixed(5)).rows(GridLength.weighted(1)).setSpacing(4, 0);
-        cell.setPadding(new Insets(3, 0, 0, 0));
-        cell.add(icon.setAnchor(Anchor.MIDDLE_LEFT), 0, 0)
-                .add(name.setAlignment(HorizontalAlignment.STRETCH, VerticalAlignment.MIDDLE), 0, 1)
-                .add(quantity.setAnchor(Anchor.MIDDLE_LEFT), 0, 2);
+                        GridLength.auto(), GridLength.fixed(5))
+                .rows(GridLength.weighted(1))
+                .setSpacing(4, 0)
+                .setPadding(new Insets(3, 0, 0, 0))
+                .add(icon, 0, 0)
+                .add(name, 0, 1)
+                .add(quantity, 0, 2);
         if (stock.listed()) {
-            final Label price = Look.rich(this.ui, Look.span(Look.withSuffix(stock.price()), Look.GOLD), Look.span("/ea", Look.GRAY))
-                    .setTextScale(0.8f);
-            price.setTooltip("Total: " + Look.withSuffix(stock.price().multiply(BigDecimal.valueOf(stock.quantity()))));
-            final AnchorPanel strip = this.ui.anchorPanel();
-            strip.setBackground(Paint.solid(Look.DARK_GREEN));
-            strip.setTooltip("Listed for sale");
-            cell.add(price.setAnchor(Anchor.MIDDLE_RIGHT), 0, 3).add(strip.setAnchor(Anchor.FILL), 0, 4);
+            final BigDecimal total = stock.price().multiply(BigDecimal.valueOf(stock.quantity()));
+            final Label price = Look.rich(this.ui, Look.span(Look.withSuffix(stock.price()), Look.GOLD),
+                            Look.span("/ea", Look.GRAY))
+                    .setTextScale(0.8f)
+                    .setTooltip("Total: " + Look.withSuffix(total))
+                    .setAnchor(Anchor.MIDDLE_RIGHT);
+            final AnchorPanel strip = this.ui.anchorPanel()
+                    .setBackground(Paint.solid(Look.DARK_GREEN))
+                    .setTooltip("Listed for sale")
+                    .setAnchor(Anchor.FILL);
+            cell.add(price, 0, 3)
+                    .add(strip, 0, 4);
         }
         return cell;
     }
@@ -275,7 +351,8 @@ public final class ExchangeScreen implements Screen {
     }
 
     private void search() {
-        this.results = this.data.search(this.itemName.text(), this.seller.text(), this.sort.selected().orElse(Sort.CREATED_ASC));
+        final Sort order = this.sort.selected().orElse(Sort.CREATED_ASC);
+        this.results = this.data.search(this.itemName.text(), this.seller.text(), order);
         this.setPage(0);
     }
 
@@ -299,15 +376,18 @@ public final class ExchangeScreen implements Screen {
             this.data.market.remove(listing);
         } else {
             ExchangeData.replace(this.data.market, listing, old -> old.quantity() - amount <= 0 ? null
-                    : new Listing(old.record(), old.item(), old.quantity() - amount, old.price(), old.seller(), old.created()));
+                    : new Listing(old.record(), old.item(), old.quantity() - amount, old.price(), old.seller(),
+                            old.created()));
         }
-        this.results = this.data.search(this.itemName.text(), this.seller.text(), this.sort.selected().orElse(Sort.CREATED_ASC));
+        final Sort order = this.sort.selected().orElse(Sort.CREATED_ASC);
+        this.results = this.data.search(this.itemName.text(), this.seller.text(), order);
         this.setPage(this.pageIndex);
     }
 
     private void toggleListing(final Stock stock) {
         if (stock.listed()) {
-            ExchangeData.replace(this.data.mine, stock, old -> new Stock(old.record(), old.item(), old.quantity(), null, old.price()));
+            ExchangeData.replace(this.data.mine, stock,
+                    old -> new Stock(old.record(), old.item(), old.quantity(), null, old.price()));
             this.data.market.removeIf(listing -> listing.record() == stock.record());
             this.refreshListable();
             this.search();
@@ -317,7 +397,8 @@ public final class ExchangeScreen implements Screen {
             return;
         }
         ExchangeDialogs.listPrice(this.ui, stock, price -> {
-            ExchangeData.replace(this.data.mine, stock, old -> new Stock(old.record(), old.item(), old.quantity(), price, price));
+            ExchangeData.replace(this.data.mine, stock,
+                    old -> new Stock(old.record(), old.item(), old.quantity(), price, price));
             this.data.market.add(new Listing(stock.record(), stock.item(), stock.quantity(), price, ExchangeData.PLAYER,
                     this.data.market.size()));
             this.refreshListable();
@@ -338,8 +419,10 @@ public final class ExchangeScreen implements Screen {
         final Optional<Listing> selected = this.selectedListing();
         final long quantity = selected.map(Listing::quantity).orElse(0L);
         final int stack = selected.map(listing -> listing.item().maxStack()).orElse(64);
-        this.buyOne.setText(this.control ? "Delist" : "Buy 1").setEnabled(selected.isPresent());
-        this.buyStack.setText("Buy " + stack).setEnabled(quantity > 1 && quantity >= stack);
+        this.buyOne.setText(this.control ? "Delist" : "Buy 1")
+                .setEnabled(selected.isPresent());
+        this.buyStack.setText("Buy " + stack)
+                .setEnabled(quantity > 1 && quantity >= stack);
         this.buyQuantity.setEnabled(quantity > 1);
         this.buyAll.setEnabled(quantity > 1);
 
