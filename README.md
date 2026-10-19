@@ -17,9 +17,10 @@ This repository has the Java2D/Swing adapter. The Minecraft adapter lives in the
 | `core` | The implementation behind both. Only adapters use it directly. |
 | `canvas-swing` | The Java2D/Swing adapter: `StrataPanel` and `SwingSnapshot`. |
 | `sandbox` | A demo app written against the API only. |
-| `docs-examples` | The code the documentation site shows, compiled and tested by the build. |
 
-[docs/DESIGN.md](docs/DESIGN.md) covers the design and where its ideas come from (MalisisCore and Wintergreen). The Javadoc of `api` and `spi` is the contract, including what adapters must guarantee.
+[docs/DESIGN.md](docs/DESIGN.md) covers the design and where its ideas come from (MalisisCore and Wintergreen), and [docs/ROADMAP.md](docs/ROADMAP.md) tracks what is built and what is next. The Javadoc of `api` and `spi` is the contract, including what adapters must guarantee.
+
+The documentation site (guides, reference, platform notes and the compiled examples the pages show) is in the Strata-Docs repository, a sibling of this one at `../Strata-Docs`. It builds against this checkout, so check the two out side by side. Nothing is published yet.
 
 ## Writing a screen
 

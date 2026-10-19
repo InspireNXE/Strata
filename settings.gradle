@@ -21,5 +21,3 @@ include('core')
 // Java2D adapter and the sandbox app that runs on it
 include('canvas-swing')
 include('sandbox')
-// The code the documentation site shows, compiled so it stays correct
-include('docs-examples')
