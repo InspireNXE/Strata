@@ -467,7 +467,7 @@ public final class TextBoxImpl extends CustomComponent<TextBox> implements TextB
 
     private Label suggestionCell(final Suggestion suggestion) {
         final Label label = this.ui.label(suggestion.text()).setStyle(this.suggestionTextStyle);
-        label.setMargin(Insets.of(4f, 0f));
+        label.setMargin(4f, 0f);
         label.setOverflow(TextOverflow.ELLIPSIS);
         label.setAnchor(Anchor.MIDDLE_LEFT);
         return label;

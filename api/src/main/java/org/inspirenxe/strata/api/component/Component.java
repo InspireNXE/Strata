@@ -164,6 +164,30 @@ public interface Component<T extends Component<T>> extends EventTarget<T> {
     }
 
     /**
+     * Sets one margin for the left and right sides and another for the top and bottom.
+     *
+     * @param horizontal the margin on the left and right
+     * @param vertical the margin on the top and bottom
+     * @return this component
+     */
+    default T setMargin(final float horizontal, final float vertical) {
+        return this.setMargin(Insets.of(horizontal, vertical));
+    }
+
+    /**
+     * Sets the margin on each side.
+     *
+     * @param left the margin on the left
+     * @param top the margin on the top
+     * @param right the margin on the right
+     * @param bottom the margin on the bottom
+     * @return this component
+     */
+    default T setMargin(final float left, final float top, final float right, final float bottom) {
+        return this.setMargin(new Insets(left, top, right, bottom));
+    }
+
+    /**
      * Returns the minimum width.
      *
      * @return the minimum width; 0 by default

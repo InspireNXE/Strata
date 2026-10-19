@@ -138,7 +138,7 @@ public final class WindowImpl extends CustomContainer<Window> implements Window 
         this.titleSpan = TextSpan.of(title);
         this.closeSpan = TextSpan.of("x");
         this.closeHoveredSpan = this.closeSpan;
-        this.setPadding(Insets.of(3f));
+        this.setPadding(3f);
         this.setAnchor(Anchor.CENTER);
     }
 

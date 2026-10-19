@@ -55,7 +55,6 @@ import org.inspirenxe.strata.api.extension.CustomComponent;
 import org.inspirenxe.strata.api.extension.peer.ComponentHooks;
 import org.inspirenxe.strata.api.extension.peer.ComponentPeer;
 import org.inspirenxe.strata.api.extension.peer.ContainerPeer;
-import org.inspirenxe.strata.api.geometry.Insets;
 import org.inspirenxe.strata.api.layout.AbsolutePanel;
 import org.inspirenxe.strata.api.layout.Anchor;
 import org.inspirenxe.strata.api.layout.AnchorPanel;
@@ -198,7 +197,7 @@ public interface ComponentFactory {
         final Label label = this.label(text)
                 .setOverflow(TextOverflow.ELLIPSIS)
                 .setAnchor(Anchor.MIDDLE_LEFT);
-        return label.setMargin(Insets.of(CELL_PADDING, 0f));
+        return label.setMargin(CELL_PADDING, 0f);
     }
 
     /**

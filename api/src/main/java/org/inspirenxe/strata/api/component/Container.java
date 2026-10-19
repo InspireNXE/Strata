@@ -98,6 +98,30 @@ public interface Container<T extends Container<T>> extends Component<T>, HasCurs
     }
 
     /**
+     * Sets one padding for the left and right sides and another for the top and bottom.
+     *
+     * @param horizontal the padding on the left and right
+     * @param vertical the padding on the top and bottom
+     * @return this container
+     */
+    default T setPadding(final float horizontal, final float vertical) {
+        return this.setPadding(Insets.of(horizontal, vertical));
+    }
+
+    /**
+     * Sets the padding on each side.
+     *
+     * @param left the padding on the left
+     * @param top the padding on the top
+     * @param right the padding on the right
+     * @param bottom the padding on the bottom
+     * @return this container
+     */
+    default T setPadding(final float left, final float top, final float right, final float bottom) {
+        return this.setPadding(new Insets(left, top, right, bottom));
+    }
+
+    /**
      * Returns whether children are clipped to the container's bounds.
      *
      * @return true by default

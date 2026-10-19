@@ -155,4 +155,38 @@ public interface TextInput<S extends TextInput<S>> extends HasText<S>, EventTarg
      * @return this control
      */
     S setTextPadding(Insets padding);
+
+    /**
+     * Sets the same text padding on all four sides.
+     *
+     * @param all the text padding on every side
+     * @return this control
+     */
+    default S setTextPadding(final float all) {
+        return this.setTextPadding(Insets.of(all));
+    }
+
+    /**
+     * Sets one text padding for the left and right sides and another for the top and bottom.
+     *
+     * @param horizontal the text padding on the left and right
+     * @param vertical the text padding on the top and bottom
+     * @return this control
+     */
+    default S setTextPadding(final float horizontal, final float vertical) {
+        return this.setTextPadding(Insets.of(horizontal, vertical));
+    }
+
+    /**
+     * Sets the text padding on each side.
+     *
+     * @param left the text padding on the left
+     * @param top the text padding on the top
+     * @param right the text padding on the right
+     * @param bottom the text padding on the bottom
+     * @return this control
+     */
+    default S setTextPadding(final float left, final float top, final float right, final float bottom) {
+        return this.setTextPadding(new Insets(left, top, right, bottom));
+    }
 }

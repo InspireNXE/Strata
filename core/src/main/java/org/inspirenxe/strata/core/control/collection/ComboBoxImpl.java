@@ -25,7 +25,6 @@ import org.inspirenxe.strata.api.event.input.PointerButtonEvent;
 import org.inspirenxe.strata.api.extension.CustomComponent;
 import org.inspirenxe.strata.api.extension.MeasureContext;
 import org.inspirenxe.strata.api.extension.Painter;
-import org.inspirenxe.strata.api.geometry.Insets;
 import org.inspirenxe.strata.api.geometry.Rect;
 import org.inspirenxe.strata.api.geometry.Size;
 import org.inspirenxe.strata.api.input.Key;
@@ -313,7 +312,7 @@ public final class ComboBoxImpl<T> extends CustomComponent<ComboBox<T>> implemen
 
     private Label cell(final T option) {
         final Label label = this.ui.label(this.labelFunction.apply(option)).setStyle(this.textStyle);
-        label.setMargin(Insets.of(PADDING, 0f));
+        label.setMargin(PADDING, 0f);
         label.setOverflow(TextOverflow.ELLIPSIS);
         label.setAnchor(Anchor.MIDDLE_LEFT);
         return label;

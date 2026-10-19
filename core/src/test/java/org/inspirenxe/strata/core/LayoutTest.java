@@ -17,7 +17,6 @@ package org.inspirenxe.strata.core;
 
 import org.inspirenxe.strata.api.ComponentFactory;
 import org.inspirenxe.strata.api.control.display.Label;
-import org.inspirenxe.strata.api.geometry.Insets;
 import org.inspirenxe.strata.api.geometry.Rect;
 import org.inspirenxe.strata.api.layout.Anchor;
 import org.inspirenxe.strata.api.layout.AnchorPanel;
@@ -56,7 +55,7 @@ class LayoutTest {
         final TestHost test = new TestHost(500, 500);
         final ComponentFactory ui = test.factory();
         final Box a = new Box(ui, 40, 10);
-        final Box b = new Box(ui, 60, 20).setMargin(new Insets(0, 5, 0, 5));
+        final Box b = new Box(ui, 60, 20).setMargin(0, 5);
         final Box c = new Box(ui, 10, 10).setAlignment(HorizontalAlignment.RIGHT, VerticalAlignment.TOP);
         final StackPanel stack = ui.stackPanel().setSpacing(4).add(a).add(b).add(c);
 
