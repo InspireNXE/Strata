@@ -1,6 +1,6 @@
 # Controls
 
-Strata's built-in controls are interfaces in the subpackages of `org.inspirenxe.strata.api.control`, made by the factory: `display` (`Label`, `Image`, `ProgressBar`, `Separator`), `button` (`Button`, `CheckBox`, `RadioButton`, `RadioGroup`, `ToggleSwitch`), `field` (`TextBox`, `TextArea`, `Spinner`, `Slider`), `collection` (`ListView`, `ComboBox`, `TableView`, `TreeView`, `GridView`), `menu` (`Menu`, `MenuBar`), `pane` (`TabBar`, `Expander`, `SplitPane`) and `window` (`Window`, `MessageBox`). Each one has [events](events.md): a request (Pre) for each change the user can make, which a handler can cancel or rewrite, and a report (Post) for each change from any source. Each section below lists them in an Events table. Their theme keys are listed on each control below and in the [theme key reference](../reference/theme-keys.md). Scrolling is a container, [`ScrollPanel`](layout.md#scrollpanel), and popups, dialogs and tooltips are in [Overlays and tooltips](overlays.md).
+Strata's built-in controls are interfaces in the subpackages of `org.inspirenxe.strata.api.control`, made by the factory: `display` (`Label`, `Image`, `ProgressBar`, `BusyIndicator`, `Separator`), `button` (`Button`, `CheckBox`, `RadioButton`, `RadioGroup`, `ToggleSwitch`), `field` (`TextBox`, `TextArea`, `Spinner`, `Slider`), `collection` (`ListView`, `ComboBox`, `TableView`, `TreeView`, `GridView`), `menu` (`Menu`, `MenuBar`), `pane` (`TabBar`, `Expander`, `SplitPane`, `ScrollBar`) and `window` (`Window`, `MessageBox`). Each one has [events](events.md): a request (Pre) for each change the user can make, which a handler can cancel or rewrite, and a report (Post) for each change from any source. Each section below lists them in an Events table. Their theme keys are listed on each control below and in the [theme key reference](../reference/theme-keys.md). Scrolling is a container, [`ScrollPanel`](layout.md#scrollpanel), and popups, dialogs and tooltips are in [Overlays and tooltips](overlays.md).
 
 ## Attributes
 
@@ -8,11 +8,11 @@ Controls that do the same kind of thing share small interfaces called attributes
 
 | Attribute | Package | What it adds | Events | Controls |
 |---|---|---|---|---|
-| `HasText` | `text` | `text()`, `setText` | | `Button`, `CheckBox`, `RadioButton`, `ToggleSwitch`, `Label`, `ProgressBar`, and through `TextInput` the text fields |
+| `HasText` | `text` | `text()`, `setText` | | `Button`, `CheckBox`, `RadioButton`, `ToggleSwitch`, `Label`, `ProgressBar`, `BusyIndicator`, and through `TextInput` the text fields |
 | `Titled` | `text` | `title()`, `setTitle` | | `Window`, `Expander` |
 | `TextInput` | `text` | the caret, the selection, `setMaxLength`, `setReadOnly`, `setTextPadding` | `EDIT`, `EDITED` | `TextBox`, `TextArea` |
 | `Toggle` | `value` | `isSelected()`, `setSelected`, `toggle()` | `TOGGLE`, `TOGGLED` | `CheckBox`, `ToggleSwitch`, `RadioButton` |
-| `Ranged` | `value` | `value()`, `setValue`, `min()`, `max()`, `setRange` | `CHANGE`, `CHANGED` | `Slider`, `Spinner`, `ProgressBar` |
+| `Ranged` | `value` | `value()`, `setValue`, `min()`, `max()`, `setRange` | `CHANGE`, `CHANGED` | `Slider`, `Spinner`, `ProgressBar`, `ScrollBar` |
 | `Stepped` | `value` | `Ranged` plus `step()`, `setStep` | | `Slider`, `Spinner` |
 | `ItemSource` | `item` | `items()`, `setItems`, `refresh()`, `setKeyFunction` | | `ListView`, `TableView`, `TreeView`, `ComboBox`, `GridView` |
 | `CellSource` | `item` | `setCellFactory` | | `ListView`, `TreeView`, `GridView` |
@@ -164,7 +164,7 @@ Themes built from images can draw the check mark into the checked faces and leav
 
 ## Slider
 
-A horizontal slider that picks a number from a range.
+A slider that picks a number from a range. It runs across by default; `setOrientation(Orientation.VERTICAL)`, or `factory.slider(Orientation.VERTICAL)`, stands it up with the minimum at the bottom.
 
 ```java
 --8<-- "controls/ControlExamples.java:slider"
@@ -176,6 +176,7 @@ A horizontal slider that picks a number from a range.
 | `setStep(step)` | 0, continuous | Values snap to `min + k * step`. The maximum is always reachable, even off that grid. |
 | `setValue(value)` | 0 | Clamped and snapped. NaN throws. Works while disabled. |
 | `setLabel(DoubleFunction<String>)` | none | Text drawn centered over the track, recomputed when the value changes. Text wider than the slider is cut off. |
+| `setOrientation(orientation)` | `HORIZONTAL` | `VERTICAL` runs up from the bottom. The value is kept. |
 | `keyStep()` | | The step, or a hundredth of the range without one |
 
 | Event | Kind | Fires |
@@ -193,11 +194,11 @@ Whole numbers come from a step of 1:
 
 Input:
 
-- A left press anywhere on the slider moves the thumb's center to the pointer. Dragging then follows the pointer, even outside the slider, once it has moved past the 4-unit drag threshold.
-- While focused, Left and Down lower the value by the key step and Right and Up raise it. Page Down and Page Up move ten key steps, and Home and End go to the ends. Held keys repeat.
+- A left press anywhere on the slider moves the thumb's center to the pointer. Dragging then follows the pointer, even outside the slider, once it has moved past the 4-unit drag threshold. A vertical slider follows only the pointer's height.
+- While focused, Left and Down lower the value by the key step and Right and Up raise it, in either orientation. Page Down and Page Up move ten key steps, and Home and End go to the ends. Held keys repeat.
 - Scrolling is ignored, so a scroll over a slider reaches its ancestors and a scrolling panel still scrolls.
 
-It is focusable and tabbable, shows the hand cursor, and wants 150 by 20 units. Stretch it or set a width to change its length. The thumb is 8 units wide and as tall as the slider.
+It is focusable and tabbable and shows the hand cursor. A horizontal slider wants 150 by 20 units and a vertical one 20 by 150; stretch it or set its length to change that. The thumb is 8 units along the track and spans the slider across it.
 
 | Key | Required | Used for |
 |---|---|---|
@@ -208,8 +209,6 @@ It is focusable and tabbable, shows the hand cursor, and wants 150 by 20 units. 
 | `slider.thumb.hovered` | yes | The thumb while the slider is hovered, focused or pressed |
 | `slider.thumb.disabled` | no | Falls back to `slider.thumb` |
 | `slider.text`, `slider.text.disabled` | no | The label |
-
-There is no vertical slider yet.
 
 ## The controls together
 
@@ -485,7 +484,37 @@ ProgressBar quota = factory.progressBar()
         .setText(used + "/" + limit);
 ```
 
-The range is 0 to 1 by default, so the value is the fraction filled. `setValue` clamps to the range and NaN throws. `setRange` needs `max` above `min` and clamps the value into it. Every change of the value reports `Ranged.CHANGED`. Keys: `progress.track` and `progress.fill` (paints, required) and `progress.text` (text style, optional).
+The range is 0 to 1 by default, so the value is the fraction filled. `setValue` clamps to the range and NaN throws. `setRange` needs `max` above `min` and clamps the value into it. Keys: `progress.track` and `progress.fill` (paints, required), `progress.segment` (paint, optional, falls back to `progress.fill`) and `progress.text` (text style, optional).
+
+For work whose length is not known, `setIndeterminate(true)` draws a moving segment instead of the fill. The segment is a quarter of the bar's width, at least 8 units, and slides in at the left and out at the right once every 1.5 seconds, by the host's clock, in whole units. The value and the caption are kept, and `setIndeterminate(false)` shows the value again.
+
+```java
+ProgressBar download = factory.progressBar()
+        .setIndeterminate(true)
+        .setText("Connecting");
+```
+
+| Event | Kind | Fires |
+|---|---|---|
+| `Ranged.CHANGED` | Post | After every change of the value, from `setValue` or from `setRange` clamping it. The bar has no input, so it never fires `Ranged.CHANGE`. Turning indeterminate on or off fires nothing. |
+
+## BusyIndicator
+
+A small sign that something is under way, like a "joining" or "loading" screen: three dots, one of them lit, with an optional caption above.
+
+```java
+BusyIndicator joining = factory.busyIndicator("Joining world");
+```
+
+The lit dot moves from the first dot to the last and back, one step every 300 milliseconds by the host's clock, for as long as the indicator is shown. Hide or remove it when the work is done. The dots are 4 units square and 4 apart, centered at the bottom of the bounds, and the caption sits centered 4 units above them. It asks for the wider of the caption and the dots (20 units), and for 4 units of height, plus one line and 4 with a caption. It is not focusable and takes no input.
+
+| Key | Required | Used for |
+|---|---|---|
+| `busy.dot` | yes | Each unlit dot |
+| `busy.dot.active` | yes | The lit dot |
+| `busy.text` | no | The caption. Falls back to the default text style. |
+
+It fires no events, since the user cannot change anything on it, and `setText` reports nothing.
 
 ## Separator
 
@@ -767,6 +796,53 @@ Keys: `split.divider` and `split.divider.hovered` (paints, optional). The divide
 | `SplitPane.MOVE` | Pre | For each drag step that would move the divider, with the position already kept within the minimum sizes |
 | `SplitPane.MOVED` | Post | After every move, including `setPosition` |
 
+## ScrollBar
+
+A scroll bar on its own, for a component that scrolls its content itself, such as a custom list, a map or a chat log. [`ScrollPanel`](layout.md#scrollpanel), `ListView` and `TextArea` draw their own bars and do not need one.
+
+```java
+ScrollBar bar = factory.scrollBar()
+        .setExtent(log.viewHeight(), log.contentHeight())
+        .onEvent(Ranged.CHANGED, event -> log.setScrollY(event.value()));
+```
+
+The value is the scroll offset, as in a scroll panel: how far the content is scrolled down or right. `setExtent(viewport, extent)` sets the range to 0 through `extent - viewport` and the visible amount to `viewport`, which sizes the thumb and the page. Call it again whenever either length changes; the offset is clamped into the new range. A range with `min` equal to `max` means there is nothing to scroll, and a new bar starts that way.
+
+| Method | Default | Notes |
+|---|---|---|
+| `setExtent(viewport, extent)` | | Sets the range and the visible amount from the two lengths. Negative or infinite lengths throw. |
+| `setRange(min, max)` | 0 to 0 | `min` may equal `max`, but not exceed it. Clamps the offset. |
+| `setVisibleAmount(amount)` | 0 | The viewport's length in the value's units. Changes neither the offset nor any event. |
+| `setValue(offset)` | 0 | Clamped. NaN throws. |
+| `setScrollRate(rate)` | 10 | How far a scroll notch or an arrow key moves |
+| `setOrientation(orientation)` | `VERTICAL` | `HORIZONTAL` for content that scrolls sideways |
+| `setSlim(boolean)` | no | A 2-unit bar with a thumb at least 16 long, drawn with the `scroll.slim.*` keys, for chat logs, tooltips and other tight places |
+
+Input:
+
+- A left press on the thumb grabs it, and dragging moves it, even outside the bar. A left press on the track beside the thumb moves one page toward the pointer. A page is the visible amount less one scroll rate, and at least one rate.
+- Scrolling over the bar moves it by the scroll rate a notch. A horizontal bar takes vertical scrolling when there is no horizontal scrolling. The bar consumes a scroll only when the offset changed, so a scroll at the end reaches a scroll panel around it.
+- The bar is not focusable, because the content it scrolls usually takes the keys. Made focusable with `setFocusable(true)`, it moves on Up and Down (vertical) or Left and Right (horizontal) by the scroll rate, Page Up and Page Down by a page, and Home and End to the ends.
+
+The track covers the bounds and the thumb spans the bar across. Along the bar, the thumb's share of the track is the visible amount over the content's length, at least 32 units (16 when slim) and at most the track less 8, as in a scroll panel. With nothing to scroll the thumb fills the track. A vertical bar wants 6 by 100 units and a horizontal one 100 by 6 (2 thick when slim); stretch it along the content it scrolls. It shows the hand cursor.
+
+A standard bar reads the same keys as a scroll panel's bars, so the two look alike. A slim bar's keys each fall back to the standard one, so a theme without them still draws it.
+
+| Key | Required | Used for |
+|---|---|---|
+| `scroll.track` | no | The track. Nothing if missing. |
+| `scroll.thumb` | yes | The thumb |
+| `scroll.thumb.hovered` | no | The thumb under the pointer or being dragged. Falls back to `scroll.thumb`. |
+| `scroll.thumb.disabled` | no | The thumb of a disabled bar, or of one with nothing to scroll. Falls back to `scroll.thumb`. |
+| `scroll.slim.track` | no | A slim bar's track. Falls back to `scroll.track`. |
+| `scroll.slim.thumb` | no | A slim bar's thumb. Falls back to `scroll.thumb`. |
+| `scroll.slim.thumb.hovered`, `scroll.slim.thumb.disabled` | no | Fall back to `scroll.slim.thumb` |
+
+| Event | Kind | Fires |
+|---|---|---|
+| `Ranged.CHANGE` | Pre | When a press on the track, a thumb drag move, a scroll or a key would change the offset, with the new offset already clamped. Cancel to stay put, or set another offset, which is clamped again. |
+| `Ranged.CHANGED` | Post | After every change of the offset, including `setValue`, and `setRange` or `setExtent` clamping it. A change of the visible amount alone fires nothing. |
+
 ## GridView
 
 Equal square cells over a list of items, such as an inventory, an icon picker or an image gallery.
@@ -798,4 +874,4 @@ There is one cell per item, null items being empty cells, in rows of `setColumns
 
 ## Controls that do not exist yet
 
-There is no vertical slider, multiple selection in lists, tables and trees, or editable table cell. You can build them on `CustomComponent`, or on `CustomComposite` for one made of other components; the [extending guide](extending.md) builds a switch. [Status and limitations](../help/status.md) lists what is planned.
+There is no multiple selection in lists, tables and trees, and no editable table cell. You can build them on `CustomComponent`, or on `CustomComposite` for one made of other components; the [extending guide](extending.md) builds a switch. [Status and limitations](../help/status.md) lists what is planned.

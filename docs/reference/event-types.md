@@ -53,6 +53,6 @@ Every type is a constant in `EventTypes`. All positions in pointer events are in
 | `CHAR` | | | | Inserts the character and consumes it |
 | `FOCUS_GAINED` | | | | Moves the caret to the end |
 
-`Label`, `Image` and the plain panels have no default behavior. The newer controls document theirs in the [controls guide](../guides/controls.md): a `ScrollPanel` scrolls on `SCROLL`, unused keys and drags of its bar; a `ListView` selects on `POINTER_PRESS`, activates on a double press or Enter, and moves on keys; a `ComboBox` opens on `CLICK` and changes on keys; a `Window` moves on drags of its title bar and closes on Escape; a `TabBar` selects on clicks and Left and Right. Each consumes what it acts on.
+`Label`, `Image` and the plain panels have no default behavior. The newer controls document theirs in the [controls guide](../guides/controls.md): a `ScrollPanel` scrolls on `SCROLL`, unused keys and drags of its bar; a `ListView` selects on `POINTER_PRESS`, activates on a double press or Enter, and moves on keys; a `ComboBox` opens on `CLICK` and changes on keys; a `Window` moves on drags of its title bar and closes on Escape; a `TabBar` selects on clicks and Left and Right; a `ScrollBar` pages on `POINTER_PRESS` on its track, follows drags of its thumb, and moves on `SCROLL` and, when made focusable, on keys. Each consumes what it acts on.
 
 Anything not listed does nothing by default and is not consumed. Disabled controls do nothing.

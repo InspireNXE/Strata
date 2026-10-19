@@ -74,6 +74,18 @@ A style set with `Label.setStyle` overrides the key.
 | `scroll.thumb.hovered` | `ScrollPanel.STYLE_THUMB_HOVERED` | paint | no | `scroll.thumb` |
 | `scroll.track` | `ScrollPanel.STYLE_TRACK` | paint | no | Nothing |
 
+## ScrollBar
+
+A standard scroll bar reads the `scroll.*` keys above (`ScrollBar.STYLE_TRACK`, `STYLE_THUMB` and `STYLE_THUMB_HOVERED` are the same strings), plus these.
+
+| Key | Constant | Kind | Required | Fallback |
+|---|---|---|---|---|
+| `scroll.thumb.disabled` | `ScrollBar.STYLE_THUMB_DISABLED` | paint | no | `scroll.thumb` |
+| `scroll.slim.track` | `ScrollBar.STYLE_SLIM_TRACK` | paint | no | `scroll.track` |
+| `scroll.slim.thumb` | `ScrollBar.STYLE_SLIM_THUMB` | paint | no | `scroll.thumb` |
+| `scroll.slim.thumb.hovered` | `ScrollBar.STYLE_SLIM_THUMB_HOVERED` | paint | no | `scroll.slim.thumb` |
+| `scroll.slim.thumb.disabled` | `ScrollBar.STYLE_SLIM_THUMB_DISABLED` | paint | no | `scroll.slim.thumb` |
+
 ## ListView
 
 | Key | Constant | Kind | Required | Fallback |
@@ -127,7 +139,16 @@ The open list also uses the `ListView` and `ScrollPanel` keys.
 | `progress.track` | `ProgressBar.STYLE_TRACK` | paint | yes | |
 | `progress.fill` | `ProgressBar.STYLE_FILL` | paint | yes | |
 | `progress.text` | `ProgressBar.STYLE_TEXT` | text style | no | `TextStyle.DEFAULT` |
+| `progress.segment` | `ProgressBar.STYLE_SEGMENT` | paint | no | `progress.fill` |
 | `separator` | `Separator.STYLE_LINE` | paint | yes | |
+
+## BusyIndicator
+
+| Key | Constant | Kind | Required | Fallback |
+|---|---|---|---|---|
+| `busy.dot` | `BusyIndicator.STYLE_DOT` | paint | yes | |
+| `busy.dot.active` | `BusyIndicator.STYLE_DOT_ACTIVE` | paint | yes | |
+| `busy.text` | `BusyIndicator.STYLE_TEXT` | text style | no | `TextStyle.DEFAULT` |
 
 ## RadioButton
 
@@ -266,6 +287,11 @@ Both read the `ListView` and `ScrollPanel` keys for their rows.
 | `scroll.thumb` | solid `0xFF5A5E66` |
 | `scroll.thumb.hovered` | solid `0xFF7A7F88` |
 | `scroll.track` | solid `0xFF1B1C1F` |
+| `scroll.thumb.disabled` | solid `0xFF3A3A3A` |
+| `scroll.slim.track` | solid `0xFF2B2D31` |
+| `scroll.slim.thumb` | solid `0xFF8A8F98` |
+| `scroll.slim.thumb.hovered` | solid `0xFFE0E0E0` |
+| `scroll.slim.thumb.disabled` | solid `0xFF3A3A3A` |
 | `list.row` | solid `0xFF1F2024` |
 | `list.row.hovered` | solid `0xFF2E3136` |
 | `list.row.selected` | solid `0xFF3A4D6E` |
@@ -291,6 +317,10 @@ Both read the `ListView` and `ScrollPanel` keys for their rows.
 | `progress.track` | solid `0xFF1B1C1F` |
 | `progress.fill` | solid `0xFF2E7D32` |
 | `progress.text` | `0xFFF0F0F0` |
+| `progress.segment` | solid `0xFF43A047` |
+| `busy.dot` | solid `0xFF5A5E66` |
+| `busy.dot.active` | solid `0xFFE0E0E0` |
+| `busy.text` | `0xFFE0E0E0` |
 | `separator` | solid `0xFF3C3F44` |
 | `radio.normal`, `radio.selected` | solid `0xFF1B1C1F` |
 | `radio.hovered`, `radio.selected.hovered` | solid `0xFF2E3136` |

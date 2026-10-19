@@ -24,7 +24,7 @@ import org.inspirenxe.strata.api.text.TextSpan;
 import org.inspirenxe.strata.api.text.TextStyle;
 import org.inspirenxe.strata.api.theme.Paint;
 import org.inspirenxe.strata.api.theme.Theme;
-import org.inspirenxe.strata.core.layout.ScrollBar;
+import org.inspirenxe.strata.core.layout.ScrollTrack;
 
 import java.util.Arrays;
 import java.util.Objects;
@@ -60,7 +60,7 @@ public final class TextAreaImpl extends CustomComponent<TextArea> implements Tex
     private static final float LINE_BREAK_WIDTH = 3f;
 
     private final StringBuilder buffer;
-    private final ScrollBar bar;
+    private final ScrollTrack bar;
     private final Runnable drawContent;
     private int maxLength;
     private boolean wrap;
@@ -137,7 +137,7 @@ public final class TextAreaImpl extends CustomComponent<TextArea> implements Tex
     public TextAreaImpl(final ComponentFactory ui) {
         super(ui);
         this.buffer = new StringBuilder();
-        this.bar = new ScrollBar(true);
+        this.bar = new ScrollTrack(true);
         this.drawContent = this::drawContent;
         this.maxLength = Integer.MAX_VALUE;
         this.wrap = true;

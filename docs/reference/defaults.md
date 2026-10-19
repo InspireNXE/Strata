@@ -64,12 +64,13 @@ Every number Strata picks for you.
 | | Gap between box and caption | 4 |
 | | Mark inset | a fifth of the box size on each side |
 | | Cursor | `HAND` |
-| `Slider` | Desired size | 150 by 20 |
+| `Slider` | Orientation | `HORIZONTAL` |
+| | Desired size | 150 by 20, or 20 by 150 when vertical |
 | | Range | 0 to 1 |
 | | Step | 0 (continuous) |
 | | Key step | the step, or a hundredth of the range |
 | | Page Up and Page Down | 10 key steps |
-| | Thumb | 8 wide, the slider's full height |
+| | Thumb | 8 along the track, the slider's full thickness across it |
 | | Cursor | `HAND` |
 | `TextBox` | Desired width | 120 |
 | | Text padding | 4 left and right, 5 top and bottom |
@@ -97,6 +98,10 @@ Every number Strata picks for you.
 | | Selected | the first tab added |
 | `ProgressBar` | Desired size | 100 wide, one line plus 4 |
 | | Range, value | 0 to 1, 0 |
+| | Indeterminate | no; when on, a segment a quarter of the width (at least 8) crosses every 1.5 s |
+| `BusyIndicator` | Dots | 3, each 4 square, 4 apart |
+| | Lit dot | moves first, second, third, second, one step every 300 ms |
+| | Desired size | 20 by 4; with a caption, the wider of it and 20, by one line plus 8 |
 | `Separator` | Thickness | 1 |
 | `RadioButton` | Box, gap and cursor | as `CheckBox` |
 | | Mark inset | three tenths of the box size on each side |
@@ -129,6 +134,14 @@ Every number Strata picks for you.
 | `SplitPane` | Divider | 4 thick |
 | | Position | 0.5 |
 | | Minimum side when dragging | 20 |
+| `ScrollBar` | Orientation | `VERTICAL` |
+| | Desired size | 6 by 100, or 100 by 6 across; 2 thick when slim |
+| | Range, visible amount, value | 0 to 0, 0, 0: nothing to scroll |
+| | Scroll rate | 10 a notch or arrow key |
+| | Page | the visible amount less one scroll rate, at least one rate |
+| | Thumb | at least 32 long (16 when slim), at most the track less 8 |
+| | Focusable | no |
+| | Cursor | `HAND` |
 | `GridView` | Columns, cell size, spacing | 9, 18, 0 |
 | | Content inset | 1 |
 | | Selectable | no |

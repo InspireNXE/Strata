@@ -12,6 +12,7 @@ import org.inspirenxe.strata.api.control.collection.ListView;
 import org.inspirenxe.strata.api.control.collection.TableColumn;
 import org.inspirenxe.strata.api.control.collection.TableView;
 import org.inspirenxe.strata.api.control.collection.TreeView;
+import org.inspirenxe.strata.api.control.display.BusyIndicator;
 import org.inspirenxe.strata.api.control.display.Image;
 import org.inspirenxe.strata.api.control.display.Label;
 import org.inspirenxe.strata.api.control.display.ProgressBar;
@@ -27,6 +28,7 @@ import org.inspirenxe.strata.api.control.menu.MenuItem;
 import org.inspirenxe.strata.api.control.menu.MenuSeparator;
 import org.inspirenxe.strata.api.control.menu.SubmenuItem;
 import org.inspirenxe.strata.api.control.pane.Expander;
+import org.inspirenxe.strata.api.control.pane.ScrollBar;
 import org.inspirenxe.strata.api.control.pane.SplitPane;
 import org.inspirenxe.strata.api.control.pane.Tab;
 import org.inspirenxe.strata.api.control.pane.TabBar;
@@ -57,6 +59,7 @@ import org.inspirenxe.strata.core.control.collection.ListViewImpl;
 import org.inspirenxe.strata.core.control.collection.TableColumnImpl;
 import org.inspirenxe.strata.core.control.collection.TableViewImpl;
 import org.inspirenxe.strata.core.control.collection.TreeViewImpl;
+import org.inspirenxe.strata.core.control.display.BusyIndicatorImpl;
 import org.inspirenxe.strata.core.control.display.ImageImpl;
 import org.inspirenxe.strata.core.control.display.LabelImpl;
 import org.inspirenxe.strata.core.control.display.ProgressBarImpl;
@@ -72,6 +75,7 @@ import org.inspirenxe.strata.core.control.menu.MenuItemImpl;
 import org.inspirenxe.strata.core.control.menu.MenuSeparatorImpl;
 import org.inspirenxe.strata.core.control.menu.SubmenuItemImpl;
 import org.inspirenxe.strata.core.control.pane.ExpanderImpl;
+import org.inspirenxe.strata.core.control.pane.ScrollBarImpl;
 import org.inspirenxe.strata.core.control.pane.SplitPaneImpl;
 import org.inspirenxe.strata.core.control.pane.TabBarImpl;
 import org.inspirenxe.strata.core.control.pane.TabImpl;
@@ -342,6 +346,16 @@ public final class ComponentFactoryImpl implements ComponentFactory {
     @Override
     public <T> GridView<T> gridView(final Function<? super T, ? extends Component<?>> cellFactory) {
         return new GridViewImpl<>(this, cellFactory);
+    }
+
+    @Override
+    public ScrollBar scrollBar() {
+        return new ScrollBarImpl(this);
+    }
+
+    @Override
+    public BusyIndicator busyIndicator() {
+        return new BusyIndicatorImpl(this);
     }
 
     @Override

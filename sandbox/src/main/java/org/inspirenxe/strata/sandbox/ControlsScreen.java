@@ -10,12 +10,16 @@ import org.inspirenxe.strata.api.control.collection.GridView;
 import org.inspirenxe.strata.api.control.collection.TableColumn;
 import org.inspirenxe.strata.api.control.collection.TableView;
 import org.inspirenxe.strata.api.control.collection.TreeView;
+import org.inspirenxe.strata.api.control.display.BusyIndicator;
 import org.inspirenxe.strata.api.control.display.Label;
+import org.inspirenxe.strata.api.control.display.ProgressBar;
+import org.inspirenxe.strata.api.control.field.Slider;
 import org.inspirenxe.strata.api.control.field.Spinner;
 import org.inspirenxe.strata.api.control.field.TextArea;
 import org.inspirenxe.strata.api.control.menu.Menu;
 import org.inspirenxe.strata.api.control.menu.MenuBar;
 import org.inspirenxe.strata.api.control.pane.Expander;
+import org.inspirenxe.strata.api.control.pane.ScrollBar;
 import org.inspirenxe.strata.api.control.pane.SplitPane;
 import org.inspirenxe.strata.api.geom.Insets;
 import org.inspirenxe.strata.api.geom.Rect;
@@ -47,7 +51,8 @@ import javax.imageio.ImageIO;
 
 /**
  * Shows the standard controls on one screen: a menu bar over a split pane, with a category tree on the left and the
- * other controls on the right. Uses the API only.
+ * other controls on the right. Under the tree are the range controls: a vertical slider, scroll bars and two busy
+ * signs. Uses the API only.
  */
 public final class ControlsScreen implements Screen {
     private ComponentFactory ui;
@@ -103,8 +108,15 @@ public final class ControlsScreen implements Screen {
                 .add(this.notes(ui))
                 .setAnchor(Anchor.FILL);
 
+        final Component<?> left = ui.gridPanel()
+                .rows(GridLength.weighted(1), GridLength.auto())
+                .columns(GridLength.weighted(1))
+                .add(this.tree, 0, 0)
+                .add(this.ranges(ui), 1, 0)
+                .setAnchor(Anchor.FILL);
+
         final SplitPane split = ui.splitPane(Orientation.HORIZONTAL)
-                .setFirst(this.tree)
+                .setFirst(left)
                 .setSecond(right)
                 .setPosition(0.24f)
                 .setAnchor(Anchor.FILL);
@@ -116,6 +128,50 @@ public final class ControlsScreen implements Screen {
                 .add(split, 1, 0)
                 .setAnchor(Anchor.FILL)
                 .setBackground(Paint.gradient(0xFF1E1F22, 0xFF111214));
+    }
+
+    private Component<?> ranges(final ComponentFactory ui) {
+        final Slider level = ui.slider(Orientation.VERTICAL)
+                .setRange(0, 10)
+                .setStep(1)
+                .setValue(7)
+                .setHeight(64);
+        final ScrollBar bar = ui.scrollBar()
+                .setExtent(40, 120)
+                .setValue(30)
+                .setHeight(64);
+        final ScrollBar slim = ui.scrollBar()
+                .setSlim(true)
+                .setExtent(40, 200)
+                .setValue(120)
+                .setHeight(64);
+        final ScrollBar across = ui.scrollBar(Orientation.HORIZONTAL)
+                .setExtent(50, 150)
+                .setValue(25)
+                .setAlignment(HorizontalAlignment.STRETCH, VerticalAlignment.TOP);
+        final ProgressBar loading = ui.progressBar()
+                .setIndeterminate(true)
+                .setText("Loading")
+                .setAlignment(HorizontalAlignment.STRETCH, VerticalAlignment.TOP);
+        final BusyIndicator joining = ui.busyIndicator("Joining")
+                .setAlignment(HorizontalAlignment.CENTER, VerticalAlignment.TOP);
+        final StackPanel column = ui.stackPanel()
+                .setSpacing(8)
+                .add(across)
+                .add(loading)
+                .add(joining)
+                .setAlignment(HorizontalAlignment.STRETCH, VerticalAlignment.TOP);
+
+        return ui.gridPanel()
+                .rows(GridLength.auto())
+                .columns(GridLength.auto(), GridLength.auto(), GridLength.auto(), GridLength.weighted(1))
+                .setSpacing(6, 0)
+                .add(level, 0, 0)
+                .add(bar, 0, 1)
+                .add(slim, 0, 2)
+                .add(column, 0, 3)
+                .setPadding(Insets.of(8))
+                .setAnchor(Anchor.FILL);
     }
 
     private Component<?> choices(final ComponentFactory ui) {

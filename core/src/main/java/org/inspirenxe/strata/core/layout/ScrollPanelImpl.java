@@ -31,8 +31,8 @@ public final class ScrollPanelImpl extends CustomContainer<ScrollPanel> implemen
     private static final Set<String> REQUIRED = Set.of(STYLE_THUMB);
     private static final float GUTTER = BAR_WIDTH + BAR_GAP;
 
-    private final ScrollBar verticalBar;
-    private final ScrollBar horizontalBar;
+    private final ScrollTrack verticalBar;
+    private final ScrollTrack horizontalBar;
     private ScrollPolicy horizontalPolicy;
     private ScrollPolicy verticalPolicy;
     private float rate;
@@ -66,8 +66,8 @@ public final class ScrollPanelImpl extends CustomContainer<ScrollPanel> implemen
      */
     public ScrollPanelImpl(final ComponentFactory ui) {
         super(ui);
-        this.verticalBar = new ScrollBar(true);
-        this.horizontalBar = new ScrollBar(false);
+        this.verticalBar = new ScrollTrack(true);
+        this.horizontalBar = new ScrollTrack(false);
         this.horizontalPolicy = ScrollPolicy.NEVER;
         this.verticalPolicy = ScrollPolicy.AUTO;
         this.rate = DEFAULT_SCROLL_RATE;

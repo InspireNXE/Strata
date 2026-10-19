@@ -3,11 +3,13 @@ package org.inspirenxe.strata.api.control.field;
 import org.inspirenxe.strata.api.component.Component;
 import org.inspirenxe.strata.api.control.attribute.value.Ranged;
 import org.inspirenxe.strata.api.control.attribute.value.Stepped;
+import org.inspirenxe.strata.api.layout.Orientation;
 
 import java.util.function.DoubleFunction;
 
 /**
- * A horizontal slider that picks a number from a range by dragging a thumb along a track.
+ * A slider that picks a number from a range by dragging a thumb along a track. It runs across by default; a
+ * {@linkplain #setOrientation vertical} slider runs up, with its minimum at the bottom.
  *
  * <h2>Values</h2>
  * <p>The value lies between {@link #min()} and {@link #max()}, 0 and 1 by default. With a {@linkplain #setStep
@@ -21,15 +23,18 @@ import java.util.function.DoubleFunction;
  *     pointer, once it has moved more than 4 units (the drag threshold), even outside the slider.</li>
  *     <li>While focused: Left and Down lower the value by the {@linkplain #keyStep() key step}, Right and Up raise it,
  *     Page Down and Page Up move by ten key steps, and Home and End go to the minimum and maximum. Held keys
- *     repeat.</li>
+ *     repeat. The keys are the same in both orientations, so Up raises a vertical slider and Right raises a
+ *     horizontal one.</li>
  * </ul>
  * <p>The slider consumes the presses, drags and keys it acts on. A disabled slider ignores input and draws its
  * disabled look. It does not react to scrolling, so a scroll over a slider reaches its ancestors.</p>
  *
- * <p>It is focusable and tabbable and shows the hand cursor. Its desired size is 150 by 20 units. The thumb is 8 units
- * wide and as tall as the slider; its left edge moves from the slider's left edge (at the minimum) to the slider's
- * right edge minus the thumb width (at the maximum). An optional {@linkplain #setLabel label} is drawn centered over
- * the track to show the setting.</p>
+ * <p>It is focusable and tabbable and shows the hand cursor. A horizontal slider wants 150 by 20 units, and its thumb
+ * is 8 units wide and as tall as the slider; the thumb's left edge moves from the slider's left edge (at the
+ * minimum) to the slider's right edge minus the thumb width (at the maximum). A vertical slider wants 20 by 150
+ * units, and its thumb is 8 units tall and as wide as the slider; the thumb's bottom edge moves from the slider's
+ * bottom edge (at the minimum) to its top edge plus the thumb height (at the maximum). An optional
+ * {@linkplain #setLabel label} is drawn centered over the track, in either orientation, to show the setting.</p>
  *
  * <h2>Events</h2>
  * <ul>
@@ -174,6 +179,22 @@ public interface Slider extends Component<Slider>, Stepped<Slider> {
      * @return the step, or a hundredth of the range when there is no step
      */
     double keyStep();
+
+    /**
+     * Returns which way the track runs.
+     *
+     * @return the orientation; {@link Orientation#HORIZONTAL} by default
+     */
+    Orientation orientation();
+
+    /**
+     * Sets which way the track runs. A horizontal slider has its minimum at the left, a vertical one at the bottom.
+     * The value is kept, and a new layout runs so the desired size follows.
+     *
+     * @param orientation the orientation
+     * @return this slider
+     */
+    Slider setOrientation(Orientation orientation);
 
     /**
      * Sets the text drawn centered over the track, computed from the value. It is recomputed whenever the value

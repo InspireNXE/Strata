@@ -10,6 +10,7 @@ import org.inspirenxe.strata.api.control.collection.ListView;
 import org.inspirenxe.strata.api.control.collection.GridView;
 import org.inspirenxe.strata.api.control.collection.TableView;
 import org.inspirenxe.strata.api.control.collection.TreeView;
+import org.inspirenxe.strata.api.control.display.BusyIndicator;
 import org.inspirenxe.strata.api.control.display.Label;
 import org.inspirenxe.strata.api.control.display.ProgressBar;
 import org.inspirenxe.strata.api.control.display.Separator;
@@ -18,6 +19,7 @@ import org.inspirenxe.strata.api.control.field.TextBox;
 import org.inspirenxe.strata.api.control.menu.Menu;
 import org.inspirenxe.strata.api.control.menu.MenuBar;
 import org.inspirenxe.strata.api.control.pane.Expander;
+import org.inspirenxe.strata.api.control.pane.ScrollBar;
 import org.inspirenxe.strata.api.control.pane.SplitPane;
 import org.inspirenxe.strata.api.control.pane.TabBar;
 import org.inspirenxe.strata.api.control.window.Window;
@@ -157,6 +159,15 @@ public final class Themes {
                 .textStyle(Overlays.STYLE_TOAST_TEXT, TextStyle.DEFAULT.withColor(0xFFF0F0F0))
                 .paint(Overlays.STYLE_BACKDROP, Paint.solid(0x60000000))
                 .textStyle(Tooltip.STYLE_TEXT, TextStyle.DEFAULT.withColor(0xFFF0F0F0))
+                .paint(ScrollBar.STYLE_THUMB_DISABLED, Paint.solid(0xFF3A3A3A))
+                .paint(ScrollBar.STYLE_SLIM_TRACK, Paint.solid(0xFF2B2D31))
+                .paint(ScrollBar.STYLE_SLIM_THUMB, Paint.solid(0xFF8A8F98))
+                .paint(ScrollBar.STYLE_SLIM_THUMB_HOVERED, Paint.solid(0xFFE0E0E0))
+                .paint(ScrollBar.STYLE_SLIM_THUMB_DISABLED, Paint.solid(0xFF3A3A3A))
+                .paint(ProgressBar.STYLE_SEGMENT, Paint.solid(0xFF43A047))
+                .paint(BusyIndicator.STYLE_DOT, Paint.solid(0xFF5A5E66))
+                .paint(BusyIndicator.STYLE_DOT_ACTIVE, Paint.solid(0xFFE0E0E0))
+                .textStyle(BusyIndicator.STYLE_TEXT, TextStyle.DEFAULT.withColor(0xFFE0E0E0))
                 .build();
     }
 }
