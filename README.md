@@ -67,3 +67,7 @@ Every control has a page in the gallery, which runs on the Java2D adapter from S
 ```bash
 ./gradlew run
 ```
+
+## License
+
+Strata is released under the Apache License, Version 2.0. See [LICENSE](LICENSE) and [NOTICE](NOTICE).
