@@ -34,6 +34,8 @@ import java.util.Optional;
 public final class TestPlatform implements Platform {
     public static final float CHAR_WIDTH = 6f;
     public static final float LINE_HEIGHT = 9f;
+    // Monospaced text measures wider, so tests can tell which style a span was measured in
+    public static final float MONO_CHAR_WIDTH = 7f;
 
     private final boolean sendsKeyRepeat;
     private long nanos;
@@ -65,7 +67,8 @@ public final class TestPlatform implements Platform {
         return new TextMetrics() {
             @Override
             public float width(final TextSpan span) {
-                return span.text().codePointCount(0, span.text().length()) * CHAR_WIDTH;
+                return span.text().codePointCount(0, span.text().length())
+                        * (span.style().monospace() ? MONO_CHAR_WIDTH : CHAR_WIDTH);
             }
 
             @Override
@@ -112,7 +115,7 @@ public final class TestPlatform implements Platform {
 
     @Override
     public Capabilities capabilities() {
-        return new Capabilities(this.sendsKeyRepeat);
+        return new Capabilities(this.sendsKeyRepeat, false);
     }
 
     public void setThemes(final ThemeSource themes) {

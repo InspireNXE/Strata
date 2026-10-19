@@ -33,12 +33,17 @@ import java.util.Set;
  * @param underline whether a line is drawn under the text
  * @param strikethrough whether a line is drawn through the text
  * @param shadow whether a darker copy is drawn one unit down and to the right
+ * @param monospace whether the text uses the engine's monospaced font, where every character has the same
+ *                  width, so code and columns line up. An engine without one uses its normal font; see
+ *                  {@code Capabilities.monospaceFont} in the SPI.
  */
-public record TextStyle(int color, boolean bold, boolean italic, boolean underline, boolean strikethrough, boolean shadow) {
+public record TextStyle(int color, boolean bold, boolean italic, boolean underline, boolean strikethrough,
+        boolean shadow,
+                        boolean monospace) {
     /**
-     * Opaque white, no decoration, no shadow.
+     * Opaque white, no decoration, no shadow, in the normal font.
      */
-    public static final TextStyle DEFAULT = new TextStyle(0xFFFFFFFF, false, false, false, false, false);
+    public static final TextStyle DEFAULT = new TextStyle(0xFFFFFFFF, false, false, false, false, false, false);
 
     /**
      * Returns a copy with another color.
@@ -47,7 +52,8 @@ public record TextStyle(int color, boolean bold, boolean italic, boolean underli
      * @return the new style
      */
     public TextStyle withColor(final int color) {
-        return new TextStyle(color, this.bold, this.italic, this.underline, this.strikethrough, this.shadow);
+        return new TextStyle(color, this.bold, this.italic, this.underline, this.strikethrough, this.shadow,
+                this.monospace);
     }
 
     /**
@@ -57,7 +63,8 @@ public record TextStyle(int color, boolean bold, boolean italic, boolean underli
      * @return the new style
      */
     public TextStyle withBold(final boolean bold) {
-        return new TextStyle(this.color, bold, this.italic, this.underline, this.strikethrough, this.shadow);
+        return new TextStyle(this.color, bold, this.italic, this.underline, this.strikethrough, this.shadow,
+                this.monospace);
     }
 
     /**
@@ -67,7 +74,8 @@ public record TextStyle(int color, boolean bold, boolean italic, boolean underli
      * @return the new style
      */
     public TextStyle withItalic(final boolean italic) {
-        return new TextStyle(this.color, this.bold, italic, this.underline, this.strikethrough, this.shadow);
+        return new TextStyle(this.color, this.bold, italic, this.underline, this.strikethrough, this.shadow,
+                this.monospace);
     }
 
     /**
@@ -77,7 +85,8 @@ public record TextStyle(int color, boolean bold, boolean italic, boolean underli
      * @return the new style
      */
     public TextStyle withUnderline(final boolean underline) {
-        return new TextStyle(this.color, this.bold, this.italic, underline, this.strikethrough, this.shadow);
+        return new TextStyle(this.color, this.bold, this.italic, underline, this.strikethrough, this.shadow,
+                this.monospace);
     }
 
     /**
@@ -87,7 +96,8 @@ public record TextStyle(int color, boolean bold, boolean italic, boolean underli
      * @return the new style
      */
     public TextStyle withStrikethrough(final boolean strikethrough) {
-        return new TextStyle(this.color, this.bold, this.italic, this.underline, strikethrough, this.shadow);
+        return new TextStyle(this.color, this.bold, this.italic, this.underline, strikethrough, this.shadow,
+                this.monospace);
     }
 
     /**
@@ -97,7 +107,19 @@ public record TextStyle(int color, boolean bold, boolean italic, boolean underli
      * @return the new style
      */
     public TextStyle withShadow(final boolean shadow) {
-        return new TextStyle(this.color, this.bold, this.italic, this.underline, this.strikethrough, shadow);
+        return new TextStyle(this.color, this.bold, this.italic, this.underline, this.strikethrough, shadow,
+                this.monospace);
+    }
+
+    /**
+     * Returns a copy in the monospaced font or the normal one.
+     *
+     * @param monospace true for the monospaced font
+     * @return the new style
+     */
+    public TextStyle withMonospace(final boolean monospace) {
+        return new TextStyle(this.color, this.bold, this.italic, this.underline, this.strikethrough, this.shadow,
+                monospace);
     }
 
     /**
@@ -139,7 +161,8 @@ public record TextStyle(int color, boolean bold, boolean italic, boolean underli
                 properties.contains(Property.ITALIC) ? other.italic : this.italic,
                 properties.contains(Property.UNDERLINE) ? other.underline : this.underline,
                 properties.contains(Property.STRIKETHROUGH) ? other.strikethrough : this.strikethrough,
-                properties.contains(Property.SHADOW) ? other.shadow : this.shadow);
+                properties.contains(Property.SHADOW) ? other.shadow : this.shadow,
+                properties.contains(Property.MONOSPACE) ? other.monospace : this.monospace);
     }
 
     /**
@@ -170,6 +193,10 @@ public record TextStyle(int color, boolean bold, boolean italic, boolean underli
         /**
          * {@link TextStyle#shadow()}.
          */
-        SHADOW
+        SHADOW,
+        /**
+         * {@link TextStyle#monospace()}.
+         */
+        MONOSPACE
     }
 }

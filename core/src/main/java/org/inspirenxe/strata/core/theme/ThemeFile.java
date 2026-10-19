@@ -42,7 +42,7 @@ record ThemeFile(Optional<ThemeId> parent, Map<String, Paint> paints, Map<String
     private static final Set<String> NINE_SLICE_KEYS = Set.of("nine_slice", "border", "tint");
     private static final Set<String> GRADIENT_KEYS = Set.of("gradient");
     private static final Set<String> TEXT_KEYS =
-            Set.of("color", "bold", "italic", "underline", "strikethrough", "shadow");
+            Set.of("color", "bold", "italic", "underline", "strikethrough", "shadow", "monospace");
 
     /**
      * Parses a document.
@@ -114,7 +114,8 @@ record ThemeFile(Optional<ThemeId> parent, Map<String, Paint> paints, Map<String
                 flag(map, "italic", where),
                 flag(map, "underline", where),
                 flag(map, "strikethrough", where),
-                flag(map, "shadow", where));
+                flag(map, "shadow", where),
+                flag(map, "monospace", where));
     }
 
     private static int tint(final Map<String, Object> map, final String where) {
@@ -208,7 +209,7 @@ record ThemeFile(Optional<ThemeId> parent, Map<String, Paint> paints, Map<String
      * @param shadow shadow, or null
      */
     record TextPatch(Integer color, Boolean bold, Boolean italic, Boolean underline, Boolean strikethrough,
-                     Boolean shadow) {
+                     Boolean shadow, Boolean monospace) {
         /**
          * Applies the set fields over a style.
          *
@@ -222,7 +223,8 @@ record ThemeFile(Optional<ThemeId> parent, Map<String, Paint> paints, Map<String
                     this.italic != null ? this.italic : base.italic(),
                     this.underline != null ? this.underline : base.underline(),
                     this.strikethrough != null ? this.strikethrough : base.strikethrough(),
-                    this.shadow != null ? this.shadow : base.shadow());
+                    this.shadow != null ? this.shadow : base.shadow(),
+                    this.monospace != null ? this.monospace : base.monospace());
         }
     }
 }

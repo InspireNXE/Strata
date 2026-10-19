@@ -34,12 +34,14 @@ import org.inspirenxe.strata.api.input.Key;
 import org.inspirenxe.strata.api.input.Modifiers;
 import org.inspirenxe.strata.api.input.MouseButton;
 import org.inspirenxe.strata.api.layout.ScrollPanel;
+import org.inspirenxe.strata.api.text.TextHighlighter;
 import org.inspirenxe.strata.api.text.TextMetrics;
 import org.inspirenxe.strata.api.text.TextSpan;
 import org.inspirenxe.strata.api.text.TextStyle;
 import org.inspirenxe.strata.api.theme.Paint;
 import org.inspirenxe.strata.api.theme.Theme;
 import org.inspirenxe.strata.core.layout.ScrollTrack;
+import org.inspirenxe.strata.core.text.StyledText;
 
 import java.util.Arrays;
 import java.util.Objects;
@@ -126,7 +128,11 @@ public final class TextAreaImpl extends CustomComponent<TextArea> implements Tex
     private int[] rowStart;
     private int[] rowEnd;
     private boolean[] rowSoft;
-    private TextSpan[] rowSpans;
+    // Each row as drawn: one span per styled segment it crosses, and where each starts on the row
+    private TextSpan[][] rowSpans;
+    private float[][] rowSpanX;
+    private final StyledText styled;
+    private TextHighlighter highlighter;
     private float widestRow;
     private boolean barShown;
     private Rect contentBox;
@@ -174,7 +180,10 @@ public final class TextAreaImpl extends CustomComponent<TextArea> implements Tex
         this.rowStart = new int[8];
         this.rowEnd = new int[8];
         this.rowSoft = new boolean[8];
-        this.rowSpans = new TextSpan[8];
+        this.rowSpans = new TextSpan[8][];
+        this.rowSpanX = new float[8][];
+        this.styled = new StyledText();
+        this.highlighter = TextHighlighter.NONE;
         this.selectionX0 = new float[8];
         this.selectionX1 = new float[8];
         this.contentBox = Rect.ZERO;
@@ -306,6 +315,18 @@ public final class TextAreaImpl extends CustomComponent<TextArea> implements Tex
     }
 
     @Override
+    public TextHighlighter highlighter() {
+        return this.highlighter;
+    }
+
+    @Override
+    public TextArea setHighlighter(final TextHighlighter highlighter) {
+        this.highlighter = Objects.requireNonNull(highlighter, "highlighter");
+        this.rowsDirty = true;
+        return this;
+    }
+
+    @Override
     public TextArea setReadOnly(final boolean readOnly) {
         this.readOnly = readOnly;
         return this;
@@ -374,6 +395,7 @@ public final class TextAreaImpl extends CustomComponent<TextArea> implements Tex
             this.rowsWidth = inner.width();
             this.rowsHeight = inner.height();
             this.rowsStyle = style;
+            this.styled.update(this.buffer.toString(), style, this.highlighter, this.isEnabled());
             final TextMetrics metrics = this.environment().text();
             this.buildRows(metrics, style, this.wrap ? inner.width() : Float.POSITIVE_INFINITY);
             this.barShown = this.rowCount * this.lineHeight > inner.height();
@@ -455,7 +477,8 @@ public final class TextAreaImpl extends CustomComponent<TextArea> implements Tex
     }
 
     private float width(final TextMetrics metrics, final TextStyle style, final int start, final int end) {
-        return start >= end ? 0f : metrics.width(new TextSpan(this.buffer.substring(start, end), style));
+        // Each styled segment is measured in its own style; the field's style only fills the gaps between runs
+        return start >= end ? 0f : this.styled.width(metrics, start, end);
     }
 
     private void addRow(final TextMetrics metrics, final TextStyle style, final int start, final int end, final boolean soft) {
@@ -465,15 +488,19 @@ public final class TextAreaImpl extends CustomComponent<TextArea> implements Tex
             this.rowEnd = Arrays.copyOf(this.rowEnd, grown);
             this.rowSoft = Arrays.copyOf(this.rowSoft, grown);
             this.rowSpans = Arrays.copyOf(this.rowSpans, grown);
+            this.rowSpanX = Arrays.copyOf(this.rowSpanX, grown);
             this.selectionX0 = Arrays.copyOf(this.selectionX0, grown);
             this.selectionX1 = Arrays.copyOf(this.selectionX1, grown);
         }
-        final TextSpan span = new TextSpan(this.buffer.substring(start, end), style);
+        final TextSpan[] spans = this.styled.spans(start, end);
+        final float[] offsets = StyledText.offsets(metrics, spans);
         this.rowStart[this.rowCount] = start;
         this.rowEnd[this.rowCount] = end;
         this.rowSoft[this.rowCount] = soft;
-        this.rowSpans[this.rowCount] = span;
-        this.widestRow = Math.max(this.widestRow, metrics.width(span));
+        this.rowSpans[this.rowCount] = spans;
+        this.rowSpanX[this.rowCount] = offsets;
+        final float rowWidth = StyledText.extent(metrics, spans, offsets);
+        this.widestRow = Math.max(this.widestRow, rowWidth);
         this.rowCount++;
     }
 
@@ -644,7 +671,11 @@ public final class TextAreaImpl extends CustomComponent<TextArea> implements Tex
                 this.selectionPaint.paint(this.painter, new Rect(originX + this.selectionX0[row], y,
                         this.selectionX1[row] - this.selectionX0[row], this.lineHeight));
             }
-            this.painter.text(this.rowSpans[row], originX, y);
+            final TextSpan[] spans = this.rowSpans[row];
+            final float[] offsets = this.rowSpanX[row];
+            for (int i = 0; i < spans.length; i++) {
+                this.painter.text(spans[i], originX + offsets[i], y);
+            }
         }
     }
 

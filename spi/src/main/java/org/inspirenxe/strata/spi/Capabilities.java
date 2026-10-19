@@ -23,6 +23,11 @@ package org.inspirenxe.strata.spi;
  *                       (after 400 ms, then every 33 ms, timed by the platform's clock while {@code render} is
  *                       called). An adapter whose engine reports repeats as more presses must tell them apart and
  *                       send {@code REPEAT}; then this is true.
+ * @param monospaceFont true when the engine has a monospaced font, so a span whose style is
+ *                      {@linkplain org.inspirenxe.strata.api.text.TextStyle#monospace() monospace} is measured and
+ *                      drawn with every character the same width. When false, such a span uses the engine's normal
+ *                      font; it is still measured and drawn alike, so layout stays correct and only columns stop
+ *                      lining up.
  */
-public record Capabilities(boolean sendsKeyRepeat) {
+public record Capabilities(boolean sendsKeyRepeat, boolean monospaceFont) {
 }

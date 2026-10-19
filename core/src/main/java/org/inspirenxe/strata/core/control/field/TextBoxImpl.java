@@ -37,6 +37,7 @@ import org.inspirenxe.strata.api.input.Modifiers;
 import org.inspirenxe.strata.api.input.MouseButton;
 import org.inspirenxe.strata.api.layout.Anchor;
 import org.inspirenxe.strata.api.overlay.Overlay;
+import org.inspirenxe.strata.api.text.TextHighlighter;
 import org.inspirenxe.strata.api.text.TextMetrics;
 import org.inspirenxe.strata.api.text.TextOverflow;
 import org.inspirenxe.strata.api.text.TextSpan;
@@ -45,6 +46,7 @@ import org.inspirenxe.strata.api.theme.Paint;
 import org.inspirenxe.strata.api.theme.Theme;
 import org.inspirenxe.strata.core.control.collection.ListViewImpl;
 import org.inspirenxe.strata.core.node.ComponentFactoryImpl;
+import org.inspirenxe.strata.core.text.StyledText;
 
 import java.util.List;
 import java.util.Objects;
@@ -153,7 +155,11 @@ public final class TextBoxImpl extends CustomComponent<TextBox> implements TextB
 
     // Derived from text and caret, recomputed only after a change
     private boolean visualsDirty;
-    private TextSpan display;
+    // The text as drawn: one span per styled segment, and where each starts
+    private final StyledText styled;
+    private TextHighlighter highlighter;
+    private TextSpan[] displaySpans;
+    private float[] displayX;
     private float textWidth;
     private float caretX;
     private float selectionStartX;
@@ -193,7 +199,10 @@ public final class TextBoxImpl extends CustomComponent<TextBox> implements TextB
         this.placeholder = "";
         this.placeholderStyle = TextStyle.DEFAULT;
         this.placeholderSpan = TextSpan.of("");
-        this.display = TextSpan.of("");
+        this.styled = new StyledText();
+        this.highlighter = TextHighlighter.NONE;
+        this.displaySpans = new TextSpan[0];
+        this.displayX = new float[0];
         this.contentBox = Rect.ZERO;
         this.visualsDirty = true;
         this.setCursor(CursorKind.TEXT);
@@ -341,6 +350,18 @@ public final class TextBoxImpl extends CustomComponent<TextBox> implements TextB
     @Override
     public boolean isReadOnly() {
         return this.readOnly;
+    }
+
+    @Override
+    public TextHighlighter highlighter() {
+        return this.highlighter;
+    }
+
+    @Override
+    public TextBox setHighlighter(final TextHighlighter highlighter) {
+        this.highlighter = Objects.requireNonNull(highlighter, "highlighter");
+        this.visualsDirty = true;
+        return this;
     }
 
     @Override
@@ -643,7 +664,9 @@ public final class TextBoxImpl extends CustomComponent<TextBox> implements TextB
         if (this.buffer.isEmpty() && !this.placeholder.isEmpty()) {
             this.painter.text(this.placeholderSpan, this.contentBox.x(), this.textY);
         } else {
-            this.painter.text(this.display, originX, this.textY);
+            for (int i = 0; i < this.displaySpans.length; i++) {
+                this.painter.text(this.displaySpans[i], originX + this.displayX[i], this.textY);
+            }
         }
     }
 
@@ -670,8 +693,15 @@ public final class TextBoxImpl extends CustomComponent<TextBox> implements TextB
             return;
         }
         this.visualsDirty = false;
-        this.display = new TextSpan(this.displayPrefix(this.buffer.length()), this.style());
-        this.textWidth = metrics.width(this.display);
+        if (this.password) {
+            // A password box draws the mask in its own style and never shows runs
+            this.displaySpans = new TextSpan[] {new TextSpan(this.displayPrefix(this.buffer.length()), this.style())};
+        } else {
+            this.syncStyled();
+            this.displaySpans = this.styled.spans(0, this.buffer.length());
+        }
+        this.displayX = StyledText.offsets(metrics, this.displaySpans);
+        this.textWidth = StyledText.extent(metrics, this.displaySpans, this.displayX);
         this.caretX = this.xForIndex(metrics, this.caret);
         this.selectionStartX = this.xForIndex(metrics, this.selectionStart());
         this.selectionEndX = this.xForIndex(metrics, this.selectionEnd());
@@ -691,8 +721,21 @@ public final class TextBoxImpl extends CustomComponent<TextBox> implements TextB
         return this.buffer.substring(0, index);
     }
 
+    /**
+     * Brings the styled segments up to the current text, style and highlighter; cheap when nothing changed.
+     */
+    private void syncStyled() {
+        this.styled.update(this.buffer.toString(), this.style(), this.highlighter, this.isEnabled());
+    }
+
     private float xForIndex(final TextMetrics metrics, final int index) {
-        return index == 0 ? 0f : metrics.width(new TextSpan(this.displayPrefix(index), this.style()));
+        if (index == 0) {
+            return 0f;
+        }
+        if (this.password) {
+            return metrics.width(new TextSpan(this.displayPrefix(index), this.style()));
+        }
+        return this.styled.width(metrics, 0, index);
     }
 
     /**
@@ -701,6 +744,9 @@ public final class TextBoxImpl extends CustomComponent<TextBox> implements TextB
     private int indexForX(final TextMetrics metrics, final float x) {
         if (x <= 0f) {
             return 0;
+        }
+        if (!this.password) {
+            this.syncStyled();
         }
         int previous = 0;
         float previousX = 0f;

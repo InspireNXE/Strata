@@ -20,6 +20,7 @@ import org.inspirenxe.strata.api.event.EventType;
 import org.inspirenxe.strata.api.event.control.ValueEvent;
 import org.inspirenxe.strata.api.event.control.ValueRequestEvent;
 import org.inspirenxe.strata.api.geometry.Insets;
+import org.inspirenxe.strata.api.text.TextHighlighter;
 
 /**
  * A control the user types text into, such as a text box or a text area.
@@ -81,6 +82,25 @@ public interface TextInput<S extends TextInput<S>> extends HasText<S>, EventTarg
      * @return this control
      */
     S setReadOnly(boolean readOnly);
+
+    /**
+     * Returns the highlighter that styles parts of the text.
+     *
+     * @return the highlighter; {@link TextHighlighter#NONE} by default
+     */
+    TextHighlighter highlighter();
+
+    /**
+     * Sets a highlighter that styles parts of the text, for syntax coloring, highlighted matches and the like. The
+     * control calls it whenever its text or its base style changes and draws each run it returns in the run's
+     * style, measuring every run in its own style, so the caret and selection line up with styled text. A disabled
+     * control ignores the runs and draws everything in its disabled style; a read-only control keeps them; a
+     * password box ignores them. Runs do not change the line height, which stays the base style's.
+     *
+     * @param highlighter the highlighter, or {@link TextHighlighter#NONE} for plain text
+     * @return this control
+     */
+    S setHighlighter(TextHighlighter highlighter);
 
     /**
      * Returns the caret position.

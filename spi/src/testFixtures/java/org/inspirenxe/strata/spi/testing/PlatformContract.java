@@ -17,6 +17,7 @@ package org.inspirenxe.strata.spi.testing;
 
 import org.inspirenxe.strata.api.geometry.Rect;
 import org.inspirenxe.strata.api.text.TextSpan;
+import org.inspirenxe.strata.api.text.TextStyle;
 import org.inspirenxe.strata.spi.Capabilities;
 import org.inspirenxe.strata.spi.Clipboard;
 import org.inspirenxe.strata.spi.Clock;
@@ -82,6 +83,17 @@ public abstract class PlatformContract {
         for (int i = 0; i < 10; i++) {
             assertEquals(first, platform.capabilities());
         }
+    }
+
+    @Test
+    void monospacedTextHasEqualWidthsWhenTheFontExists() {
+        final Platform platform = this.platform();
+        final TextStyle monospace = TextStyle.DEFAULT.withMonospace(true);
+        final float narrow = platform.textMetrics().width(new TextSpan("iiii", monospace));
+        final float wide = platform.textMetrics().width(new TextSpan("MMMM", monospace));
+        assertTrue(narrow > 0f && wide > 0f, "monospaced text has a width");
+        assumeTrue(platform.capabilities().monospaceFont(), "the engine has no monospaced font");
+        assertEquals(narrow, wide, 0.01f, "every character of a monospaced font has the same width");
     }
 
     @Test
