@@ -1,6 +1,8 @@
 package org.inspirenxe.strata.core;
 
 import org.inspirenxe.strata.api.component.CursorKind;
+import org.inspirenxe.strata.api.control.attribute.value.Ranged;
+import org.inspirenxe.strata.api.control.attribute.value.Toggle;
 import org.inspirenxe.strata.api.control.button.Button;
 import org.inspirenxe.strata.api.control.button.CheckBox;
 import org.inspirenxe.strata.api.control.display.Image;
@@ -162,7 +164,7 @@ class BasicControlsTest {
         private final List<Boolean> seen = new ArrayList<>();
 
         CheckBoxes() {
-            this.box.onEvent(CheckBox.TOGGLED, event -> this.seen.add(event.value()));
+            this.box.onEvent(Toggle.TOGGLED, event -> this.seen.add(event.value()));
             this.test.show(this.test.factory().absolutePanel().add(this.box));
         }
 
@@ -180,9 +182,9 @@ class BasicControlsTest {
         @Test
         void clickingAnywhereToggles() {
             this.test.click(45, 8);
-            assertTrue(this.box.isChecked());
+            assertTrue(this.box.isSelected());
             this.test.click(2, 2);
-            assertFalse(this.box.isChecked());
+            assertFalse(this.box.isSelected());
             assertEquals(List.of(true, false), this.seen);
         }
 
@@ -200,9 +202,9 @@ class BasicControlsTest {
             this.box.setEnabled(false);
             this.test.click(45, 8);
             this.box.toggle();
-            assertFalse(this.box.isChecked());
+            assertFalse(this.box.isSelected());
 
-            this.box.setChecked(true).setChecked(true);
+            this.box.setSelected(true).setSelected(true);
             assertEquals(List.of(true), this.seen);
         }
 
@@ -231,7 +233,7 @@ class BasicControlsTest {
         private final List<Double> seen = new ArrayList<>();
 
         Sliders() {
-            this.slider.onEvent(Slider.CHANGED, event -> this.seen.add(event.value()));
+            this.slider.onEvent(Ranged.CHANGED, event -> this.seen.add(event.value()));
             this.test.show(this.test.factory().absolutePanel().add(this.slider));
         }
 

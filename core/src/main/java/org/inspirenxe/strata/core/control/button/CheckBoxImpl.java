@@ -107,12 +107,12 @@ public final class CheckBoxImpl extends CustomComponent<CheckBox> implements Che
     }
 
     @Override
-    public boolean isChecked() {
+    public boolean isSelected() {
         return this.checked;
     }
 
     @Override
-    public CheckBox setChecked(final boolean checked) {
+    public CheckBox setSelected(final boolean checked) {
         if (this.checked != checked) {
             this.checked = checked;
             this.report(TOGGLED, checked, !checked);
@@ -121,10 +121,11 @@ public final class CheckBoxImpl extends CustomComponent<CheckBox> implements Che
     }
 
     @Override
-    public void toggle() {
+    public CheckBox toggle() {
         if (this.isEnabled()) {
-            this.setChecked(!this.checked);
+            this.setSelected(!this.checked);
         }
+        return this;
     }
 
     /**
@@ -135,7 +136,7 @@ public final class CheckBoxImpl extends CustomComponent<CheckBox> implements Che
         if (this.isEnabled()) {
             this.request(TOGGLE, !this.checked, checked -> {
                 if (checked != null) {
-                    this.setChecked(checked);
+                    this.setSelected(checked);
                 }
             });
         }

@@ -1,6 +1,7 @@
 package org.inspirenxe.strata.api.control.field;
 
 import org.inspirenxe.strata.api.component.Component;
+import org.inspirenxe.strata.api.control.attribute.text.TextInput;
 import org.inspirenxe.strata.api.event.EventType;
 import org.inspirenxe.strata.api.event.RequestEvent;
 import org.inspirenxe.strata.api.event.ValueEvent;
@@ -47,6 +48,30 @@ import java.util.Objects;
  * breaks given to {@link #setText} or pasted are removed. In password mode every code point is drawn as the mask
  * character, and copy and cut do nothing.</p>
  *
+ * <h2>Events</h2>
+ * <ul>
+ *     <li>{@link TextInput#EDIT}: Fired when the user is about to edit the text by typing, deleting, cutting or
+ *     pasting. The value is the whole text the edit would produce. While handlers run, the box still holds the text and
+ *     selection from before the edit. Cancel the event to reject the edit and keep the text and selection as they were,
+ *     or set another text to rewrite it; the value must not be set to null. The final text has its line breaks removed
+ *     and is cut to {@link #maxLength()} before it applies, and the caret goes as many characters before its end as the
+ *     edit left it, with nothing selected. An edit that would leave the text as it is, such as typing into a full box,
+ *     fires nothing, and a read-only box fires nothing. Fires only for the user's actions: {@link #setText} and
+ *     {@link #setMaxLength} fire none.</li>
+ *     <li>{@link TextInput#EDITED}: Fired after the text changed: by an edit of the user's, by {@link #setText}, or by
+ *     {@link #setMaxLength} cutting it. The value is the new text and {@code previous()} the text before; neither is
+ *     null. An edit whose final text equals the old one fires nothing. Fires for changes made from code too.</li>
+ * </ul>
+ *
+ * <pre>{@code
+ * // Up to four digits
+ * box.onEvent(TextInput.EDIT, event -> {
+ *     if (!event.value().matches("\\d{0,4}")) {
+ *         event.cancel();
+ *     }
+ * });
+ * }</pre>
+ *
  * <h2>Theme keys</h2>
  * <ul>
  *     <li>{@value #STYLE_NORMAL} (paint, required): the background when not focused.</li>
@@ -75,7 +100,7 @@ import java.util.Objects;
  * <p>Get one from {@link org.inspirenxe.strata.api.ComponentFactory#textBox()}. Do not implement this
  * interface.</p>
  */
-public interface TextBox extends Component<TextBox> {
+public interface TextBox extends Component<TextBox>, TextInput<TextBox> {
     /**
      * Style key for the background when not focused (paint, required).
      */
@@ -109,32 +134,6 @@ public interface TextBox extends Component<TextBox> {
      */
     String STYLE_CARET = "textbox.caret";
 
-    /**
-     * Fired when the user is about to edit the text by typing, deleting, cutting or pasting. The value is the whole
-     * text the edit would produce. While handlers run, the box still holds the text and selection from before the
-     * edit. Cancel the event to reject the edit and keep the text and selection as they were, or set another text to
-     * rewrite it; the value must not be set to null. The final text has its line breaks removed and is cut to
-     * {@link #maxLength()} before it applies, and the caret goes as many characters before its end as the edit left
-     * it, with nothing selected. An edit that would leave the text as it is, such as typing into a full box, fires
-     * nothing, and a read-only box fires nothing. Fires only for the user's actions: {@link #setText} and
-     * {@link #setMaxLength} fire none.
-     *
-     * <pre>{@code
-     * // Up to four digits
-     * box.onEvent(TextBox.EDIT, event -> {
-     *     if (!event.value().matches("\\d{0,4}")) {
-     *         event.cancel();
-     *     }
-     * });
-     * }</pre>
-     */
-    EventType<ValueRequestEvent<TextBox, String>> EDIT = EventType.valueRequest("text_box.edit");
-    /**
-     * Fired after the text changed: by an edit of the user's, by {@link #setText}, or by {@link #setMaxLength}
-     * cutting it. The value is the new text and {@code previous()} the text before; neither is null. An edit whose
-     * final text equals the old one fires nothing. Fires for changes made from code too.
-     */
-    EventType<ValueEvent<TextBox, String>> EDITED = EventType.valueReport("text_box.edited");
     /**
      * Fired when the user presses Enter or keypad Enter while the box has focus, whether or not anything handles
      * {@link #SUBMITTED}. A held key's repeats do not fire it, and neither does a disabled box. Cancel it to ignore

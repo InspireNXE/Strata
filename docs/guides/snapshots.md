@@ -18,7 +18,7 @@ Inside the handler:
 | `event.currentSnapshot()` | The snapshot of the component whose handler is running |
 | `event.snapshotOf(component)` | Any component's snapshot, as an `Optional` |
 
-Snapshots belong to Pre events: input, and a control's requests. A Post event, such as `TextBox.EDITED`, fires after its change, so it carries the value from before the change as `previous()` instead of a snapshot.
+Snapshots belong to Pre events: input, and a control's requests. A Post event, such as `TextInput.EDITED`, fires after its change, so it carries the value from before the change as `previous()` instead of a snapshot.
 
 ## What is captured, and when
 

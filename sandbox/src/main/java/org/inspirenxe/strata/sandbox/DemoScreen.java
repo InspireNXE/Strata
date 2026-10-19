@@ -2,6 +2,8 @@ package org.inspirenxe.strata.sandbox;
 
 import org.inspirenxe.strata.api.ComponentFactory;
 import org.inspirenxe.strata.api.component.Component;
+import org.inspirenxe.strata.api.control.attribute.text.TextInput;
+import org.inspirenxe.strata.api.control.attribute.value.Toggle;
 import org.inspirenxe.strata.api.control.button.Button;
 import org.inspirenxe.strata.api.control.display.Label;
 import org.inspirenxe.strata.api.control.field.TextBox;
@@ -103,7 +105,7 @@ public final class DemoScreen implements Screen {
                 .setText("Strata")
                 .setMaxLength(24)
                 .setAlignment(HorizontalAlignment.STRETCH, VerticalAlignment.TOP)
-                .onEvent(TextBox.EDITED,
+                .onEvent(TextInput.EDITED,
                         event -> greeting.setText(event.value().isEmpty() ? "Hello?" : "Hello, " + event.value()));
         final TextBox secret = ui.textBox()
                 .setPassword(true)

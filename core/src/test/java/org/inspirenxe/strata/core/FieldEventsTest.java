@@ -1,5 +1,7 @@
 package org.inspirenxe.strata.core;
 
+import org.inspirenxe.strata.api.control.attribute.text.TextInput;
+import org.inspirenxe.strata.api.control.attribute.value.Ranged;
 import org.inspirenxe.strata.api.control.field.Slider;
 import org.inspirenxe.strata.api.control.field.Spinner;
 import org.inspirenxe.strata.api.control.field.TextArea;
@@ -81,8 +83,8 @@ class FieldEventsTest {
         private final AbsolutePanel form = this.test.factory().absolutePanel().add(this.box);
 
         TextBoxes() {
-            this.box.onEvent(TextBox.EDIT, event -> this.edits.handle(event.control().text(), event))
-                    .onEvent(TextBox.EDITED, event -> this.heard.add(event.previous() + "->" + event.value()));
+            this.box.onEvent(TextInput.EDIT, event -> this.edits.handle(event.control().text(), event))
+                    .onEvent(TextInput.EDITED, event -> this.heard.add(event.previous() + "->" + event.value()));
             this.test.show(this.form);
             this.box.requestFocus();
         }
@@ -180,8 +182,8 @@ class FieldEventsTest {
 
         @Test
         void aFormCanPoliceEveryBoxInIt() {
-            final List<TextBox> targets = new ArrayList<>();
-            this.form.onEvent(TextBox.EDIT, event -> {
+            final List<TextInput<?>> targets = new ArrayList<>();
+            this.form.onEvent(TextInput.EDIT, event -> {
                 targets.add(event.control());
                 if (!event.value().matches("\\d*")) {
                     event.cancel();
@@ -228,8 +230,8 @@ class FieldEventsTest {
         private final AbsolutePanel form = this.test.factory().absolutePanel().add(this.area);
 
         TextAreas() {
-            this.area.onEvent(TextArea.EDIT, event -> this.edits.handle(event.control().text(), event))
-                    .onEvent(TextArea.EDITED, event -> this.heard.add(event.previous() + "->" + event.value()));
+            this.area.onEvent(TextInput.EDIT, event -> this.edits.handle(event.control().text(), event))
+                    .onEvent(TextInput.EDITED, event -> this.heard.add(event.previous() + "->" + event.value()));
             this.test.show(this.form);
             this.area.requestFocus();
         }
@@ -301,7 +303,7 @@ class FieldEventsTest {
         @Test
         void aFormHearsEdits() {
             final List<String> formHeard = new ArrayList<>();
-            this.form.onEvent(TextArea.EDITED, event -> formHeard.add(event.value()));
+            this.form.onEvent(TextInput.EDITED, event -> formHeard.add(event.value()));
             this.type("hi");
             assertEquals(List.of("h", "hi"), formHeard);
         }
@@ -317,8 +319,8 @@ class FieldEventsTest {
         private final AbsolutePanel form = this.test.factory().absolutePanel().add(this.slider);
 
         Sliders() {
-            this.slider.onEvent(Slider.CHANGE, this.changes::handle)
-                    .onEvent(Slider.CHANGED, event -> this.heard.add(event.previous() + "->" + event.value()));
+            this.slider.onEvent(Ranged.CHANGE, this.changes::handle)
+                    .onEvent(Ranged.CHANGED, event -> this.heard.add(event.previous() + "->" + event.value()));
             this.test.show(this.form);
         }
 
@@ -394,7 +396,7 @@ class FieldEventsTest {
 
         @Test
         void aFormCanRefuseChanges() {
-            this.form.onEvent(Slider.CHANGE, event -> event.cancel());
+            this.form.onEvent(Ranged.CHANGE, event -> event.cancel());
             this.press(54);
             assertEquals(0d, this.slider.value());
             assertEquals(1, this.changes.seen.size());
@@ -410,8 +412,8 @@ class FieldEventsTest {
         private final AbsolutePanel form = this.test.factory().absolutePanel().add(this.spinner);
 
         Spinners() {
-            this.spinner.onEvent(Spinner.CHANGE, this.changes::handle)
-                    .onEvent(Spinner.CHANGED, event -> this.heard.add(event.previous() + "->" + event.value()));
+            this.spinner.onEvent(Ranged.CHANGE, this.changes::handle)
+                    .onEvent(Ranged.CHANGED, event -> this.heard.add(event.previous() + "->" + event.value()));
             this.test.show(this.form);
             this.test.click(10, 9);
         }
@@ -502,12 +504,12 @@ class FieldEventsTest {
         void aFormHearsTheSpinnerButNotItsField() {
             final List<String> outside = new ArrayList<>();
             final List<String> composite = new ArrayList<>();
-            this.form.onEvent(TextBox.EDIT, event -> outside.add("edit " + event.value()))
-                    .onEvent(TextBox.EDITED, event -> outside.add("edited " + event.value()))
+            this.form.onEvent(TextInput.EDIT, event -> outside.add("edit " + event.value()))
+                    .onEvent(TextInput.EDITED, event -> outside.add("edited " + event.value()))
                     .onEvent(TextBox.SUBMIT, event -> outside.add("submit"))
                     .onEvent(TextBox.SUBMITTED, event -> outside.add("submitted"))
-                    .onEvent(Spinner.CHANGED, event -> outside.add("changed " + event.value()));
-            this.spinner.onEvent(TextBox.EDITED, event -> composite.add(event.value()));
+                    .onEvent(Ranged.CHANGED, event -> outside.add("changed " + event.value()));
+            this.spinner.onEvent(TextInput.EDITED, event -> composite.add(event.value()));
 
             this.key(Key.BACKSPACE);
             this.type("9");

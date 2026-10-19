@@ -1,6 +1,7 @@
 package org.inspirenxe.strata.api.control.display;
 
 import org.inspirenxe.strata.api.component.Component;
+import org.inspirenxe.strata.api.control.attribute.text.HasText;
 import org.inspirenxe.strata.api.layout.HorizontalAlignment;
 import org.inspirenxe.strata.api.text.TextOverflow;
 import org.inspirenxe.strata.api.text.TextSpan;
@@ -45,7 +46,7 @@ import java.util.Objects;
  * <p>Get one from {@link org.inspirenxe.strata.api.ComponentFactory#label(String)}. Do not implement this
  * interface.</p>
  */
-public interface Label extends Component<Label> {
+public interface Label extends Component<Label>, HasText<Label> {
     /**
      * Style key for the label's text style.
      */

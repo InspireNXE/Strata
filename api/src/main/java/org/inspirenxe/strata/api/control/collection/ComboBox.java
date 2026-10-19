@@ -1,11 +1,10 @@
 package org.inspirenxe.strata.api.control.collection;
 
 import org.inspirenxe.strata.api.component.Component;
-import org.inspirenxe.strata.api.event.ControlEvent;
-import org.inspirenxe.strata.api.event.EventType;
-import org.inspirenxe.strata.api.event.RequestEvent;
-import org.inspirenxe.strata.api.event.ValueEvent;
-import org.inspirenxe.strata.api.event.ValueRequestEvent;
+import org.inspirenxe.strata.api.control.attribute.item.ItemSource;
+import org.inspirenxe.strata.api.control.attribute.item.SingleSelection;
+import org.inspirenxe.strata.api.control.attribute.popup.Closable;
+import org.inspirenxe.strata.api.control.attribute.popup.Openable;
 
 import java.util.List;
 import java.util.Optional;
@@ -24,14 +23,36 @@ import java.util.function.Function;
  * and Escape closes. A disabled box ignores input.</p>
  *
  * <p>Options are drawn with the {@linkplain #setLabelFunction label function}, {@code toString} by default. When
- * options are set, the selection moves to an equal option, or to the first option if there is none. A box with
- * options always has one selected.</p>
+ * options are set, the selection moves to the option with the selected option's {@linkplain #setKeyFunction key}, or
+ * to the first option if there is none. Code can clear the selection with {@link #clearSelection()}; the box then
+ * shows no text until something is selected.</p>
  *
  * <p>The selection events carry option indexes, so read the option from the box:
- * {@code box.options().get(e.value())}. The open list is private to the box and fires no events of its own.</p>
+ * {@code box.items().get(e.value())}. The open list is private to the box and fires no events of its own. The box
+ * reports {@link Closable#CLOSED} each time the list closes, however it closed, and never fires
+ * {@link Closable#CLOSE}.</p>
  *
  * <p>The box is focusable and tabbable and shows the hand cursor. It asks for its widest option plus padding and
  * the arrow, and one line plus 3 units above and below.</p>
+ *
+ * <h2>Events</h2>
+ * <ul>
+ *     <li>{@link Openable#OPEN}: Asked before the user opens the list: a click on the closed box, or Enter, Space or
+ *     Alt and Down while it has focus. It fires only when the list can open, which needs the box attached, enabled and
+ *     with options. A handler may change the options before the list opens; the box checks again afterwards and stays
+ *     closed if it has no options left. Fires only for the user's actions.</li>
+ *     <li>{@link Openable#OPENED}: Told after the list opened. Fires for {@link #open()} called from code too.</li>
+ *     <li>{@link SingleSelection#SELECT}: Asked before the user changes the selection: a click on a row of the open
+ *     list, Enter or Space on the highlighted row of the open list, or the Up, Down, Home and End keys on the closed
+ *     box. A choice from the open list closes it before this fires. Moving the highlight in the open list does not fire
+ *     it, and neither does a choice of the option already selected. The value is the index of the option about to be
+ *     selected. A handler may rewrite it to another option's index; an index outside the options is ignored. Fires only
+ *     for the user's actions.</li>
+ *     <li>{@link SingleSelection#SELECTED}: Told after the selection changed. The value is the selected index, -1 once
+ *     nothing is selected, and the previous value is the index before. It also fires when {@link #setItems} keeps
+ *     the index but the option there is no longer equal to the one before, so the value can equal the previous value.
+ *     Fires for changes made from code too, including {@link #setItems}.</li>
+ * </ul>
  *
  * <h2>Theme keys</h2>
  * <ul>
@@ -51,8 +72,8 @@ import java.util.function.Function;
  *
  * <pre>{@code
  * ComboBox<SortType> sort = factory.comboBox(SortType::label)
- *         .setOptions(List.of(SortType.values()))
- *         .onEvent(ComboBox.SELECTED, e -> search());
+ *         .setItems(List.of(SortType.values()))
+ *         .onEvent(SingleSelection.SELECTED, e -> search());
  * }</pre>
  *
  * <p>Get one from {@link org.inspirenxe.strata.api.ComponentFactory#comboBox(Function)}. Do not implement this
@@ -60,7 +81,8 @@ import java.util.function.Function;
  *
  * @param <T> the type of the options
  */
-public interface ComboBox<T> extends Component<ComboBox<T>> {
+public interface ComboBox<T> extends Component<ComboBox<T>>, ItemSource<T, ComboBox<T>>,
+        SingleSelection<T, ComboBox<T>>, Openable<ComboBox<T>> {
     /**
      * Style key for the box (paint, required).
      */
@@ -89,49 +111,24 @@ public interface ComboBox<T> extends Component<ComboBox<T>> {
      * How many rows the open list shows by default before it scrolls.
      */
     int DEFAULT_MAX_VISIBLE_OPTIONS = 8;
-    /**
-     * Asked before the user opens the list: a click on the closed box, or Enter, Space or Alt and Down while it has
-     * focus. It fires only when the list can open, which needs the box attached, enabled and with options. A handler
-     * may change the options before the list opens; the box checks again afterwards and stays closed if it has no
-     * options left. Fires only for the user's actions.
-     */
-    EventType<RequestEvent<ComboBox<?>>> OPEN = EventType.request("combo_box.open");
-    /**
-     * Told after the list opened. Fires for {@link #open()} called from code too.
-     */
-    EventType<ControlEvent<ComboBox<?>>> OPENED = EventType.report("combo_box.opened");
-    /**
-     * Asked before the user changes the selection: a click on a row of the open list, Enter or Space on the
-     * highlighted row of the open list, or the Up, Down, Home and End keys on the closed box. A choice from the open
-     * list closes it before this fires. Moving the highlight in the open list does not fire it, and neither does a
-     * choice of the option already selected. The value is the index of the option about to be selected. A handler
-     * may rewrite it to another option's index; an index outside the options is ignored. Fires only for the user's
-     * actions.
-     */
-    EventType<ValueRequestEvent<ComboBox<?>, Integer>> SELECT = EventType.valueRequest("combo_box.select");
-    /**
-     * Told after the selection changed. The value is the selected index, -1 once there are no options, and the
-     * previous value is the index before. It also fires when {@link #setOptions} keeps the index but the option
-     * there is no longer equal to the one before, so the value can equal the previous value. Fires for changes made
-     * from code too, including {@link #setOptions}.
-     */
-    EventType<ValueEvent<ComboBox<?>, Integer>> SELECTED = EventType.valueReport("combo_box.selected");
 
     /**
      * Returns the options.
      *
      * @return an unmodifiable copy of the options
      */
-    List<T> options();
+    @Override
+    List<T> items();
 
     /**
-     * Replaces the options and closes the list. The selection moves to an equal option, or to the first one.
-     * {@link #SELECTED} fires if the selected option or its index changed.
+     * Replaces the options and closes the list. The selection moves to the option with the selected option's key, or
+     * to the first one. {@link SingleSelection#SELECTED} fires if the selected option or its index changed.
      *
-     * @param options the options; the box keeps a copy
+     * @param items the options; the box keeps a copy
      * @return this box
      */
-    ComboBox<T> setOptions(List<? extends T> options);
+    @Override
+    ComboBox<T> setItems(List<? extends T> items);
 
     /**
      * Sets how options are drawn.
@@ -144,33 +141,37 @@ public interface ComboBox<T> extends Component<ComboBox<T>> {
     /**
      * Returns the selected option.
      *
-     * @return the selected option, or empty while there are no options
+     * @return the selected option, or empty while nothing is selected
      */
+    @Override
     Optional<T> selected();
 
     /**
      * Returns the selected index.
      *
-     * @return the index of the selected option, or -1 while there are no options
+     * @return the index of the selected option, or -1 while nothing is selected
      */
+    @Override
     int selectedIndex();
 
     /**
-     * Selects the option at an index.
+     * Selects the option at an index, or nothing for -1.
      *
-     * @param index the index
+     * @param index the index, or -1
      * @return this box
-     * @throws IndexOutOfBoundsException if the index is not an option's index
+     * @throws IndexOutOfBoundsException if the index is not -1 and not an option's index
      */
+    @Override
     ComboBox<T> select(int index);
 
     /**
-     * Selects the first option equal to the given one. Does nothing if there is none.
+     * Selects the first option with the same key as the given one, or nothing if there is none.
      *
-     * @param option the option
+     * @param item the option
      * @return this box
      */
-    ComboBox<T> selectOption(T option);
+    @Override
+    ComboBox<T> selectItem(T item);
 
     /**
      * Returns how many rows the open list shows before it scrolls.
@@ -193,6 +194,7 @@ public interface ComboBox<T> extends Component<ComboBox<T>> {
      *
      * @return true while the popup shows
      */
+    @Override
     boolean isOpen();
 
     /**
@@ -203,9 +205,10 @@ public interface ComboBox<T> extends Component<ComboBox<T>> {
     ComboBox<T> open();
 
     /**
-     * Closes the list without changing the selection.
+     * Closes the list without changing the selection, and reports {@link Closable#CLOSED} if it was open.
      *
      * @return this box
      */
+    @Override
     ComboBox<T> close();
 }

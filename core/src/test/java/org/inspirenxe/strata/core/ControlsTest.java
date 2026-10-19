@@ -2,6 +2,9 @@ package org.inspirenxe.strata.core;
 
 import org.inspirenxe.strata.api.ComponentFactory;
 import org.inspirenxe.strata.api.component.Tooltip;
+import org.inspirenxe.strata.api.control.attribute.item.SingleSelection;
+import org.inspirenxe.strata.api.control.attribute.popup.Closable;
+import org.inspirenxe.strata.api.control.attribute.text.TextInput;
 import org.inspirenxe.strata.api.control.collection.ComboBox;
 import org.inspirenxe.strata.api.control.display.Label;
 import org.inspirenxe.strata.api.control.display.ProgressBar;
@@ -31,6 +34,7 @@ import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -115,11 +119,11 @@ class ControlsTest {
         void anEditHandlerCanRejectAnEdit() {
             this.show();
             final List<String> heard = new ArrayList<>();
-            this.box.onEvent(TextBox.EDIT, event -> {
+            this.box.onEvent(TextInput.EDIT, event -> {
                 if (!event.value().matches("\\d*")) {
                     event.cancel();
                 }
-            }).onEvent(TextBox.EDITED, event -> heard.add(event.value()));
+            }).onEvent(TextInput.EDITED, event -> heard.add(event.value()));
             this.type("1a2");
             assertEquals("12", this.box.text());
             assertEquals(List.of("1", "12"), heard);
@@ -128,7 +132,7 @@ class ControlsTest {
         @Test
         void anEditHandlerCanRewriteAnEdit() {
             this.show();
-            this.box.onEvent(TextBox.EDIT, event -> event.setValue(
+            this.box.onEvent(TextInput.EDIT, event -> event.setValue(
                     event.value().isEmpty() ? "" : Long.toString(Math.min(Long.parseLong(event.value()), 50))));
             this.type("99");
             assertEquals("50", this.box.text());
@@ -168,7 +172,7 @@ class ControlsTest {
         private ComboBox<String> combo;
 
         private void show() {
-            this.combo = ControlsTest.this.ui.<String>comboBox(String::toUpperCase).setOptions(List.of("a", "b", "c"));
+            this.combo = ControlsTest.this.ui.<String>comboBox(String::toUpperCase).setItems(List.of("a", "b", "c"));
             ControlsTest.this.test.show(ControlsTest.this.ui.absolutePanel().add(this.combo, 10, 10));
         }
 
@@ -185,7 +189,7 @@ class ControlsTest {
         void clickingAnOptionSelectsItAndCloses() {
             this.show();
             final List<String> heard = new ArrayList<>();
-            this.combo.onEvent(ComboBox.SELECTED, e -> heard.add(this.combo.options().get(e.value())));
+            this.combo.onEvent(SingleSelection.SELECTED, e -> heard.add(this.combo.items().get(e.value())));
             ControlsTest.this.center(this.combo.bounds(), MouseButton.LEFT);
             assertTrue(this.combo.isOpen());
             ControlsTest.this.test.host().layout();
@@ -223,9 +227,9 @@ class ControlsTest {
         void newOptionsKeepAnEqualSelection() {
             this.show();
             this.combo.select(1);
-            this.combo.setOptions(List.of("z", "b"));
+            this.combo.setItems(List.of("z", "b"));
             assertEquals(1, this.combo.selectedIndex());
-            this.combo.setOptions(List.of("x", "y"));
+            this.combo.setItems(List.of("x", "y"));
             assertEquals(0, this.combo.selectedIndex());
         }
     }
@@ -236,7 +240,7 @@ class ControlsTest {
         void escapeClosesADialogWindowAndTellsListeners() {
             ControlsTest.this.test.show(ControlsTest.this.ui.absolutePanel());
             final List<String> closed = new ArrayList<>();
-            final Window window = ControlsTest.this.ui.window("Title").onEvent(Window.CLOSED, event -> closed.add("window"));
+            final Window window = ControlsTest.this.ui.window("Title").onEvent(Closable.CLOSED, event -> closed.add("window"));
             window.add(ControlsTest.this.ui.button("OK"));
             final var overlay = ControlsTest.this.ui.overlays().dialog(window);
             ControlsTest.this.key(Key.ESCAPE);
@@ -263,7 +267,7 @@ class ControlsTest {
         @Test
         void theCloseButtonClosesTheWindow() {
             final List<String> closed = new ArrayList<>();
-            final Window window = ControlsTest.this.ui.window("Title").onEvent(Window.CLOSED, event -> closed.add("x"));
+            final Window window = ControlsTest.this.ui.window("Title").onEvent(Closable.CLOSED, event -> closed.add("x"));
             window.setSize(100, 60);
             ControlsTest.this.test.show(ControlsTest.this.ui.absolutePanel().add(window, 0, 0));
             ControlsTest.this.test.click(100 - 7, 5);
@@ -304,7 +308,7 @@ class ControlsTest {
             final TabBar tabs = ControlsTest.this.ui.tabBar().addTab("Buy").addTab("Sell");
             tabs.setWidth(200);
             final List<Integer> heard = new ArrayList<>();
-            tabs.onEvent(TabBar.SELECTED, event -> heard.add(event.value()));
+            tabs.onEvent(SingleSelection.SELECTED, event -> heard.add(event.value()));
             ControlsTest.this.test.show(ControlsTest.this.ui.absolutePanel().add(tabs, 0, 0));
             assertEquals(0, tabs.selectedIndex());
             assertEquals(16f, tabs.desiredHeight());
@@ -328,11 +332,14 @@ class ControlsTest {
     }
 
     @Test
-    void progressBarsClampTheirValue() {
+    void progressBarsClampTheirValueToTheRange() {
         final ProgressBar bar = this.ui.progressBar();
-        assertEquals(1f, bar.setValue(3f).value());
-        assertEquals(0f, bar.setValue(Float.NaN).value());
-        assertEquals(0.25f, bar.setValue(0.25f).value());
+        assertEquals(1.0, bar.setValue(3).value());
+        assertEquals(0.25, bar.setValue(0.25).value());
+        assertThrows(IllegalArgumentException.class, () -> bar.setValue(Double.NaN));
+        assertEquals(12.0, bar.setRange(12, 36).value());
+        assertEquals(36.0, bar.setValue(50).value());
+        assertThrows(IllegalArgumentException.class, () -> bar.setRange(5, 5));
     }
 
     @Test

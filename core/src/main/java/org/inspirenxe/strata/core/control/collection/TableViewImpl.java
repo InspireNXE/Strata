@@ -305,6 +305,56 @@ public final class TableViewImpl<T> extends CustomComposite<TableView<T>> implem
     }
 
     @Override
+    public float rowHeight() {
+        return this.list.rowHeight();
+    }
+
+    @Override
+    public float rowSpacing() {
+        return this.list.rowSpacing();
+    }
+
+    @Override
+    public TableView<T> setRowSpacing(final float spacing) {
+        this.list.setRowSpacing(spacing);
+        return this;
+    }
+
+    @Override
+    public float scrollY() {
+        return this.list.scrollY();
+    }
+
+    @Override
+    public TableView<T> setScrollY(final float scrollY) {
+        this.list.setScrollY(scrollY);
+        return this;
+    }
+
+    @Override
+    public TableView<T> scrollToIndex(final int index) {
+        this.list.scrollToIndex(index);
+        return this;
+    }
+
+    @Override
+    public boolean isDeselectable() {
+        return this.list.isDeselectable();
+    }
+
+    @Override
+    public TableView<T> setDeselectable(final boolean deselectable) {
+        this.list.setDeselectable(deselectable);
+        return this;
+    }
+
+    @Override
+    public TableView<T> setActivateOnClick(final boolean onClick) {
+        this.list.setActivateOnClick(onClick);
+        return this;
+    }
+
+    @Override
     public int selectedIndex() {
         return this.list.selectedIndex();
     }

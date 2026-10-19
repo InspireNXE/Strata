@@ -1113,9 +1113,9 @@ public final class Root {
         }
 
         @Override
-        public void close() {
+        public Overlay close() {
             if (!this.open) {
-                return;
+                return this;
             }
             this.open = false;
             Root.this.layers.remove(this);
@@ -1128,6 +1128,7 @@ public final class Root {
                 this.handlers.fire(Overlay.CLOSED, new ControlEventImpl<>(this.node.facade(), this));
             }
             this.handlers.clear();
+            return this;
         }
 
         @Override

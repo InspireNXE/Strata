@@ -237,6 +237,7 @@ public final class MenuImpl extends CustomComponent<Menu> implements Menu {
             factory.root().layout();
         }
         this.requestFocus();
+        this.report(OPENED);
         return this;
     }
 

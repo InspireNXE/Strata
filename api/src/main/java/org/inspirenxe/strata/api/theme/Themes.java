@@ -7,7 +7,7 @@ import org.inspirenxe.strata.api.control.button.RadioButton;
 import org.inspirenxe.strata.api.control.button.ToggleSwitch;
 import org.inspirenxe.strata.api.control.collection.ComboBox;
 import org.inspirenxe.strata.api.control.collection.ListView;
-import org.inspirenxe.strata.api.control.collection.SlotGrid;
+import org.inspirenxe.strata.api.control.collection.GridView;
 import org.inspirenxe.strata.api.control.collection.TableView;
 import org.inspirenxe.strata.api.control.collection.TreeView;
 import org.inspirenxe.strata.api.control.display.Label;
@@ -150,9 +150,9 @@ public final class Themes {
                 .textStyle(Expander.STYLE_TEXT_DISABLED, TextStyle.DEFAULT.withColor(0xFF707070))
                 .paint(SplitPane.STYLE_DIVIDER, Paint.solid(0xFF2B2D31))
                 .paint(SplitPane.STYLE_DIVIDER_HOVERED, Paint.solid(0xFF6A9FFF))
-                .paint(SlotGrid.STYLE_SLOT, Paint.solid(0xFF1B1C1F))
-                .paint(SlotGrid.STYLE_SLOT_HOVERED, Paint.solid(0x40FFFFFF))
-                .paint(SlotGrid.STYLE_SLOT_SELECTED, Paint.solid(0x606A9FFF))
+                .paint(GridView.STYLE_CELL, Paint.solid(0xFF1B1C1F))
+                .paint(GridView.STYLE_CELL_HOVERED, Paint.solid(0x40FFFFFF))
+                .paint(GridView.STYLE_CELL_SELECTED, Paint.solid(0x606A9FFF))
                 .paint(Overlays.STYLE_TOAST, Paint.solid(0xF02B2D31))
                 .textStyle(Overlays.STYLE_TOAST_TEXT, TextStyle.DEFAULT.withColor(0xFFF0F0F0))
                 .paint(Overlays.STYLE_BACKDROP, Paint.solid(0x60000000))

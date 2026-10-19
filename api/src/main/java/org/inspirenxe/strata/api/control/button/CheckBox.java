@@ -1,9 +1,8 @@
 package org.inspirenxe.strata.api.control.button;
 
 import org.inspirenxe.strata.api.component.Component;
-import org.inspirenxe.strata.api.event.EventType;
-import org.inspirenxe.strata.api.event.ValueEvent;
-import org.inspirenxe.strata.api.event.ValueRequestEvent;
+import org.inspirenxe.strata.api.control.attribute.text.HasText;
+import org.inspirenxe.strata.api.control.attribute.value.Toggle;
 
 import java.util.Objects;
 
@@ -11,8 +10,8 @@ import java.util.Objects;
  * A box that is checked or not, with a caption to its right.
  *
  * <p>A left click anywhere on the check box toggles it, and so does Enter, keypad Enter or Space while it has focus
- * (not repeated). It consumes those inputs. Each toggle by the user fires {@link #TOGGLE}, and every change fires
- * {@link #TOGGLED}. A disabled check box does neither and draws its disabled look.</p>
+ * (not repeated). It consumes those inputs. Each toggle by the user fires {@link Toggle#TOGGLE}, and every change
+ * fires {@link Toggle#TOGGLED}. A disabled check box does neither and draws its disabled look.</p>
  *
  * <p>It is focusable and tabbable and shows the hand cursor. The box is square, {@linkplain #setBoxSize sized} to the
  * caption's line height plus 8 units by default, which is 17 with a 9-unit font.
@@ -44,14 +43,14 @@ import java.util.Objects;
  *
  * <pre>{@code
  * CheckBox music = factory.checkBox("Music")
- *         .setChecked(settings.music())
- *         .onEvent(CheckBox.TOGGLED, event -> settings.setMusic(event.value()));
+ *         .setSelected(settings.music())
+ *         .onEvent(Toggle.TOGGLED, event -> settings.setMusic(event.value()));
  * }</pre>
  *
  * <p>Get one from {@link org.inspirenxe.strata.api.ComponentFactory#checkBox(String)}. Do not implement this
  * interface.</p>
  */
-public interface CheckBox extends Component<CheckBox> {
+public interface CheckBox extends Component<CheckBox>, HasText<CheckBox>, Toggle<CheckBox> {
     /**
      * Style key for the unchecked box (paint, required).
      */
@@ -98,18 +97,6 @@ public interface CheckBox extends Component<CheckBox> {
     String STYLE_TEXT_DISABLED = "checkbox.text.disabled";
 
     /**
-     * Fired when the user toggles the box by click or key, before it changes. The value is the state the box is
-     * about to take: true to check it. Canceling it leaves the box as it is. A handler may set another value, which
-     * the box applies like {@link #setChecked}; null is ignored. Fires only for the user's actions.
-     */
-    EventType<ValueRequestEvent<CheckBox, Boolean>> TOGGLE = EventType.valueRequest("check_box.toggle");
-    /**
-     * Fired after the box was checked or unchecked. The value is the new state and the previous value the old one.
-     * Fires for changes made from code too.
-     */
-    EventType<ValueEvent<CheckBox, Boolean>> TOGGLED = EventType.valueReport("check_box.toggled");
-
-    /**
      * Returns the caption.
      *
      * @return the caption text
@@ -123,28 +110,6 @@ public interface CheckBox extends Component<CheckBox> {
      * @return this check box
      */
     CheckBox setText(String text);
-
-    /**
-     * Returns whether the box is checked.
-     *
-     * @return true if checked; false by default
-     */
-    boolean isChecked();
-
-    /**
-     * Checks or unchecks the box. Fires {@link #TOGGLED} if the state changed. Works while disabled too, so code
-     * can keep a disabled check box in step with its setting.
-     *
-     * @param checked true to check the box
-     * @return this check box
-     */
-    CheckBox setChecked(boolean checked);
-
-    /**
-     * Flips the box as if it had been clicked, firing {@link #TOGGLED} but not {@link #TOGGLE}. Does nothing while
-     * disabled.
-     */
-    void toggle();
 
     /**
      * Returns the size of the square box.
@@ -166,10 +131,10 @@ public interface CheckBox extends Component<CheckBox> {
     /**
      * A check box's own state in a {@link org.inspirenxe.strata.api.component.ComponentSnapshot}.
      *
-     * @param checked whether the box was {@linkplain #isChecked() checked}
+     * @param selected whether the box was {@linkplain #isSelected() checked}
      * @param text the caption; never null
      */
-    record State(boolean checked, String text) {
+    record State(boolean selected, String text) {
 
         /**
          * Checks the text.

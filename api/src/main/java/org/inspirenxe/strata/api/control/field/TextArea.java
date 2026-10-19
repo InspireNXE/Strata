@@ -1,9 +1,7 @@
 package org.inspirenxe.strata.api.control.field;
 
 import org.inspirenxe.strata.api.component.Component;
-import org.inspirenxe.strata.api.event.EventType;
-import org.inspirenxe.strata.api.event.ValueEvent;
-import org.inspirenxe.strata.api.event.ValueRequestEvent;
+import org.inspirenxe.strata.api.control.attribute.text.TextInput;
 import org.inspirenxe.strata.api.geom.Insets;
 
 import java.util.Objects;
@@ -17,13 +15,30 @@ import java.util.Objects;
  * click selects the line. Pasted text keeps its line breaks, and {@code \r\n} and {@code \r} become {@code \n}.</p>
  *
  * <p>With wrapping on, which is the default, a line too long for the width breaks after the last space that fits,
- * or between characters when a word alone is too wide. A space where the line breaks stays at the end of the row. With wrapping off, rows are the lines of the text and the
- * view scrolls sideways to keep the caret in sight. Text taller than the view scrolls vertically, with a scroll bar
- * at the right edge, by wheel, by dragging the thumb and to keep the caret in sight.</p>
+ * or between characters when a word alone is too wide. A space where the line breaks stays at the end of the row.
+ * With wrapping off, rows are the lines of the text and the view scrolls sideways to keep the caret in sight. Text
+ * taller than the view scrolls vertically, with a scroll bar at the right edge, by wheel, by dragging the thumb and to
+ * keep the caret in sight.</p>
  *
  * <p>It is focusable and tabbable, accepts text input and shows the text cursor. Tab is left to focus traversal. It
  * asks for {@value #DEFAULT_WIDTH} units of width and enough height for {@linkplain #setVisibleLines four lines}, and
  * text sits 4 units in from each edge unless the padding is changed.</p>
+ *
+ * <h2>Events</h2>
+ * <ul>
+ *     <li>{@link TextInput#EDIT}: Fired when the user is about to edit the text by typing, pressing Enter, deleting,
+ *     cutting or pasting. The value is the whole text the edit would produce. While handlers run, the area still holds
+ *     the text and selection from before the edit. Cancel the event to reject the edit and keep the text and selection
+ *     as they were, or set another text to rewrite it; the value must not be set to null. The final text has its
+ *     {@code \r\n} and {@code \r} turned into {@code \n} and is cut to {@link #maxLength()} before it applies, and the
+ *     caret goes as many characters before its end as the edit left it, with nothing selected. An edit that would leave
+ *     the text as it is, such as typing into a full area, fires nothing, and a read-only area fires nothing. Fires only
+ *     for the user's actions: {@link #setText} and {@link #setMaxLength} fire none.</li>
+ *     <li>{@link TextInput#EDITED}: Fired after the text changed: by an edit of the user's, by {@link #setText}, or by
+ *     {@link #setMaxLength} cutting it. The value is the new text and {@code previous()} the text before, both with
+ *     lines separated by {@code \n}; neither is null. An edit whose final text equals the old one fires nothing. Fires
+ *     for changes made from code too.</li>
+ * </ul>
  *
  * <h2>Theme keys</h2>
  * <p>A text area reads the {@link TextBox} keys, so the two look alike, and the {@link
@@ -37,7 +52,7 @@ import java.util.Objects;
  * <p>Get one from {@link org.inspirenxe.strata.api.ComponentFactory#textArea()}. Do not implement this
  * interface.</p>
  */
-public interface TextArea extends Component<TextArea> {
+public interface TextArea extends Component<TextArea>, TextInput<TextArea> {
     /**
      * The width, in UI units, a text area asks for.
      */
@@ -46,25 +61,6 @@ public interface TextArea extends Component<TextArea> {
      * How many lines a text area asks room for unless {@linkplain #setVisibleLines told} otherwise.
      */
     int DEFAULT_VISIBLE_LINES = 4;
-
-    /**
-     * Fired when the user is about to edit the text by typing, pressing Enter, deleting, cutting or pasting. The
-     * value is the whole text the edit would produce. While handlers run, the area still holds the text and
-     * selection from before the edit. Cancel the event to reject the edit and keep the text and selection as they
-     * were, or set another text to rewrite it; the value must not be set to null. The final text has its
-     * {@code \r\n} and {@code \r} turned into {@code \n} and is cut to {@link #maxLength()} before it applies, and
-     * the caret goes as many characters before its end as the edit left it, with nothing selected. An edit that would
-     * leave the text as it is, such as typing into a full area, fires nothing, and a read-only area fires nothing.
-     * Fires only for the user's actions: {@link #setText} and {@link #setMaxLength} fire none.
-     */
-    EventType<ValueRequestEvent<TextArea, String>> EDIT = EventType.valueRequest("text_area.edit");
-    /**
-     * Fired after the text changed: by an edit of the user's, by {@link #setText}, or by {@link #setMaxLength}
-     * cutting it. The value is the new text and {@code previous()} the text before, both with lines separated by
-     * {@code \n}; neither is null. An edit whose final text equals the old one fires nothing. Fires for changes made
-     * from code too.
-     */
-    EventType<ValueEvent<TextArea, String>> EDITED = EventType.valueReport("text_area.edited");
 
     /**
      * Returns the text.

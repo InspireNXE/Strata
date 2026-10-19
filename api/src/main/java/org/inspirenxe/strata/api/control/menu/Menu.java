@@ -1,8 +1,9 @@
 package org.inspirenxe.strata.api.control.menu;
 
 import org.inspirenxe.strata.api.component.Component;
+import org.inspirenxe.strata.api.control.attribute.popup.Closable;
+import org.inspirenxe.strata.api.control.attribute.popup.Openable;
 import org.inspirenxe.strata.api.control.display.Separator;
-import org.inspirenxe.strata.api.event.ControlEvent;
 import org.inspirenxe.strata.api.event.EventType;
 import org.inspirenxe.strata.api.event.ValueEvent;
 import org.inspirenxe.strata.api.event.ValueRequestEvent;
@@ -27,8 +28,16 @@ import java.util.function.Consumer;
  * adding it to a container. Items are one line plus 6 units tall, with 14 units at the left for the check mark and 14
  * at the right for the submenu arrow, and separators 5 units tall.</p>
  *
- * <p>A menu is the whole content of its popup and has no parent, so its events ({@link #CHOOSE}, {@link #CHOSEN}
- * and {@link #CLOSED}) reach only the handlers registered on the menu itself.</p>
+ * <p>A menu is the whole content of its popup and has no parent, so its events ({@link #CHOOSE}, {@link #CHOSEN},
+ * {@link Openable#OPENED} and {@link Closable#CLOSED}) reach only the handlers registered on the menu itself. A menu
+ * opens only from code or from its bar, so it never fires {@link Openable#OPEN}, and it never fires
+ * {@link Closable#CLOSE}.</p>
+ *
+ * <h2>Events</h2>
+ * <ul>
+ *     <li>{@link Closable#CLOSED}: Reported each time the menu closes, for any reason: a choice, Escape, a press
+ *     outside, a parent menu closing, or {@link #close()} called from code.</li>
+ * </ul>
  *
  * <h2>Theme keys</h2>
  * <ul>
@@ -58,7 +67,7 @@ import java.util.function.Consumer;
  *
  * <p>Get one from {@link org.inspirenxe.strata.api.ComponentFactory#menu()}. Do not implement this interface.</p>
  */
-public interface Menu extends Component<Menu> {
+public interface Menu extends Component<Menu>, Openable<Menu> {
     /**
      * Style key for the menu's background (paint, required).
      */
@@ -99,11 +108,6 @@ public interface Menu extends Component<Menu> {
      * user's choices report it.
      */
     EventType<ValueEvent<Menu, Integer>> CHOSEN = EventType.valueReport("menu.chosen");
-    /**
-     * Reported each time the menu closes, for any reason: a choice, Escape, a press outside, a parent menu closing,
-     * or {@link #close()} called from code.
-     */
-    EventType<ControlEvent<Menu>> CLOSED = EventType.report("menu.closed");
 
     /**
      * Adds a command.
@@ -219,6 +223,7 @@ public interface Menu extends Component<Menu> {
      *
      * @return true while it shows in a popup
      */
+    @Override
     boolean isOpen();
 
     /**
@@ -244,9 +249,11 @@ public interface Menu extends Component<Menu> {
     Menu openAt(float x, float y);
 
     /**
-     * Closes the menu and any submenu open from it. Does nothing if it is not open.
+     * Closes the menu and any submenu open from it, and reports {@link Closable#CLOSED}. Does nothing if it is not
+     * open.
      *
      * @return this menu
      */
+    @Override
     Menu close();
 }

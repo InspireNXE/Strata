@@ -1,5 +1,6 @@
 package org.inspirenxe.strata.core.control.pane;
 
+import java.util.Optional;
 import org.inspirenxe.strata.api.ComponentFactory;
 import org.inspirenxe.strata.api.component.CursorKind;
 import org.inspirenxe.strata.api.component.Tooltip;
@@ -111,8 +112,25 @@ public final class TabBarImpl extends CustomComposite<TabBar> implements TabBar 
     }
 
     @Override
+    public Optional<String> selected() {
+        return this.selectedIndex < 0 ? Optional.empty() : Optional.of(this.tabText(this.selectedIndex));
+    }
+
+    @Override
+    public TabBar selectItem(final String text) {
+        for (int i = 0; i < this.tabs.size(); i++) {
+            if (this.tabText(i).equals(text)) {
+                return this.select(i);
+            }
+        }
+        return this.select(-1);
+    }
+
+    @Override
     public TabBar select(final int index) {
-        Objects.checkIndex(index, this.tabs.size());
+        if (index != -1) {
+            Objects.checkIndex(index, this.tabs.size());
+        }
         final int previous = this.selectedIndex;
         if (index != previous) {
             this.selectedIndex = index;
@@ -122,7 +140,7 @@ public final class TabBarImpl extends CustomComposite<TabBar> implements TabBar 
     }
 
     /**
-     * Selects a tab for the user through {@link TabBar#SELECT}. The tab that is already selected skips the request
+     * Selects a tab for the user through {@code SELECT}. The tab that is already selected skips the request
      * and changes nothing.
      */
     private void userSelect(final int index) {

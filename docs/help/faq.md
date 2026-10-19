@@ -96,7 +96,7 @@ Register a `KEY` handler on the screen's root and use `event.is(key, modifiers, 
 
 ### Why does `event.snapshot()` throw?
 
-Only Pre events have snapshots. A Post event such as `TextBox.EDITED` fires after its change, so `snapshot()` throws `IllegalStateException` there; read `previous()` instead. Paint and measure events have none either. See [When there is no snapshot](../guides/snapshots.md#when-there-is-no-snapshot).
+Only Pre events have snapshots. A Post event such as `TextInput.EDITED` fires after its change, so `snapshot()` throws `IllegalStateException` there; read `previous()` instead. Paint and measure events have none either. See [When there is no snapshot](../guides/snapshots.md#when-there-is-no-snapshot).
 
 ### Does a snapshot include a panel's children?
 

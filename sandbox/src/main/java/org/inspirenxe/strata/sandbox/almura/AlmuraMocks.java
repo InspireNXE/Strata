@@ -104,7 +104,7 @@ public final class AlmuraMocks {
                 new Scenario<>("store-admin", () -> new StoreScreen(true), (screen, stack) -> layout(stack)),
                 new Scenario<>("store-finder", () -> new StoreScreen(true), (screen, stack) -> {
                     layout(stack);
-                    screen.finderBox().selectOption("Building Blocks");
+                    screen.finderBox().selectItem("Building Blocks");
                     layout(stack);
                     screen.adminList().select(30);
                     click(stack, screen.finderBox().bounds());

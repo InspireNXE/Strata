@@ -6,7 +6,7 @@ import org.inspirenxe.strata.api.component.Tooltip;
 import org.inspirenxe.strata.api.control.button.RadioButton;
 import org.inspirenxe.strata.api.control.button.RadioGroup;
 import org.inspirenxe.strata.api.control.button.ToggleSwitch;
-import org.inspirenxe.strata.api.control.collection.SlotGrid;
+import org.inspirenxe.strata.api.control.collection.GridView;
 import org.inspirenxe.strata.api.control.collection.TableView;
 import org.inspirenxe.strata.api.control.collection.TreeView;
 import org.inspirenxe.strata.api.control.display.Label;
@@ -90,9 +90,9 @@ public final class ControlsScreen implements Screen {
                 .setAnchor(Anchor.MIDDLE_LEFT);
         this.tree = ui.<Category>treeView(row)
                 .setChildren(Category::children)
-                .setRoots(Category.ROOTS)
+                .setItems(Category.ROOTS)
                 .setAnchor(Anchor.FILL);
-        this.tree.select(Category.ROOTS.getFirst().children().get(1));
+        this.tree.selectItem(Category.ROOTS.getFirst().children().get(1));
 
         final StackPanel right = ui.stackPanel()
                 .setSpacing(6)
@@ -131,10 +131,10 @@ public final class ControlsScreen implements Screen {
                 .add(byName)
                 .add(byPrice)
                 .add(bySeller);
-        sort.select("price");
+        sort.selectItem("price");
 
         final ToggleSwitch onlyMine = ui.toggleSwitch("Only mine")
-                .setOn(true);
+                .setSelected(true);
         final ToggleSwitch hideSold = ui.toggleSwitch("Hide sold");
         final ToggleSwitch locked = ui.toggleSwitch("Locked")
                 .setEnabled(false);
@@ -153,7 +153,7 @@ public final class ControlsScreen implements Screen {
     private Component<?> numbers(final ComponentFactory ui) {
         final Function<String, Label> slot = name -> ui.label(name.substring(0, 1))
                 .setAnchor(Anchor.CENTER);
-        final SlotGrid<String> hotbar = ui.<String>slotGrid(slot)
+        final GridView<String> hotbar = ui.<String>gridView(slot)
                 .setColumns(9)
                 .setTooltips(Tooltip::text)
                 .setItems(Arrays.asList("Stone", "Iron", null, "Gold", null, null, "Wood", null, "Glass"))

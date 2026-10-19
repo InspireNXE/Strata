@@ -2,6 +2,8 @@ package org.inspirenxe.strata.examples.events;
 
 import org.inspirenxe.strata.api.ComponentFactory;
 import org.inspirenxe.strata.api.component.Component;
+import org.inspirenxe.strata.api.control.attribute.text.TextInput;
+import org.inspirenxe.strata.api.control.attribute.value.Ranged;
 import org.inspirenxe.strata.api.control.button.Button;
 import org.inspirenxe.strata.api.control.display.Label;
 import org.inspirenxe.strata.api.control.field.Slider;
@@ -58,21 +60,21 @@ public final class EventExamples {
     static void rewrite(final Slider volume, final double[] cap) {
         // --8<-- [start:rewrite]
         // A Pre event with a value: set another one to change what the user did
-        volume.onEvent(Slider.CHANGE, event -> event.setValue(Math.min(event.value(), cap[0])));
+        volume.onEvent(Ranged.CHANGE, event -> event.setValue(Math.min(event.value(), cap[0])));
         // --8<-- [end:rewrite]
     }
 
     static void react(final TextBox name, final Label preview) {
         // --8<-- [start:react]
         // A Post event: the text has already changed, by typing or by setText
-        name.onEvent(TextBox.EDITED, event -> preview.setText(event.value().toUpperCase()));
+        name.onEvent(TextInput.EDITED, event -> preview.setText(event.value().toUpperCase()));
         // --8<-- [end:react]
     }
 
     static void form(final StackPanel form) {
         // --8<-- [start:form]
         // Every text box in the form, with one handler, before the boxes' own handlers at priority 0
-        form.onEvent(TextBox.EDIT, -100, event -> {
+        form.onEvent(TextInput.EDIT, -100, event -> {
             if (event.value().length() > 32) {
                 event.cancel();
             }

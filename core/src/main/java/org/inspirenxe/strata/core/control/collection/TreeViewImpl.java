@@ -87,13 +87,13 @@ public final class TreeViewImpl<T> extends CustomComposite<TreeView<T>> implemen
     // ------------------------------------------------------------------
 
     @Override
-    public List<T> roots() {
+    public List<T> items() {
         return this.roots;
     }
 
     @Override
-    public TreeView<T> setRoots(final List<? extends T> roots) {
-        this.roots = List.copyOf(roots);
+    public TreeView<T> setItems(final List<? extends T> items) {
+        this.roots = List.copyOf(items);
         this.rebuild();
         return this;
     }
@@ -350,6 +350,56 @@ public final class TreeViewImpl<T> extends CustomComposite<TreeView<T>> implemen
         return this;
     }
 
+    @Override
+    public float rowHeight() {
+        return this.list.rowHeight();
+    }
+
+    @Override
+    public float rowSpacing() {
+        return this.list.rowSpacing();
+    }
+
+    @Override
+    public TreeView<T> setRowSpacing(final float spacing) {
+        this.list.setRowSpacing(spacing);
+        return this;
+    }
+
+    @Override
+    public float scrollY() {
+        return this.list.scrollY();
+    }
+
+    @Override
+    public TreeView<T> setScrollY(final float scrollY) {
+        this.list.setScrollY(scrollY);
+        return this;
+    }
+
+    @Override
+    public TreeView<T> scrollToIndex(final int index) {
+        this.list.scrollToIndex(index);
+        return this;
+    }
+
+    @Override
+    public boolean isDeselectable() {
+        return this.list.isDeselectable();
+    }
+
+    @Override
+    public TreeView<T> setDeselectable(final boolean deselectable) {
+        this.list.setDeselectable(deselectable);
+        return this;
+    }
+
+    @Override
+    public TreeView<T> setActivateOnClick(final boolean onClick) {
+        this.list.setActivateOnClick(onClick);
+        return this;
+    }
+
     // ------------------------------------------------------------------
     // Selection
     // ------------------------------------------------------------------
@@ -360,7 +410,18 @@ public final class TreeViewImpl<T> extends CustomComposite<TreeView<T>> implemen
     }
 
     @Override
-    public TreeView<T> select(final T item) {
+    public int selectedIndex() {
+        return this.list.selectedIndex();
+    }
+
+    @Override
+    public TreeView<T> select(final int index) {
+        this.list.select(index);
+        return this;
+    }
+
+    @Override
+    public TreeView<T> selectItem(final T item) {
         if (item == null) {
             this.list.select(-1);
             return this;

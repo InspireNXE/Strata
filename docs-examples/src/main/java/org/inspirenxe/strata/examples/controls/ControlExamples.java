@@ -1,6 +1,8 @@
 package org.inspirenxe.strata.examples.controls;
 
 import org.inspirenxe.strata.api.ComponentFactory;
+import org.inspirenxe.strata.api.control.attribute.value.Ranged;
+import org.inspirenxe.strata.api.control.attribute.value.Toggle;
 import org.inspirenxe.strata.api.control.button.CheckBox;
 import org.inspirenxe.strata.api.control.display.Image;
 import org.inspirenxe.strata.api.control.display.Label;
@@ -75,8 +77,8 @@ public final class ControlExamples {
     static CheckBox checkBox(final ComponentFactory factory, final Settings settings) {
         // --8<-- [start:checkbox]
         final CheckBox music = factory.checkBox("Music")
-                .setChecked(settings.music())
-                .onEvent(CheckBox.TOGGLED, event -> settings.setMusic(event.value()));
+                .setSelected(settings.music())
+                .onEvent(Toggle.TOGGLED, event -> settings.setMusic(event.value()));
         // --8<-- [end:checkbox]
         return music;
     }
@@ -88,7 +90,7 @@ public final class ControlExamples {
                 .setStep(1)
                 .setValue(settings.volume())
                 .setLabel(value -> "Volume: " + (int) value + "%")
-                .onEvent(Slider.CHANGED, event -> settings.setVolume(event.value()));
+                .onEvent(Ranged.CHANGED, event -> settings.setVolume(event.value()));
         volume.setAlignment(HorizontalAlignment.STRETCH, VerticalAlignment.TOP);
         // --8<-- [end:slider]
         return volume;
@@ -102,7 +104,7 @@ public final class ControlExamples {
                 .setStep(1)
                 .setValue(settings.distance())
                 .setLabel(value -> "Render distance: " + (int) value + " chunks")
-                .onEvent(Slider.CHANGED, event -> settings.setDistance(event.value().intValue()));
+                .onEvent(Ranged.CHANGED, event -> settings.setDistance(event.value().intValue()));
         // --8<-- [end:integers]
         return distance;
     }
@@ -123,8 +125,8 @@ public final class ControlExamples {
             final Label status = factory.label("");
             final CheckBox music = checkBox(factory, settings);
             final CheckBox subtitles = factory.checkBox("Subtitles");
-            final CheckBox locked = factory.checkBox("Locked option").setChecked(true).setEnabled(false);
-            music.onEvent(CheckBox.TOGGLED, event -> status.setText(event.value() ? "Music on" : "Music off"));
+            final CheckBox locked = factory.checkBox("Locked option").setSelected(true).setEnabled(false);
+            music.onEvent(Toggle.TOGGLED, event -> status.setText(event.value() ? "Music on" : "Music off"));
 
             final Slider distance = integerSlider(factory, settings);
             distance.setAlignment(HorizontalAlignment.STRETCH, VerticalAlignment.TOP);

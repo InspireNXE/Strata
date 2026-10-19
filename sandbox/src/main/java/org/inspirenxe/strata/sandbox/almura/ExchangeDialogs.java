@@ -2,6 +2,9 @@ package org.inspirenxe.strata.sandbox.almura;
 
 import org.inspirenxe.strata.api.ComponentFactory;
 import org.inspirenxe.strata.api.component.Component;
+import org.inspirenxe.strata.api.control.attribute.item.Activatable;
+import org.inspirenxe.strata.api.control.attribute.item.SingleSelection;
+import org.inspirenxe.strata.api.control.attribute.text.TextInput;
 import org.inspirenxe.strata.api.control.button.Button;
 import org.inspirenxe.strata.api.control.collection.ListView;
 import org.inspirenxe.strata.api.control.display.Image;
@@ -65,7 +68,7 @@ final class ExchangeDialogs {
                 .setSelectAllOnFocus(true)
                 .setWidth(45)
                 .setAnchor(Anchor.MIDDLE_RIGHT)
-                .onEvent(TextBox.EDIT, event -> {
+                .onEvent(TextInput.EDIT, event -> {
                     final String digits = event.value().replaceAll("[^0-9]", "");
                     if (digits.isEmpty()) {
                         event.setValue("");
@@ -100,7 +103,7 @@ final class ExchangeDialogs {
             total.setText(Look.currency(listing.price().multiply(BigDecimal.valueOf(value))));
             confirm.setEnabled(value > 0 && value <= listing.quantity());
         };
-        amount.onEvent(TextBox.EDITED, event -> validate.run());
+        amount.onEvent(TextInput.EDITED, event -> validate.run());
         final Runnable submit = () -> {
             if (confirm.isEnabled()) {
                 buy.accept(Long.parseLong(amount.text()));
@@ -118,7 +121,7 @@ final class ExchangeDialogs {
                 .setSelectAllOnFocus(true)
                 .setText(stock.lastPrice() == null ? "" : stock.lastPrice().toPlainString())
                 .setWidth(65)
-                .onEvent(TextBox.EDIT, event -> {
+                .onEvent(TextInput.EDIT, event -> {
                     if (!event.value().matches("\\d{0,12}(\\.\\d{0,2})?")) {
                         event.cancel();
                     }
@@ -133,7 +136,7 @@ final class ExchangeDialogs {
             final BigDecimal max = BigDecimal.valueOf(1_000_000_000_000L);
             confirm.setEnabled(value != null && value.signum() > 0 && value.compareTo(max) <= 0);
         };
-        price.onEvent(TextBox.EDITED, event -> validate.run());
+        price.onEvent(TextInput.EDITED, event -> validate.run());
         validate.run();
         final Runnable submit = () -> {
             if (confirm.isEnabled()) {
@@ -198,14 +201,14 @@ final class ExchangeDialogs {
 
         void open() {
             this.left = this.list()
-                    .onEvent(ListView.SELECTED, e -> this.selected(true, this.left.selected()))
-                    .onEvent(ListView.ACTIVATED, e -> {
+                    .onEvent(SingleSelection.SELECTED, e -> this.selected(true, this.left.selected()))
+                    .onEvent(Activatable.ACTIVATED, e -> {
                         final Stock stock = this.left.items().get(e.value());
                         this.move(true, stock, stock.quantity());
                     });
             this.right = this.list()
-                    .onEvent(ListView.SELECTED, e -> this.selected(false, this.right.selected()))
-                    .onEvent(ListView.ACTIVATED, e -> {
+                    .onEvent(SingleSelection.SELECTED, e -> this.selected(false, this.right.selected()))
+                    .onEvent(Activatable.ACTIVATED, e -> {
                         final Stock stock = this.right.items().get(e.value());
                         this.move(false, stock, stock.quantity());
                     });

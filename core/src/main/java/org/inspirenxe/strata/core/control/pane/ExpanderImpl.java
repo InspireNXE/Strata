@@ -125,7 +125,7 @@ public final class ExpanderImpl extends CustomComposite<Expander> implements Exp
             }
         }
         this.invalidateLayout();
-        this.report(TOGGLED, expanded, !expanded);
+        this.report(EXPANDED, expanded, !expanded);
         return this;
     }
 
@@ -137,12 +137,12 @@ public final class ExpanderImpl extends CustomComposite<Expander> implements Exp
     }
 
     /**
-     * Expands or collapses for the user through {@link Expander#TOGGLE}, applying the final value unless it is null.
+     * Expands or collapses for the user through {@link Expander#EXPAND}, applying the final value unless it is null.
      * Does nothing while disabled.
      */
     private void userToggle() {
         if (this.isEnabled()) {
-            this.request(TOGGLE, !this.expanded, expanded -> {
+            this.request(EXPAND, !this.expanded, expanded -> {
                 if (expanded != null) {
                     this.setExpanded(expanded);
                 }

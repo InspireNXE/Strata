@@ -2,6 +2,9 @@ package org.inspirenxe.strata.sandbox.almura;
 
 import org.inspirenxe.strata.api.ComponentFactory;
 import org.inspirenxe.strata.api.component.Component;
+import org.inspirenxe.strata.api.control.attribute.item.Activatable;
+import org.inspirenxe.strata.api.control.attribute.item.SingleSelection;
+import org.inspirenxe.strata.api.control.attribute.popup.Closable;
 import org.inspirenxe.strata.api.control.button.Button;
 import org.inspirenxe.strata.api.control.collection.ComboBox;
 import org.inspirenxe.strata.api.control.collection.ListView;
@@ -79,7 +82,7 @@ public final class ExchangeScreen implements Screen {
         this.ui = ui;
         final Window window = ui.window("Exchange: " + this.data.name)
                 .setSize(600, 370)
-                .onEvent(Window.CLOSED, event -> {
+                .onEvent(Closable.CLOSED, event -> {
                     if (this.handle != null) {
                         this.handle.close();
                     }
@@ -124,8 +127,8 @@ public final class ExchangeScreen implements Screen {
                 .setTabIndex(1)
                 .setAnchor(Anchor.FILL);
         this.sort = ui.<Sort>comboBox(sort -> sort.label)
-                .setOptions(List.of(Sort.values()))
-                .onEvent(ComboBox.SELECTED, e -> this.search())
+                .setItems(List.of(Sort.values()))
+                .onEvent(SingleSelection.SELECTED, e -> this.search())
                 .setAnchor(Anchor.FILL);
         final Button search = Look.button(ui, "Search", 80)
                 .onEvent(Button.PRESSED, event -> this.search())
@@ -152,8 +155,8 @@ public final class ExchangeScreen implements Screen {
                 .setRowSpacing(1)
                 .setKeyFunction(Listing::record)
                 .setPlaceholder("No results found.")
-                .onEvent(ListView.SELECTED, e -> this.updateControls())
-                .onEvent(ListView.ACTIVATED, e -> this.buy(this.forSale.items().get(e.value()), 1))
+                .onEvent(SingleSelection.SELECTED, e -> this.updateControls())
+                .onEvent(Activatable.ACTIVATED, e -> this.buy(this.forSale.items().get(e.value()), 1))
                 .setAnchor(Anchor.FILL);
 
         this.first = Look.button(ui, "|<", 20)
@@ -227,8 +230,8 @@ public final class ExchangeScreen implements Screen {
                 .setRowSpacing(1)
                 .setKeyFunction(Stock::record)
                 .setPlaceholder("Nothing to list.")
-                .onEvent(ListView.SELECTED, e -> this.updateControls())
-                .onEvent(ListView.ACTIVATED, e -> this.toggleListing(this.listable.items().get(e.value())))
+                .onEvent(SingleSelection.SELECTED, e -> this.updateControls())
+                .onEvent(Activatable.ACTIVATED, e -> this.toggleListing(this.listable.items().get(e.value())))
                 .setAnchor(Anchor.FILL);
 
         this.list = Look.button(ui, "List", 46)

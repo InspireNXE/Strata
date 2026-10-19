@@ -84,6 +84,8 @@ Every number Strata picks for you.
 | | Smallest desired width | 40 |
 | | Wheel | one row and its spacing a notch |
 | `ComboBox` | Rows shown before scrolling | 8 |
+| | Selection | the first option once there are options |
+| | Label function, key function | `toString`, the option itself |
 | | Desired size | widest option plus 4, 4 and 4 of padding and a 7-wide arrow; one line plus 6 |
 | | Open list rows | one line plus 4 |
 | | Cursor | `HAND` |
@@ -93,7 +95,7 @@ Every number Strata picks for you.
 | | Spacing | 0 |
 | | Selected | the first tab added |
 | `ProgressBar` | Desired size | 100 wide, one line plus 4 |
-| | Value | 0 |
+| | Range, value | 0 to 1, 0 |
 | `Separator` | Thickness | 1 |
 | `RadioButton` | Box, gap and cursor | as `CheckBox` |
 | | Mark inset | three tenths of the box size on each side |
@@ -125,9 +127,10 @@ Every number Strata picks for you.
 | `SplitPane` | Divider | 4 thick |
 | | Position | 0.5 |
 | | Minimum side when dragging | 20 |
-| `SlotGrid` | Columns, slot size, spacing | 9, 18, 0 |
+| `GridView` | Columns, cell size, spacing | 9, 18, 0 |
 | | Content inset | 1 |
 | | Selectable | no |
+| | Activation | a left double click |
 
 ## Input
 

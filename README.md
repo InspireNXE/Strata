@@ -12,7 +12,7 @@ This repository has the Java2D/Swing adapter. The Minecraft adapter lives in the
 
 | Module | What it is |
 |---|---|
-| `api` | What developers compile against: interfaces, value records, the `ComponentFactory`, the controls (`Label`, `Image`, `Button`, `CheckBox`, `Slider`, `TextBox`, `ListView`, `ComboBox`, `Window`, `MessageBox`, `TabBar`, `ProgressBar`, `Separator`, `RadioButton`, `ToggleSwitch`, `Spinner`, `TextArea`, `TableView`, `TreeView`, `Menu`, `MenuBar`, `Expander`, `SplitPane`, `SlotGrid`), the containers (including `ScrollPanel`), overlays and tooltips, and the extension points (`CustomComponent`, `CustomComposite`, `CustomContainer`, `ComponentBehavior`, `Painter`, `Environment`). |
+| `api` | What developers compile against: interfaces, value records, the `ComponentFactory`, the controls (`Label`, `Image`, `Button`, `CheckBox`, `Slider`, `TextBox`, `ListView`, `ComboBox`, `Window`, `MessageBox`, `TabBar`, `ProgressBar`, `Separator`, `RadioButton`, `ToggleSwitch`, `Spinner`, `TextArea`, `TableView`, `TreeView`, `Menu`, `MenuBar`, `Expander`, `SplitPane`, `GridView`) and the attributes they share (`Toggle`, `SingleSelection`, `TextInput` and others), the containers (including `ScrollPanel`), overlays and tooltips, and the extension points (`CustomComponent`, `CustomComposite`, `CustomContainer`, `Painter`, `Environment`). |
 | `spi` | What engine adapters implement (`Canvas`, `Platform`) and drive (`ScreenHost`, `ScreenStack`), plus contract tests for adapters. |
 | `core` | The implementation behind both. Only adapters use it directly. |
 | `canvas-swing` | The Java2D/Swing adapter: `StrataPanel` and `SwingSnapshot`. |
@@ -39,7 +39,7 @@ public final class SettingsScreen implements Screen {
 
 You can extend Strata in three ways, from lightest to heaviest:
 
-- Change a built-in through its events, with `onEvent(type, handler)` and an optional priority. Pre events (`TextBox.EDIT`, `Window.CLOSE`) can be canceled or rewritten, Post events (`TextBox.EDITED`) report every change, and drawing and sizing are events too (`Component.PAINTED`, `Component.MEASURED`).
+- Change a built-in through its events, with `onEvent(type, handler)` and an optional priority. Pre events (`TextInput.EDIT`, `Closable.CLOSE`) can be canceled or rewritten, Post events (`TextInput.EDITED`) report every change, and drawing and sizing are events too (`Component.PAINTED`, `Component.MEASURED`).
 - Compose built-ins inside a container and expose the group through an interface of your own.
 - Write a new type by extending `CustomComponent<T>`, or `CustomContainer<T>` for a layout. The class can implement an interface of your own, so other code sees it as its own type.
 

@@ -32,7 +32,7 @@ Rewrite a value on its way in:
 --8<-- "extending/ExtendingExamples.java:rewrite"
 ```
 
-Ask before a window closes. Calling `window.close()` from code fires no `Window.CLOSE`, so the dialog can close it without asking again:
+Ask before a window closes. Calling `window.close()` from code fires no `Closable.CLOSE`, so the dialog can close it without asking again:
 
 ```java
 --8<-- "extending/ExtendingExamples.java:veto"

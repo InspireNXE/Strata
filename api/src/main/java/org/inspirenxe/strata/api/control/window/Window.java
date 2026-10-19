@@ -1,9 +1,8 @@
 package org.inspirenxe.strata.api.control.window;
 
 import org.inspirenxe.strata.api.component.Container;
-import org.inspirenxe.strata.api.event.ControlEvent;
-import org.inspirenxe.strata.api.event.EventType;
-import org.inspirenxe.strata.api.event.RequestEvent;
+import org.inspirenxe.strata.api.control.attribute.popup.Closable;
+import org.inspirenxe.strata.api.control.attribute.text.Titled;
 
 /**
  * A framed panel with a title bar, a close button, and content below the bar. Screens use it as their main frame,
@@ -25,6 +24,19 @@ import org.inspirenxe.strata.api.event.RequestEvent;
  *     first.</li>
  * </ul>
  *
+ * <h2>Events</h2>
+ * <ul>
+ *     <li>{@link Closable#CLOSE}: Requested when the user closes the window: a click on the close button, or an Escape
+ *     press that the window acts on as described above. An Escape press reaches the window when focus is inside it, or
+ *     when nothing has focus and the window is the content of the top dialog. Unless a handler cancels the request, the
+ *     window does what {@link #close()} does. Cancel it to keep the window open, for example to ask about unsaved
+ *     changes first; the Escape press is used either way. An overlay that closes without the window, such as a popup
+ *     closed by a press outside it or by an Escape press that never reached the window, fires no request. Fires only
+ *     for the user's actions.</li>
+ *     <li>{@link Closable#CLOSED}: Reported each time the window closes, before the overlay showing it closes. Fires
+ *     for {@link #close()} called from code too.</li>
+ * </ul>
+ *
  * <h2>Theme keys</h2>
  * <ul>
  *     <li>{@value #STYLE_BACKGROUND} (paint, required): the whole window, drawn under the title bar.</li>
@@ -40,13 +52,13 @@ import org.inspirenxe.strata.api.event.RequestEvent;
  * <pre>{@code
  * Window window = factory.window("Exchange").add(content);
  * window.setSize(600, 370);
- * window.onEvent(Window.CLOSED, event -> handle.close());
+ * window.onEvent(Closable.CLOSED, event -> handle.close());
  * }</pre>
  *
  * <p>Get one from {@link org.inspirenxe.strata.api.ComponentFactory#window(String)}. Do not implement this
  * interface.</p>
  */
-public interface Window extends Container<Window> {
+public interface Window extends Container<Window>, Titled<Window>, Closable<Window> {
     /**
      * Style key for the window's background (paint, required).
      */
@@ -71,22 +83,6 @@ public interface Window extends Container<Window> {
      * The space above and below the title in the title bar, in UI units.
      */
     float TITLE_PADDING = 3f;
-
-    /**
-     * Requested when the user closes the window: a click on the close button, or an Escape press that the window
-     * acts on as described above. An Escape press reaches the window when focus is inside it, or when nothing has
-     * focus and the window is the content of the top dialog. Unless a handler cancels the request, the window does
-     * what {@link #close()} does. Cancel it to keep the window open, for example to ask about unsaved changes first;
-     * the Escape press is used either way. An overlay that closes without the window, such as a popup closed by a
-     * press outside it or by an Escape press that never reached the window, fires no request. Fires only for the
-     * user's actions.
-     */
-    EventType<RequestEvent<Window>> CLOSE = EventType.request("window.close");
-    /**
-     * Reported each time the window closes, before the overlay showing it closes. Fires for {@link #close()} called
-     * from code too.
-     */
-    EventType<ControlEvent<Window>> CLOSED = EventType.report("window.closed");
 
     /**
      * Returns the title.
@@ -138,6 +134,9 @@ public interface Window extends Container<Window> {
      * Closes the window: reports {@link #CLOSED}, then closes the overlay showing it, if it is in one. A window that
      * is a screen's content stays; close the screen from a {@link #CLOSED} handler. Each call reports, even on a
      * window that is not shown.
+     *
+     * @return this window
      */
-    void close();
+    @Override
+    Window close();
 }

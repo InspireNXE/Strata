@@ -1,6 +1,11 @@
 package org.inspirenxe.strata.api.control.collection;
 
 import org.inspirenxe.strata.api.component.Component;
+import org.inspirenxe.strata.api.control.attribute.item.Activatable;
+import org.inspirenxe.strata.api.control.attribute.item.CellSource;
+import org.inspirenxe.strata.api.control.attribute.item.ItemSource;
+import org.inspirenxe.strata.api.control.attribute.item.RowView;
+import org.inspirenxe.strata.api.control.attribute.item.SingleSelection;
 import org.inspirenxe.strata.api.event.EventType;
 import org.inspirenxe.strata.api.event.ValueEvent;
 import org.inspirenxe.strata.api.event.ValueRequestEvent;
@@ -23,11 +28,32 @@ import java.util.function.Function;
  * and Enter work as in a list.</p>
  *
  * <p>Items are told apart by their key, the item itself unless {@linkplain #setKeyFunction set} otherwise, and the
- * tree remembers which keys are expanded across {@link #setRoots} calls.</p>
+ * tree remembers which keys are expanded across {@link #setItems} calls.</p>
  *
  * <p>The tree fires its own events. The selection and activation events carry row indexes, so read the item with
  * {@code tree.shownItems().get(e.value())}. The row list is private to the tree: its {@link ListView} events never
  * reach anything outside the tree.</p>
+ *
+ * <h2>Events</h2>
+ * <ul>
+ *     <li>{@link SingleSelection#SELECT}: Asked before the user changes the selection: a press on a row, the Up, Down,
+ *     Page Up, Page Down, Home and End keys while focus is in the tree, Right while an expanded item is selected, which
+ *     moves to its first child, or Left while an item that is not expanded is selected, which moves to its parent. It
+ *     fires only when the selection would change. The value is the row of {@link #shownItems()} about to be selected.
+ *     The user never clears the selection, but a handler may rewrite the value to -1 to clear it, or to another row;
+ *     any other index outside the rows is ignored. Fires only for the user's actions.</li>
+ *     <li>{@link SingleSelection#SELECTED}: Told after the selected row changed. The value is the selected row of
+ *     {@link #shownItems()}, or -1 when nothing is selected, and the previous value is the row before. It fires once
+ *     per change, also when expanding or collapsing moves the selected item to another row, and when the rows are
+ *     worked out again and the item kept selected is no longer equal to the one before, in which case the value can
+ *     equal the previous value. Fires for changes made from code too.</li>
+ *     <li>{@link Activatable#ACTIVATE}: Asked before the user activates a row: a double press on a row, or Enter while
+ *     focus is in the tree and a row is selected. The value is the row of {@link #shownItems()}. A handler may rewrite
+ *     it to another row; an index outside the rows is ignored. Fires only for the user's actions.</li>
+ *     <li>{@link Activatable#ACTIVATED}: Told after the user activated a row. The value is the row of
+ *     {@link #shownItems()}, and the previous value is the same row. The tree has no method that activates a row from
+ *     code.</li>
+ * </ul>
  *
  * <h2>Theme keys</h2>
  * <p>The rows read the {@link ListView} keys. The arrows read this.</p>
@@ -38,7 +64,7 @@ import java.util.function.Function;
  * <pre>{@code
  * TreeView<Category> categories = factory.<Category>treeView(category -> factory.label(category.name()))
  *         .setChildren(Category::subcategories)
- *         .setRoots(store.categories());
+ *         .setItems(store.categories());
  * }</pre>
  *
  * <p>Get one from {@link org.inspirenxe.strata.api.ComponentFactory#treeView}. Do not implement this
@@ -46,7 +72,8 @@ import java.util.function.Function;
  *
  * @param <T> the type of the items
  */
-public interface TreeView<T> extends Component<TreeView<T>> {
+public interface TreeView<T> extends Component<TreeView<T>>, ItemSource<T, TreeView<T>>, CellSource<T, TreeView<T>>,
+        SingleSelection<T, TreeView<T>>, Activatable<TreeView<T>>, RowView<TreeView<T>> {
     /**
      * Style key for the expand arrows (paint, optional).
      */
@@ -60,34 +87,6 @@ public interface TreeView<T> extends Component<TreeView<T>> {
      */
     float DEFAULT_INDENT = 10f;
     /**
-     * Asked before the user changes the selection: a press on a row, the Up, Down, Page Up, Page Down, Home and End
-     * keys while focus is in the tree, Right while an expanded item is selected, which moves to its first child, or
-     * Left while an item that is not expanded is selected, which moves to its parent. It fires only when the
-     * selection would change. The value is the row of {@link #shownItems()} about to be selected. The user never
-     * clears the selection, but a handler may rewrite the value to -1 to clear it, or to another row; any other index
-     * outside the rows is ignored. Fires only for the user's actions.
-     */
-    EventType<ValueRequestEvent<TreeView<?>, Integer>> SELECT = EventType.valueRequest("tree_view.select");
-    /**
-     * Told after the selected row changed. The value is the selected row of {@link #shownItems()}, or -1 when
-     * nothing is selected, and the previous value is the row before. It fires once per change, also when expanding
-     * or collapsing moves the selected item to another row, and when the rows are worked out again and the item
-     * kept selected is no longer equal to the one before, in which case the value can equal the previous value.
-     * Fires for changes made from code too.
-     */
-    EventType<ValueEvent<TreeView<?>, Integer>> SELECTED = EventType.valueReport("tree_view.selected");
-    /**
-     * Asked before the user activates a row: a double press on a row, or Enter while focus is in the tree and a row
-     * is selected. The value is the row of {@link #shownItems()}. A handler may rewrite it to another row; an index
-     * outside the rows is ignored. Fires only for the user's actions.
-     */
-    EventType<ValueRequestEvent<TreeView<?>, Integer>> ACTIVATE = EventType.valueRequest("tree_view.activate");
-    /**
-     * Told after the user activated a row. The value is the row of {@link #shownItems()}, and the previous value is
-     * the same row. The tree has no method that activates a row from code.
-     */
-    EventType<ValueEvent<TreeView<?>, Integer>> ACTIVATED = EventType.valueReport("tree_view.activated");
-    /**
      * Asked before the user expands or collapses an item: a click on its arrow, or, while focus is in the tree, Right
      * on the selected item when it has children and is collapsed, or Left on the selected item when it is expanded.
      * The press that starts a click on the arrow also selects the row, through {@link #SELECT}. The value names the
@@ -99,26 +98,28 @@ public interface TreeView<T> extends Component<TreeView<T>> {
     /**
      * Told after an item was expanded or collapsed. The value names the item and its new state, and the previous
      * value the same item and its old state. {@link #expandAll()} and {@link #collapseAll()} fire it once for each
-     * item that changed, and {@link #select} once for each ancestor it expanded. {@link #collapseAll()} reports only
+     * item that changed, and {@link #selectItem} once for each ancestor it expanded. {@link #collapseAll()} reports only
      * items it can still reach from the roots; it forgets other expanded keys without an event. Fires for changes
      * made from code too.
      */
     EventType<ValueEvent<TreeView<?>, Expansion<?>>> EXPANDED = EventType.valueReport("tree_view.expanded");
 
     /**
-     * Returns the top-level items.
+     * Returns the top-level items, the roots.
      *
      * @return an unmodifiable list of the roots
      */
-    List<T> roots();
+    @Override
+    List<T> items();
 
     /**
-     * Replaces the top-level items. Expanded keys and the selection carry over to items with the same key.
+     * Replaces the top-level items, the roots. Expanded keys and the selection carry over to items with the same key.
      *
-     * @param roots the new roots, copied
+     * @param items the new roots, copied
      * @return this tree
      */
-    TreeView<T> setRoots(List<? extends T> roots);
+    @Override
+    TreeView<T> setItems(List<? extends T> items);
 
     /**
      * Sets how the tree finds an item's children. The rows are worked out again.
@@ -234,11 +235,30 @@ public interface TreeView<T> extends Component<TreeView<T>> {
     TreeView<T> setPlaceholder(String placeholder);
 
     /**
+     * Returns the selected row.
+     *
+     * @return the selected row of {@link #shownItems()}, or -1 when nothing is selected
+     */
+    @Override
+    int selectedIndex();
+
+    /**
      * Returns the selected item.
      *
      * @return the selected item, or empty when nothing is selected
      */
+    @Override
     Optional<T> selected();
+
+    /**
+     * Selects a shown row and scrolls it into view.
+     *
+     * @param index the row of {@link #shownItems()}, or -1 to select nothing
+     * @return this tree
+     * @throws IndexOutOfBoundsException if the index is not -1 and not a shown row
+     */
+    @Override
+    TreeView<T> select(int index);
 
     /**
      * Selects an item, expanding its ancestors so it shows, and scrolls it into view. The tree searches the
@@ -247,7 +267,8 @@ public interface TreeView<T> extends Component<TreeView<T>> {
      * @param item the item, or null to select nothing
      * @return this tree
      */
-    TreeView<T> select(T item);
+    @Override
+    TreeView<T> selectItem(T item);
 
     /**
      * An item and whether it is expanded.

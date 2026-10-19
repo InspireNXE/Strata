@@ -1,6 +1,10 @@
 package org.inspirenxe.strata.api.control.collection;
 
 import org.inspirenxe.strata.api.component.Component;
+import org.inspirenxe.strata.api.control.attribute.item.Activatable;
+import org.inspirenxe.strata.api.control.attribute.item.ItemSource;
+import org.inspirenxe.strata.api.control.attribute.item.RowView;
+import org.inspirenxe.strata.api.control.attribute.item.SingleSelection;
 import org.inspirenxe.strata.api.control.display.Label;
 import org.inspirenxe.strata.api.event.EventType;
 import org.inspirenxe.strata.api.event.ValueEvent;
@@ -34,6 +38,26 @@ import java.util.function.Function;
  * read the item with {@code table.shownItems().get(e.value())}. The body list is private to the table: its
  * {@link ListView} events never reach anything outside the table.</p>
  *
+ * <h2>Events</h2>
+ * <ul>
+ *     <li>{@link SingleSelection#SELECT}: Asked before the user changes the selection: a press on a row, or the Up,
+ *     Down, Page Up, Page Down, Home and End keys while focus is in the table. It fires only when the selection would
+ *     change. The value is the row of {@link #shownItems()} about to be selected. The user never clears the selection,
+ *     but a handler may rewrite the value to -1 to clear it, or to another row; the table then selects as
+ *     {@link #select} does and ignores any other index outside the rows. Fires only for the user's actions.</li>
+ *     <li>{@link SingleSelection#SELECTED}: Told after the selected row changed. The value is the selected row of
+ *     {@link #shownItems()}, or -1 when nothing is selected, and the previous value is the row before. A sort or
+ *     {@link #setItems} that moves the selected item to another row fires it too, and so does {@link #setItems} when
+ *     the item kept selected is no longer equal to the one before, in which case the value can equal the previous
+ *     value. Fires for changes made from code too.</li>
+ *     <li>{@link Activatable#ACTIVATE}: Asked before the user activates a row: a double press on a row, or Enter while
+ *     focus is in the table and a row is selected. The value is the row of {@link #shownItems()}. A handler may rewrite
+ *     it to another row; an index outside the rows is ignored. Fires only for the user's actions.</li>
+ *     <li>{@link Activatable#ACTIVATED}: Told after the user activated a row. The value is the row of
+ *     {@link #shownItems()}, and the previous value is the same row. The table has no method that activates a row from
+ *     code.</li>
+ * </ul>
+ *
  * <h2>Theme keys</h2>
  * <p>The body reads the {@link ListView} keys. The header reads these.</p>
  * <ul>
@@ -59,7 +83,8 @@ import java.util.function.Function;
  *
  * @param <T> the type of the items
  */
-public interface TableView<T> extends Component<TableView<T>> {
+public interface TableView<T> extends Component<TableView<T>>, ItemSource<T, TableView<T>>,
+        SingleSelection<T, TableView<T>>, Activatable<TableView<T>>, RowView<TableView<T>> {
     /**
      * Style key for the header behind each title (paint, required).
      */
@@ -76,33 +101,6 @@ public interface TableView<T> extends Component<TableView<T>> {
      * Style key for the lines between columns (paint, optional).
      */
     String STYLE_GRID = "table.grid";
-    /**
-     * Asked before the user changes the selection: a press on a row, or the Up, Down, Page Up, Page Down, Home and
-     * End keys while focus is in the table. It fires only when the selection would change. The value is the row of
-     * {@link #shownItems()} about to be selected. The user never clears the selection, but a handler may rewrite the
-     * value to -1 to clear it, or to another row; the table then selects as {@link #select} does and ignores any
-     * other index outside the rows. Fires only for the user's actions.
-     */
-    EventType<ValueRequestEvent<TableView<?>, Integer>> SELECT = EventType.valueRequest("table_view.select");
-    /**
-     * Told after the selected row changed. The value is the selected row of {@link #shownItems()}, or -1 when
-     * nothing is selected, and the previous value is the row before. A sort or {@link #setItems} that moves the
-     * selected item to another row fires it too, and so does {@link #setItems} when the item kept selected is no
-     * longer equal to the one before, in which case the value can equal the previous value. Fires for changes made
-     * from code too.
-     */
-    EventType<ValueEvent<TableView<?>, Integer>> SELECTED = EventType.valueReport("table_view.selected");
-    /**
-     * Asked before the user activates a row: a double press on a row, or Enter while focus is in the table and a
-     * row is selected. The value is the row of {@link #shownItems()}. A handler may rewrite it to another row; an
-     * index outside the rows is ignored. Fires only for the user's actions.
-     */
-    EventType<ValueRequestEvent<TableView<?>, Integer>> ACTIVATE = EventType.valueRequest("table_view.activate");
-    /**
-     * Told after the user activated a row. The value is the row of {@link #shownItems()}, and the previous value is
-     * the same row. The table has no method that activates a row from code.
-     */
-    EventType<ValueEvent<TableView<?>, Integer>> ACTIVATED = EventType.valueReport("table_view.activated");
     /**
      * Asked before the user sorts the rows: a click on the title of a sortable column. The first click on a column
      * sorts ascending and each further click flips the direction. The value is the sort about to apply. A handler

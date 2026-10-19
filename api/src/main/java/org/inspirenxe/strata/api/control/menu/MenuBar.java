@@ -1,9 +1,7 @@
 package org.inspirenxe.strata.api.control.menu;
 
 import org.inspirenxe.strata.api.component.Component;
-import org.inspirenxe.strata.api.event.EventType;
-import org.inspirenxe.strata.api.event.ValueEvent;
-import org.inspirenxe.strata.api.event.ValueRequestEvent;
+import org.inspirenxe.strata.api.control.attribute.item.SingleSelection;
 
 import java.util.Optional;
 
@@ -14,6 +12,25 @@ import java.util.Optional;
  * the pointer onto another title opens that one instead, and Left and Right in a menu with no submenu open move to
  * the neighboring title's menu. Titles are their text plus 8 units on each side, and the bar is one line plus 6 units
  * tall. The bar is not focusable.</p>
+ *
+ * <p>The bar's selection is its open menu: {@link #selectedIndex()} is the index of the title whose menu is open, and
+ * {@link #select(int)} opens a menu from code.</p>
+ *
+ * <h2>Events</h2>
+ * <ul>
+ *     <li>{@link SingleSelection#SELECT}: Requested when the user opens one of the bar's menus: a click on its title,
+ *     moving the pointer onto another title while a menu is open, or Left and Right in an open menu. The value is the
+ *     title index. Unless a handler cancels the request, the bar closes the open menu and opens the requested one; a
+ *     handler can also change the menu's items first. A rewritten index that is out of range or names the menu already
+ *     open is ignored, which leaves the bar as it is. A click on the title of the open menu closes it without this
+ *     event. While a handler cancels, each pointer move over another title fires it again. Fires only for the user's
+ *     actions.</li>
+ *     <li>{@link SingleSelection#SELECTED}: Reported after the bar's open menu changed: a menu opened from its title or
+ *     from {@link #select(int)}, or the open menu closed, however it closed. The value is the index of the title whose
+ *     menu is open now, or -1 when none is, and the previous value the index before. Moving from one menu to another
+ *     reports once. Opening a menu with {@link Menu#open} does not make it the bar's open menu and reports
+ *     nothing.</li>
+ * </ul>
  *
  * <h2>Theme keys</h2>
  * <ul>
@@ -32,7 +49,7 @@ import java.util.Optional;
  * <p>Get one from {@link org.inspirenxe.strata.api.ComponentFactory#menuBar()}. Do not implement this
  * interface.</p>
  */
-public interface MenuBar extends Component<MenuBar> {
+public interface MenuBar extends Component<MenuBar>, SingleSelection<Menu, MenuBar> {
     /**
      * Style key for the bar's background (paint, optional).
      */
@@ -45,23 +62,6 @@ public interface MenuBar extends Component<MenuBar> {
      * Style key for the titles (text style, optional).
      */
     String STYLE_TEXT = "menubar.text";
-
-    /**
-     * Requested when the user opens one of the bar's menus: a click on its title, moving the pointer onto another
-     * title while a menu is open, or Left and Right in an open menu. The value is the title index. Unless a handler
-     * cancels the request, the bar closes the open menu and opens the requested one; a handler can also change the
-     * menu's items first. A rewritten index that is out of range or names the menu already open is ignored, which
-     * leaves the bar as it is. A click on the title of the open menu closes it without this event. While a handler
-     * cancels, each pointer move over another title fires it again. Fires only for the user's actions.
-     */
-    EventType<ValueRequestEvent<MenuBar, Integer>> OPEN = EventType.valueRequest("menu_bar.open");
-    /**
-     * Reported after one of the bar's menus opened from its title. The value is the title index, and
-     * {@link ValueEvent#previous()} is the index of the menu open before, or -1 when none was. Opening a menu with
-     * {@link Menu#open} does not make it the bar's open menu and reports nothing; closing a menu is reported by the
-     * menu's {@link Menu#CLOSED}.
-     */
-    EventType<ValueEvent<MenuBar, Integer>> OPENED = EventType.valueReport("menu_bar.opened");
 
     /**
      * Adds a title at the right end.
@@ -92,7 +92,37 @@ public interface MenuBar extends Component<MenuBar> {
     /**
      * Returns the index of the title whose menu is open.
      *
-     * @return the index, or empty when none is open
+     * @return the index, or -1 when none is open
      */
-    Optional<Integer> openIndex();
+    @Override
+    int selectedIndex();
+
+    /**
+     * Returns the open menu.
+     *
+     * @return the menu, or empty when none is open
+     */
+    @Override
+    Optional<Menu> selected();
+
+    /**
+     * Opens the menu under a title, closing the one open before, or closes the open menu for -1. Fires
+     * {@link SingleSelection#SELECTED} if that changed which menu is open, and never {@link SingleSelection#SELECT}.
+     * A menu with no items, or a bar that is not attached, stays closed.
+     *
+     * @param index the title index, or -1
+     * @return this bar
+     * @throws IndexOutOfBoundsException if the index is not -1 and there is no such title
+     */
+    @Override
+    MenuBar select(int index);
+
+    /**
+     * Opens a menu of this bar, or closes the open menu if the menu is not one of the bar's.
+     *
+     * @param menu the menu
+     * @return this bar
+     */
+    @Override
+    MenuBar selectItem(Menu menu);
 }

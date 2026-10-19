@@ -36,7 +36,7 @@ import java.util.function.Function;
  * The core {@link ComboBox}. The open list is a {@link ListView} in a popup, not focusable, whose selection is the
  * highlight; it is built when the list opens and dropped when it closes. The box routes the list's input to itself,
  * so the list fires no events: moving the highlight is silent, and a row picked from it becomes the box's own
- * {@link ComboBox#SELECT} request. Its rows are one line plus 4 units tall,
+ * {@code SELECT} request. Its rows are one line plus 4 units tall,
  * with the option text 4 units in from the left.
  *
  * <p>The box draws its text {@link #PADDING} units in from the left, cut short with {@code ...} if it does not fit,
@@ -58,6 +58,7 @@ public final class ComboBoxImpl<T> extends CustomComponent<ComboBox<T>> implemen
     private final ComponentFactory ui;
     private List<T> options;
     private Function<? super T, String> labelFunction;
+    private Function<? super T, ?> keyFunction;
     private int selectedIndex;
     private int maxVisible;
     private Overlay popup;
@@ -92,6 +93,7 @@ public final class ComboBoxImpl<T> extends CustomComponent<ComboBox<T>> implemen
         this.ui = ui;
         this.options = List.of();
         this.labelFunction = Objects.requireNonNull(labelFunction, "labelFunction");
+        this.keyFunction = Function.identity();
         this.selectedIndex = -1;
         this.maxVisible = DEFAULT_MAX_VISIBLE_OPTIONS;
         this.normal = Paint.NONE;
@@ -111,18 +113,20 @@ public final class ComboBoxImpl<T> extends CustomComponent<ComboBox<T>> implemen
     // ------------------------------------------------------------------
 
     @Override
-    public List<T> options() {
+    public List<T> items() {
         return this.options;
     }
 
     @Override
-    public ComboBox<T> setOptions(final List<? extends T> options) {
+    public ComboBox<T> setItems(final List<? extends T> items) {
         final Optional<T> before = this.selected();
         final int beforeIndex = this.selectedIndex;
-        this.options = List.copyOf(options);
+        final boolean had = beforeIndex >= 0;
+        final T beforeItem = had ? this.options.get(beforeIndex) : null;
+        this.options = List.copyOf(items);
         int index = this.options.isEmpty() ? -1 : 0;
-        if (before.isPresent()) {
-            final int found = this.options.indexOf(before.get());
+        if (had) {
+            final int found = this.indexOfKey(beforeItem);
             if (found >= 0) {
                 index = found;
             }
@@ -135,6 +139,38 @@ public final class ComboBoxImpl<T> extends CustomComponent<ComboBox<T>> implemen
             this.report(SELECTED, index, beforeIndex);
         }
         return this;
+    }
+
+    @Override
+    public ComboBox<T> refresh() {
+        this.shownFor = null;
+        this.invalidateLayout();
+        if (this.list != null) {
+            this.list.refresh();
+        }
+        return this;
+    }
+
+    @Override
+    public ComboBox<T> setKeyFunction(final Function<? super T, ?> keyFunction) {
+        this.keyFunction = Objects.requireNonNull(keyFunction, "keyFunction");
+        return this;
+    }
+
+    /**
+     * Finds the first option with the same key as an item.
+     *
+     * @return the option's index, or -1 if none has the key
+     */
+    private int indexOfKey(final T item) {
+        final Object key = item == null ? null : this.keyFunction.apply(item);
+        for (int i = 0; i < this.options.size(); i++) {
+            final T option = this.options.get(i);
+            if (Objects.equals(key, option == null ? null : this.keyFunction.apply(option))) {
+                return i;
+            }
+        }
+        return -1;
     }
 
     @Override
@@ -156,7 +192,9 @@ public final class ComboBoxImpl<T> extends CustomComponent<ComboBox<T>> implemen
 
     @Override
     public ComboBox<T> select(final int index) {
-        Objects.checkIndex(index, this.options.size());
+        if (index != -1) {
+            Objects.checkIndex(index, this.options.size());
+        }
         final int previous = this.selectedIndex;
         if (index != previous) {
             this.selectedIndex = index;
@@ -167,9 +205,8 @@ public final class ComboBoxImpl<T> extends CustomComponent<ComboBox<T>> implemen
     }
 
     @Override
-    public ComboBox<T> selectOption(final T option) {
-        final int index = this.options.indexOf(option);
-        return index < 0 ? this : this.select(index);
+    public ComboBox<T> selectItem(final T item) {
+        return this.select(this.indexOfKey(item));
     }
 
     @Override
@@ -215,6 +252,7 @@ public final class ComboBoxImpl<T> extends CustomComponent<ComboBox<T>> implemen
         this.popup.onEvent(Overlay.CLOSED, event -> {
             this.popup = null;
             this.list = null;
+            this.report(CLOSED);
         });
         this.report(OPENED);
         return this;
@@ -233,7 +271,7 @@ public final class ComboBoxImpl<T> extends CustomComponent<ComboBox<T>> implemen
     }
 
     /**
-     * Opens the list for the user if {@link ComboBox#OPEN} allows it. Does nothing if the list cannot open.
+     * Opens the list for the user if {@code OPEN} allows it. Does nothing if the list cannot open.
      */
     private void userOpen() {
         if (this.canOpen() && this.request(OPEN)) {

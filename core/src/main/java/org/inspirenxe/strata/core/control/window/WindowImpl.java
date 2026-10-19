@@ -141,11 +141,12 @@ public final class WindowImpl extends CustomContainer<Window> implements Window 
     }
 
     @Override
-    public void close() {
+    public Window close() {
         this.report(CLOSED);
         if (this.isAttached()) {
             this.ui.overlays().of(this).ifPresent(Overlay::close);
         }
+        return this;
     }
 
     /**

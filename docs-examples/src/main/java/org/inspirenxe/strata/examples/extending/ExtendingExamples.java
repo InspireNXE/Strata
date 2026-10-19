@@ -5,6 +5,7 @@ import org.inspirenxe.strata.api.component.Component;
 import org.inspirenxe.strata.api.control.button.Button;
 import org.inspirenxe.strata.api.control.display.Label;
 import org.inspirenxe.strata.api.control.field.Slider;
+import org.inspirenxe.strata.api.control.attribute.text.TextInput;
 import org.inspirenxe.strata.api.control.field.TextBox;
 import org.inspirenxe.strata.api.control.window.MessageBox;
 import org.inspirenxe.strata.api.control.window.Window;
@@ -97,14 +98,14 @@ public final class ExtendingExamples {
 
     // --8<-- [start:reuse]
     /** Lets through only text made of digits. Shared by every amount field. */
-    static final EventHandler<ValueRequestEvent<TextBox, String>> DIGITS_ONLY = event -> {
+    static final EventHandler<ValueRequestEvent<TextInput<?>, String>> DIGITS_ONLY = event -> {
         if (!event.value().chars().allMatch(Character::isDigit)) {
             event.cancel();
         }
     };
 
     static TextBox amountField(final ComponentFactory factory) {
-        return factory.textBox().setMaxLength(6).onEvent(TextBox.EDIT, DIGITS_ONLY);
+        return factory.textBox().setMaxLength(6).onEvent(TextInput.EDIT, DIGITS_ONLY);
     }
     // --8<-- [end:reuse]
 

@@ -1,6 +1,8 @@
 package org.inspirenxe.strata.core;
 
 import org.inspirenxe.strata.api.ComponentFactory;
+import org.inspirenxe.strata.api.control.attribute.item.Activatable;
+import org.inspirenxe.strata.api.control.attribute.item.SingleSelection;
 import org.inspirenxe.strata.api.control.collection.ListView;
 import org.inspirenxe.strata.api.control.field.TextBox;
 import org.inspirenxe.strata.api.extension.CustomComponent;
@@ -197,7 +199,7 @@ class ScrollTest {
         void aPressSelectsAndADoubleClickActivates() {
             this.show(10);
             final List<Integer> activated = new ArrayList<>();
-            this.list.onEvent(ListView.ACTIVATED, e -> activated.add(this.list.items().get(e.value())));
+            this.list.onEvent(Activatable.ACTIVATED, e -> activated.add(this.list.items().get(e.value())));
             ScrollTest.this.test.click(10, 45);
             assertEquals(Optional.of(2), this.list.selected());
             ScrollTest.this.test.click(10, 45);
@@ -222,7 +224,7 @@ class ScrollTest {
             this.list.setKeyFunction(item -> item % 100);
             this.list.select(4);
             final List<Optional<Integer>> heard = new ArrayList<>();
-            this.list.onEvent(ListView.SELECTED, e -> heard.add(this.list.selected()));
+            this.list.onEvent(SingleSelection.SELECTED, e -> heard.add(this.list.selected()));
             this.list.setItems(List.of(9, 8, 104, 7));
             assertEquals(2, this.list.selectedIndex());
             assertEquals(List.of(Optional.of(104)), heard);

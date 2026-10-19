@@ -1,6 +1,7 @@
 package org.inspirenxe.strata.api.control.button;
 
 import org.inspirenxe.strata.api.component.Component;
+import org.inspirenxe.strata.api.control.attribute.text.HasText;
 import org.inspirenxe.strata.api.event.ControlEvent;
 import org.inspirenxe.strata.api.event.EventType;
 import org.inspirenxe.strata.api.event.RequestEvent;
@@ -39,7 +40,7 @@ import java.util.Objects;
  * <p>Get one from {@link org.inspirenxe.strata.api.ComponentFactory#button(String)}. Do not implement this
  * interface.</p>
  */
-public interface Button extends Component<Button> {
+public interface Button extends Component<Button>, HasText<Button> {
     /**
      * Style key for the idle face (paint, required).
      */

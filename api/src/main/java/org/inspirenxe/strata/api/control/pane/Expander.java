@@ -1,6 +1,7 @@
 package org.inspirenxe.strata.api.control.pane;
 
 import org.inspirenxe.strata.api.component.Component;
+import org.inspirenxe.strata.api.control.attribute.text.Titled;
 import org.inspirenxe.strata.api.event.EventType;
 import org.inspirenxe.strata.api.event.ValueEvent;
 import org.inspirenxe.strata.api.event.ValueRequestEvent;
@@ -13,7 +14,7 @@ import java.util.Objects;
  * <p>A left click on the header flips it, and so does Enter, keypad Enter or Space while it has focus (not
  * repeated). It consumes those inputs. While collapsed, the content is taken out of the tree, so it takes no space
  * and no input and loses focus if it had it; {@link #content()} still returns it. Each flip by the user fires
- * {@link #TOGGLE}, and every change fires {@link #TOGGLED}. A disabled expander does not flip.</p>
+ * {@link #EXPAND}, and every change fires {@link #EXPANDED}. A disabled expander does not flip.</p>
  *
  * <p>It is focusable and tabbable, and the header shows the hand cursor. The header is one line plus 6 units tall and
  * spans the expander's width: a 7-unit arrow 4 units in from the left, pointing right when collapsed and down when
@@ -39,7 +40,7 @@ import java.util.Objects;
  * <p>Get one from {@link org.inspirenxe.strata.api.ComponentFactory#expander(String)}. Do not implement this
  * interface.</p>
  */
-public interface Expander extends Component<Expander> {
+public interface Expander extends Component<Expander>, Titled<Expander> {
     /**
      * Style key for the header (paint, optional).
      */
@@ -62,12 +63,12 @@ public interface Expander extends Component<Expander> {
      * to take: true to show the content. Canceling it leaves the expander as it is. A handler may set another value,
      * which the expander applies like {@link #setExpanded}; null is ignored. Fires only for the user's actions.
      */
-    EventType<ValueRequestEvent<Expander, Boolean>> TOGGLE = EventType.valueRequest("expander.toggle");
+    EventType<ValueRequestEvent<Expander, Boolean>> EXPAND = EventType.valueRequest("expander.expand");
     /**
      * Fired after the content was shown or hidden. The value is the new state, true when shown, and the previous
      * value the old one. Fires for changes made from code too.
      */
-    EventType<ValueEvent<Expander, Boolean>> TOGGLED = EventType.valueReport("expander.toggled");
+    EventType<ValueEvent<Expander, Boolean>> EXPANDED = EventType.valueReport("expander.expanded");
 
     /**
      * Returns the title.
@@ -108,7 +109,7 @@ public interface Expander extends Component<Expander> {
     boolean isExpanded();
 
     /**
-     * Shows or hides the content. Fires {@link #TOGGLED} if the state changed. Works while disabled too.
+     * Shows or hides the content. Fires {@link #EXPANDED} if the state changed. Works while disabled too.
      *
      * @param expanded true to show the content
      * @return this expander
@@ -116,7 +117,7 @@ public interface Expander extends Component<Expander> {
     Expander setExpanded(boolean expanded);
 
     /**
-     * Flips the expander as if its header had been clicked, firing {@link #TOGGLED} but not {@link #TOGGLE}. Does
+     * Flips the expander as if its header had been clicked, firing {@link #EXPANDED} but not {@link #EXPAND}. Does
      * nothing while disabled.
      */
     void toggle();

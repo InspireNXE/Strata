@@ -1,8 +1,8 @@
 package org.inspirenxe.strata.api.control.button;
 
+import org.inspirenxe.strata.api.control.attribute.item.SingleSelection;
+import org.inspirenxe.strata.api.control.attribute.value.Toggle;
 import org.inspirenxe.strata.api.event.EventTarget;
-import org.inspirenxe.strata.api.event.EventType;
-import org.inspirenxe.strata.api.event.ValueEvent;
 
 import java.util.List;
 import java.util.Optional;
@@ -16,16 +16,19 @@ import java.util.Optional;
  * move the selection and focus to the previous enabled, visible button in the group, and Down and Right to the next
  * one, wrapping at the ends.</p>
  *
- * <p>The group is an {@link EventTarget} of its own for {@link #SELECTED}. Its events reach only the handlers
- * registered on the group, and do not bubble through the tree its buttons are in. To refuse a selection, handle
- * {@link RadioButton#SELECT} on the buttons or on a container around them.</p>
+ * <p>The group is an {@link EventTarget} of its own for {@link SingleSelection#SELECTED}, which carries the index
+ * of the selected button in {@link #buttons()}. The event's {@linkplain org.inspirenxe.strata.api.event.Event#target()
+ * target} is the newly selected button, or the deselected one when the selection was cleared. Its events reach only
+ * the handlers registered on the group, and do not bubble through the tree its buttons are in. The group never fires
+ * {@link SingleSelection#SELECT}; to refuse a selection, handle {@link Toggle#TOGGLE} on the buttons or on a
+ * container around them.</p>
  *
  * <pre>{@code
  * RadioGroup<Difficulty> difficulty = factory.radioGroup();
  * column.add(difficulty.add("Easy", Difficulty.EASY))
  *         .add(difficulty.add("Hard", Difficulty.HARD));
- * difficulty.select(settings.difficulty())
- *         .onEvent(RadioGroup.SELECTED, event -> difficulty.selected().ifPresent(settings::setDifficulty));
+ * difficulty.selectItem(settings.difficulty())
+ *         .onEvent(SingleSelection.SELECTED, event -> difficulty.selected().ifPresent(settings::setDifficulty));
  * }</pre>
  *
  * <p>Get one from {@link org.inspirenxe.strata.api.ComponentFactory#radioGroup()}. Do not implement this
@@ -33,16 +36,7 @@ import java.util.Optional;
  *
  * @param <T> the type of the values the buttons stand for
  */
-public interface RadioGroup<T> extends EventTarget<RadioGroup<T>> {
-    /**
-     * Fired on the group after the selected button changed, by the user or by code. The value is the index of the
-     * selected button in {@link #buttons()}, or -1 when none is, and the previous value the index before the
-     * change. The {@linkplain ValueEvent#control() control} is the group and the {@linkplain ValueEvent#target()
-     * target} the newly selected button, or the deselected one when the selection was cleared. Reaches only the
-     * group's own handlers. Fires for changes made from code too.
-     */
-    EventType<ValueEvent<RadioGroup<?>, Integer>> SELECTED = EventType.valueReport("radio_group.selected");
-
+public interface RadioGroup<T> extends SingleSelection<T, RadioGroup<T>> {
     /**
      * Makes a new, unselected button in this group. The button is not added to any container.
      *
@@ -76,26 +70,40 @@ public interface RadioGroup<T> extends EventTarget<RadioGroup<T>> {
     Optional<RadioButton> selectedButton();
 
     /**
+     * Returns the index of the selected button.
+     *
+     * @return the selected button's index in {@link #buttons()}, or -1 if none is
+     */
+    @Override
+    int selectedIndex();
+
+    /**
      * Returns the value of the selected button.
      *
      * @return the selected value, or empty if no button is selected or the selected button stands for null
      */
+    @Override
     Optional<T> selected();
 
     /**
-     * Selects the first button that stands for a value, compared with {@link Object#equals}. Fires
-     * {@link #SELECTED} if the selection changed. Works on disabled buttons too.
+     * Selects the button at an index, or deselects every button for -1. Fires {@link Toggle#TOGGLED} on each button
+     * whose state changed, then {@link SingleSelection#SELECTED} if the selection changed. Works on disabled
+     * buttons too.
+     *
+     * @param index the button's index in {@link #buttons()}, or -1
+     * @return this group
+     * @throws IndexOutOfBoundsException if the index is not -1 and not a button's index
+     */
+    @Override
+    RadioGroup<T> select(int index);
+
+    /**
+     * Selects the first button that stands for a value, compared with {@link Object#equals}, or deselects every
+     * button if none does. Fires the events {@link #select(int)} does. Works on disabled buttons too.
      *
      * @param value the value to select; may be null
      * @return this group
-     * @throws IllegalArgumentException if no button stands for {@code value}
      */
-    RadioGroup<T> select(T value);
-
-    /**
-     * Deselects every button. Fires {@link #SELECTED} if a button was selected.
-     *
-     * @return this group
-     */
-    RadioGroup<T> clearSelection();
+    @Override
+    RadioGroup<T> selectItem(T value);
 }

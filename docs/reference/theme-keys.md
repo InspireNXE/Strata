@@ -197,7 +197,7 @@ Both read the `ListView` and `ScrollPanel` keys for their rows.
 | `menubar.item.hovered` | `MenuBar.STYLE_ITEM_HOVERED` | paint | no | `menu.item.hovered` |
 | `menubar.text` | `MenuBar.STYLE_TEXT` | text style | no | `menu.text` |
 
-## Expander, SplitPane and SlotGrid
+## Expander, SplitPane and GridView
 
 | Key | Constant | Kind | Required | Fallback |
 |---|---|---|---|---|
@@ -207,9 +207,9 @@ Both read the `ListView` and `ScrollPanel` keys for their rows.
 | `expander.text.disabled` | `Expander.STYLE_TEXT_DISABLED` | text style | no | `expander.text` |
 | `split.divider` | `SplitPane.STYLE_DIVIDER` | paint | no | `separator` |
 | `split.divider.hovered` | `SplitPane.STYLE_DIVIDER_HOVERED` | paint | no | `split.divider` |
-| `slot.normal` | `SlotGrid.STYLE_SLOT` | paint | yes | |
-| `slot.hovered` | `SlotGrid.STYLE_SLOT_HOVERED` | paint | no | Nothing |
-| `slot.selected` | `SlotGrid.STYLE_SLOT_SELECTED` | paint | no | `slot.hovered` |
+| `grid.cell` | `GridView.STYLE_CELL` | paint | yes | |
+| `grid.cell.hovered` | `GridView.STYLE_CELL_HOVERED` | paint | no | Nothing |
+| `grid.cell.selected` | `GridView.STYLE_CELL_SELECTED` | paint | no | `grid.cell.hovered` |
 
 ## Overlays and tooltips
 
@@ -328,9 +328,9 @@ Both read the `ListView` and `ScrollPanel` keys for their rows.
 | `expander.text.disabled` | `0xFF707070` |
 | `split.divider` | solid `0xFF2B2D31` |
 | `split.divider.hovered` | solid `0xFF6A9FFF` |
-| `slot.normal` | solid `0xFF1B1C1F` |
-| `slot.hovered` | solid `0x40FFFFFF` |
-| `slot.selected` | solid `0x606A9FFF` |
+| `grid.cell` | solid `0xFF1B1C1F` |
+| `grid.cell.hovered` | solid `0x40FFFFFF` |
+| `grid.cell.selected` | solid `0x606A9FFF` |
 | `toast.background` | solid `0xF02B2D31` |
 | `toast.text` | `0xFFF0F0F0` |
 | `overlay.backdrop` | solid `0x60000000` |

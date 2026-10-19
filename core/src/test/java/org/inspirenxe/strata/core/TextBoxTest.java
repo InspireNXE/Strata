@@ -1,5 +1,6 @@
 package org.inspirenxe.strata.core;
 
+import org.inspirenxe.strata.api.control.attribute.text.TextInput;
 import org.inspirenxe.strata.api.control.button.Button;
 import org.inspirenxe.strata.api.control.field.TextBox;
 import org.inspirenxe.strata.api.geom.Rect;
@@ -65,7 +66,7 @@ class TextBoxTest {
     @Test
     void typingInsertsAtCaretAndNotifies() {
         final List<String> seen = new ArrayList<>();
-        this.box.onEvent(TextBox.EDITED, event -> seen.add(event.value()));
+        this.box.onEvent(TextInput.EDITED, event -> seen.add(event.value()));
         this.box.requestFocus();
 
         this.type("hi");

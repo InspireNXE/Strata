@@ -8,7 +8,7 @@ import org.inspirenxe.strata.api.control.button.RadioGroup;
 import org.inspirenxe.strata.api.control.button.ToggleSwitch;
 import org.inspirenxe.strata.api.control.collection.ComboBox;
 import org.inspirenxe.strata.api.control.collection.ListView;
-import org.inspirenxe.strata.api.control.collection.SlotGrid;
+import org.inspirenxe.strata.api.control.collection.GridView;
 import org.inspirenxe.strata.api.control.collection.TableView;
 import org.inspirenxe.strata.api.control.collection.TreeView;
 import org.inspirenxe.strata.api.control.display.Image;
@@ -47,7 +47,7 @@ import org.inspirenxe.strata.core.control.button.RadioGroupImpl;
 import org.inspirenxe.strata.core.control.button.ToggleSwitchImpl;
 import org.inspirenxe.strata.core.control.collection.ComboBoxImpl;
 import org.inspirenxe.strata.core.control.collection.ListViewImpl;
-import org.inspirenxe.strata.core.control.collection.SlotGridImpl;
+import org.inspirenxe.strata.core.control.collection.GridViewImpl;
 import org.inspirenxe.strata.core.control.collection.TableViewImpl;
 import org.inspirenxe.strata.core.control.collection.TreeViewImpl;
 import org.inspirenxe.strata.core.control.display.ImageImpl;
@@ -293,8 +293,8 @@ public final class ComponentFactoryImpl implements ComponentFactory {
     }
 
     @Override
-    public <T> SlotGrid<T> slotGrid(final Function<? super T, ? extends Component<?>> cellFactory) {
-        return new SlotGridImpl<>(this, cellFactory);
+    public <T> GridView<T> gridView(final Function<? super T, ? extends Component<?>> cellFactory) {
+        return new GridViewImpl<>(this, cellFactory);
     }
 
     @Override

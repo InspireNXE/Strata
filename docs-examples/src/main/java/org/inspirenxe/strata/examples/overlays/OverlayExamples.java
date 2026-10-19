@@ -2,6 +2,7 @@ package org.inspirenxe.strata.examples.overlays;
 
 import org.inspirenxe.strata.api.ComponentFactory;
 import org.inspirenxe.strata.api.component.Tooltip;
+import org.inspirenxe.strata.api.control.attribute.popup.Closable;
 import org.inspirenxe.strata.api.control.button.Button;
 import org.inspirenxe.strata.api.control.display.Label;
 import org.inspirenxe.strata.api.control.field.TextBox;
@@ -40,7 +41,7 @@ public final class OverlayExamples {
         final AnchorPanel menu = factory.anchorPanel().add(factory.label("Popup content"));
         menu.setPadding(4).setBackground(Paint.solid(0xF0101010));
         final Overlay popup = factory.overlays().popup(menu, more.bounds());
-        popup.onEvent(Overlay.CLOSED, event -> more.setText("More"));
+        popup.onEvent(Closable.CLOSED, event -> more.setText("More"));
         // --8<-- [end:popup]
         return popup;
     }

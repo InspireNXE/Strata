@@ -117,16 +117,40 @@ public final class RadioButtonImpl extends CustomComponent<RadioButton> implemen
         return this;
     }
 
+    @Override
+    public RadioButton toggle() {
+        if (this.isEnabled()) {
+            this.setSelected(!this.isSelected());
+        }
+        return this;
+    }
+
     /**
-     * Selects this button for the user unless a handler cancels {@link RadioButton#SELECT}. A button that is
-     * already selected skips the request.
+     * Selects this button for the user through {@link org.inspirenxe.strata.api.control.attribute.value.Toggle#TOGGLE}
+     * with true, and selects it if the final value is true. A button that is already selected skips the request and
+     * is only focused if asked.
      *
      * @param focus whether to focus the button once it is selected
      */
     void userSelect(final boolean focus) {
-        if (this.isSelected() || this.request(SELECT)) {
+        if (this.isSelected()) {
             this.applySelect(focus);
+            return;
         }
+        this.request(TOGGLE, true, selected -> {
+            if (Boolean.TRUE.equals(selected)) {
+                this.applySelect(focus);
+            }
+        });
+    }
+
+    /**
+     * Reports a change of this button's state, for the group.
+     *
+     * @param selected the new state
+     */
+    void reportToggled(final boolean selected) {
+        this.report(TOGGLED, selected, !selected);
     }
 
     /**

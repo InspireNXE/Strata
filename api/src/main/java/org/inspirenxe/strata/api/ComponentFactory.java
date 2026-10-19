@@ -7,7 +7,7 @@ import org.inspirenxe.strata.api.control.button.RadioGroup;
 import org.inspirenxe.strata.api.control.button.ToggleSwitch;
 import org.inspirenxe.strata.api.control.collection.ComboBox;
 import org.inspirenxe.strata.api.control.collection.ListView;
-import org.inspirenxe.strata.api.control.collection.SlotGrid;
+import org.inspirenxe.strata.api.control.collection.GridView;
 import org.inspirenxe.strata.api.control.collection.TableView;
 import org.inspirenxe.strata.api.control.collection.TreeView;
 import org.inspirenxe.strata.api.control.display.Image;
@@ -308,13 +308,13 @@ public interface ComponentFactory {
     SplitPane splitPane(Orientation orientation);
 
     /**
-     * Makes a {@link SlotGrid} with no slots, {@value SlotGrid#DEFAULT_COLUMNS} columns wide.
+     * Makes a {@link GridView} with no cells, {@value GridView#DEFAULT_COLUMNS} columns wide.
      *
      * @param <T> the type of the items
-     * @param cellFactory makes the component shown in a filled slot
-     * @return a new slot grid
+     * @param cellFactory makes the component shown in a filled cell
+     * @return a new grid
      */
-    <T> SlotGrid<T> slotGrid(Function<? super T, ? extends Component<?>> cellFactory);
+    <T> GridView<T> gridView(Function<? super T, ? extends Component<?>> cellFactory);
 
     /**
      * Creates the peer of a new leaf component. Called by {@link CustomComponent}'s constructor; do not call it

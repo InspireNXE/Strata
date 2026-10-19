@@ -1,6 +1,8 @@
 package org.inspirenxe.strata.examples.snapshots;
 
 import org.inspirenxe.strata.api.component.ComponentSnapshot;
+import org.inspirenxe.strata.api.control.attribute.text.TextInput;
+import org.inspirenxe.strata.api.control.attribute.value.Toggle;
 import org.inspirenxe.strata.api.control.button.Button;
 import org.inspirenxe.strata.api.control.button.CheckBox;
 import org.inspirenxe.strata.api.control.field.TextBox;
@@ -24,7 +26,7 @@ public final class SnapshotExamples {
         // --8<-- [start:compare]
         // Every edit asks first, so the snapshot holds the text, caret and selection from before it
         final Deque<TextBox.State> undo = new ArrayDeque<>();
-        name.onEvent(TextBox.EDIT, event ->
+        name.onEvent(TextInput.EDIT, event ->
                 event.snapshot().state(TextBox.State.class).ifPresent(undo::push));
         // --8<-- [end:compare]
         return undo;
@@ -55,7 +57,7 @@ public final class SnapshotExamples {
         // --8<-- [start:keep]
         // Snapshots stay valid after the event, so they can be kept for undo or logging
         final List<CheckBox.State> history = new ArrayList<>();
-        box.onEvent(CheckBox.TOGGLE, event ->
+        box.onEvent(Toggle.TOGGLE, event ->
                 event.snapshot().state(CheckBox.State.class).ifPresent(history::add));
         // --8<-- [end:keep]
         return history;
@@ -64,7 +66,7 @@ public final class SnapshotExamples {
     static void previous(final TextBox name) {
         // --8<-- [start:previous]
         // A Post event fires after its change, so it carries the value from before instead of a snapshot
-        name.onEvent(TextBox.EDITED, event ->
+        name.onEvent(TextInput.EDITED, event ->
                 System.out.println("\"" + event.previous() + "\" became \"" + event.value() + "\""));
         // --8<-- [end:previous]
     }

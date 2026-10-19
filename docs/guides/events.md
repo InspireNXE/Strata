@@ -10,7 +10,7 @@ component.onEvent(EventTypes.CLICK, -100, event -> { ... });                   /
 Subscription drag = component.subscribe(EventTypes.DRAG, 0, event -> { ... }); // removable later
 ```
 
-Event types are typed keys. `EventTypes.CLICK` is an `EventType<PointerButtonEvent>`, so the handler receives a `PointerButtonEvent` without a cast. Input types are the constants in `EventTypes`. Each control declares its own as constants on its interface, such as `Button.PRESS` and `TextBox.EDITED`, and every component has `Component.PAINT`, `Component.PAINTED` and `Component.MEASURED`. Always use the constants, because types are compared by identity.
+Event types are typed keys. `EventTypes.CLICK` is an `EventType<PointerButtonEvent>`, so the handler receives a `PointerButtonEvent` without a cast. Input types are the constants in `EventTypes`. A control's events are constants on the [attributes](controls.md#attributes) it has, such as `TextInput.EDITED` for every text field and `SingleSelection.SELECTED` for every list, table and tree, or on the control itself for what only it does, such as `Button.PRESS`. Every component has `Component.PAINT`, `Component.PAINTED` and `Component.MEASURED`. Always use the constants, because types are compared by identity.
 
 `onEvent` returns the component, so registration chains with the setters:
 
@@ -28,8 +28,8 @@ Events come in two kinds.
 
 | Kind | What it says | Can cancel | Fires for | Examples |
 |---|---|---|---|---|
-| Pre | "About to do this" | Yes, and requests with a value can be rewritten with `setValue` | Input, and the user's actions on a control | `KEY`, `CLICK`, `Button.PRESS`, `TextBox.EDIT`, `Window.CLOSE`, `Component.PAINT` |
-| Post | "This happened" | No | Every change, whether the user or code made it | `Button.PRESSED`, `TextBox.EDITED`, `Window.CLOSED`, `Component.PAINTED` |
+| Pre | "About to do this" | Yes, and requests with a value can be rewritten with `setValue` | Input, and the user's actions on a control | `KEY`, `CLICK`, `Button.PRESS`, `TextInput.EDIT`, `Closable.CLOSE`, `Component.PAINT` |
+| Post | "This happened" | No | Every change, whether the user or code made it | `Button.PRESSED`, `TextInput.EDITED`, `Closable.CLOSED`, `Component.PAINTED` |
 
 To stop or change something, handle its Pre event. To react to it, handle its Post event.
 
@@ -66,7 +66,7 @@ Control events bubble, so one handler on a panel hears the controls inside it:
 --8<-- "events/EventExamples.java:form"
 ```
 
-The events of a control's private parts stop at that control. A table is built from an inner list, but a handler on your form never sees that list's `ListView.SELECTED`; it sees the table's own `TableView.SELECTED`.
+The events of a control's private parts stop at that control. A table is built from an inner list, but a handler on your form for `SingleSelection.SELECTED` hears only the table: the event's `control()` is the table, never the list inside it.
 
 ## Canceling and stopping
 

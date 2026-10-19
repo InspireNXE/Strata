@@ -19,7 +19,7 @@ import java.util.Optional;
 /**
  * The core {@link RadioGroup}. It holds its buttons and their values side by side and tracks the selected button;
  * the buttons ask it whether they are selected. Its handlers live in a dispatcher of its own, created on the first
- * registration, and {@link RadioGroup#SELECTED} reaches only them.
+ * registration, and the group's {@code SELECTED} reaches only them.
  *
  * @param <T> the type of the values the buttons stand for
  */
@@ -72,19 +72,22 @@ public final class RadioGroupImpl<T> implements RadioGroup<T> {
     }
 
     @Override
-    public RadioGroup<T> select(final T value) {
-        final int index = this.values.indexOf(value);
-        if (index < 0) {
-            throw new IllegalArgumentException("No button stands for " + value);
+    public int selectedIndex() {
+        return this.buttons.indexOf(this.selected);
+    }
+
+    @Override
+    public RadioGroup<T> select(final int index) {
+        if (index != -1) {
+            Objects.checkIndex(index, this.buttons.size());
         }
-        this.choose(this.buttons.get(index));
+        this.choose(index == -1 ? null : this.buttons.get(index));
         return this;
     }
 
     @Override
-    public RadioGroup<T> clearSelection() {
-        this.choose(null);
-        return this;
+    public RadioGroup<T> selectItem(final T value) {
+        return this.select(this.values.indexOf(value));
     }
 
     @Override
@@ -108,8 +111,9 @@ public final class RadioGroupImpl<T> implements RadioGroup<T> {
     }
 
     /**
-     * Makes a button the selected one, or none, and fires {@link RadioGroup#SELECTED} on the group if that changed
-     * anything. The event's target is the newly selected button, or the deselected one when none is selected now.
+     * Makes a button the selected one, or none. If that changed anything, the deselected and the selected button
+     * report {@code TOGGLED}, in that order, and the group fires {@code SELECTED} to its own handlers. That event's
+     * target is the newly selected button, or the deselected one when none is selected now.
      */
     void choose(final RadioButtonImpl button) {
         final RadioButtonImpl previous = this.selected;
@@ -117,6 +121,12 @@ public final class RadioGroupImpl<T> implements RadioGroup<T> {
             return;
         }
         this.selected = button;
+        if (previous != null) {
+            previous.reportToggled(false);
+        }
+        if (button != null) {
+            button.reportToggled(true);
+        }
         if (this.dispatcher != null && this.dispatcher.hasHandlers(SELECTED)) {
             this.dispatcher.fire(SELECTED, new ValueEventImpl<>(button == null ? previous : button, this,
                     this.buttons.indexOf(button), this.buttons.indexOf(previous)));
@@ -125,8 +135,8 @@ public final class RadioGroupImpl<T> implements RadioGroup<T> {
 
     /**
      * Selects and focuses the next usable button after {@code from} in a direction for the user, wrapping at the
-     * ends. A handler may cancel the target button's {@link RadioButton#SELECT}, which leaves the selection and
-     * focus as they are.
+     * ends. A handler may cancel the target button's {@code TOGGLE}, which leaves the selection and focus as they
+     * are.
      *
      * @return true if one was found
      */

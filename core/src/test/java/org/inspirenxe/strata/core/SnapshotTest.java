@@ -2,6 +2,7 @@ package org.inspirenxe.strata.core;
 
 import org.inspirenxe.strata.api.ComponentFactory;
 import org.inspirenxe.strata.api.component.ComponentSnapshot;
+import org.inspirenxe.strata.api.control.attribute.text.TextInput;
 import org.inspirenxe.strata.api.control.button.Button;
 import org.inspirenxe.strata.api.control.field.TextBox;
 import org.inspirenxe.strata.api.event.Event;
@@ -50,7 +51,7 @@ class SnapshotTest {
         this.test.show(this.ui.absolutePanel().add(box));
         final List<Event> events = new ArrayList<>();
         final List<String> previous = new ArrayList<>();
-        box.onEvent(TextBox.EDITED, event -> {
+        box.onEvent(TextInput.EDITED, event -> {
             events.add(event);
             previous.add(event.previous());
         });
@@ -69,7 +70,7 @@ class SnapshotTest {
         box.requestFocus();
         final List<TextBox.State> before = new ArrayList<>();
         final List<String> live = new ArrayList<>();
-        box.onEvent(TextBox.EDIT, event -> {
+        box.onEvent(TextInput.EDIT, event -> {
             before.add(event.snapshot().state(TextBox.State.class).orElseThrow());
             live.add(event.value());
         });

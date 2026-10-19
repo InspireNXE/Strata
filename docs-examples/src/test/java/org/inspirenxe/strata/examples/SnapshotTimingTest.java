@@ -1,6 +1,7 @@
 package org.inspirenxe.strata.examples;
 
 import org.inspirenxe.strata.api.component.ComponentSnapshot;
+import org.inspirenxe.strata.api.control.attribute.text.TextInput;
 import org.inspirenxe.strata.api.control.button.Button;
 import org.inspirenxe.strata.api.control.field.TextBox;
 import org.inspirenxe.strata.api.event.EventTypes;
@@ -57,7 +58,7 @@ class SnapshotTimingTest {
     @Test
     void anEditRequestSnapshotHoldsTheTextBeforeTheEdit() {
         final List<TextBox.State> before = new ArrayList<>();
-        this.box.onEvent(TextBox.EDIT, event -> event.snapshot().state(TextBox.State.class).ifPresent(before::add));
+        this.box.onEvent(TextInput.EDIT, event -> event.snapshot().state(TextBox.State.class).ifPresent(before::add));
         this.box.requestFocus();
         this.host.key(Key.BACKSPACE, KeyAction.PRESS, Modifiers.NONE);
         assertEquals("ab", before.getFirst().text());

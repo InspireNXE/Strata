@@ -2,13 +2,13 @@ package org.inspirenxe.strata.api.control.pane;
 
 import org.inspirenxe.strata.api.component.Component;
 import org.inspirenxe.strata.api.component.Tooltip;
-import org.inspirenxe.strata.api.event.EventType;
-import org.inspirenxe.strata.api.event.ValueEvent;
-import org.inspirenxe.strata.api.event.ValueRequestEvent;
+import org.inspirenxe.strata.api.control.attribute.item.SingleSelection;
+
+import java.util.Optional;
 
 /**
  * A row of tabs, one of them selected. The bar only picks a tab; show the matching content yourself when
- * {@link #SELECTED} fires.
+ * {@link SingleSelection#SELECTED} fires. The entries of its selection are the tabs' texts.
  *
  * <p>Tabs share the bar's width equally, with {@linkplain #setSpacing the spacing} between them, and are one line
  * plus 7 units tall. A click on an enabled tab selects it. While the bar has focus, Left and Right select the
@@ -16,6 +16,18 @@ import org.inspirenxe.strata.api.event.ValueRequestEvent;
  * first tab added is selected; a bar with no tabs has none.</p>
  *
  * <p>The bar is focusable and tabbable, and each tab shows the hand cursor while enabled.</p>
+ *
+ * <h2>Events</h2>
+ * <ul>
+ *     <li>{@link SingleSelection#SELECT}: Fired when the user selects a tab, by a left click on an enabled tab or by
+ *     Left or Right, which move to the nearest enabled tab in that direction, before the selection changes. The value
+ *     is the index of the tab about to be selected. Not fired for a click on the selected tab. Canceling it keeps the
+ *     current tab. A handler may set another index; an index out of range, a disabled tab or null is ignored. Fires
+ *     only for the user's actions.</li>
+ *     <li>{@link SingleSelection#SELECTED}: Fired after another tab was selected. The value is the new index and the
+ *     previous value the old one. The first tab becoming selected when it is added fires nothing. Fires for changes
+ *     made from code too.</li>
+ * </ul>
  *
  * <h2>Theme keys</h2>
  * <ul>
@@ -34,13 +46,13 @@ import org.inspirenxe.strata.api.event.ValueRequestEvent;
  *
  * <pre>{@code
  * TabBar sides = factory.tabBar().addTab("Buy").addTab("Sell")
- *         .onEvent(TabBar.SELECTED, event -> showSide(event.value() == 0 ? Side.BUY : Side.SELL));
+ *         .onEvent(SingleSelection.SELECTED, event -> showSide(event.value() == 0 ? Side.BUY : Side.SELL));
  * }</pre>
  *
  * <p>Get one from {@link org.inspirenxe.strata.api.ComponentFactory#tabBar()}. Do not implement this
  * interface.</p>
  */
-public interface TabBar extends Component<TabBar> {
+public interface TabBar extends Component<TabBar>, SingleSelection<String, TabBar> {
     /**
      * Style key for an unselected tab (paint, required).
      */
@@ -69,20 +81,6 @@ public interface TabBar extends Component<TabBar> {
      * Style key for a disabled tab's text (text style, optional).
      */
     String STYLE_TEXT_DISABLED = "tab.text.disabled";
-
-    /**
-     * Fired when the user selects a tab, by a left click on an enabled tab or by Left or Right, which move to the
-     * nearest enabled tab in that direction, before the selection changes. The value is the index of the tab about
-     * to be selected. Not fired for a click on the selected tab. Canceling it keeps the current tab. A handler may
-     * set another index; an index out of range, a disabled tab or null is ignored. Fires only for the user's
-     * actions.
-     */
-    EventType<ValueRequestEvent<TabBar, Integer>> SELECT = EventType.valueRequest("tab_bar.select");
-    /**
-     * Fired after another tab was selected. The value is the new index and the previous value the old one. The
-     * first tab becoming selected when it is added fires nothing. Fires for changes made from code too.
-     */
-    EventType<ValueEvent<TabBar, Integer>> SELECTED = EventType.valueReport("tab_bar.selected");
 
     /**
      * Adds a tab at the end. The first tab added is selected.
@@ -150,18 +148,37 @@ public interface TabBar extends Component<TabBar> {
     /**
      * Returns the selected tab.
      *
-     * @return the selected index, or -1 when there are no tabs
+     * @return the selected index, or -1 when there are no tabs or the selection was cleared
      */
+    @Override
     int selectedIndex();
 
     /**
-     * Selects a tab, enabled or not. Fires {@link #SELECTED} if the selection changed.
+     * Returns the selected tab's text.
      *
-     * @param index the tab's index
-     * @return this bar
-     * @throws IndexOutOfBoundsException if there is no such tab
+     * @return the text, or empty when no tab is selected
      */
+    @Override
+    Optional<String> selected();
+
+    /**
+     * Selects a tab, enabled or not, or none for -1. Fires {@link SingleSelection#SELECTED} if the selection changed.
+     *
+     * @param index the tab's index, or -1
+     * @return this bar
+     * @throws IndexOutOfBoundsException if the index is not -1 and there is no such tab
+     */
+    @Override
     TabBar select(int index);
+
+    /**
+     * Selects the first tab with a text, or none if no tab has it.
+     *
+     * @param text the tab's text
+     * @return this bar
+     */
+    @Override
+    TabBar selectItem(String text);
 
     /**
      * Returns the space between tabs.

@@ -2,6 +2,8 @@ package org.inspirenxe.strata.core;
 
 import org.inspirenxe.strata.api.ComponentFactory;
 import org.inspirenxe.strata.api.component.Component;
+import org.inspirenxe.strata.api.control.attribute.item.SingleSelection;
+import org.inspirenxe.strata.api.control.attribute.value.Toggle;
 import org.inspirenxe.strata.api.control.button.Button;
 import org.inspirenxe.strata.api.control.button.CheckBox;
 import org.inspirenxe.strata.api.control.button.RadioButton;
@@ -117,12 +119,12 @@ class ButtonPaneEventsTest {
 
         private void show() {
             this.box = ButtonPaneEventsTest.this.ui.checkBox("Music")
-                    .onEvent(CheckBox.TOGGLE, event -> {
+                    .onEvent(Toggle.TOGGLE, event -> {
                         // The box still has its old state while the request is delivered
-                        assertEquals(!event.value(), event.control().isChecked());
+                        assertEquals(!event.value(), event.control().isSelected());
                         this.requests.add(event.value());
                     })
-                    .onEvent(CheckBox.TOGGLED, event -> this.heard.add(event.previous() + "->" + event.value()));
+                    .onEvent(Toggle.TOGGLED, event -> this.heard.add(event.previous() + "->" + event.value()));
             this.form = ButtonPaneEventsTest.this.form(this.box);
         }
 
@@ -139,9 +141,9 @@ class ButtonPaneEventsTest {
         @Test
         void cancelingLeavesTheBox() {
             this.show();
-            this.box.onEvent(CheckBox.TOGGLE, event -> event.cancel());
+            this.box.onEvent(Toggle.TOGGLE, event -> event.cancel());
             ButtonPaneEventsTest.this.test.click(5, 5);
-            assertFalse(this.box.isChecked());
+            assertFalse(this.box.isSelected());
             assertEquals(List.of(true), this.requests);
             assertEquals(List.of(), this.heard);
         }
@@ -149,17 +151,17 @@ class ButtonPaneEventsTest {
         @Test
         void aRewrittenValueIsApplied() {
             this.show();
-            this.box.onEvent(CheckBox.TOGGLE, 1, event -> event.setValue(false));
+            this.box.onEvent(Toggle.TOGGLE, 1, event -> event.setValue(false));
             ButtonPaneEventsTest.this.test.click(5, 5);
-            assertFalse(this.box.isChecked());
+            assertFalse(this.box.isSelected());
             assertEquals(List.of(), this.heard);
         }
 
         @Test
         void codeOnlyReports() {
             this.show();
-            this.box.setChecked(true);
-            this.box.setChecked(true);
+            this.box.setSelected(true);
+            this.box.setSelected(true);
             this.box.toggle();
             assertEquals(List.of(), this.requests);
             assertEquals(List.of("false->true", "true->false"), this.heard);
@@ -168,9 +170,9 @@ class ButtonPaneEventsTest {
         @Test
         void aFormCanRefuse() {
             this.show();
-            this.form.onEvent(CheckBox.TOGGLE, event -> event.cancel());
+            this.form.onEvent(Toggle.TOGGLE, event -> event.cancel());
             ButtonPaneEventsTest.this.test.click(5, 5);
-            assertFalse(this.box.isChecked());
+            assertFalse(this.box.isSelected());
         }
     }
 
@@ -183,11 +185,11 @@ class ButtonPaneEventsTest {
 
         private void show() {
             this.toggle = ButtonPaneEventsTest.this.ui.toggleSwitch("PvP")
-                    .onEvent(ToggleSwitch.TOGGLE, event -> {
-                        assertEquals(!event.value(), event.control().isOn());
+                    .onEvent(Toggle.TOGGLE, event -> {
+                        assertEquals(!event.value(), event.control().isSelected());
                         this.requests.add(event.value());
                     })
-                    .onEvent(ToggleSwitch.TOGGLED, event -> this.heard.add(event.previous() + "->" + event.value()));
+                    .onEvent(Toggle.TOGGLED, event -> this.heard.add(event.previous() + "->" + event.value()));
             this.form = ButtonPaneEventsTest.this.form(this.toggle);
         }
 
@@ -204,29 +206,29 @@ class ButtonPaneEventsTest {
         @Test
         void cancelingLeavesTheSwitch() {
             this.show();
-            this.toggle.onEvent(ToggleSwitch.TOGGLE, event -> event.cancel());
+            this.toggle.onEvent(Toggle.TOGGLE, event -> event.cancel());
             ButtonPaneEventsTest.this.test.click(5, 5);
-            assertFalse(this.toggle.isOn());
+            assertFalse(this.toggle.isSelected());
             assertEquals(List.of(), this.heard);
         }
 
         @Test
         void aRewrittenValueIsAppliedAndNullIgnored() {
             this.show();
-            final Subscription off = this.toggle.subscribe(ToggleSwitch.TOGGLE, 1, event -> event.setValue(false));
+            final Subscription off = this.toggle.subscribe(Toggle.TOGGLE, 1, event -> event.setValue(false));
             ButtonPaneEventsTest.this.test.click(5, 5);
-            assertFalse(this.toggle.isOn());
+            assertFalse(this.toggle.isSelected());
             off.close();
-            this.toggle.onEvent(ToggleSwitch.TOGGLE, 1, event -> event.setValue(null));
+            this.toggle.onEvent(Toggle.TOGGLE, 1, event -> event.setValue(null));
             ButtonPaneEventsTest.this.test.click(5, 5);
-            assertFalse(this.toggle.isOn());
+            assertFalse(this.toggle.isSelected());
             assertEquals(List.of(), this.heard);
         }
 
         @Test
         void codeOnlyReports() {
             this.show();
-            this.toggle.setOn(true);
+            this.toggle.setSelected(true);
             this.toggle.toggle();
             assertEquals(List.of(), this.requests);
             assertEquals(List.of("false->true", "true->false"), this.heard);
@@ -236,7 +238,7 @@ class ButtonPaneEventsTest {
         void aFormHearsTheChange() {
             this.show();
             final List<Boolean> formHeard = new ArrayList<>();
-            this.form.onEvent(ToggleSwitch.TOGGLED, event -> formHeard.add(event.value()));
+            this.form.onEvent(Toggle.TOGGLED, event -> formHeard.add(event.value()));
             ButtonPaneEventsTest.this.test.click(5, 5);
             assertEquals(List.of(true), formHeard);
         }
@@ -259,12 +261,12 @@ class ButtonPaneEventsTest {
             this.normal = this.group.add("Normal", "normal");
             this.hard = this.group.add("Hard", "hard");
             for (final RadioButton button : this.group.buttons()) {
-                button.onEvent(RadioButton.SELECT, event -> {
+                button.onEvent(Toggle.TOGGLE, event -> {
                     assertFalse(event.control().isSelected());
-                    this.requests.add(event.control().text());
+                    this.requests.add(((RadioButton) event.control()).text());
                 });
             }
-            this.group.onEvent(RadioGroup.SELECTED, event -> this.heard.add(event.previous() + "->" + event.value()
+            this.group.onEvent(SingleSelection.SELECTED, event -> this.heard.add(event.previous() + "->" + event.value()
                     + " " + ((RadioButton) event.target()).text()));
             this.column = ui.stackPanel().add(this.easy).add(this.normal).add(this.hard);
             ButtonPaneEventsTest.this.test.show(this.column);
@@ -301,8 +303,8 @@ class ButtonPaneEventsTest {
             this.show();
             this.click(this.easy);
             this.easy.requestFocus();
-            this.normal.onEvent(RadioButton.SELECT, event -> event.cancel());
-            this.hard.onEvent(RadioButton.SELECT, event -> event.cancel());
+            this.normal.onEvent(Toggle.TOGGLE, event -> event.cancel());
+            this.hard.onEvent(Toggle.TOGGLE, event -> event.cancel());
             ButtonPaneEventsTest.this.key(Key.DOWN);
             assertTrue(this.easy.isSelected());
             assertSame(this.easy, ButtonPaneEventsTest.this.test.focused());
@@ -315,7 +317,7 @@ class ButtonPaneEventsTest {
         @Test
         void codeOnlyReports() {
             this.show();
-            this.group.select("hard");
+            this.group.selectItem("hard");
             this.easy.setSelected(true);
             this.easy.setSelected(true);
             this.group.clearSelection();
@@ -327,9 +329,9 @@ class ButtonPaneEventsTest {
         void aFormCanRefuseButGroupEventsDoNotBubble() {
             this.show();
             final List<Integer> outside = new ArrayList<>();
-            this.column.onEvent(RadioGroup.SELECTED, event -> outside.add(event.value()));
+            this.column.onEvent(SingleSelection.SELECTED, event -> outside.add(event.value()));
             this.click(this.easy);
-            this.column.onEvent(RadioButton.SELECT, event -> event.cancel());
+            this.column.onEvent(Toggle.TOGGLE, event -> event.cancel());
             this.click(this.hard);
             assertTrue(this.easy.isSelected());
             assertEquals(List.of(), outside);
@@ -340,12 +342,12 @@ class ButtonPaneEventsTest {
         void groupHandlersChainAndUnsubscribe() {
             this.show();
             final List<Integer> heard = new ArrayList<>();
-            assertSame(this.group, this.group.onEvent(RadioGroup.SELECTED, event -> { }));
-            final Subscription subscription = this.group.subscribe(RadioGroup.SELECTED, 0,
+            assertSame(this.group, this.group.onEvent(SingleSelection.SELECTED, event -> { }));
+            final Subscription subscription = this.group.subscribe(SingleSelection.SELECTED, 0,
                     event -> heard.add(event.value()));
-            this.group.select("normal");
+            this.group.selectItem("normal");
             subscription.close();
-            this.group.select("easy");
+            this.group.selectItem("easy");
             assertEquals(List.of(1), heard);
             assertSame(this.group, this.normal.group());
         }
@@ -361,8 +363,8 @@ class ButtonPaneEventsTest {
         private void show() {
             final ComponentFactory ui = ButtonPaneEventsTest.this.ui;
             this.expander = ui.expander("More").setContent(ui.label("Inside"))
-                    .onEvent(Expander.TOGGLE, event -> this.requests.add(event.value()))
-                    .onEvent(Expander.TOGGLED, event -> this.heard.add(event.previous() + "->" + event.value()));
+                    .onEvent(Expander.EXPAND, event -> this.requests.add(event.value()))
+                    .onEvent(Expander.EXPANDED, event -> this.heard.add(event.previous() + "->" + event.value()));
             this.form = ButtonPaneEventsTest.this.form(this.expander);
         }
 
@@ -379,7 +381,7 @@ class ButtonPaneEventsTest {
         @Test
         void cancelingLeavesItCollapsed() {
             this.show();
-            this.expander.onEvent(Expander.TOGGLE, event -> event.cancel());
+            this.expander.onEvent(Expander.EXPAND, event -> event.cancel());
             ButtonPaneEventsTest.this.test.click(5, 5);
             assertFalse(this.expander.isExpanded());
             assertFalse(this.expander.content().isAttached());
@@ -389,7 +391,7 @@ class ButtonPaneEventsTest {
         @Test
         void aRewrittenValueIsApplied() {
             this.show();
-            this.expander.onEvent(Expander.TOGGLE, event -> event.setValue(false));
+            this.expander.onEvent(Expander.EXPAND, event -> event.setValue(false));
             ButtonPaneEventsTest.this.test.click(5, 5);
             assertFalse(this.expander.isExpanded());
             assertEquals(List.of(), this.heard);
@@ -407,7 +409,7 @@ class ButtonPaneEventsTest {
         @Test
         void aFormCanRefuse() {
             this.show();
-            this.form.onEvent(Expander.TOGGLE, event -> event.cancel());
+            this.form.onEvent(Expander.EXPAND, event -> event.cancel());
             ButtonPaneEventsTest.this.test.click(5, 5);
             assertFalse(this.expander.isExpanded());
         }
@@ -422,8 +424,8 @@ class ButtonPaneEventsTest {
 
         private void show() {
             this.tabs = ButtonPaneEventsTest.this.ui.tabBar().addTab("Buy").addTab("Sell").addTab("Trade")
-                    .onEvent(TabBar.SELECT, event -> this.requests.add(event.value()))
-                    .onEvent(TabBar.SELECTED, event -> this.heard.add(event.previous() + "->" + event.value()));
+                    .onEvent(SingleSelection.SELECT, event -> this.requests.add(event.value()))
+                    .onEvent(SingleSelection.SELECTED, event -> this.heard.add(event.previous() + "->" + event.value()));
             this.tabs.setWidth(300);
             this.form = ButtonPaneEventsTest.this.form(this.tabs);
         }
@@ -442,7 +444,7 @@ class ButtonPaneEventsTest {
         @Test
         void cancelingKeepsTheTab() {
             this.show();
-            this.tabs.onEvent(TabBar.SELECT, event -> event.cancel());
+            this.tabs.onEvent(SingleSelection.SELECT, event -> event.cancel());
             ButtonPaneEventsTest.this.test.click(150, 5);
             this.tabs.requestFocus();
             ButtonPaneEventsTest.this.key(Key.RIGHT);
@@ -455,7 +457,7 @@ class ButtonPaneEventsTest {
         void aRewrittenIndexIsSelectedUnlessItCannotBe() {
             this.show();
             final Integer[] rewrite = {2};
-            this.tabs.onEvent(TabBar.SELECT, -1, event -> event.setValue(rewrite[0]));
+            this.tabs.onEvent(SingleSelection.SELECT, -1, event -> event.setValue(rewrite[0]));
             ButtonPaneEventsTest.this.test.click(150, 5);
             assertEquals(2, this.tabs.selectedIndex());
 
@@ -483,7 +485,7 @@ class ButtonPaneEventsTest {
         void theBarItselfFiresAndAFormHearsIt() {
             this.show();
             final List<Component<?>> targets = new ArrayList<>();
-            this.form.onEvent(TabBar.SELECTED, event -> targets.add(event.target()));
+            this.form.onEvent(SingleSelection.SELECTED, event -> targets.add(event.target()));
             ButtonPaneEventsTest.this.test.click(150, 5);
             assertEquals(List.of(this.tabs), targets);
         }

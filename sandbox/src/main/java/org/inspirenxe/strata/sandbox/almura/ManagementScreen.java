@@ -2,6 +2,11 @@ package org.inspirenxe.strata.sandbox.almura;
 
 import org.inspirenxe.strata.api.ComponentFactory;
 import org.inspirenxe.strata.api.component.Component;
+import org.inspirenxe.strata.api.control.attribute.item.Activatable;
+import org.inspirenxe.strata.api.control.attribute.item.SingleSelection;
+import org.inspirenxe.strata.api.control.attribute.popup.Closable;
+import org.inspirenxe.strata.api.control.attribute.text.TextInput;
+import org.inspirenxe.strata.api.control.attribute.value.Toggle;
 import org.inspirenxe.strata.api.control.button.Button;
 import org.inspirenxe.strata.api.control.button.CheckBox;
 import org.inspirenxe.strata.api.control.collection.ListView;
@@ -105,18 +110,18 @@ public final class ManagementScreen implements Screen {
         this.list = ui.<Feature>listView(row)
                 .setRowHeight(20)
                 .setKeyFunction(Feature::id)
-                .onEvent(ListView.SELECTED, e -> this.show(this.list.selected()))
-                .onEvent(ListView.ACTIVATED, e -> this.open());
+                .onEvent(SingleSelection.SELECTED, e -> this.show(this.list.selected()))
+                .onEvent(Activatable.ACTIVATED, e -> this.open());
         Look.panel(this.list)
                 .setAnchor(Anchor.FILL);
 
         this.id = this.field(0)
-                .onEvent(TextBox.EDIT, event -> {
+                .onEvent(TextInput.EDIT, event -> {
                     event.setValue(event.value().replaceAll("[^A-Za-z0-9_.]", "").toLowerCase(Locale.ROOT));
                 });
         this.name = this.field(1);
         this.permission = this.field(2)
-                .onEvent(TextBox.EDIT, event -> {
+                .onEvent(TextInput.EDIT, event -> {
                     event.setValue(event.value().replaceAll("[^A-Za-z0-9_.]", "").toLowerCase(Locale.ROOT));
                 });
         this.creator = this.field(3)
@@ -129,7 +134,7 @@ public final class ManagementScreen implements Screen {
         this.creatorIdLabel = Look.label(ui, "Creator UUID:", Look.WHITE);
         this.createdLabel = Look.label(ui, "Created:", Look.WHITE);
         this.hidden = ui.checkBox("Hidden")
-                .onEvent(CheckBox.TOGGLED, event -> this.validate())
+                .onEvent(Toggle.TOGGLED, event -> this.validate())
                 .setAnchor(Anchor.MIDDLE_LEFT);
         this.save = Look.button(ui, "Save", 40)
                 .onEvent(Button.PRESSED, event -> this.save());
@@ -192,7 +197,7 @@ public final class ManagementScreen implements Screen {
         final Window window = ui.window(this.title)
                 .add(layout)
                 .setWidth(375)
-                .onEvent(Window.CLOSED, event -> leave.run());
+                .onEvent(Closable.CLOSED, event -> leave.run());
         close.onEvent(Button.PRESSED, event -> leave.run());
 
         this.list.setItems(this.features);
@@ -204,7 +209,7 @@ public final class ManagementScreen implements Screen {
 
     private TextBox field(final int tabIndex) {
         return this.ui.textBox()
-                .onEvent(TextBox.EDITED, event -> this.validate())
+                .onEvent(TextInput.EDITED, event -> this.validate())
                 .onEvent(TextBox.SUBMITTED, event -> this.save())
                 .setTabIndex(tabIndex);
     }
@@ -230,7 +235,7 @@ public final class ManagementScreen implements Screen {
                 this.creatorIdLabel, this.createdLabel)) {
             part.setVisible(existing);
         }
-        this.hidden.setChecked(selected.map(Feature::hidden).orElse(false));
+        this.hidden.setSelected(selected.map(Feature::hidden).orElse(false));
         this.open.setEnabled(existing);
         this.validate();
     }
@@ -260,7 +265,7 @@ public final class ManagementScreen implements Screen {
                     }
                     final Feature old = this.list.selected().orElse(null);
                     final Feature next = new Feature(this.id.text(), this.name.text(), this.permission.text(),
-                            this.hidden.isChecked(), old == null ? "Zidane" : old.creator(),
+                            this.hidden.isSelected(), old == null ? "Zidane" : old.creator(),
                             old == null ? UUID.nameUUIDFromBytes("Zidane".getBytes()) : old.creatorId(),
                             old == null ? LocalDateTime.now() : old.created());
                     if (old == null) {

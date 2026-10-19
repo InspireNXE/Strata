@@ -2,6 +2,8 @@ package org.inspirenxe.strata.sandbox.almura;
 
 import org.inspirenxe.strata.api.ComponentFactory;
 import org.inspirenxe.strata.api.component.Component;
+import org.inspirenxe.strata.api.control.attribute.text.TextInput;
+import org.inspirenxe.strata.api.control.attribute.value.Toggle;
 import org.inspirenxe.strata.api.control.button.Button;
 import org.inspirenxe.strata.api.control.button.CheckBox;
 import org.inspirenxe.strata.api.control.display.Label;
@@ -44,7 +46,7 @@ final class StoreDialogs {
                 .setText("1")
                 .setSelectAllOnFocus(true)
                 .setWidth(45)
-                .onEvent(TextBox.EDIT, event -> {
+                .onEvent(TextInput.EDIT, event -> {
                     final String digits = event.value().replaceAll("[^0-9]", "");
                     final String kept = digits.length() > 12 ? digits.substring(0, 12) : digits;
                     event.setValue(digits.isEmpty() ? "" : Long.toString(Math.min(Long.parseLong(kept), max)));
@@ -69,7 +71,7 @@ final class StoreDialogs {
                 .add(total, 2, 1)
                 .setAlignment(HorizontalAlignment.STRETCH, VerticalAlignment.TOP);
         final Window window = ExchangeDialogs.window(ui, "Enter a Quantity", 130, grid, confirm, cancel);
-        amount.onEvent(TextBox.EDITED, event -> {
+        amount.onEvent(TextInput.EDITED, event -> {
             final long value = event.value().isEmpty() ? 0 : Long.parseLong(event.value());
             total.setText(Look.currency(item.price().multiply(BigDecimal.valueOf(value))));
             confirm.setEnabled(value >= 1 && value <= max);
@@ -124,7 +126,7 @@ final class StoreDialogs {
 
         Column(final ComponentFactory ui, final String title, final Optional<StoreItem> existing, final int tabIndex) {
             this.price = ui.textBox()
-                    .onEvent(TextBox.EDIT, event -> {
+                    .onEvent(TextInput.EDIT, event -> {
                         if (!event.value().matches("\\d{0,8}(\\.\\d{0,2})?")) {
                             event.cancel();
                         }
@@ -132,7 +134,7 @@ final class StoreDialogs {
                     .setWidth(50)
                     .setTabIndex(tabIndex);
             this.quantity = ui.textBox()
-                    .onEvent(TextBox.EDIT, event -> {
+                    .onEvent(TextInput.EDIT, event -> {
                         if (!event.value().matches("\\d{0,8}")) {
                             event.cancel();
                         }
@@ -144,14 +146,14 @@ final class StoreDialogs {
             existing.ifPresent(item -> {
                 this.price.setText(item.price().toPlainString());
                 if (item.infinite()) {
-                    this.infinite.setChecked(true);
+                    this.infinite.setSelected(true);
                 } else {
                     this.quantity.setText(Long.toString(item.quantity()));
                 }
             });
-            this.price.onEvent(TextBox.EDITED, event -> this.changed());
-            this.quantity.onEvent(TextBox.EDITED, event -> this.changed());
-            this.infinite.onEvent(CheckBox.TOGGLED, event -> this.changed());
+            this.price.onEvent(TextInput.EDITED, event -> this.changed());
+            this.quantity.onEvent(TextInput.EDITED, event -> this.changed());
+            this.infinite.onEvent(Toggle.TOGGLED, event -> this.changed());
 
             final Label titleLabel = Look.label(ui, title, Look.WHITE)
                     .setAnchor(Anchor.TOP_CENTER);
@@ -185,7 +187,7 @@ final class StoreDialogs {
         }
 
         private void changed() {
-            final boolean endless = this.infinite.isChecked();
+            final boolean endless = this.infinite.isSelected();
             this.quantity.setReadOnly(endless);
             if (endless) {
                 this.quantity.setText("-1");
@@ -209,7 +211,7 @@ final class StoreDialogs {
             if (price.signum() <= 0) {
                 return Optional.empty();
             }
-            if (this.infinite.isChecked()) {
+            if (this.infinite.isSelected()) {
                 return Optional.of(new Side(price, StoreData.INFINITE));
             }
             if (this.quantity.text().isEmpty()) {

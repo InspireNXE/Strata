@@ -1,12 +1,15 @@
 package org.inspirenxe.strata.api.control.display;
 
 import org.inspirenxe.strata.api.component.Component;
+import org.inspirenxe.strata.api.control.attribute.text.HasText;
+import org.inspirenxe.strata.api.control.attribute.value.Ranged;
 
 /**
- * A bar filled from the left to show a fraction, with an optional caption centered on it, such as {@code 12/36}.
+ * A bar filled from the left to show how far a value is through its range, with an optional caption centered on it,
+ * such as {@code 12/36}. The range is 0 to 1 by default, so the value is the fraction filled.
  *
  * <p>It asks for 100 units of width and one line plus 4 units of height; stretch it or give it a size. It is not
- * focusable and has no default behavior for input.</p>
+ * focusable and has no default behavior for input, so it never fires {@link Ranged#CHANGE}.</p>
  *
  * <h2>Theme keys</h2>
  * <ul>
@@ -16,13 +19,16 @@ import org.inspirenxe.strata.api.component.Component;
  * </ul>
  *
  * <pre>{@code
- * ProgressBar slots = factory.progressBar().setValue(used / (float) limit).setText(used + "/" + limit);
+ * ProgressBar slots = factory.progressBar()
+ *         .setRange(0, limit)
+ *         .setValue(used)
+ *         .setText(used + "/" + limit);
  * }</pre>
  *
  * <p>Get one from {@link org.inspirenxe.strata.api.ComponentFactory#progressBar()}. Do not implement this
  * interface.</p>
  */
-public interface ProgressBar extends Component<ProgressBar> {
+public interface ProgressBar extends Component<ProgressBar>, HasText<ProgressBar>, Ranged<ProgressBar> {
     /**
      * Style key for the bar's track (paint, required).
      */
@@ -37,25 +43,56 @@ public interface ProgressBar extends Component<ProgressBar> {
     String STYLE_TEXT = "progress.text";
 
     /**
-     * Returns the fraction filled.
+     * Returns the value.
      *
-     * @return a value from 0 to 1; 0 by default
+     * @return a value within the range; 0 by default
      */
-    float value();
+    @Override
+    double value();
 
     /**
-     * Sets the fraction filled, clamped to 0 to 1. Not a number counts as 0.
+     * Sets the value, clamped to the range. {@link Ranged#CHANGED} fires if it changed.
      *
-     * @param value the fraction
+     * @param value the value
      * @return this bar
+     * @throws IllegalArgumentException if {@code value} is NaN
      */
-    ProgressBar setValue(float value);
+    @Override
+    ProgressBar setValue(double value);
+
+    /**
+     * Returns the lower end of the range, where the bar is empty.
+     *
+     * @return the minimum; 0 by default
+     */
+    @Override
+    double min();
+
+    /**
+     * Returns the upper end of the range, where the bar is full.
+     *
+     * @return the maximum; 1 by default
+     */
+    @Override
+    double max();
+
+    /**
+     * Sets the range and clamps the value to it. {@link Ranged#CHANGED} fires if that changed the value.
+     *
+     * @param min the value at which the bar is empty
+     * @param max the value at which the bar is full
+     * @return this bar
+     * @throws IllegalArgumentException if either end is not finite, or {@code max} is not greater than {@code min}
+     */
+    @Override
+    ProgressBar setRange(double min, double max);
 
     /**
      * Returns the caption.
      *
      * @return the caption; empty by default
      */
+    @Override
     String text();
 
     /**
@@ -64,5 +101,6 @@ public interface ProgressBar extends Component<ProgressBar> {
      * @param text the caption, or an empty string for none
      * @return this bar
      */
+    @Override
     ProgressBar setText(String text);
 }

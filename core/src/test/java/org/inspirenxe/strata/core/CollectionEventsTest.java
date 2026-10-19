@@ -2,9 +2,12 @@ package org.inspirenxe.strata.core;
 
 import org.inspirenxe.strata.api.ComponentFactory;
 import org.inspirenxe.strata.api.component.Component;
+import org.inspirenxe.strata.api.control.attribute.item.Activatable;
+import org.inspirenxe.strata.api.control.attribute.item.SingleSelection;
+import org.inspirenxe.strata.api.control.attribute.popup.Openable;
 import org.inspirenxe.strata.api.control.collection.ComboBox;
+import org.inspirenxe.strata.api.control.collection.GridView;
 import org.inspirenxe.strata.api.control.collection.ListView;
-import org.inspirenxe.strata.api.control.collection.SlotGrid;
 import org.inspirenxe.strata.api.control.collection.TableView;
 import org.inspirenxe.strata.api.control.collection.TreeView;
 import org.inspirenxe.strata.api.event.ValueEvent;
@@ -66,14 +69,14 @@ class CollectionEventsTest {
             this.list = ui.<Integer>listView(item -> ui.label(Integer.toString(item)))
                     .setItems(List.of(0, 1, 2, 3, 4, 5, 6, 7, 8, 9));
             this.list.setSize(100, 100);
-            this.list.onEvent(ListView.SELECTED, e -> this.heard.add(change(e)));
+            this.list.onEvent(SingleSelection.SELECTED, e -> this.heard.add(change(e)));
             CollectionEventsTest.this.show(this.list, 0, 0);
         }
 
         @Test
         void aPressAsksToSelectAndReports() {
             this.show();
-            this.list.onEvent(ListView.SELECT, e -> this.asked.add(e.value()));
+            this.list.onEvent(SingleSelection.SELECT, e -> this.asked.add(e.value()));
             CollectionEventsTest.this.test.click(10, 45);
             assertEquals(List.of(2), this.asked);
             assertEquals(2, this.list.selectedIndex());
@@ -83,7 +86,7 @@ class CollectionEventsTest {
         @Test
         void aCanceledSelectKeepsTheSelection() {
             this.show();
-            this.list.onEvent(ListView.SELECT, e -> e.cancel());
+            this.list.onEvent(SingleSelection.SELECT, e -> e.cancel());
             CollectionEventsTest.this.test.click(10, 45);
             assertEquals(-1, this.list.selectedIndex());
             assertEquals(List.of(), this.heard);
@@ -93,7 +96,7 @@ class CollectionEventsTest {
         void aRewrittenIndexIsSelectedAndABadOneIgnored() {
             this.show();
             final int[] rewrite = {5};
-            this.list.onEvent(ListView.SELECT, e -> e.setValue(rewrite[0]));
+            this.list.onEvent(SingleSelection.SELECT, e -> e.setValue(rewrite[0]));
             CollectionEventsTest.this.test.click(10, 45);
             assertEquals(5, this.list.selectedIndex());
             rewrite[0] = 99;
@@ -105,7 +108,7 @@ class CollectionEventsTest {
         @Test
         void keysAndDeselectingAskOnlyWhenTheSelectionWouldChange() {
             this.show();
-            this.list.onEvent(ListView.SELECT, e -> this.asked.add(e.value()));
+            this.list.onEvent(SingleSelection.SELECT, e -> this.asked.add(e.value()));
             this.list.setDeselectable(true);
             this.list.requestFocus();
             CollectionEventsTest.this.key(Key.DOWN);
@@ -120,7 +123,7 @@ class CollectionEventsTest {
         @Test
         void codeReportsButNeverAsks() {
             this.show();
-            this.list.onEvent(ListView.SELECT, e -> this.asked.add(e.value()));
+            this.list.onEvent(SingleSelection.SELECT, e -> this.asked.add(e.value()));
             this.list.select(4);
             this.list.selectItem(6);
             this.list.select(6);
@@ -137,13 +140,13 @@ class CollectionEventsTest {
         void aDoublePressAndEnterAskToActivate() {
             this.show();
             final List<String> activated = new ArrayList<>();
-            this.list.onEvent(ListView.ACTIVATED, e -> activated.add(change(e)));
-            this.list.onEvent(ListView.ACTIVATE, e -> this.asked.add(e.value()));
+            this.list.onEvent(Activatable.ACTIVATED, e -> activated.add(change(e)));
+            this.list.onEvent(Activatable.ACTIVATE, e -> this.asked.add(e.value()));
             CollectionEventsTest.this.test.click(10, 45);
             CollectionEventsTest.this.test.click(10, 45);
             assertEquals(List.of("2->2"), activated);
 
-            this.list.onEvent(ListView.ACTIVATE, 1, e -> e.cancel());
+            this.list.onEvent(Activatable.ACTIVATE, 1, e -> e.cancel());
             CollectionEventsTest.this.key(Key.ENTER);
             assertEquals(List.of(2, 2), this.asked);
             assertEquals(1, activated.size());
@@ -154,8 +157,8 @@ class CollectionEventsTest {
             this.show();
             final List<Integer> activated = new ArrayList<>();
             final int[] rewrite = {7};
-            this.list.onEvent(ListView.ACTIVATED, e -> activated.add(e.value()));
-            this.list.onEvent(ListView.ACTIVATE, e -> e.setValue(rewrite[0]));
+            this.list.onEvent(Activatable.ACTIVATED, e -> activated.add(e.value()));
+            this.list.onEvent(Activatable.ACTIVATE, e -> e.setValue(rewrite[0]));
             this.list.setActivateOnClick(true);
             CollectionEventsTest.this.test.click(10, 65);
             rewrite[0] = 10;
@@ -167,9 +170,9 @@ class CollectionEventsTest {
         void anAncestorCanRefuseAndHear() {
             this.show();
             final AbsolutePanel panel = CollectionEventsTest.this.panel;
-            final List<ListView<?>> heard = new ArrayList<>();
-            panel.onEvent(ListView.SELECTED, e -> heard.add(e.control()));
-            panel.onEvent(ListView.SELECT, e -> e.cancel());
+            final List<SingleSelection<?, ?>> heard = new ArrayList<>();
+            panel.onEvent(SingleSelection.SELECTED, e -> heard.add(e.control()));
+            panel.onEvent(SingleSelection.SELECT, e -> e.cancel());
             CollectionEventsTest.this.test.click(10, 45);
             assertEquals(-1, this.list.selectedIndex());
             this.list.select(3);
@@ -186,9 +189,9 @@ class CollectionEventsTest {
 
         private void show() {
             final ComponentFactory ui = CollectionEventsTest.this.ui;
-            this.combo = ui.<String>comboBox(String::toUpperCase).setOptions(List.of("a", "b", "c"));
-            this.combo.onEvent(ComboBox.SELECTED, e -> this.heard.add(change(e)))
-                    .onEvent(ComboBox.OPENED, e -> this.opened.add("opened"));
+            this.combo = ui.<String>comboBox(String::toUpperCase).setItems(List.of("a", "b", "c"));
+            this.combo.onEvent(SingleSelection.SELECTED, e -> this.heard.add(change(e)))
+                    .onEvent(Openable.OPENED, e -> this.opened.add("opened"));
             CollectionEventsTest.this.show(this.combo, 10, 10);
         }
 
@@ -206,7 +209,7 @@ class CollectionEventsTest {
         void clicksAndKeysAskToOpen() {
             this.show();
             final boolean[] refuse = {true};
-            this.combo.onEvent(ComboBox.OPEN, e -> {
+            this.combo.onEvent(Openable.OPEN, e -> {
                 this.asked.add("open");
                 if (refuse[0]) {
                     e.cancel();
@@ -227,7 +230,7 @@ class CollectionEventsTest {
         @Test
         void openingFromCodeReportsButNeverAsks() {
             this.show();
-            this.combo.onEvent(ComboBox.OPEN, e -> this.asked.add("open"));
+            this.combo.onEvent(Openable.OPEN, e -> this.asked.add("open"));
             this.combo.open();
             assertTrue(this.combo.isOpen());
             assertEquals(List.of(), this.asked);
@@ -237,7 +240,7 @@ class CollectionEventsTest {
         @Test
         void aRowPickedFromTheListAsksAfterTheListClosed() {
             this.show();
-            this.combo.onEvent(ComboBox.SELECT, e -> this.asked.add(e.value() + (this.combo.isOpen() ? " open" : " closed")));
+            this.combo.onEvent(SingleSelection.SELECT, e -> this.asked.add(e.value() + (this.combo.isOpen() ? " open" : " closed")));
             this.clickBox();
             this.clickThirdRow();
             assertFalse(this.combo.isOpen());
@@ -250,7 +253,7 @@ class CollectionEventsTest {
             this.show();
             final Integer[] rewrite = {null};
             final boolean[] refuse = {false};
-            this.combo.onEvent(ComboBox.SELECT, e -> {
+            this.combo.onEvent(SingleSelection.SELECT, e -> {
                 this.asked.add(e.value());
                 if (refuse[0]) {
                     e.cancel();
@@ -275,11 +278,11 @@ class CollectionEventsTest {
         @Test
         void codeReportsButNeverAsks() {
             this.show();
-            this.combo.onEvent(ComboBox.SELECT, e -> this.asked.add(e.value()));
+            this.combo.onEvent(SingleSelection.SELECT, e -> this.asked.add(e.value()));
             this.combo.select(2);
-            this.combo.selectOption("b");
-            this.combo.setOptions(List.of("z", "b"));
-            this.combo.setOptions(List.of());
+            this.combo.selectItem("b");
+            this.combo.setItems(List.of("z", "b"));
+            this.combo.setItems(List.of());
             assertEquals(List.of(), this.asked);
             // "b" keeps its index in the new options, so only the last change reports
             assertEquals(List.of("0->2", "2->1", "1->-1"), this.heard);
@@ -290,17 +293,21 @@ class CollectionEventsTest {
          */
         private void watchPopup(final List<String> leaked) {
             final Component<?> popup = CollectionEventsTest.this.ui.overlays().open().getFirst().content();
-            popup.onEvent(ListView.SELECT, e -> leaked.add("select"));
-            popup.onEvent(ListView.SELECTED, e -> leaked.add("selected"));
-            popup.onEvent(ListView.ACTIVATE, e -> leaked.add("activate"));
-            popup.onEvent(ListView.ACTIVATED, e -> leaked.add("activated"));
+            popup.onEvent(SingleSelection.SELECT, e -> leaked.add("select"));
+            popup.onEvent(SingleSelection.SELECTED, e -> leaked.add("selected"));
+            popup.onEvent(Activatable.ACTIVATE, e -> leaked.add("activate"));
+            popup.onEvent(Activatable.ACTIVATED, e -> leaked.add("activated"));
         }
 
         @Test
         void thePopupListFiresNothingOfItsOwn() {
             this.show();
             final List<String> leaked = new ArrayList<>();
-            CollectionEventsTest.this.panel.onEvent(ListView.SELECTED, e -> leaked.add("panel"));
+            CollectionEventsTest.this.panel.onEvent(SingleSelection.SELECTED, e -> {
+                if (e.control() != this.combo) {
+                    leaked.add("panel");
+                }
+            });
             this.combo.requestFocus();
             CollectionEventsTest.this.key(Key.SPACE);
             this.watchPopup(leaked);
@@ -316,7 +323,7 @@ class CollectionEventsTest {
         @Test
         void anAncestorCanRefuse() {
             this.show();
-            CollectionEventsTest.this.panel.onEvent(ComboBox.SELECT, e -> e.cancel());
+            CollectionEventsTest.this.panel.onEvent(SingleSelection.SELECT, e -> e.cancel());
             this.combo.requestFocus();
             CollectionEventsTest.this.key(Key.DOWN);
             assertEquals(0, this.combo.selectedIndex());
@@ -341,7 +348,7 @@ class CollectionEventsTest {
                     .addTextColumn("Name", GridLength.weighted(1), Offer::name)
                     .setItems(List.of(this.apple, this.cherry, this.banana));
             this.table.setSize(200, 120);
-            this.table.onEvent(TableView.SELECTED, e -> this.heard.add(change(e)));
+            this.table.onEvent(SingleSelection.SELECTED, e -> this.heard.add(change(e)));
             CollectionEventsTest.this.show(this.table, 0, 0);
         }
 
@@ -350,7 +357,7 @@ class CollectionEventsTest {
             this.show();
             final Integer[] rewrite = {null};
             final boolean[] refuse = {false};
-            this.table.onEvent(TableView.SELECT, e -> {
+            this.table.onEvent(SingleSelection.SELECT, e -> {
                 this.asked.add(e.value());
                 if (refuse[0]) {
                     e.cancel();
@@ -378,7 +385,7 @@ class CollectionEventsTest {
         @Test
         void codeAndSortingReportButNeverAsk() {
             this.show();
-            this.table.onEvent(TableView.SELECT, e -> this.asked.add(e.value()));
+            this.table.onEvent(SingleSelection.SELECT, e -> this.asked.add(e.value()));
             this.table.select(1);
             this.table.selectItem(this.banana);
             // Sorting by name moves banana to the middle, where the descending sort keeps it
@@ -393,14 +400,14 @@ class CollectionEventsTest {
         void aDoublePressAsksToActivate() {
             this.show();
             final List<String> activated = new ArrayList<>();
-            this.table.onEvent(TableView.ACTIVATED, e -> activated.add(this.table.shownItems().get(e.value()).name()
+            this.table.onEvent(Activatable.ACTIVATED, e -> activated.add(this.table.shownItems().get(e.value()).name()
                     + " " + change(e)));
             CollectionEventsTest.this.test.click(10, 50);
             CollectionEventsTest.this.test.click(10, 50);
             assertEquals(List.of("Cherry 1->1"), activated);
-            this.table.onEvent(TableView.ACTIVATE, e -> e.setValue(2));
+            this.table.onEvent(Activatable.ACTIVATE, e -> e.setValue(2));
             CollectionEventsTest.this.key(Key.ENTER);
-            this.table.onEvent(TableView.ACTIVATE, 1, e -> e.cancel());
+            this.table.onEvent(Activatable.ACTIVATE, 1, e -> e.cancel());
             CollectionEventsTest.this.key(Key.ENTER);
             assertEquals(List.of("Cherry 1->1", "banana 2->2"), activated);
         }
@@ -462,16 +469,18 @@ class CollectionEventsTest {
             this.show();
             final List<String> seen = new ArrayList<>();
             final AbsolutePanel panel = CollectionEventsTest.this.panel;
-            panel.onEvent(ListView.SELECT, e -> seen.add("list select"));
-            panel.onEvent(ListView.SELECTED, e -> seen.add("list selected"));
-            panel.onEvent(ListView.ACTIVATED, e -> seen.add("list activated"));
-            this.table.onEvent(ListView.SELECTED, e -> seen.add("list selected at the table"));
-            panel.onEvent(TableView.SELECTED, e -> seen.add("table selected"));
-            panel.onEvent(TableView.ACTIVATED, e -> seen.add("table activated"));
+            panel.onEvent(SingleSelection.SELECT, e -> seen.add("select by " + this.who(e.control())));
+            panel.onEvent(SingleSelection.SELECTED, e -> seen.add("selected by " + this.who(e.control())));
+            panel.onEvent(Activatable.ACTIVATED, e -> seen.add("activated by " + this.who(e.control())));
             CollectionEventsTest.this.test.click(10, 50);
             CollectionEventsTest.this.test.click(10, 50);
             this.table.select(0);
-            assertEquals(List.of("table selected", "table activated", "table selected"), seen);
+            assertEquals(List.of("select by the table", "selected by the table", "activated by the table",
+                    "selected by the table"), seen);
+        }
+
+        private String who(final Object control) {
+            return control == this.table ? "the table" : "another control";
         }
     }
 
@@ -497,9 +506,9 @@ class CollectionEventsTest {
             final ComponentFactory ui = CollectionEventsTest.this.ui;
             this.tree = ui.<Node>treeView(node -> ui.label(node.name()))
                     .setChildren(Node::kids)
-                    .setRoots(List.of(this.a, this.b, this.c));
+                    .setItems(List.of(this.a, this.b, this.c));
             this.tree.setSize(200, 200);
-            this.tree.onEvent(TreeView.SELECTED, e -> this.heard.add(change(e)));
+            this.tree.onEvent(SingleSelection.SELECTED, e -> this.heard.add(change(e)));
             this.tree.onEvent(TreeView.EXPANDED, e -> {
                 assertEquals(e.value().item(), e.previous().item());
                 assertEquals(!e.value().expanded(), e.previous().expanded());
@@ -513,7 +522,7 @@ class CollectionEventsTest {
             this.show();
             final Integer[] rewrite = {null};
             final boolean[] refuse = {false};
-            this.tree.onEvent(TreeView.SELECT, e -> {
+            this.tree.onEvent(SingleSelection.SELECT, e -> {
                 this.asked.add(e.value());
                 if (refuse[0]) {
                     e.cancel();
@@ -538,7 +547,7 @@ class CollectionEventsTest {
         void rightAndLeftAskToExpandAndSelect() {
             this.show();
             final boolean[] refuse = {true};
-            this.tree.onEvent(TreeView.SELECT, e -> this.asked.add(e.value()));
+            this.tree.onEvent(SingleSelection.SELECT, e -> this.asked.add(e.value()));
             this.tree.onEvent(TreeView.EXPAND, e -> {
                 this.asked.add(((Node) e.value().item()).name() + (e.value().expanded() ? "+" : "-"));
                 if (refuse[0]) {
@@ -574,9 +583,9 @@ class CollectionEventsTest {
         @Test
         void codeReportsOnceForEachChangeButNeverAsks() {
             this.show();
-            this.tree.onEvent(TreeView.SELECT, e -> this.asked.add(e.value()));
+            this.tree.onEvent(SingleSelection.SELECT, e -> this.asked.add(e.value()));
             this.tree.onEvent(TreeView.EXPAND, e -> this.asked.add(e.value()));
-            this.tree.select(this.leaf);
+            this.tree.selectItem(this.leaf);
             this.tree.setExpanded(this.a, false);
             this.tree.expandAll();
             this.tree.collapseAll();
@@ -588,7 +597,7 @@ class CollectionEventsTest {
         @Test
         void expandingAboveTheSelectionReportsItsNewRow() {
             this.show();
-            this.tree.select(this.b);
+            this.tree.selectItem(this.b);
             this.tree.setExpanded(this.a, true);
             assertEquals(List.of("-1->1", "1->2"), this.heard);
             assertEquals(Optional.of(this.b), this.tree.selected());
@@ -598,11 +607,11 @@ class CollectionEventsTest {
         void aDoublePressAsksToActivate() {
             this.show();
             final List<String> activated = new ArrayList<>();
-            this.tree.onEvent(TreeView.ACTIVATED, e -> activated.add(this.tree.shownItems().get(e.value()).name()
+            this.tree.onEvent(Activatable.ACTIVATED, e -> activated.add(this.tree.shownItems().get(e.value()).name()
                     + " " + change(e)));
             CollectionEventsTest.this.test.click(50, 30);
             CollectionEventsTest.this.test.click(50, 30);
-            this.tree.onEvent(TreeView.ACTIVATE, e -> e.cancel());
+            this.tree.onEvent(Activatable.ACTIVATE, e -> e.cancel());
             CollectionEventsTest.this.key(Key.ENTER);
             assertEquals(List.of("B 1->1"), activated);
         }
@@ -612,29 +621,27 @@ class CollectionEventsTest {
             this.show();
             final List<String> seen = new ArrayList<>();
             final AbsolutePanel panel = CollectionEventsTest.this.panel;
-            panel.onEvent(ListView.SELECTED, e -> seen.add("list selected"));
-            panel.onEvent(ListView.ACTIVATED, e -> seen.add("list activated"));
-            this.tree.onEvent(ListView.SELECTED, e -> seen.add("list selected at the tree"));
-            panel.onEvent(TreeView.SELECTED, e -> seen.add("tree selected"));
-            panel.onEvent(TreeView.SELECT, e -> e.cancel());
+            panel.onEvent(SingleSelection.SELECTED, e -> seen.add(e.control() == this.tree ? "tree selected" : "leak"));
+            panel.onEvent(Activatable.ACTIVATED, e -> seen.add("leak"));
+            panel.onEvent(SingleSelection.SELECT, e -> e.cancel());
             CollectionEventsTest.this.test.click(50, 30);
-            this.tree.select(this.b);
+            this.tree.selectItem(this.b);
             assertEquals(List.of("tree selected"), seen);
         }
     }
 
     @Nested
-    class SlotGrids {
+    class GridViews {
         private final List<Object> asked = new ArrayList<>();
         private final List<String> heard = new ArrayList<>();
-        private final List<SlotGrid.Click<?>> clicks = new ArrayList<>();
-        private SlotGrid<String> grid;
+        private final List<GridView.Click<?>> clicks = new ArrayList<>();
+        private GridView<String> grid;
 
         private void show() {
             final ComponentFactory ui = CollectionEventsTest.this.ui;
-            this.grid = ui.<String>slotGrid(ui::label).setColumns(3).setItems(List.of("a", "b", "c")).setSelectable(true);
-            this.grid.onEvent(SlotGrid.SELECTED, e -> this.heard.add(change(e)))
-                    .onEvent(SlotGrid.CLICKED, e -> {
+            this.grid = ui.<String>gridView(ui::label).setColumns(3).setItems(List.of("a", "b", "c")).setSelectable(true);
+            this.grid.onEvent(SingleSelection.SELECTED, e -> this.heard.add(change(e)))
+                    .onEvent(GridView.CLICKED, e -> {
                         assertEquals(e.value(), e.previous());
                         this.clicks.add(e.value());
                     });
@@ -646,7 +653,7 @@ class CollectionEventsTest {
             this.show();
             final Integer[] rewrite = {null};
             final boolean[] refuse = {false};
-            this.grid.onEvent(SlotGrid.SELECT, e -> {
+            this.grid.onEvent(SingleSelection.SELECT, e -> {
                 this.asked.add(e.value());
                 if (refuse[0]) {
                     e.cancel();
@@ -671,7 +678,7 @@ class CollectionEventsTest {
         @Test
         void codeReportsButNeverAsks() {
             this.show();
-            this.grid.onEvent(SlotGrid.SELECT, e -> this.asked.add(e.value()));
+            this.grid.onEvent(SingleSelection.SELECT, e -> this.asked.add(e.value()));
             this.grid.select(2);
             this.grid.setItems(List.of("a"));
             assertEquals(List.of(), this.asked);
@@ -681,20 +688,20 @@ class CollectionEventsTest {
         @Test
         void aClickAsksAndReportsEvenWhenTheSelectionWasRefused() {
             this.show();
-            this.grid.onEvent(SlotGrid.SELECT, e -> e.cancel());
-            this.grid.onEvent(SlotGrid.CLICK, e -> this.asked.add(e.value().index()));
+            this.grid.onEvent(SingleSelection.SELECT, e -> e.cancel());
+            this.grid.onEvent(GridView.CLICK, e -> this.asked.add(e.value().index()));
             CollectionEventsTest.this.rightClick(41, 5);
             CollectionEventsTest.this.test.click(5, 5);
             assertEquals(-1, this.grid.selectedIndex());
             assertEquals(List.of(2, 0), this.asked);
             assertEquals(2, this.clicks.size());
-            assertEquals(new SlotGrid.Click<>(2, "c", MouseButton.RIGHT, Modifiers.NONE), this.clicks.getFirst());
+            assertEquals(new GridView.Click<>(2, "c", MouseButton.RIGHT, Modifiers.NONE), this.clicks.getFirst());
         }
 
         @Test
         void aCanceledClickReportsNothingButStillSelects() {
             this.show();
-            this.grid.onEvent(SlotGrid.CLICK, e -> e.cancel());
+            this.grid.onEvent(GridView.CLICK, e -> e.cancel());
             CollectionEventsTest.this.test.click(5, 5);
             assertEquals(List.of(), this.clicks);
             assertEquals(0, this.grid.selectedIndex());
@@ -704,18 +711,18 @@ class CollectionEventsTest {
         void aRewrittenClickIsReportedAsGivenUnlessItsSlotIsMissing() {
             this.show();
             final int[] index = {1};
-            this.grid.onEvent(SlotGrid.CLICK, e -> e.setValue(new SlotGrid.Click<>(index[0], "x", MouseButton.MIDDLE,
+            this.grid.onEvent(GridView.CLICK, e -> e.setValue(new GridView.Click<>(index[0], "x", MouseButton.MIDDLE,
                     Modifiers.NONE)));
             CollectionEventsTest.this.test.click(5, 5);
             index[0] = 3;
             CollectionEventsTest.this.test.click(5, 5);
-            assertEquals(List.of(new SlotGrid.Click<>(1, "x", MouseButton.MIDDLE, Modifiers.NONE)), this.clicks);
+            assertEquals(List.of(new GridView.Click<>(1, "x", MouseButton.MIDDLE, Modifiers.NONE)), this.clicks);
         }
 
         @Test
         void anAncestorCanRefuse() {
             this.show();
-            CollectionEventsTest.this.panel.onEvent(SlotGrid.CLICK, e -> e.cancel());
+            CollectionEventsTest.this.panel.onEvent(GridView.CLICK, e -> e.cancel());
             CollectionEventsTest.this.test.click(5, 5);
             assertEquals(List.of(), this.clicks);
         }

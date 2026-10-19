@@ -3,11 +3,14 @@ package org.inspirenxe.strata.core;
 import org.inspirenxe.strata.api.ComponentFactory;
 import org.inspirenxe.strata.api.component.Component;
 import org.inspirenxe.strata.api.component.Tooltip;
+import org.inspirenxe.strata.api.control.attribute.item.SingleSelection;
+import org.inspirenxe.strata.api.control.attribute.value.Ranged;
+import org.inspirenxe.strata.api.control.attribute.value.Toggle;
 import org.inspirenxe.strata.api.control.button.Button;
 import org.inspirenxe.strata.api.control.button.RadioButton;
 import org.inspirenxe.strata.api.control.button.RadioGroup;
 import org.inspirenxe.strata.api.control.button.ToggleSwitch;
-import org.inspirenxe.strata.api.control.collection.SlotGrid;
+import org.inspirenxe.strata.api.control.collection.GridView;
 import org.inspirenxe.strata.api.control.collection.TableView;
 import org.inspirenxe.strata.api.control.collection.TreeView;
 import org.inspirenxe.strata.api.control.field.Spinner;
@@ -87,14 +90,14 @@ class StandardControlsTest {
             this.easy = this.group.add("Easy", "easy");
             this.normal = this.group.add("Normal", "normal");
             this.hard = this.group.add("Hard", "hard");
-            this.group.onEvent(RadioGroup.SELECTED, event -> this.heard.add(this.group.selected()));
+            this.group.onEvent(SingleSelection.SELECTED, event -> this.heard.add(this.group.selected()));
             StandardControlsTest.this.test.show(ui.stackPanel().add(this.easy).add(this.normal).add(this.hard));
         }
 
         @Test
         void selectingOneDeselectsTheOthers() {
             this.show();
-            this.group.select("normal");
+            this.group.selectItem("normal");
             assertTrue(this.normal.isSelected());
             this.hard.setSelected(true);
             assertFalse(this.normal.isSelected());
@@ -120,9 +123,11 @@ class StandardControlsTest {
         }
 
         @Test
-        void selectingAnUnknownValueThrows() {
+        void selectingAnUnknownValueClears() {
             this.show();
-            assertThrows(IllegalArgumentException.class, () -> this.group.select("nightmare"));
+            this.group.selectItem("normal");
+            this.group.selectItem("nightmare");
+            assertEquals(-1, this.group.selectedIndex());
         }
     }
 
@@ -140,13 +145,13 @@ class StandardControlsTest {
         void aClickFlipsItUnlessDisabled() {
             final List<Boolean> heard = new ArrayList<>();
             final ToggleSwitch toggle = StandardControlsTest.this.topLeft(StandardControlsTest.this.ui.toggleSwitch("PvP"))
-                    .onEvent(ToggleSwitch.TOGGLED, event -> heard.add(event.value()));
+                    .onEvent(Toggle.TOGGLED, event -> heard.add(event.value()));
             StandardControlsTest.this.test.show(toggle);
             StandardControlsTest.this.test.click(5, 5);
-            assertTrue(toggle.isOn());
+            assertTrue(toggle.isSelected());
             toggle.setEnabled(false);
             toggle.toggle();
-            assertTrue(toggle.isOn());
+            assertTrue(toggle.isSelected());
             assertEquals(List.of(true), heard);
         }
     }
@@ -158,7 +163,7 @@ class StandardControlsTest {
 
         private void show() {
             this.spinner = StandardControlsTest.this.topLeft(StandardControlsTest.this.ui.spinner())
-                    .onEvent(Spinner.CHANGED, event -> this.heard.add(event.value()));
+                    .onEvent(Ranged.CHANGED, event -> this.heard.add(event.value()));
             StandardControlsTest.this.test.show(this.spinner);
             StandardControlsTest.this.test.click(10, 9);
         }
@@ -379,7 +384,7 @@ class StandardControlsTest {
             final ComponentFactory ui = StandardControlsTest.this.ui;
             this.tree = StandardControlsTest.this.topLeft(ui.<Node>treeView(node -> ui.label(node.name())))
                     .setChildren(Node::kids)
-                    .setRoots(List.of(this.a, this.b));
+                    .setItems(List.of(this.a, this.b));
             this.tree.setSize(200, 200);
             StandardControlsTest.this.test.show(this.tree);
         }
@@ -402,7 +407,7 @@ class StandardControlsTest {
         @Test
         void selectingADeepItemExpandsItsAncestors() {
             this.show();
-            this.tree.select(this.leafA2a);
+            this.tree.selectItem(this.leafA2a);
             assertEquals(List.of(this.a, this.leafA1, this.a2, this.leafA2a, this.b), this.tree.shownItems());
             assertEquals(2, this.tree.depth(3));
             assertEquals(Optional.of(this.leafA2a), this.tree.selected());
@@ -412,8 +417,8 @@ class StandardControlsTest {
         void collapsingMovesTheSelectionUp() {
             this.show();
             final List<Optional<Node>> heard = new ArrayList<>();
-            this.tree.select(this.leafA2a);
-            this.tree.onEvent(TreeView.SELECTED, e -> heard.add(this.tree.selected()));
+            this.tree.selectItem(this.leafA2a);
+            this.tree.onEvent(SingleSelection.SELECTED, e -> heard.add(this.tree.selected()));
             this.tree.setExpanded(this.a, false);
             assertEquals(Optional.of(this.a), this.tree.selected());
             assertEquals(List.of(Optional.of(this.a)), heard);
@@ -433,7 +438,7 @@ class StandardControlsTest {
             this.show();
             this.tree.expandAll();
             assertEquals(5, this.tree.shownItems().size());
-            this.tree.select(this.leafA2a).collapseAll();
+            this.tree.selectItem(this.leafA2a).collapseAll();
             assertEquals(List.of(this.a, this.b), this.tree.shownItems());
             assertEquals(Optional.of(this.a), this.tree.selected());
         }
@@ -543,10 +548,10 @@ class StandardControlsTest {
             StandardControlsTest.this.move(60, 7);
             assertTrue(edit.isOpen());
             assertFalse(file.isOpen());
-            assertEquals(Optional.of(1), bar.openIndex());
+            assertEquals(1, bar.selectedIndex());
             StandardControlsTest.this.key(Key.RIGHT);
             assertTrue(file.isOpen());
-            assertEquals(Optional.of(0), bar.openIndex());
+            assertEquals(0, bar.selectedIndex());
             assertThrows(IllegalArgumentException.class, () -> ui.menuBar().addMenu("Again", file));
         }
     }
@@ -663,17 +668,17 @@ class StandardControlsTest {
     }
 
     @Nested
-    class SlotGrids {
+    class GridViews {
         @Test
         void slotsLayOutInRowsAndReportClicks() {
             final ComponentFactory ui = StandardControlsTest.this.ui;
-            final List<SlotGrid.Click<?>> clicks = new ArrayList<>();
-            final SlotGrid<String> grid = StandardControlsTest.this.topLeft(ui.<String>slotGrid(ui::label))
+            final List<GridView.Click<?>> clicks = new ArrayList<>();
+            final GridView<String> grid = StandardControlsTest.this.topLeft(ui.<String>gridView(ui::label))
                     .setColumns(3).setSpacing(2)
                     .setTooltips(Tooltip::text)
                     .setItems(Arrays.asList("a", null, "c", "d"))
                     .setSelectable(true)
-                    .onEvent(SlotGrid.CLICKED, e -> clicks.add(e.value()));
+                    .onEvent(GridView.CLICKED, e -> clicks.add(e.value()));
             StandardControlsTest.this.test.show(grid);
             assertEquals(3 * 18f + 2 * 2f, grid.desiredWidth());
             assertEquals(2 * 18f + 2f, grid.desiredHeight());
@@ -691,7 +696,7 @@ class StandardControlsTest {
         @Test
         void shrinkingTheItemsDropsALostSelection() {
             final ComponentFactory ui = StandardControlsTest.this.ui;
-            final SlotGrid<String> grid = ui.<String>slotGrid(ui::label).setItems(List.of("a", "b", "c")).select(2);
+            final GridView<String> grid = ui.<String>gridView(ui::label).setItems(List.of("a", "b", "c")).select(2);
             grid.setItems(List.of("a"));
             assertEquals(-1, grid.selectedIndex());
             grid.setItems(List.of("a", "b")).select(1).setItem(1, null);

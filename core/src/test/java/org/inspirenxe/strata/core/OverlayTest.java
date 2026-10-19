@@ -2,6 +2,7 @@ package org.inspirenxe.strata.core;
 
 import org.inspirenxe.strata.api.ComponentFactory;
 import org.inspirenxe.strata.api.component.Tooltip;
+import org.inspirenxe.strata.api.control.attribute.popup.Closable;
 import org.inspirenxe.strata.api.control.button.Button;
 import org.inspirenxe.strata.api.control.field.TextBox;
 import org.inspirenxe.strata.api.event.EventTypes;
@@ -69,8 +70,8 @@ class OverlayTest {
         void escapeClosesTheTopOverlay() {
             OverlayTest.this.test.show(OverlayTest.this.ui.absolutePanel());
             final List<String> closed = new ArrayList<>();
-            OverlayTest.this.ui.overlays().popup(new Box(OverlayTest.this.ui, 20, 20), Rect.ZERO).onEvent(Overlay.CLOSED, event -> closed.add("first"));
-            OverlayTest.this.ui.overlays().popup(new Box(OverlayTest.this.ui, 20, 20), Rect.ZERO).onEvent(Overlay.CLOSED, event -> closed.add("second"));
+            OverlayTest.this.ui.overlays().popup(new Box(OverlayTest.this.ui, 20, 20), Rect.ZERO).onEvent(Closable.CLOSED, event -> closed.add("first"));
+            OverlayTest.this.ui.overlays().popup(new Box(OverlayTest.this.ui, 20, 20), Rect.ZERO).onEvent(Closable.CLOSED, event -> closed.add("second"));
             assertTrue(OverlayTest.this.test.host().key(Key.ESCAPE, KeyAction.PRESS, Modifiers.NONE));
             assertEquals(List.of("second"), closed);
             assertEquals(1, OverlayTest.this.ui.overlays().open().size());

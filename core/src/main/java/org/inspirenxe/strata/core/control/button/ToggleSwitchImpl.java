@@ -100,12 +100,12 @@ public final class ToggleSwitchImpl extends CustomComponent<ToggleSwitch> implem
     }
 
     @Override
-    public boolean isOn() {
+    public boolean isSelected() {
         return this.on;
     }
 
     @Override
-    public ToggleSwitch setOn(final boolean on) {
+    public ToggleSwitch setSelected(final boolean on) {
         if (this.on != on) {
             this.on = on;
             this.report(TOGGLED, on, !on);
@@ -114,10 +114,11 @@ public final class ToggleSwitchImpl extends CustomComponent<ToggleSwitch> implem
     }
 
     @Override
-    public void toggle() {
+    public ToggleSwitch toggle() {
         if (this.isEnabled()) {
-            this.setOn(!this.on);
+            this.setSelected(!this.on);
         }
+        return this;
     }
 
     /**
@@ -128,7 +129,7 @@ public final class ToggleSwitchImpl extends CustomComponent<ToggleSwitch> implem
         if (this.isEnabled()) {
             this.request(TOGGLE, !this.on, on -> {
                 if (on != null) {
-                    this.setOn(on);
+                    this.setSelected(on);
                 }
             });
         }

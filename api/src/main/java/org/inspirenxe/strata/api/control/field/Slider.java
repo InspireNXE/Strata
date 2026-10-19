@@ -1,9 +1,8 @@
 package org.inspirenxe.strata.api.control.field;
 
 import org.inspirenxe.strata.api.component.Component;
-import org.inspirenxe.strata.api.event.EventType;
-import org.inspirenxe.strata.api.event.ValueEvent;
-import org.inspirenxe.strata.api.event.ValueRequestEvent;
+import org.inspirenxe.strata.api.control.attribute.value.Ranged;
+import org.inspirenxe.strata.api.control.attribute.value.Stepped;
 
 import java.util.function.DoubleFunction;
 
@@ -31,6 +30,20 @@ import java.util.function.DoubleFunction;
  * wide and as tall as the slider; its left edge moves from the slider's left edge (at the minimum) to the slider's
  * right edge minus the thumb width (at the maximum). An optional {@linkplain #setLabel label} is drawn centered over
  * the track to show the setting.</p>
+ *
+ * <h2>Events</h2>
+ * <ul>
+ *     <li>{@link Ranged#CHANGE}: Fired when the user is about to change the value: a press or drag on the slider, or
+ *     the arrow, Page Up, Page Down, Home and End keys while it has focus. During a drag it fires for each move that
+ *     would change the value. The value is the new value, already clamped to the range and snapped to the step. Cancel
+ *     the event to keep the current value, or set another value; it is clamped and snapped again as {@link #setValue}
+ *     does, and must not be null or NaN. A press, drag or key that would leave the value as it is fires nothing. Fires
+ *     only for the user's actions: {@link #setValue}, {@link #setRange} and {@link #setStep} fire none.</li>
+ *     <li>{@link Ranged#CHANGED}: Fired after the value changed: by the user, by {@link #setValue}, or by
+ *     {@link #setRange} or {@link #setStep} moving it. The value is the new value and {@code previous()} the value
+ *     before; neither is null. During a drag it fires for each move that changes the value. Fires for changes made from
+ *     code too.</li>
+ * </ul>
  *
  * <h2>Theme keys</h2>
  * <ul>
@@ -61,7 +74,7 @@ import java.util.function.DoubleFunction;
  * <p>Get one from {@link org.inspirenxe.strata.api.ComponentFactory#slider()}. Do not implement this
  * interface.</p>
  */
-public interface Slider extends Component<Slider> {
+public interface Slider extends Component<Slider>, Stepped<Slider> {
     /**
      * Style key for the track (paint, required).
      */
@@ -94,22 +107,6 @@ public interface Slider extends Component<Slider> {
      * Style key for the label when disabled (text style, optional).
      */
     String STYLE_TEXT_DISABLED = "slider.text.disabled";
-
-    /**
-     * Fired when the user is about to change the value: a press or drag on the slider, or the arrow, Page Up, Page
-     * Down, Home and End keys while it has focus. During a drag it fires for each move that would change the value.
-     * The value is the new value, already clamped to the range and snapped to the step. Cancel the event to keep the
-     * current value, or set another value; it is clamped and snapped again as {@link #setValue} does, and must not be
-     * null or NaN. A press, drag or key that would leave the value as it is fires nothing. Fires only for the user's
-     * actions: {@link #setValue}, {@link #setRange} and {@link #setStep} fire none.
-     */
-    EventType<ValueRequestEvent<Slider, Double>> CHANGE = EventType.valueRequest("slider.change");
-    /**
-     * Fired after the value changed: by the user, by {@link #setValue}, or by {@link #setRange} or {@link #setStep}
-     * moving it. The value is the new value and {@code previous()} the value before; neither is null. During a drag
-     * it fires for each move that changes the value. Fires for changes made from code too.
-     */
-    EventType<ValueEvent<Slider, Double>> CHANGED = EventType.valueReport("slider.changed");
 
     /**
      * Returns the value.

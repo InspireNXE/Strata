@@ -1,10 +1,9 @@
 package org.inspirenxe.strata.api.control.field;
 
 import org.inspirenxe.strata.api.component.Component;
+import org.inspirenxe.strata.api.control.attribute.value.Ranged;
+import org.inspirenxe.strata.api.control.attribute.value.Stepped;
 import org.inspirenxe.strata.api.control.button.Button;
-import org.inspirenxe.strata.api.event.EventType;
-import org.inspirenxe.strata.api.event.ValueEvent;
-import org.inspirenxe.strata.api.event.ValueRequestEvent;
 
 /**
  * A number in a text field, with buttons to step it up and down.
@@ -21,6 +20,20 @@ import org.inspirenxe.strata.api.event.ValueRequestEvent;
  *
  * <p>Every value is clamped to the range and rounded to the number of decimals. A new spinner counts whole numbers
  * from 0 to 100 in steps of 1, starting at 0, and asks for {@value #DEFAULT_WIDTH} units of width.</p>
+ *
+ * <h2>Events</h2>
+ * <ul>
+ *     <li>{@link Ranged#CHANGE}: Fired when the user is about to change the value: the step buttons, the wheel, the Up,
+ *     Down, Page Up and Page Down keys, or typed text taken on Enter or when the field loses focus. A step takes any
+ *     typed text first, so one step can fire this twice. The value is the new value, already clamped to the range and
+ *     rounded to the decimals. Cancel the event to keep the current value, which the field then shows again, or set
+ *     another value; it is clamped and rounded again as {@link #setValue} does, and must not be null or NaN. A change
+ *     that would leave the value as it is fires nothing. Fires only for the user's actions: {@link #setValue},
+ *     {@link #increment} and {@link #decrement} called from code fire none.</li>
+ *     <li>{@link Ranged#CHANGED}: Fired after the value changed: by the user, by {@link #setValue}, {@link #increment}
+ *     or {@link #decrement}, or by {@link #setRange} or {@link #setDecimals} moving it. The value is the new value and
+ *     {@code previous()} the value before; neither is null. Fires for changes made from code too.</li>
+ * </ul>
  *
  * <h2>Theme keys</h2>
  * <p>The field reads the {@link TextBox} keys. The buttons read these, and draw their arrows in the color of
@@ -41,7 +54,7 @@ import org.inspirenxe.strata.api.event.ValueRequestEvent;
  * <p>Get one from {@link org.inspirenxe.strata.api.ComponentFactory#spinner()}. Do not implement this
  * interface.</p>
  */
-public interface Spinner extends Component<Spinner> {
+public interface Spinner extends Component<Spinner>, Stepped<Spinner> {
     /**
      * Style key for each step button (paint, optional).
      */
@@ -62,23 +75,6 @@ public interface Spinner extends Component<Spinner> {
      * The width a spinner asks for, in UI units.
      */
     float DEFAULT_WIDTH = 60f;
-
-    /**
-     * Fired when the user is about to change the value: the step buttons, the wheel, the Up, Down, Page Up and Page
-     * Down keys, or typed text taken on Enter or when the field loses focus. A step takes any typed text first, so one
-     * step can fire this twice. The value is the new value, already clamped to the range and rounded to the decimals.
-     * Cancel the event to keep the current value, which the field then shows again, or set another value; it is
-     * clamped and rounded again as {@link #setValue} does, and must not be null or NaN. A change that would leave the
-     * value as it is fires nothing. Fires only for the user's actions: {@link #setValue}, {@link #increment} and
-     * {@link #decrement} called from code fire none.
-     */
-    EventType<ValueRequestEvent<Spinner, Double>> CHANGE = EventType.valueRequest("spinner.change");
-    /**
-     * Fired after the value changed: by the user, by {@link #setValue}, {@link #increment} or {@link #decrement}, or
-     * by {@link #setRange} or {@link #setDecimals} moving it. The value is the new value and {@code previous()} the
-     * value before; neither is null. Fires for changes made from code too.
-     */
-    EventType<ValueEvent<Spinner, Double>> CHANGED = EventType.valueReport("spinner.changed");
 
     /**
      * Returns the value.

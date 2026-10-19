@@ -35,6 +35,7 @@ public final class MenuBarImpl extends CustomComponent<MenuBar> implements MenuB
     private final List<String> titles;
     private final List<MenuImpl> menus;
     private int openIndex;
+    private boolean switching;
     private float pointerX;
 
     // Theme
@@ -93,29 +94,63 @@ public final class MenuBarImpl extends CustomComponent<MenuBar> implements MenuB
     }
 
     @Override
-    public Optional<Integer> openIndex() {
-        return this.openIndex < 0 ? Optional.empty() : Optional.of(this.openIndex);
+    public int selectedIndex() {
+        return this.openIndex;
+    }
+
+    @Override
+    public Optional<Menu> selected() {
+        return this.openIndex < 0 ? Optional.empty() : Optional.of(this.menus.get(this.openIndex));
+    }
+
+    @Override
+    public MenuBar select(final int index) {
+        if (index == -1) {
+            if (this.openIndex >= 0) {
+                this.menus.get(this.openIndex).close();
+            }
+            return this;
+        }
+        Objects.checkIndex(index, this.menus.size());
+        if (this.isAttached()) {
+            this.openMenu(index, false);
+        }
+        return this;
+    }
+
+    @Override
+    public MenuBar selectItem(final Menu menu) {
+        return this.select(this.menus.indexOf(menu));
     }
 
     /**
-     * Called by a menu of this bar once it has closed, however it closed.
+     * Called by a menu of this bar once it has closed, however it closed. Reports the bar's selection clearing,
+     * unless the bar closed the menu to open another.
      */
     void menuClosed(final MenuImpl menu) {
         if (this.openIndex >= 0 && this.menus.get(this.openIndex) == menu) {
+            final int previous = this.openIndex;
             this.openIndex = -1;
+            if (!this.switching) {
+                this.report(SELECTED, -1, previous);
+            }
         }
     }
 
     /**
-     * Opens a menu for the user through an {@link #OPEN} request.
+     * Opens a menu for the user through a {@code SELECT} request.
      */
     private void userOpen(final int index, final boolean fromKeyboard) {
-        this.request(OPEN, index, chosen -> this.openMenu(chosen, fromKeyboard));
+        this.request(SELECT, index, chosen -> {
+            if (chosen != null) {
+                this.openMenu(chosen, fromKeyboard);
+            }
+        });
     }
 
     /**
-     * Closes the open menu and opens another, then reports {@link #OPENED} if it opened. Ignores an index that is
-     * out of range or names the menu already open, as a handler may have rewritten it.
+     * Closes the open menu and opens another, then reports {@code SELECTED} once for the change. Ignores an index
+     * that is out of range or names the menu already open, as a handler may have rewritten it.
      */
     private void openMenu(final int index, final boolean fromKeyboard) {
         if (index < 0 || index >= this.titleX.length || index == this.openIndex) {
@@ -123,7 +158,12 @@ public final class MenuBarImpl extends CustomComponent<MenuBar> implements MenuB
         }
         final int previous = this.openIndex;
         if (previous >= 0) {
-            this.menus.get(previous).close();
+            this.switching = true;
+            try {
+                this.menus.get(previous).close();
+            } finally {
+                this.switching = false;
+            }
         }
         final Rect bounds = this.bounds();
         final MenuImpl menu = this.menus.get(index);
@@ -133,7 +173,9 @@ public final class MenuBarImpl extends CustomComponent<MenuBar> implements MenuB
             if (fromKeyboard) {
                 menu.highlightFirst();
             }
-            this.report(OPENED, index, previous);
+            this.report(SELECTED, index, previous);
+        } else if (previous >= 0) {
+            this.report(SELECTED, -1, previous);
         }
     }
 

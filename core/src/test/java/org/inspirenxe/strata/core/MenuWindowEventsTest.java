@@ -2,6 +2,8 @@ package org.inspirenxe.strata.core;
 
 import org.inspirenxe.strata.api.ComponentFactory;
 import org.inspirenxe.strata.api.component.Component;
+import org.inspirenxe.strata.api.control.attribute.item.SingleSelection;
+import org.inspirenxe.strata.api.control.attribute.popup.Closable;
 import org.inspirenxe.strata.api.control.button.Button;
 import org.inspirenxe.strata.api.control.menu.Menu;
 import org.inspirenxe.strata.api.control.menu.MenuBar;
@@ -81,7 +83,7 @@ class MenuWindowEventsTest {
             this.show();
             final List<String> heard = MenuWindowEventsTest.this.heard;
             this.menu.onEvent(Menu.CHOOSE, e -> heard.add("choose " + e.value()))
-                    .onEvent(Menu.CLOSED, e -> heard.add("closed"))
+                    .onEvent(Closable.CLOSED, e -> heard.add("closed"))
                     .onEvent(Menu.CHOSEN, e -> heard.add("chosen " + e.previous() + " " + e.value()));
             this.clickTwo();
             assertEquals(List.of("choose 2", "closed", "two", "chosen 2 2"), heard);
@@ -171,7 +173,7 @@ class MenuWindowEventsTest {
             final List<String> heard = MenuWindowEventsTest.this.heard;
             this.menu.onEvent(Menu.CHOOSE, e -> heard.add("choose"))
                     .onEvent(Menu.CHOSEN, e -> heard.add("chosen"))
-                    .onEvent(Menu.CLOSED, e -> heard.add("closed"));
+                    .onEvent(Closable.CLOSED, e -> heard.add("closed"));
             this.menu.setItemChecked(3, true);
             this.menu.close();
             this.menu.close();
@@ -183,8 +185,8 @@ class MenuWindowEventsTest {
         void closingByTheUserReportsEachMenuOfTheChain() {
             this.show();
             final List<String> heard = MenuWindowEventsTest.this.heard;
-            this.menu.onEvent(Menu.CLOSED, e -> heard.add("menu"));
-            this.more.onEvent(Menu.CLOSED, e -> heard.add("more"));
+            this.menu.onEvent(Closable.CLOSED, e -> heard.add("menu"));
+            this.more.onEvent(Closable.CLOSED, e -> heard.add("more"));
             MenuWindowEventsTest.this.key(Key.UP);
             MenuWindowEventsTest.this.key(Key.ENTER);
             MenuWindowEventsTest.this.key(Key.ESCAPE);
@@ -215,8 +217,8 @@ class MenuWindowEventsTest {
 
         private void record() {
             final List<String> heard = MenuWindowEventsTest.this.heard;
-            this.bar.onEvent(MenuBar.OPEN, e -> heard.add("open " + e.value()))
-                    .onEvent(MenuBar.OPENED, e -> heard.add("opened " + e.previous() + " " + e.value()));
+            this.bar.onEvent(SingleSelection.SELECT, e -> heard.add("open " + e.value()))
+                    .onEvent(SingleSelection.SELECTED, e -> heard.add("opened " + e.previous() + " " + e.value()));
         }
 
         private void clickFile() {
@@ -235,7 +237,7 @@ class MenuWindowEventsTest {
             assertFalse(this.file.isOpen());
             MenuWindowEventsTest.this.key(Key.RIGHT);
             assertTrue(this.file.isOpen());
-            assertEquals(Optional.of(0), this.bar.openIndex());
+            assertEquals(0, this.bar.selectedIndex());
             assertEquals(List.of("open 0", "opened -1 0", "open 1", "opened 0 1", "open 0", "opened 1 0"),
                     MenuWindowEventsTest.this.heard);
         }
@@ -245,29 +247,29 @@ class MenuWindowEventsTest {
             this.show();
             this.clickFile();
             this.record();
-            this.bar.onEvent(MenuBar.OPEN, 1, e -> e.cancel());
+            this.bar.onEvent(SingleSelection.SELECT, 1, e -> e.cancel());
             MenuWindowEventsTest.this.move(60, 7);
             MenuWindowEventsTest.this.key(Key.LEFT);
             assertEquals(List.of("open 1", "open 1"), MenuWindowEventsTest.this.heard);
             assertTrue(this.file.isOpen());
             assertFalse(this.edit.isOpen());
-            assertEquals(Optional.of(0), this.bar.openIndex());
+            assertEquals(0, this.bar.selectedIndex());
         }
 
         @Test
         void cancelingTheFirstOpenLeavesEverythingClosed() {
             this.show();
-            this.bar.onEvent(MenuBar.OPEN, e -> e.cancel());
+            this.bar.onEvent(SingleSelection.SELECT, e -> e.cancel());
             this.clickFile();
             assertFalse(this.file.isOpen());
-            assertEquals(Optional.empty(), this.bar.openIndex());
+            assertEquals(-1, this.bar.selectedIndex());
         }
 
         @Test
         void aRewrittenIndexOpensThatMenu() {
             this.show();
             this.record();
-            this.bar.onEvent(MenuBar.OPEN, -1, e -> e.setValue(1));
+            this.bar.onEvent(SingleSelection.SELECT, -1, e -> e.setValue(1));
             this.clickFile();
             assertTrue(this.edit.isOpen());
             assertFalse(this.file.isOpen());
@@ -280,13 +282,13 @@ class MenuWindowEventsTest {
             this.clickFile();
             final int[] rewrite = {5};
             this.record();
-            this.bar.onEvent(MenuBar.OPEN, -1, e -> e.setValue(rewrite[0]));
+            this.bar.onEvent(SingleSelection.SELECT, -1, e -> e.setValue(rewrite[0]));
             MenuWindowEventsTest.this.move(60, 7);
             rewrite[0] = 0;
             MenuWindowEventsTest.this.key(Key.RIGHT);
             assertEquals(List.of("open 5", "open 0"), MenuWindowEventsTest.this.heard);
             assertTrue(this.file.isOpen());
-            assertEquals(Optional.of(0), this.bar.openIndex());
+            assertEquals(0, this.bar.selectedIndex());
         }
 
         @Test
@@ -299,15 +301,15 @@ class MenuWindowEventsTest {
             this.clickFile();
             MenuWindowEventsTest.this.test.click(20, 7);
             assertFalse(this.file.isOpen());
-            assertEquals(Optional.empty(), this.bar.openIndex());
-            assertEquals(List.of("open 0", "opened -1 0"), MenuWindowEventsTest.this.heard);
+            assertEquals(-1, this.bar.selectedIndex());
+            assertEquals(List.of("open 0", "opened -1 0", "opened 0 -1"), MenuWindowEventsTest.this.heard);
         }
 
         @Test
         void anAncestorHearsAndCanRefuseTheRequest() {
             this.show();
             final List<Component<?>> targets = new ArrayList<>();
-            this.panel.onEvent(MenuBar.OPEN, e -> {
+            this.panel.onEvent(SingleSelection.SELECT, e -> {
                 targets.add(e.target());
                 e.cancel();
             });
@@ -320,7 +322,7 @@ class MenuWindowEventsTest {
         void anAncestorHearsTheReport() {
             this.show();
             final List<Integer> opened = new ArrayList<>();
-            this.panel.onEvent(MenuBar.OPENED, e -> opened.add(e.value()));
+            this.panel.onEvent(SingleSelection.SELECTED, e -> opened.add(e.value()));
             this.clickFile();
             assertEquals(List.of(0), opened);
         }
@@ -331,8 +333,8 @@ class MenuWindowEventsTest {
         private Window window(final String title) {
             final List<String> heard = MenuWindowEventsTest.this.heard;
             return MenuWindowEventsTest.this.ui.window(title)
-                    .onEvent(Window.CLOSE, e -> heard.add("close"))
-                    .onEvent(Window.CLOSED, e -> heard.add("closed"));
+                    .onEvent(Closable.CLOSE, e -> heard.add("close"))
+                    .onEvent(Closable.CLOSED, e -> heard.add("closed"));
         }
 
         private Overlay dialog(final Window window) {
@@ -372,7 +374,7 @@ class MenuWindowEventsTest {
 
         @Test
         void cancelingTheCloseButtonKeepsADialogOpen() {
-            final Window window = this.window("Title").onEvent(Window.CLOSE, e -> e.cancel());
+            final Window window = this.window("Title").onEvent(Closable.CLOSE, e -> e.cancel());
             final Overlay overlay = this.dialog(window);
             this.clickClose(window);
             assertEquals(List.of("close"), MenuWindowEventsTest.this.heard);
@@ -389,7 +391,7 @@ class MenuWindowEventsTest {
 
         @Test
         void cancelingEscapeKeepsADialogOpenAndUsesThePress() {
-            final Overlay overlay = this.dialog(this.window("Title").onEvent(Window.CLOSE, e -> e.cancel()));
+            final Overlay overlay = this.dialog(this.window("Title").onEvent(Closable.CLOSE, e -> e.cancel()));
             assertTrue(MenuWindowEventsTest.this.key(Key.ESCAPE));
             assertEquals(List.of("close"), MenuWindowEventsTest.this.heard);
             assertTrue(overlay.isOpen());
@@ -410,12 +412,12 @@ class MenuWindowEventsTest {
             final AbsolutePanel panel = this.inPanel(window);
             final List<String> heard = MenuWindowEventsTest.this.heard;
             final boolean[] refuse = {true};
-            panel.onEvent(Window.CLOSE, e -> {
+            panel.onEvent(Closable.CLOSE, e -> {
                 heard.add("close");
                 if (refuse[0]) {
                     e.cancel();
                 }
-            }).onEvent(Window.CLOSED, e -> heard.add("closed " + (e.control() == window)));
+            }).onEvent(Closable.CLOSED, e -> heard.add("closed " + (e.control() == window)));
             this.clickClose(window);
             refuse[0] = false;
             this.clickClose(window);
@@ -430,7 +432,7 @@ class MenuWindowEventsTest {
             final AbsolutePanel panel = this.inPanel(window);
             ok.requestFocus();
             assertFalse(MenuWindowEventsTest.this.key(Key.ESCAPE));
-            panel.onEvent(Window.CLOSED, e -> MenuWindowEventsTest.this.heard.add("closed"));
+            panel.onEvent(Closable.CLOSED, e -> MenuWindowEventsTest.this.heard.add("closed"));
             assertTrue(MenuWindowEventsTest.this.key(Key.ESCAPE));
             assertEquals(List.of("closed"), MenuWindowEventsTest.this.heard);
         }
@@ -451,7 +453,7 @@ class MenuWindowEventsTest {
                         assertSame(e.value(), e.previous());
                         this.results.add(e.value());
                     });
-            this.box.window().onEvent(Window.CLOSED, e -> outer.heard.add("window closed"));
+            this.box.window().onEvent(Closable.CLOSED, e -> outer.heard.add("window closed"));
             this.overlay = outer.ui.overlays().dialog(this.box);
         }
 
@@ -523,7 +525,7 @@ class MenuWindowEventsTest {
         @Test
         void cancelingTheWindowsOwnRequestStopsTheDismissBeforeTheAnswer() {
             this.show();
-            this.box.window().onEvent(Window.CLOSE, e -> e.cancel());
+            this.box.window().onEvent(Closable.CLOSE, e -> e.cancel());
             this.clickClose();
             assertEquals(List.of(), MenuWindowEventsTest.this.heard);
             assertTrue(this.overlay.isOpen());
@@ -563,9 +565,9 @@ class MenuWindowEventsTest {
             final List<String> outside = new ArrayList<>();
             panel.onEvent(MessageBox.ANSWER, e -> outside.add("answer " + e.value() + " " + (e.target() == embedded)))
                     .onEvent(MessageBox.ANSWERED, e -> outside.add("answered " + e.value()))
-                    .onEvent(Window.CLOSE, e -> outside.add("window close"))
-                    .onEvent(Window.CLOSED, e -> outside.add("window closed"));
-            embedded.onEvent(Window.CLOSED, e -> outer.heard.add("box heard window closed"));
+                    .onEvent(Closable.CLOSE, e -> outside.add("window close"))
+                    .onEvent(Closable.CLOSED, e -> outside.add("window closed"));
+            embedded.onEvent(Closable.CLOSED, e -> outer.heard.add("box heard window closed"));
 
             final Rect bounds = embedded.window().bounds();
             outer.test.click(bounds.right() - 7, bounds.y() + 5);
@@ -582,7 +584,7 @@ class MenuWindowEventsTest {
         private Overlay popup(final String name) {
             final Box content = new Box(MenuWindowEventsTest.this.ui, 20, 20);
             final Overlay overlay = MenuWindowEventsTest.this.ui.overlays().popup(content, Rect.ZERO);
-            return overlay.onEvent(Overlay.CLOSED, e -> {
+            return overlay.onEvent(Closable.CLOSED, e -> {
                 assertSame(overlay, e.control());
                 assertSame(content, e.target());
                 assertFalse(e.target().isAttached());
@@ -614,8 +616,8 @@ class MenuWindowEventsTest {
         void handlersRunByPriorityAndCanBeRemoved() {
             MenuWindowEventsTest.this.test.show(MenuWindowEventsTest.this.ui.absolutePanel());
             final Overlay overlay = this.popup("default");
-            final Subscription removed = overlay.subscribe(Overlay.CLOSED, 0, e -> this.closed.add("removed"));
-            overlay.onEvent(Overlay.CLOSED, -1, e -> this.closed.add("early"));
+            final Subscription removed = overlay.subscribe(Closable.CLOSED, 0, e -> this.closed.add("removed"));
+            overlay.onEvent(Closable.CLOSED, -1, e -> this.closed.add("early"));
             removed.close();
             overlay.close();
             assertEquals(List.of("early", "default"), this.closed);
@@ -626,7 +628,7 @@ class MenuWindowEventsTest {
             MenuWindowEventsTest.this.test.show(MenuWindowEventsTest.this.ui.absolutePanel());
             final Overlay overlay = this.popup("popup");
             overlay.close();
-            overlay.onEvent(Overlay.CLOSED, e -> this.closed.add("late"));
+            overlay.onEvent(Closable.CLOSED, e -> this.closed.add("late"));
             overlay.close();
             assertEquals(List.of("popup"), this.closed);
         }

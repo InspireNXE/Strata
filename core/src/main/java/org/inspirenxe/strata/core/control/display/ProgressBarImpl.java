@@ -17,8 +17,8 @@ import java.util.Objects;
 import java.util.Set;
 
 /**
- * The core {@link ProgressBar}. The fill covers the value's share of the bounds' width from the left edge, over the
- * whole height.
+ * The core {@link ProgressBar}. The fill covers the value's share of the range, as a share of the bounds' width from
+ * the left edge, over the whole height.
  */
 public final class ProgressBarImpl extends CustomComponent<ProgressBar> implements ProgressBar {
     /**
@@ -27,7 +27,9 @@ public final class ProgressBarImpl extends CustomComponent<ProgressBar> implemen
     public static final float DEFAULT_WIDTH = 100f;
     private static final Set<String> REQUIRED = Set.of(STYLE_TRACK, STYLE_FILL);
 
-    private float value;
+    private double value;
+    private double min;
+    private double max;
     private String text;
     private Paint trackPaint;
     private Paint fillPaint;
@@ -43,6 +45,7 @@ public final class ProgressBarImpl extends CustomComponent<ProgressBar> implemen
      */
     public ProgressBarImpl(final ComponentFactory ui) {
         super(ui);
+        this.max = 1.0;
         this.text = "";
         this.trackPaint = Paint.NONE;
         this.fillPaint = Paint.NONE;
@@ -51,14 +54,50 @@ public final class ProgressBarImpl extends CustomComponent<ProgressBar> implemen
     }
 
     @Override
-    public float value() {
+    public double value() {
         return this.value;
     }
 
     @Override
-    public ProgressBar setValue(final float value) {
-        this.value = Float.isNaN(value) ? 0f : Math.max(0f, Math.min(1f, value));
+    public ProgressBar setValue(final double value) {
+        if (Double.isNaN(value)) {
+            throw new IllegalArgumentException("value is NaN");
+        }
+        this.apply(value);
         return this;
+    }
+
+    @Override
+    public double min() {
+        return this.min;
+    }
+
+    @Override
+    public double max() {
+        return this.max;
+    }
+
+    @Override
+    public ProgressBar setRange(final double min, final double max) {
+        if (!Double.isFinite(min) || !Double.isFinite(max) || max <= min) {
+            throw new IllegalArgumentException("Bad range " + min + " to " + max);
+        }
+        this.min = min;
+        this.max = max;
+        this.apply(this.value);
+        return this;
+    }
+
+    /**
+     * Clamps a value to the range and reports it if it differs from the current one.
+     */
+    private void apply(final double value) {
+        final double clamped = Math.max(this.min, Math.min(this.max, value));
+        final double previous = this.value;
+        if (clamped != previous) {
+            this.value = clamped;
+            this.report(CHANGED, clamped, previous);
+        }
     }
 
     @Override
@@ -97,8 +136,9 @@ public final class ProgressBarImpl extends CustomComponent<ProgressBar> implemen
     @Override
     protected void paint(final Painter painter, final Rect bounds) {
         this.trackPaint.paint(painter, bounds);
-        if (this.value > 0f) {
-            this.fillPaint.paint(painter, new Rect(bounds.x(), bounds.y(), bounds.width() * this.value, bounds.height()));
+        final float fraction = (float) ((this.value - this.min) / (this.max - this.min));
+        if (fraction > 0f) {
+            this.fillPaint.paint(painter, new Rect(bounds.x(), bounds.y(), bounds.width() * fraction, bounds.height()));
         }
         if (!this.text.isEmpty()) {
             painter.text(this.span, bounds.x() + (bounds.width() - this.textWidth) * 0.5f,

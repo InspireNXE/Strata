@@ -3,6 +3,10 @@ package org.inspirenxe.strata.sandbox.almura;
 import org.inspirenxe.strata.api.ComponentFactory;
 import org.inspirenxe.strata.api.component.Component;
 import org.inspirenxe.strata.api.component.Tooltip;
+import org.inspirenxe.strata.api.control.attribute.item.Activatable;
+import org.inspirenxe.strata.api.control.attribute.item.SingleSelection;
+import org.inspirenxe.strata.api.control.attribute.popup.Closable;
+import org.inspirenxe.strata.api.control.attribute.text.TextInput;
 import org.inspirenxe.strata.api.control.button.Button;
 import org.inspirenxe.strata.api.control.collection.ComboBox;
 import org.inspirenxe.strata.api.control.collection.ListView;
@@ -110,7 +114,7 @@ public final class StoreScreen implements Screen {
         this.ui = ui;
         final Window window = ui.window(this.data.name)
                 .setSize(this.admin ? 481 : 257, 300)
-                .onEvent(Window.CLOSED, event -> {
+                .onEvent(Closable.CLOSED, event -> {
                     if (this.handle != null) {
                         this.handle.close();
                     }
@@ -139,14 +143,14 @@ public final class StoreScreen implements Screen {
                 .addTab("Buy")
                 .addTab("Sell")
                 .setSpacing(4)
-                .onEvent(TabBar.SELECTED, event -> this.refresh(false))
+                .onEvent(SingleSelection.SELECTED, event -> this.refresh(false))
                 .setAlignment(HorizontalAlignment.STRETCH, VerticalAlignment.TOP);
         this.search = ui.textBox()
                 .onEvent(TextBox.SUBMITTED, event -> this.refresh(false))
                 .setAnchor(Anchor.FILL);
         this.sort = ui.<Sort>comboBox(sort -> sort.label)
-                .setOptions(List.of(Sort.values()))
-                .onEvent(ComboBox.SELECTED, e -> this.refresh(false))
+                .setItems(List.of(Sort.values()))
+                .onEvent(SingleSelection.SELECTED, e -> this.refresh(false))
                 .setAnchor(Anchor.FILL);
         final Button go = Look.button(ui, "Search", 50)
                 .onEvent(Button.PRESSED, event -> this.refresh(false))
@@ -168,8 +172,8 @@ public final class StoreScreen implements Screen {
                 .setRowHeight(24)
                 .setRowSpacing(1)
                 .setKeyFunction(StoreItem::record)
-                .onEvent(ListView.SELECTED, e -> this.updateControls())
-                .onEvent(ListView.ACTIVATED, e -> this.transact(this.items.items().get(e.value()), 1));
+                .onEvent(SingleSelection.SELECTED, e -> this.updateControls())
+                .onEvent(Activatable.ACTIVATED, e -> this.transact(this.items.items().get(e.value()), 1));
         Look.panel(this.items)
                 .setAnchor(Anchor.FILL);
 
@@ -210,19 +214,19 @@ public final class StoreScreen implements Screen {
 
     private Component<?> buildAdmin(final ComponentFactory ui) {
         this.finder = ui.<String>comboBox(name -> name)
-                .setOptions(List.copyOf(this.finders.keySet()))
+                .setItems(List.copyOf(this.finders.keySet()))
                 .setMaxVisibleOptions(24)
-                .onEvent(ComboBox.SELECTED, e -> this.refreshAdmin())
+                .onEvent(SingleSelection.SELECTED, e -> this.refreshAdmin())
                 .setAnchor(Anchor.FILL);
         this.adminSearch = ui.textBox()
-                .onEvent(TextBox.EDITED, event -> this.refreshAdmin())
+                .onEvent(TextInput.EDITED, event -> this.refreshAdmin())
                 .setAlignment(HorizontalAlignment.STRETCH, VerticalAlignment.TOP);
         this.adminItems = ui.<Item>listView(this::adminCell)
                 .setRowHeight(24)
                 .setRowSpacing(1)
                 .setKeyFunction(Item::name)
-                .onEvent(ListView.SELECTED, e -> this.updateAdminControls())
-                .onEvent(ListView.ACTIVATED, e -> this.listOrModify(this.adminItems.items().get(e.value())));
+                .onEvent(SingleSelection.SELECTED, e -> this.updateAdminControls())
+                .onEvent(Activatable.ACTIVATED, e -> this.listOrModify(this.adminItems.items().get(e.value())));
         Look.panel(this.adminItems)
                 .setAnchor(Anchor.FILL);
         this.list = Look.button(ui, "List", 50)
