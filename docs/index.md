@@ -21,7 +21,7 @@ Strata is a GUI library for Java games that does not depend on any engine. You d
 - Typed events with a before and an after phase, cancellation that really skips the default behavior, and bubbling to ancestors.
 - Lazy event snapshots, so a handler can compare a component's state at the moment an event fired with its state now.
 - Themes that map style keys to colors, gradients, sprites and nine-slices. A missing key is reported before anything draws, along with every other missing key.
-- Three ways to extend: decorate a built-in widget, compose several, or write your own component or layout on the same base classes the built-ins use.
+- Three ways to extend: decorate a built-in control, compose several, or write your own component or layout on the same base classes the built-ins use.
 - A small SPI for engine adapters, with contract tests that hold every adapter to the same rules.
 
 ## Where to start
@@ -31,7 +31,7 @@ Strata is a GUI library for Java games that does not depend on any engine. You d
 - [Installation](getting-started/installation.md): requirements, building from source, and adding Strata to a Swing app.
 - [Your first screen](getting-started/first-screen.md): a step-by-step walk through the screen above, run in a Swing window.
 - [Core concepts](getting-started/concepts.md): the handful of ideas everything else builds on.
-- [Guides](guides/index.md): layout, widgets, events, snapshots, focus, themes and extending, each in depth.
+- [Guides](guides/index.md): layout, controls, events, snapshots, focus, themes and extending, each in depth.
 - [Platforms](platforms/index.md): the Swing adapter, how engines differ, and how to write an adapter of your own.
 - [FAQ](help/faq.md) and [Troubleshooting](help/troubleshooting.md): short answers to common questions, and fixes for common errors.
 

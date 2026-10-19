@@ -2,6 +2,14 @@ package org.inspirenxe.strata.core;
 
 import org.inspirenxe.strata.api.ComponentFactory;
 import org.inspirenxe.strata.api.component.Tooltip;
+import org.inspirenxe.strata.api.control.collection.ComboBox;
+import org.inspirenxe.strata.api.control.display.Label;
+import org.inspirenxe.strata.api.control.display.ProgressBar;
+import org.inspirenxe.strata.api.control.display.Separator;
+import org.inspirenxe.strata.api.control.field.TextBox;
+import org.inspirenxe.strata.api.control.pane.TabBar;
+import org.inspirenxe.strata.api.control.window.MessageBox;
+import org.inspirenxe.strata.api.control.window.Window;
 import org.inspirenxe.strata.api.geom.Insets;
 import org.inspirenxe.strata.api.geom.Rect;
 import org.inspirenxe.strata.api.input.Key;
@@ -14,14 +22,6 @@ import org.inspirenxe.strata.api.text.TextOverflow;
 import org.inspirenxe.strata.api.text.TextSpan;
 import org.inspirenxe.strata.api.text.TextStyle;
 import org.inspirenxe.strata.api.theme.Border;
-import org.inspirenxe.strata.api.widget.ComboBox;
-import org.inspirenxe.strata.api.widget.Label;
-import org.inspirenxe.strata.api.widget.MessageBox;
-import org.inspirenxe.strata.api.widget.ProgressBar;
-import org.inspirenxe.strata.api.widget.Separator;
-import org.inspirenxe.strata.api.widget.TabBar;
-import org.inspirenxe.strata.api.widget.TextBox;
-import org.inspirenxe.strata.api.widget.Window;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
@@ -34,7 +34,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * The tier 2 widgets, rich labels and the text box additions. Text in the test platform is 6 units per code point
+ * The tier 2 controls, rich labels and the text box additions. Text in the test platform is 6 units per code point
  * and 9 per line.
  */
 class ControlsTest {

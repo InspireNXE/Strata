@@ -1,6 +1,8 @@
 package org.inspirenxe.strata.examples;
 
 import org.inspirenxe.strata.api.component.ComponentSnapshot;
+import org.inspirenxe.strata.api.control.button.Button;
+import org.inspirenxe.strata.api.control.field.TextBox;
 import org.inspirenxe.strata.api.event.EventTypes;
 import org.inspirenxe.strata.api.event.Phase;
 import org.inspirenxe.strata.api.geom.Rect;
@@ -10,8 +12,6 @@ import org.inspirenxe.strata.api.input.Modifiers;
 import org.inspirenxe.strata.api.input.MouseButton;
 import org.inspirenxe.strata.api.layout.Anchor;
 import org.inspirenxe.strata.api.theme.Themes;
-import org.inspirenxe.strata.api.widget.Button;
-import org.inspirenxe.strata.api.widget.TextBox;
 import org.inspirenxe.strata.core.StrataCore;
 import org.inspirenxe.strata.examples.adapter.ToyPlatform;
 import org.inspirenxe.strata.spi.ScreenHost;

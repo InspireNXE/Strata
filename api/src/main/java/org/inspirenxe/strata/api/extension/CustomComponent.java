@@ -34,7 +34,7 @@ import java.util.Objects;
 import java.util.Set;
 
 /**
- * Base class for new kinds of component. Strata's own widgets are built on it too.
+ * Base class for new kinds of component. Strata's own controls are built on it too.
  *
  * <p>Subclass it, implement {@link #measure}, and override the other {@code protected} hooks you need. To let other
  * code see the component as a type of your own, declare an interface that extends {@link Component} and implement
@@ -107,7 +107,7 @@ public abstract class CustomComponent<T extends Component<T>> implements Compone
     }
 
     /**
-     * Creates the component and its peer, decorated by a behavior. Strata's widgets use this to accept the
+     * Creates the component and its peer, decorated by a behavior. Strata's controls use this to accept the
      * behavior passed to their factory method; offer the same to users of your component if it suits.
      *
      * @param factory the factory of the host that will show this component

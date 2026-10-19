@@ -107,7 +107,7 @@ public interface Event {
     boolean isPropagationStopped();
 
     /**
-     * Cancels the event and stops it: "handled here". Built-in widgets consume the input they act on.
+     * Cancels the event and stops it: "handled here". Built-in controls consume the input they act on.
      */
     default void consume() {
         this.cancel();

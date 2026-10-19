@@ -1,14 +1,14 @@
 package org.inspirenxe.strata.core;
 
+import org.inspirenxe.strata.api.control.button.Button;
+import org.inspirenxe.strata.api.control.field.TextBox;
 import org.inspirenxe.strata.api.geom.Rect;
 import org.inspirenxe.strata.api.input.Key;
 import org.inspirenxe.strata.api.input.KeyAction;
 import org.inspirenxe.strata.api.input.Modifier;
 import org.inspirenxe.strata.api.input.Modifiers;
 import org.inspirenxe.strata.api.input.MouseButton;
-import org.inspirenxe.strata.api.widget.Button;
-import org.inspirenxe.strata.api.widget.TextBox;
-import org.inspirenxe.strata.core.widget.TextBoxImpl;
+import org.inspirenxe.strata.core.control.field.TextBoxImpl;
 import org.inspirenxe.strata.spi.ScreenHost;
 import org.junit.jupiter.api.Test;
 

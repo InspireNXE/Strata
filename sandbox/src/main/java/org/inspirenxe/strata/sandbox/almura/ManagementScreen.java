@@ -2,6 +2,13 @@ package org.inspirenxe.strata.sandbox.almura;
 
 import org.inspirenxe.strata.api.ComponentFactory;
 import org.inspirenxe.strata.api.component.Component;
+import org.inspirenxe.strata.api.control.button.Button;
+import org.inspirenxe.strata.api.control.button.CheckBox;
+import org.inspirenxe.strata.api.control.collection.ListView;
+import org.inspirenxe.strata.api.control.display.Label;
+import org.inspirenxe.strata.api.control.field.TextBox;
+import org.inspirenxe.strata.api.control.window.MessageBox;
+import org.inspirenxe.strata.api.control.window.Window;
 import org.inspirenxe.strata.api.layout.Anchor;
 import org.inspirenxe.strata.api.layout.AnchorPanel;
 import org.inspirenxe.strata.api.layout.GridLength;
@@ -11,13 +18,6 @@ import org.inspirenxe.strata.api.layout.VerticalAlignment;
 import org.inspirenxe.strata.api.screen.Screen;
 import org.inspirenxe.strata.api.screen.ScreenHandle;
 import org.inspirenxe.strata.api.text.TextOverflow;
-import org.inspirenxe.strata.api.widget.Button;
-import org.inspirenxe.strata.api.widget.CheckBox;
-import org.inspirenxe.strata.api.widget.Label;
-import org.inspirenxe.strata.api.widget.ListView;
-import org.inspirenxe.strata.api.widget.MessageBox;
-import org.inspirenxe.strata.api.widget.TextBox;
-import org.inspirenxe.strata.api.widget.Window;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;

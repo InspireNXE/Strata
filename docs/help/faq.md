@@ -32,7 +32,7 @@ Plugin systems often give each plugin its own class loader, and one application 
 
 No. A class that implements a component interface directly is rejected with `IllegalArgumentException`. Extend `CustomComponent` or `CustomContainer`. See [Extending Strata](../guides/extending.md).
 
-### Can I subclass the built-in widgets?
+### Can I subclass the built-in controls?
 
 No, their implementations are hidden. Decorate them with a behavior, compose them, or write your own component. See [Extending Strata](../guides/extending.md).
 

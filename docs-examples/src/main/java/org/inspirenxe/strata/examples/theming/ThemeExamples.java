@@ -1,6 +1,9 @@
 package org.inspirenxe.strata.examples.theming;
 
 import org.inspirenxe.strata.api.ComponentFactory;
+import org.inspirenxe.strata.api.control.button.Button;
+import org.inspirenxe.strata.api.control.display.Label;
+import org.inspirenxe.strata.api.control.field.TextBox;
 import org.inspirenxe.strata.api.geom.Insets;
 import org.inspirenxe.strata.api.layout.Anchor;
 import org.inspirenxe.strata.api.layout.StackPanel;
@@ -11,9 +14,6 @@ import org.inspirenxe.strata.api.theme.SpriteId;
 import org.inspirenxe.strata.api.theme.Theme;
 import org.inspirenxe.strata.api.theme.ThemeException;
 import org.inspirenxe.strata.api.theme.Themes;
-import org.inspirenxe.strata.api.widget.Button;
-import org.inspirenxe.strata.api.widget.Label;
-import org.inspirenxe.strata.api.widget.TextBox;
 import org.inspirenxe.strata.examples.quickstart.SettingsScreen;
 import org.inspirenxe.strata.swing.SwingSnapshot;
 

@@ -24,7 +24,7 @@ import org.inspirenxe.strata.api.geom.Size;
 public interface Visual {
 
     /**
-     * Returns the size the visual is meant to be drawn at, which an image widget asks for by default.
+     * Returns the size the visual is meant to be drawn at, which an image control asks for by default.
      *
      * @return the natural size in UI units, for example 16 by 16 for a small icon
      */

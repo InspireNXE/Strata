@@ -1,5 +1,8 @@
 package org.inspirenxe.strata.examples.layout;
 
+import org.inspirenxe.strata.api.control.button.Button;
+import org.inspirenxe.strata.api.control.display.Label;
+import org.inspirenxe.strata.api.control.field.TextBox;
 import org.inspirenxe.strata.api.geom.Insets;
 import org.inspirenxe.strata.api.layout.AbsolutePanel;
 import org.inspirenxe.strata.api.layout.Anchor;
@@ -13,9 +16,6 @@ import org.inspirenxe.strata.api.layout.VerticalAlignment;
 import org.inspirenxe.strata.api.screen.Screen;
 import org.inspirenxe.strata.api.text.TextStyle;
 import org.inspirenxe.strata.api.theme.Paint;
-import org.inspirenxe.strata.api.widget.Button;
-import org.inspirenxe.strata.api.widget.Label;
-import org.inspirenxe.strata.api.widget.TextBox;
 
 /**
  * The layout guide's examples. Each method returns a screen; the documentation images are rendered from them.

@@ -1,7 +1,7 @@
 package org.inspirenxe.strata.api.event;
 
 /**
- * The event types Strata fires. Every component can receive every type; built-in widgets act on the ones listed
+ * The event types Strata fires. Every component can receive every type; built-in controls act on the ones listed
  * under "default behavior" below. Positions in pointer events are in the host's coordinates.
  */
 public final class EventTypes {

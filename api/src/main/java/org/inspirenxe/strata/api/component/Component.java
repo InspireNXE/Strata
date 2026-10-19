@@ -116,7 +116,7 @@ public interface Component<T extends Component<T>> {
     boolean isEnabled();
 
     /**
-     * Enables or disables the component. A disabled component is still drawn (built-in widgets draw a disabled
+     * Enables or disables the component. A disabled component is still drawn (built-in controls draw a disabled
      * look) and still takes space, but it receives no pointer or keyboard input and cannot be focused. Disabling
      * the focused component, or one of its ancestors, clears focus.
      *

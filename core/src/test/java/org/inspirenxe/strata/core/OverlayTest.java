@@ -2,6 +2,8 @@ package org.inspirenxe.strata.core;
 
 import org.inspirenxe.strata.api.ComponentFactory;
 import org.inspirenxe.strata.api.component.Tooltip;
+import org.inspirenxe.strata.api.control.button.Button;
+import org.inspirenxe.strata.api.control.field.TextBox;
 import org.inspirenxe.strata.api.event.EventTypes;
 import org.inspirenxe.strata.api.geom.Rect;
 import org.inspirenxe.strata.api.input.Key;
@@ -11,8 +13,6 @@ import org.inspirenxe.strata.api.input.Modifiers;
 import org.inspirenxe.strata.api.input.MouseButton;
 import org.inspirenxe.strata.api.layout.AbsolutePanel;
 import org.inspirenxe.strata.api.overlay.Overlay;
-import org.inspirenxe.strata.api.widget.Button;
-import org.inspirenxe.strata.api.widget.TextBox;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 

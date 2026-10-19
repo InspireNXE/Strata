@@ -24,7 +24,7 @@ A `Screen` describes one full screen of UI. You never construct components with 
 
 `build` may be called more than once: every time the screen is opened, and again whenever the screen asks for a rebuild. Keep the data your screen shows in fields on the screen object, and make the components fresh in `build`. See [Screens](../guides/screens.md).
 
-### Widgets
+### Controls
 
 ```java
 final Label status = factory.label("Ready");

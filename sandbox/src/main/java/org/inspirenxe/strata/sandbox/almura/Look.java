@@ -2,6 +2,8 @@ package org.inspirenxe.strata.sandbox.almura;
 
 import org.inspirenxe.strata.api.ComponentFactory;
 import org.inspirenxe.strata.api.component.Component;
+import org.inspirenxe.strata.api.control.button.Button;
+import org.inspirenxe.strata.api.control.display.Label;
 import org.inspirenxe.strata.api.geom.Insets;
 import org.inspirenxe.strata.api.layout.Anchor;
 import org.inspirenxe.strata.api.layout.GridLength;
@@ -15,8 +17,6 @@ import org.inspirenxe.strata.api.text.TextSpan;
 import org.inspirenxe.strata.api.text.TextStyle;
 import org.inspirenxe.strata.api.theme.Border;
 import org.inspirenxe.strata.api.theme.Paint;
-import org.inspirenxe.strata.api.widget.Button;
-import org.inspirenxe.strata.api.widget.Label;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;

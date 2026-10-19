@@ -1,8 +1,9 @@
 package org.inspirenxe.strata.core;
 
 import org.inspirenxe.strata.api.ComponentFactory;
-import org.inspirenxe.strata.api.event.Phase;
+import org.inspirenxe.strata.api.control.button.Button;
 import org.inspirenxe.strata.api.event.EventTypes;
+import org.inspirenxe.strata.api.event.Phase;
 import org.inspirenxe.strata.api.input.Key;
 import org.inspirenxe.strata.api.input.KeyAction;
 import org.inspirenxe.strata.api.input.Modifier;
@@ -12,7 +13,6 @@ import org.inspirenxe.strata.api.layout.AbsolutePanel;
 import org.inspirenxe.strata.api.theme.Theme;
 import org.inspirenxe.strata.api.theme.ThemeException;
 import org.inspirenxe.strata.api.theme.Themes;
-import org.inspirenxe.strata.api.widget.Button;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;

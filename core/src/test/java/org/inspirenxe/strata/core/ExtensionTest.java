@@ -2,8 +2,11 @@ package org.inspirenxe.strata.core;
 
 import org.inspirenxe.strata.api.ComponentFactory;
 import org.inspirenxe.strata.api.component.Component;
-import org.inspirenxe.strata.api.event.PointerButtonEvent;
+import org.inspirenxe.strata.api.control.button.Button;
+import org.inspirenxe.strata.api.control.button.ButtonBehavior;
+import org.inspirenxe.strata.api.control.display.Label;
 import org.inspirenxe.strata.api.event.EventTypes;
+import org.inspirenxe.strata.api.event.PointerButtonEvent;
 import org.inspirenxe.strata.api.extension.ArrangeContext;
 import org.inspirenxe.strata.api.extension.CustomComponent;
 import org.inspirenxe.strata.api.extension.CustomContainer;
@@ -17,9 +20,6 @@ import org.inspirenxe.strata.api.layout.AbsolutePanel;
 import org.inspirenxe.strata.api.screen.Screen;
 import org.inspirenxe.strata.api.screen.ScreenHandle;
 import org.inspirenxe.strata.api.text.TextSpan;
-import org.inspirenxe.strata.api.widget.Button;
-import org.inspirenxe.strata.api.widget.ButtonBehavior;
-import org.inspirenxe.strata.api.widget.Label;
 import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.Proxy;

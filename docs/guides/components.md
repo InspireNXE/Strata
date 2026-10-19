@@ -1,6 +1,6 @@
 # Components
 
-Everything on screen is a `Component`. This page covers what all components share. The built-in widgets add their own behavior on top, described in [Widgets](widgets.md).
+Everything on screen is a `Component`. This page covers what all components share. The built-in controls add their own behavior on top, described in [Controls](controls.md).
 
 ## Getting components
 
@@ -56,7 +56,7 @@ Removing a component does not remove its event handlers. Close the subscriptions
 | Flag | Default | Effect |
 |---|---|---|
 | `setVisible(false)` | visible | Not drawn, cannot be hovered or focused, takes no space in layout, and its bounds become empty |
-| `setEnabled(false)` | enabled | Still drawn (built-in widgets draw a disabled look) and still takes space, but gets no pointer or keyboard input and cannot be focused |
+| `setEnabled(false)` | enabled | Still drawn (built-in controls draw a disabled look) and still takes space, but gets no pointer or keyboard input and cannot be focused |
 | `setFocusable(true)` | buttons, check boxes, sliders and text boxes only | Can take keyboard focus by a click or `requestFocus()` |
 | `setTabbable(true)` | buttons, check boxes, sliders and text boxes only | Tab and Shift+Tab stop here. Only matters if it is also focusable. |
 | `setTabIndex(n)` | 0 | Tab visits lower indexes first, then tree order among equal indexes. Negative values are allowed. |

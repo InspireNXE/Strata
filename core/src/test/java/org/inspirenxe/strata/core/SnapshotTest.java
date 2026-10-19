@@ -2,6 +2,8 @@ package org.inspirenxe.strata.core;
 
 import org.inspirenxe.strata.api.ComponentFactory;
 import org.inspirenxe.strata.api.component.ComponentSnapshot;
+import org.inspirenxe.strata.api.control.button.Button;
+import org.inspirenxe.strata.api.control.field.TextBox;
 import org.inspirenxe.strata.api.event.Event;
 import org.inspirenxe.strata.api.event.EventTypes;
 import org.inspirenxe.strata.api.event.Phase;
@@ -14,8 +16,6 @@ import org.inspirenxe.strata.api.input.Modifiers;
 import org.inspirenxe.strata.api.layout.AbsolutePanel;
 import org.inspirenxe.strata.api.layout.Orientation;
 import org.inspirenxe.strata.api.layout.StackPanel;
-import org.inspirenxe.strata.api.widget.Button;
-import org.inspirenxe.strata.api.widget.TextBox;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;

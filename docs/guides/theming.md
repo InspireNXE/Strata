@@ -8,7 +8,7 @@ A theme decides how components look. It maps style keys, such as `button.hovered
 |---|---|---|
 | `Themes.flat()` | `api` | Dark, solid colors only. Works on any engine without image assets. |
 
-It defines every key of every built-in widget. Adapters may ship themes of their own that use the engine's widget images.
+It defines every key of every built-in control. Adapters may ship themes of their own that use the engine's widget images.
 
 ![The flat theme](../assets/images/theme-flat.png)
 
@@ -36,7 +36,7 @@ Labels and panels have no backgrounds in any theme. Set those per component with
 
 ## Required and optional keys
 
-Each widget lists the keys it reads as `STYLE_*` constants on its interface. Some are required, and the rest are optional with a documented fallback. The [theme key reference](../reference/theme-keys.md) lists them all.
+Each control lists the keys it reads as `STYLE_*` constants on its interface. Some are required, and the rest are optional with a documented fallback. The [theme key reference](../reference/theme-keys.md) lists them all.
 
 A host checks the theme before it shows anything. When it opens a screen, it collects the required keys of every component in the tree, and if the theme lacks any of them it throws a `ThemeException` that lists every missing key at once, so one run shows everything to add. The same check runs when a component is added to a tree that is already on screen, and when the host's theme changes.
 

@@ -1,6 +1,6 @@
 # Keyboard shortcuts
 
-Every key the built-in widgets and hosts respond to. Control means Control without Alt. On macOS, see the [note on Command](../platforms/differences.md#modifier-keys).
+Every key the built-in controls and hosts respond to. Control means Control without Alt. On macOS, see the [note on Command](../platforms/differences.md#modifier-keys).
 
 ## Hosts
 

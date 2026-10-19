@@ -2,6 +2,9 @@ package org.inspirenxe.strata.examples.events;
 
 import org.inspirenxe.strata.api.ComponentFactory;
 import org.inspirenxe.strata.api.component.Component;
+import org.inspirenxe.strata.api.control.button.Button;
+import org.inspirenxe.strata.api.control.display.Label;
+import org.inspirenxe.strata.api.control.field.TextBox;
 import org.inspirenxe.strata.api.event.EventTypes;
 import org.inspirenxe.strata.api.event.Phase;
 import org.inspirenxe.strata.api.event.Subscription;
@@ -18,9 +21,6 @@ import org.inspirenxe.strata.api.layout.StackPanel;
 import org.inspirenxe.strata.api.screen.Screen;
 import org.inspirenxe.strata.api.screen.ScreenHandle;
 import org.inspirenxe.strata.api.theme.Paint;
-import org.inspirenxe.strata.api.widget.Button;
-import org.inspirenxe.strata.api.widget.Label;
-import org.inspirenxe.strata.api.widget.TextBox;
 
 /**
  * The events guide's examples.

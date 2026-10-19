@@ -46,8 +46,8 @@ Use `BEFORE` to veto or replace what a component does, and `AFTER` to react to w
 
 When an event finishes, the host reports it to the adapter as consumed if it was canceled or stopped, and the adapter keeps that input from the engine. A handler that acts on input should call `consume()`, so ancestors and the engine do not act on it too.
 
-!!! warning "Built-in widgets consume what they act on"
-    A button consumes the clicks and keys that press it, and a text box consumes the keys and characters it edits with. Consuming stops propagation, so those events never reach the widget's ancestors. A handler on a panel does not see clicks on the buttons inside it. Put the handler on the button, in `BEFORE` if it must run first.
+!!! warning "Built-in controls consume what they act on"
+    A button consumes the clicks and keys that press it, and a text box consumes the keys and characters it edits with. Consuming stops propagation, so those events never reach the control's ancestors. A handler on a panel does not see clicks on the buttons inside it. Put the handler on the button, in `BEFORE` if it must run first.
 
 ## Target and current
 
@@ -167,7 +167,7 @@ A key handler on the root sees every key that nothing focused consumed, which ma
 
 ## Custom event types
 
-`EventType.bubbling(name, eventClass)` and `EventType.direct(name, eventClass)` create new types, and `CustomComponent.onOtherEvent` is the hook for their default behavior. There is no public way to fire an event yet, though, so custom types are reserved for now. For component-specific notifications, use listeners as the widgets do (`onAction`, `onCheckedChanged`, `onValueChanged`, `onTextChanged`), as the [switch example](extending.md#write-a-new-component) does with `onChange`.
+`EventType.bubbling(name, eventClass)` and `EventType.direct(name, eventClass)` create new types, and `CustomComponent.onOtherEvent` is the hook for their default behavior. There is no public way to fire an event yet, though, so custom types are reserved for now. For component-specific notifications, use listeners as the controls do (`onAction`, `onCheckedChanged`, `onValueChanged`, `onTextChanged`), as the [switch example](extending.md#write-a-new-component) does with `onChange`.
 
 ## All event types
 
@@ -185,4 +185,4 @@ A key handler on the root sees every key that nothing focused consumed, which ma
 | `CHAR` | `CharEvent` | yes | The focused component only |
 | `FOCUS_GAINED`, `FOCUS_LOST` | `FocusEvent` | no | The component gaining or losing focus |
 
-The [event type reference](../reference/event-types.md) adds each type's default behavior in the built-in widgets.
+The [event type reference](../reference/event-types.md) adds each type's default behavior in the built-in controls.

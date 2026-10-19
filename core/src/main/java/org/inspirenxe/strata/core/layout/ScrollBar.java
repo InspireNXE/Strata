@@ -7,7 +7,7 @@ import org.inspirenxe.strata.api.theme.Paint;
 
 /**
  * The geometry of one scroll bar: its track, and a thumb sized by the visible fraction of the content and placed by
- * the offset. Used by {@link ScrollPanelImpl} and the list widget.
+ * the offset. Used by {@link ScrollPanelImpl} and the list view.
  *
  * <p>The thumb is the track's length times the visible fraction, at least {@link ScrollPanel#MIN_THUMB_LENGTH}
  * and at most the track less 8 units, but never longer than the track.</p>

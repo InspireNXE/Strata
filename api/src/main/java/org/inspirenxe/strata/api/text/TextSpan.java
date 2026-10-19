@@ -4,7 +4,7 @@ import java.util.Objects;
 
 /**
  * A run of text in one style. Spans are single lines as far as engines are concerned: break text into lines (as
- * {@link org.inspirenxe.strata.api.widget.Label} does) before drawing it.
+ * {@link org.inspirenxe.strata.api.control.display.Label} does) before drawing it.
  *
  * @param text the characters; may be empty, must not be null
  * @param style how they look

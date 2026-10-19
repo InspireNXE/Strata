@@ -1,6 +1,8 @@
 package org.inspirenxe.strata.core;
 
 import org.inspirenxe.strata.api.ComponentFactory;
+import org.inspirenxe.strata.api.control.collection.ListView;
+import org.inspirenxe.strata.api.control.field.TextBox;
 import org.inspirenxe.strata.api.extension.CustomComponent;
 import org.inspirenxe.strata.api.extension.MeasureContext;
 import org.inspirenxe.strata.api.geom.Rect;
@@ -14,8 +16,6 @@ import org.inspirenxe.strata.api.layout.AbsolutePanel;
 import org.inspirenxe.strata.api.layout.Orientation;
 import org.inspirenxe.strata.api.layout.ScrollPanel;
 import org.inspirenxe.strata.api.layout.StackPanel;
-import org.inspirenxe.strata.api.widget.ListView;
-import org.inspirenxe.strata.api.widget.TextBox;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 

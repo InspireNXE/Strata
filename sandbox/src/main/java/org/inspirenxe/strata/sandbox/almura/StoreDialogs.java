@@ -2,17 +2,17 @@ package org.inspirenxe.strata.sandbox.almura;
 
 import org.inspirenxe.strata.api.ComponentFactory;
 import org.inspirenxe.strata.api.component.Component;
+import org.inspirenxe.strata.api.control.button.Button;
+import org.inspirenxe.strata.api.control.button.CheckBox;
+import org.inspirenxe.strata.api.control.display.Label;
+import org.inspirenxe.strata.api.control.field.TextBox;
+import org.inspirenxe.strata.api.control.window.Window;
 import org.inspirenxe.strata.api.layout.Anchor;
 import org.inspirenxe.strata.api.layout.GridLength;
 import org.inspirenxe.strata.api.layout.GridPanel;
 import org.inspirenxe.strata.api.layout.HorizontalAlignment;
 import org.inspirenxe.strata.api.layout.Orientation;
 import org.inspirenxe.strata.api.layout.VerticalAlignment;
-import org.inspirenxe.strata.api.widget.Button;
-import org.inspirenxe.strata.api.widget.CheckBox;
-import org.inspirenxe.strata.api.widget.Label;
-import org.inspirenxe.strata.api.widget.TextBox;
-import org.inspirenxe.strata.api.widget.Window;
 import org.inspirenxe.strata.sandbox.almura.StoreData.StoreItem;
 
 import java.math.BigDecimal;

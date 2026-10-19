@@ -34,7 +34,7 @@ Every component also has a border (`setBorder(Border.of(argb, width))`, a width 
 
 ### Offset
 
-`setOffset(dx, dy)` moves a component, and everything inside it, from where its parent's layout puts it. Siblings and the parent's size do not change, and the move needs no new measure. Use it for small nudges and for dragging; a [window](widgets.md#window) moves by its offset when its title bar is dragged.
+`setOffset(dx, dy)` moves a component, and everything inside it, from where its parent's layout puts it. Siblings and the parent's size do not change, and the move needs no new measure. Use it for small nudges and for dragging; a [window](controls.md#window) moves by its offset when its title bar is dragged.
 
 ### How a component's size is decided
 
@@ -188,7 +188,7 @@ Each axis has a policy: `NEVER` (the axis does not scroll, and children get the 
 | Up, Down, Page Up, Page Down, Home, End | When no focused descendant used them |
 | Focus | A descendant that gains focus is scrolled into view |
 
-`setScroll(x, y)`, `scrollBy`, `scrollToVisible(component)` and `onScrollChanged` work from code. Scrolling moves the children's real bounds without measuring them again, so pointer positions and `bounds()` stay in host coordinates inside a scroll panel. Children are clipped to the viewport, the bounds less the padding and the bar's gutter. For long lists of similar rows, use a [`ListView`](widgets.md#listview), which builds only the rows in view.
+`setScroll(x, y)`, `scrollBy`, `scrollToVisible(component)` and `onScrollChanged` work from code. Scrolling moves the children's real bounds without measuring them again, so pointer positions and `bounds()` stay in host coordinates inside a scroll panel. Children are clipped to the viewport, the bounds less the padding and the bar's gutter. For long lists of similar rows, use a [`ListView`](controls.md#listview), which builds only the rows in view.
 
 ## Clipping
 

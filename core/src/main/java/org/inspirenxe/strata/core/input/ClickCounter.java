@@ -9,7 +9,7 @@ import org.inspirenxe.strata.api.input.MouseButton;
  * {@link #MULTI_CLICK_MILLIS} of the previous press, and lands within {@link #MULTI_CLICK_DISTANCE} of it on both
  * axes. After a triple click the next press starts again at one.</p>
  *
- * <p>The host delivers every press and release at once with its count, and widgets react to the count they care
+ * <p>The host delivers every press and release at once with its count, and controls react to the count they care
  * about (a text box selects a word on two and everything on three). Wintergreen's recognizer held single releases
  * back until it knew no second click was coming, which added up to half a second of lag to every click.</p>
  */

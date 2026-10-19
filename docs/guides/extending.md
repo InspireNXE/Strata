@@ -8,7 +8,7 @@ There are three ways to extend Strata. Pick the lightest one that does the job.
 | [Compose](#compose-built-ins) | Package several components as one reusable piece | A plain class |
 | [Write a new component](#write-a-new-component) or [layout](#write-a-new-layout) | Make something that does not exist yet | A subclass of `CustomComponent` or `CustomContainer` |
 
-Strata's own widgets and panels are written the third way, on the same public base classes, so you have everything they have.
+Strata's own controls and panels are written the third way, on the same public base classes, so you have everything they have.
 
 ![A custom switch and a custom wrapping layout](../assets/images/extending-custom.png)
 
@@ -61,7 +61,7 @@ The class is not a `Component`, so you add `field.component()` rather than `fiel
 
 ## Write a new component
 
-Subclass `CustomComponent<T>`. To let other code see your component as a type of its own, declare an interface that extends `Component<YourInterface>` and implement it. This example builds a small switch; Strata's own [`ToggleSwitch`](widgets.md#toggleswitch) is written the same way in core.
+Subclass `CustomComponent<T>`. To let other code see your component as a type of its own, declare an interface that extends `Component<YourInterface>` and implement it. This example builds a small switch; Strata's own [`ToggleSwitch`](controls.md#toggleswitch) is written the same way in core.
 
 ```java
 --8<-- "extending/ToggleSwitch.java:interface"
@@ -156,8 +156,8 @@ Everything required of a custom component applies, plus:
 
 ## Things you cannot do
 
-- Implement `Component`, `Container` or a widget interface directly. Strata rejects such classes.
-- Subclass the built-in widgets. Their implementations are hidden in `core`. Decorate them with a behavior, or write your own.
+- Implement `Component`, `Container` or a control interface directly. Strata rejects such classes.
+- Subclass the built-in controls. Their implementations are hidden in `core`. Decorate them with a behavior, or write your own.
 - Fire your own events. See [Custom event types](events.md#custom-event-types).
 - Draw arbitrary geometry, such as lines or textured triangles. The painter offers rectangles, gradients, sprites and text only, because every engine can draw those. See [Status and limitations](../help/status.md).
 - Use `ComponentFactory.createPeer`, `createContainerPeer`, `CustomComponent.peer()` or anything in `api.extension.peer`. They are plumbing between the base classes and core.

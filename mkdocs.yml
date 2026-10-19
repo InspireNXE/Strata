@@ -97,7 +97,7 @@ nav:
       - guides/index.md
       - Components: guides/components.md
       - Layout: guides/layout.md
-      - Widgets: guides/widgets.md
+      - Controls: guides/controls.md
       - Overlays and tooltips: guides/overlays.md
       - Events: guides/events.md
       - Event snapshots: guides/snapshots.md

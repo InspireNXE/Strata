@@ -1,16 +1,16 @@
 package org.inspirenxe.strata.core;
 
 import org.inspirenxe.strata.api.ComponentFactory;
-import org.inspirenxe.strata.api.layout.Anchor;
-import org.inspirenxe.strata.api.layout.HorizontalAlignment;
-import org.inspirenxe.strata.api.layout.VerticalAlignment;
+import org.inspirenxe.strata.api.control.display.Label;
 import org.inspirenxe.strata.api.geom.Insets;
 import org.inspirenxe.strata.api.geom.Rect;
-import org.inspirenxe.strata.api.layout.GridPanel;
-import org.inspirenxe.strata.api.layout.GridLength;
+import org.inspirenxe.strata.api.layout.Anchor;
 import org.inspirenxe.strata.api.layout.AnchorPanel;
+import org.inspirenxe.strata.api.layout.GridLength;
+import org.inspirenxe.strata.api.layout.GridPanel;
+import org.inspirenxe.strata.api.layout.HorizontalAlignment;
 import org.inspirenxe.strata.api.layout.StackPanel;
-import org.inspirenxe.strata.api.widget.Label;
+import org.inspirenxe.strata.api.layout.VerticalAlignment;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;

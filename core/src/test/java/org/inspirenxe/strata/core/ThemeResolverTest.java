@@ -1,5 +1,6 @@
 package org.inspirenxe.strata.core;
 
+import org.inspirenxe.strata.api.control.button.Button;
 import org.inspirenxe.strata.api.geom.Insets;
 import org.inspirenxe.strata.api.text.TextStyle;
 import org.inspirenxe.strata.api.theme.Paint;
@@ -9,7 +10,6 @@ import org.inspirenxe.strata.api.theme.ThemeException;
 import org.inspirenxe.strata.api.theme.ThemeId;
 import org.inspirenxe.strata.api.theme.ThemeRef;
 import org.inspirenxe.strata.api.theme.Themes;
-import org.inspirenxe.strata.api.widget.Button;
 import org.inspirenxe.strata.core.host.ScreenHostImpl;
 import org.inspirenxe.strata.core.theme.ThemeResolver;
 import org.inspirenxe.strata.spi.ThemeDocument;

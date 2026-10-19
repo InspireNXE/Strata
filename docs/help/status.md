@@ -6,7 +6,7 @@ Strata is at version 0.1.0 and has not been released. This page lists what is te
 
 | Area | How |
 |---|---|
-| Layout, input, focus, events, snapshots, extension, the widgets, scrolling, lists, overlays and tooltips | Unit tests in `core` against a test platform with a manual clock |
+| Layout, input, focus, events, snapshots, extension, the controls, scrolling, lists, overlays and tooltips | Unit tests in `core` against a test platform with a manual clock |
 | Building real screens | Mock-ups of Almura's Exchange and Store screens in the sandbox, rendered in a dozen states by `--mocks` |
 | The SPI contracts | Contract tests run on the test platform, on the Swing adapter, and on the example adapter in these docs |
 | The Swing adapter | Every contract, sprite, tint and nine-slice drawing on generated images, key and button mapping, a panel driven with synthetic AWT events, end-to-end snapshots |
@@ -23,7 +23,7 @@ Publishing to Maven and depending on Strata from a separate project have not bee
 
 ## Not built yet
 
-- Widgets: vertical slider, multiple selection in lists, tables and trees, editable table cells. Behavior interfaces for the newer widgets.
+- Controls: vertical slider, multiple selection in lists, tables and trees, editable table cells. Behavior interfaces for the newer controls.
 - Inline sprites in text. `SpriteSpan` and `InlineElement` are reserved.
 - Firing custom event types.
 - Narration and other accessibility support.
@@ -36,7 +36,7 @@ Publishing to Maven and depending on Strata from a separate project have not bee
 These are recorded in the [design document](../DESIGN.md#8-decisions-and-open-questions):
 
 - A platform shortcut modifier: Command on macOS, Control elsewhere.
-- Behavior interfaces for the newer widgets, and whether `ListView` needs multiple selection.
+- Behavior interfaces for the newer controls, and whether `ListView` needs multiple selection.
 
 ## Compatibility promise
 

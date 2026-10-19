@@ -1,6 +1,6 @@
 # Theme keys
 
-Every style key the built-in widgets read. A theme lacking a required key cannot show a tree that uses the widget; see [Themes](../guides/theming.md#required-and-optional-keys).
+Every style key the built-in controls read. A theme lacking a required key cannot show a tree that uses the control; see [Themes](../guides/theming.md#required-and-optional-keys).
 
 ## Button
 

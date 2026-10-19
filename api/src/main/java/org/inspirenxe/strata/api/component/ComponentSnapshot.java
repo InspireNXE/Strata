@@ -17,9 +17,9 @@ import java.util.Optional;
  * nothing about its children; each child that was captured has a snapshot of its own.</p>
  *
  * <p>Each field holds what the {@link Component} getter of the same name returned when the snapshot was taken.
- * {@link #state()} holds what the component's kind adds, such as a text box's text and caret: the built-in widgets
+ * {@link #state()} holds what the component's kind adds, such as a text box's text and caret: the built-in controls
  * and panels record a nested {@code State} type (for example
- * {@link org.inspirenxe.strata.api.widget.TextBox.State}), and a
+ * {@link org.inspirenxe.strata.api.control.field.TextBox.State}), and a
  * {@link org.inspirenxe.strata.api.extension.CustomComponent} records whatever its {@code snapshotState} hook
  * returns.</p>
  *

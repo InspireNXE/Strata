@@ -3,6 +3,20 @@ package org.inspirenxe.strata.core;
 import org.inspirenxe.strata.api.ComponentFactory;
 import org.inspirenxe.strata.api.component.Component;
 import org.inspirenxe.strata.api.component.Tooltip;
+import org.inspirenxe.strata.api.control.button.Button;
+import org.inspirenxe.strata.api.control.button.RadioButton;
+import org.inspirenxe.strata.api.control.button.RadioGroup;
+import org.inspirenxe.strata.api.control.button.ToggleSwitch;
+import org.inspirenxe.strata.api.control.collection.SlotGrid;
+import org.inspirenxe.strata.api.control.collection.TableView;
+import org.inspirenxe.strata.api.control.collection.TreeView;
+import org.inspirenxe.strata.api.control.field.Spinner;
+import org.inspirenxe.strata.api.control.field.TextArea;
+import org.inspirenxe.strata.api.control.field.TextBox;
+import org.inspirenxe.strata.api.control.menu.Menu;
+import org.inspirenxe.strata.api.control.menu.MenuBar;
+import org.inspirenxe.strata.api.control.pane.Expander;
+import org.inspirenxe.strata.api.control.pane.SplitPane;
 import org.inspirenxe.strata.api.geom.Rect;
 import org.inspirenxe.strata.api.input.Key;
 import org.inspirenxe.strata.api.input.KeyAction;
@@ -14,20 +28,6 @@ import org.inspirenxe.strata.api.layout.GridLength;
 import org.inspirenxe.strata.api.layout.Orientation;
 import org.inspirenxe.strata.api.overlay.Overlay;
 import org.inspirenxe.strata.api.text.TextSpan;
-import org.inspirenxe.strata.api.widget.Button;
-import org.inspirenxe.strata.api.widget.Expander;
-import org.inspirenxe.strata.api.widget.Menu;
-import org.inspirenxe.strata.api.widget.MenuBar;
-import org.inspirenxe.strata.api.widget.RadioButton;
-import org.inspirenxe.strata.api.widget.RadioGroup;
-import org.inspirenxe.strata.api.widget.SlotGrid;
-import org.inspirenxe.strata.api.widget.Spinner;
-import org.inspirenxe.strata.api.widget.SplitPane;
-import org.inspirenxe.strata.api.widget.TableView;
-import org.inspirenxe.strata.api.widget.TextArea;
-import org.inspirenxe.strata.api.widget.TextBox;
-import org.inspirenxe.strata.api.widget.ToggleSwitch;
-import org.inspirenxe.strata.api.widget.TreeView;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
@@ -43,7 +43,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * The standard controls added after the tier 2 widgets. Text in the test platform is 6 units per code point and 9
+ * The standard controls added after the tier 2 controls. Text in the test platform is 6 units per code point and 9
  * per line.
  */
 class StandardControlsTest {

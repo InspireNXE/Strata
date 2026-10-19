@@ -48,7 +48,7 @@ Setters that affect size schedule a new layout automatically. Margin is space ou
 
 ## Events
 
-Input reaches components as events. For every component an event reaches, three steps run in order: the component's `BEFORE` handlers, then its default behavior (a button pressing, a text box inserting a character) unless a handler canceled the event, then its `AFTER` handlers. Bubbling events then move on to the parent. Built-in widgets consume the input they act on, which stops it there.
+Input reaches components as events. For every component an event reaches, three steps run in order: the component's `BEFORE` handlers, then its default behavior (a button pressing, a text box inserting a character) unless a handler canceled the event, then its `AFTER` handlers. Bubbling events then move on to the parent. Built-in controls consume the input they act on, which stops it there.
 
 When an event finishes, the host tells the adapter whether it was handled. Unhandled input goes on to the engine, so an engine that closes screens on Escape still does. See [Events](../guides/events.md).
 
@@ -58,7 +58,7 @@ At most one component per host has keyboard focus. Key events go to it, or to th
 
 ## Themes
 
-A theme maps style keys, such as `button.hovered`, to paints (solid colors, gradients, sprites, nine-slices) and text styles. Every component in a host shares the host's theme. Widgets mark some keys as required, and a host refuses to show a tree whose theme lacks any of them, listing every missing key at once. `Themes.flat()` works on any engine, and adapters can ship themes that match their engine's own widgets. See [Themes](../guides/theming.md).
+A theme maps style keys, such as `button.hovered`, to paints (solid colors, gradients, sprites, nine-slices) and text styles. Every component in a host shares the host's theme. Controls mark some keys as required, and a host refuses to show a tree whose theme lacks any of them, listing every missing key at once. `Themes.flat()` works on any engine, and adapters can ship themes that match their engine's own look. See [Themes](../guides/theming.md).
 
 ## Threading
 

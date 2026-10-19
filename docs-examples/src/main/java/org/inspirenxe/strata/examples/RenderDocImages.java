@@ -3,13 +3,13 @@ package org.inspirenxe.strata.examples;
 import org.inspirenxe.strata.api.screen.Screen;
 import org.inspirenxe.strata.api.theme.Theme;
 import org.inspirenxe.strata.api.theme.Themes;
+import org.inspirenxe.strata.examples.controls.ControlExamples;
 import org.inspirenxe.strata.examples.events.EventExamples;
 import org.inspirenxe.strata.examples.extending.ExtendingExamples;
 import org.inspirenxe.strata.examples.layout.LayoutExamples;
 import org.inspirenxe.strata.examples.quickstart.SettingsScreen;
 import org.inspirenxe.strata.examples.screens.ScreenExamples;
 import org.inspirenxe.strata.examples.theming.ThemeExamples;
-import org.inspirenxe.strata.examples.widgets.WidgetExamples;
 import org.inspirenxe.strata.swing.SwingSnapshot;
 
 import java.awt.Color;
@@ -48,7 +48,7 @@ public final class RenderDocImages {
         render(out, "layout-sizes", LayoutExamples.sizes(), flat, 320, 150);
         render(out, "events-drag", EventExamples.dragging(), flat, 320, 80);
         render(out, "extending-custom", ExtendingExamples.customComponents(), ExtendingExamples.checkBoxTheme(), 320, 190);
-        render(out, "widgets-controls", WidgetExamples.controls(), flat, 320, 200);
+        render(out, "controls-basic", ControlExamples.controls(), flat, 320, 200);
         render(out, "screens-list", new ScreenExamples.ShoppingList(), flat, 320, 100);
         render(out, "theme-flat", ThemeExamples.sampler(0xFF2B2D31), flat, 200, 120);
         render(out, "theme-derived", ThemeExamples.sampler(0xFF2B2D31), ThemeExamples.derived(), 200, 120);

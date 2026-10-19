@@ -1,29 +1,29 @@
 package org.inspirenxe.strata.api.theme;
 
 import org.inspirenxe.strata.api.component.Tooltip;
+import org.inspirenxe.strata.api.control.button.Button;
+import org.inspirenxe.strata.api.control.button.CheckBox;
+import org.inspirenxe.strata.api.control.button.RadioButton;
+import org.inspirenxe.strata.api.control.button.ToggleSwitch;
+import org.inspirenxe.strata.api.control.collection.ComboBox;
+import org.inspirenxe.strata.api.control.collection.ListView;
+import org.inspirenxe.strata.api.control.collection.SlotGrid;
+import org.inspirenxe.strata.api.control.collection.TableView;
+import org.inspirenxe.strata.api.control.collection.TreeView;
+import org.inspirenxe.strata.api.control.display.Label;
+import org.inspirenxe.strata.api.control.display.ProgressBar;
+import org.inspirenxe.strata.api.control.display.Separator;
+import org.inspirenxe.strata.api.control.field.Slider;
+import org.inspirenxe.strata.api.control.field.TextBox;
+import org.inspirenxe.strata.api.control.menu.Menu;
+import org.inspirenxe.strata.api.control.menu.MenuBar;
+import org.inspirenxe.strata.api.control.pane.Expander;
+import org.inspirenxe.strata.api.control.pane.SplitPane;
+import org.inspirenxe.strata.api.control.pane.TabBar;
+import org.inspirenxe.strata.api.control.window.Window;
 import org.inspirenxe.strata.api.layout.ScrollPanel;
 import org.inspirenxe.strata.api.overlay.Overlays;
 import org.inspirenxe.strata.api.text.TextStyle;
-import org.inspirenxe.strata.api.widget.Button;
-import org.inspirenxe.strata.api.widget.CheckBox;
-import org.inspirenxe.strata.api.widget.ComboBox;
-import org.inspirenxe.strata.api.widget.Expander;
-import org.inspirenxe.strata.api.widget.Label;
-import org.inspirenxe.strata.api.widget.ListView;
-import org.inspirenxe.strata.api.widget.Menu;
-import org.inspirenxe.strata.api.widget.MenuBar;
-import org.inspirenxe.strata.api.widget.ProgressBar;
-import org.inspirenxe.strata.api.widget.RadioButton;
-import org.inspirenxe.strata.api.widget.Separator;
-import org.inspirenxe.strata.api.widget.Slider;
-import org.inspirenxe.strata.api.widget.SlotGrid;
-import org.inspirenxe.strata.api.widget.SplitPane;
-import org.inspirenxe.strata.api.widget.TabBar;
-import org.inspirenxe.strata.api.widget.TableView;
-import org.inspirenxe.strata.api.widget.TextBox;
-import org.inspirenxe.strata.api.widget.ToggleSwitch;
-import org.inspirenxe.strata.api.widget.TreeView;
-import org.inspirenxe.strata.api.widget.Window;
 
 /**
  * Themes that ship with Strata. Engine adapters may offer more.
@@ -40,7 +40,7 @@ public final class Themes {
 
     /**
      * Returns a dark theme made of solid colors only, so it works on any engine without image assets. It defines
-     * every key of every built-in widget.
+     * every key of every built-in control.
      *
      * @return the flat theme
      */

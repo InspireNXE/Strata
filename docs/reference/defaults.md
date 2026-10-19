@@ -42,9 +42,9 @@ Every number Strata picks for you.
 | `Window` close button | 12 wide, at the right end of the title bar |
 | `Window` closable, movable | yes, yes |
 
-## Widgets
+## Controls
 
-| Widget | Setting | Default |
+| Control | Setting | Default |
 |---|---|---|
 | `Label` | Wrapping | off |
 | | Text alignment | `LEFT` |

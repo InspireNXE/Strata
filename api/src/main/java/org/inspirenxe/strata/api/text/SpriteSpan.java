@@ -5,7 +5,7 @@ import org.inspirenxe.strata.api.theme.SpriteId;
 import java.util.Objects;
 
 /**
- * A sprite placed in a line of text, such as an icon in a sentence. Reserved for rich text; no built-in widget
+ * A sprite placed in a line of text, such as an icon in a sentence. Reserved for rich text; no built-in control
  * draws sprite spans yet.
  *
  * @param sprite the sprite to draw

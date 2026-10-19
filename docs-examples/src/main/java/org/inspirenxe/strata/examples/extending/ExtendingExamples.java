@@ -2,6 +2,12 @@ package org.inspirenxe.strata.examples.extending;
 
 import org.inspirenxe.strata.api.ComponentFactory;
 import org.inspirenxe.strata.api.component.Component;
+import org.inspirenxe.strata.api.control.button.Button;
+import org.inspirenxe.strata.api.control.button.ButtonBehavior;
+import org.inspirenxe.strata.api.control.display.Label;
+import org.inspirenxe.strata.api.control.display.LabelBehavior;
+import org.inspirenxe.strata.api.control.field.TextBox;
+import org.inspirenxe.strata.api.control.field.TextBoxBehavior;
 import org.inspirenxe.strata.api.event.CharEvent;
 import org.inspirenxe.strata.api.extension.MeasureContext;
 import org.inspirenxe.strata.api.extension.MeasureNext;
@@ -17,12 +23,6 @@ import org.inspirenxe.strata.api.screen.Screen;
 import org.inspirenxe.strata.api.theme.Paint;
 import org.inspirenxe.strata.api.theme.Theme;
 import org.inspirenxe.strata.api.theme.Themes;
-import org.inspirenxe.strata.api.widget.Button;
-import org.inspirenxe.strata.api.widget.ButtonBehavior;
-import org.inspirenxe.strata.api.widget.Label;
-import org.inspirenxe.strata.api.widget.LabelBehavior;
-import org.inspirenxe.strata.api.widget.TextBox;
-import org.inspirenxe.strata.api.widget.TextBoxBehavior;
 
 /**
  * The extending guide's examples.

@@ -76,7 +76,7 @@ protected void paint(Painter painter, Rect bounds) {
 
 ## Mixed styles
 
-A label made with `setSpans` draws its spans one after another, each in its own style, and wraps them by the same rules, so a piece of a span keeps the span's style on any line. Use it for text like a white item name followed by a gray count, or a gold price followed by `/ea`. `setTextScale` draws a label larger or smaller, and `TextOverflow.ELLIPSIS` ends a line that does not fit with `...`, in the style of the last character kept. See [Label](widgets.md#label).
+A label made with `setSpans` draws its spans one after another, each in its own style, and wraps them by the same rules, so a piece of a span keeps the span's style on any line. Use it for text like a white item name followed by a gray count, or a gold price followed by `/ea`. `setTextScale` draws a label larger or smaller, and `TextOverflow.ELLIPSIS` ends a line that does not fit with `...`, in the style of the last character kept. See [Label](controls.md#label).
 
 Wrapping is part of the label, not a public utility. A custom component that needs wrapped text can measure and break the text itself, or contain a wrapping label.
 

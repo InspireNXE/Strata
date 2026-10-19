@@ -1,22 +1,22 @@
 package org.inspirenxe.strata.sandbox;
 
 import org.inspirenxe.strata.api.ComponentFactory;
-import org.inspirenxe.strata.api.layout.Anchor;
 import org.inspirenxe.strata.api.component.Component;
-import org.inspirenxe.strata.api.layout.HorizontalAlignment;
-import org.inspirenxe.strata.api.layout.VerticalAlignment;
+import org.inspirenxe.strata.api.control.button.Button;
+import org.inspirenxe.strata.api.control.button.ButtonBehavior;
+import org.inspirenxe.strata.api.control.display.Label;
+import org.inspirenxe.strata.api.control.field.TextBox;
 import org.inspirenxe.strata.api.extension.Next;
 import org.inspirenxe.strata.api.extension.Painter;
 import org.inspirenxe.strata.api.geom.Rect;
-import org.inspirenxe.strata.api.layout.GridPanel;
+import org.inspirenxe.strata.api.layout.Anchor;
 import org.inspirenxe.strata.api.layout.GridLength;
+import org.inspirenxe.strata.api.layout.GridPanel;
+import org.inspirenxe.strata.api.layout.HorizontalAlignment;
+import org.inspirenxe.strata.api.layout.VerticalAlignment;
 import org.inspirenxe.strata.api.screen.Screen;
 import org.inspirenxe.strata.api.text.TextStyle;
 import org.inspirenxe.strata.api.theme.Paint;
-import org.inspirenxe.strata.api.widget.Button;
-import org.inspirenxe.strata.api.widget.ButtonBehavior;
-import org.inspirenxe.strata.api.widget.Label;
-import org.inspirenxe.strata.api.widget.TextBox;
 import org.inspirenxe.strata.sandbox.almura.AlmuraMocks;
 
 import java.util.function.Consumer;
