@@ -18,6 +18,5 @@ include('api')
 include('spi')
 // The implementation behind both
 include('core')
-// Java2D adapter and the sandbox app that runs on it
+// Java2D adapter
 include('canvas-swing')
-include('sandbox')

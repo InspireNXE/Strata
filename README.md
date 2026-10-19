@@ -16,7 +16,6 @@ This repository has the Java2D/Swing adapter. The Minecraft adapter lives in the
 | `spi` | What engine adapters implement (`Canvas`, `Platform`) and drive (`ScreenHost`, `ScreenStack`), plus contract tests for adapters. |
 | `core` | The implementation behind both. Only adapters use it directly. |
 | `canvas-swing` | The Java2D/Swing adapter: `StrataPanel` and `SwingSnapshot`. |
-| `sandbox` | A demo app written against the API only. |
 
 [docs/DESIGN.md](docs/DESIGN.md) covers the design and where its ideas come from (MalisisCore and Wintergreen), and [docs/ROADMAP.md](docs/ROADMAP.md) tracks what is built and what is next. The Javadoc of `api` and `spi` is the contract, including what adapters must guarantee.
 
@@ -64,14 +63,8 @@ Building needs JDK 25.
 ./gradlew build
 ```
 
-To run the sandbox in a window:
+Every control has a page in the gallery, which runs on the Java2D adapter and lives in the Strata-Gallery repository, a sibling of this one at `../Strata-Gallery`. From there:
 
 ```bash
-./gradlew :sandbox:run
-```
-
-To render one frame to a PNG instead, which works without a display:
-
-```bash
-./gradlew :sandbox:run --args="--snapshot sandbox.png"
+./gradlew :gallery:run
 ```
