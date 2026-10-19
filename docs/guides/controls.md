@@ -1,6 +1,6 @@
 # Controls
 
-Strata's built-in controls are interfaces in the subpackages of `org.inspirenxe.strata.api.control`, made by the factory: `display` (`Label`, `Image`, `ProgressBar`, `Separator`), `button` (`Button`, `CheckBox`, `RadioButton`, `RadioGroup`, `ToggleSwitch`), `field` (`TextBox`, `TextArea`, `Spinner`, `Slider`), `collection` (`ListView`, `ComboBox`, `TableView`, `TreeView`, `GridView`), `menu` (`Menu`, `MenuBar`), `pane` (`TabBar`, `Expander`, `SplitPane`) and `window` (`Window`, `MessageBox`). Each one has [events](events.md): a request (Pre) for each change the user can make, which a handler can cancel or rewrite, and a report (Post) for each change from any source. Each section below lists them in an Events table. Their theme keys are listed on each control below and in the [theme key reference](../reference/theme-keys.md). Scrolling is a container, [`ScrollPanel`](layout.md#scrollpanel), and popups, dialogs and tooltips are in [Overlays and tooltips](overlays.md).
+Strata's built-in controls are interfaces in the subpackages of `org.inspirenxe.strata.api.control`, made by the factory: `display` (`Label`, `Image`, `ProgressBar`, `Separator`), `button` (`Button`, `CheckBox`, `RadioButton`, `RadioGroup`, `ToggleSwitch`), `field` (`TextBox`, `TextArea`, `Spinner`, `Slider`, `ColorPicker`), `collection` (`ListView`, `ComboBox`, `TableView`, `TreeView`, `GridView`, `DualList`), `menu` (`Menu`, `MenuBar`), `pane` (`TabBar`, `Expander`, `SplitPane`) and `window` (`Window`, `MessageBox`). Each one has [events](events.md): a request (Pre) for each change the user can make, which a handler can cancel or rewrite, and a report (Post) for each change from any source. Each section below lists them in an Events table. Their theme keys are listed on each control below and in the [theme key reference](../reference/theme-keys.md). Scrolling is a container, [`ScrollPanel`](layout.md#scrollpanel), and popups, dialogs and tooltips are in [Overlays and tooltips](overlays.md).
 
 ## Attributes
 
@@ -15,7 +15,7 @@ Controls that do the same kind of thing share small interfaces called attributes
 | `Ranged` | `value` | `value()`, `setValue`, `min()`, `max()`, `setRange` | `CHANGE`, `CHANGED` | `Slider`, `Spinner`, `ProgressBar` |
 | `Stepped` | `value` | `Ranged` plus `step()`, `setStep` | | `Slider`, `Spinner` |
 | `ItemSource` | `item` | `items()`, `setItems`, `refresh()`, `setKeyFunction` | | `ListView`, `TableView`, `TreeView`, `ComboBox`, `GridView` |
-| `CellSource` | `item` | `setCellFactory` | | `ListView`, `TreeView`, `GridView` |
+| `CellSource` | `item` | `setCellFactory` | | `ListView`, `TreeView`, `GridView`, `DualList` |
 | `SingleSelection` | `item` | `selectedIndex()`, `selected()`, `select(index)`, `selectItem(item)`, `clearSelection()` | `SELECT`, `SELECTED` | the collections, `TabBar`, `MenuBar`, `RadioGroup` |
 | `Activatable` | `item` | `setActivateOnClick` | `ACTIVATE`, `ACTIVATED` | `ListView`, `TableView`, `TreeView`, `GridView` |
 | `RowView` | `item` | row height and spacing, the placeholder, scrolling, `setDeselectable` | | `ListView`, `TableView`, `TreeView` |
@@ -282,7 +282,7 @@ The box is focusable and tabbable and shows the text cursor. Focus by Tab or `re
 - asks the engine for text input, which some engines need before they send any characters;
 - consumes every key press that types a character (any printable key without Control or Alt), so engine shortcuts on those keys do not fire while you type;
 - consumes the editing keys and shortcuts in the table above;
-- does not consume Tab, Escape, Up, Down, Page Up or Page Down. Tab moves focus and Escape reaches the engine, which may close the screen. Enter is consumed only when a `SUBMIT` or `SUBMITTED` handler is on the box's path; otherwise it bubbles to ancestors.
+- does not consume Tab, Escape, Up, Down, Page Up or Page Down. Tab moves focus and Escape reaches the engine, which may close the screen. Enter is consumed only when a `SUBMIT` or `SUBMITTED` handler is on the box's path; otherwise it bubbles to ancestors. While the [suggestion list](#suggestions) is open, the box consumes Up, Down, Tab, Enter and Escape itself.
 
 A disabled box ignores input.
 
@@ -300,6 +300,45 @@ The caret is one unit wide and blinks every half second on the host's clock. It 
 | `textbox.text.readonly` | no | Text when read-only. Falls back to `textbox.text.disabled`. |
 | `textbox.selection` | no | Behind selected text. Falls back to translucent blue. |
 | `textbox.caret` | no | The caret. Falls back to light gray. |
+| `textbox.suggestions` | no | Behind the suggestion list. Falls back to `combobox.popup`. |
+| `textbox.suggestion.text` | no | The text of each suggestion. Falls back to `textbox.text`. |
+
+The suggestion rows use the [`ListView`](#listview) row keys, the highlighted one as the selected row.
+
+### Suggestions
+
+Give the box a suggestion provider and it offers completions in a popup list below it as the user types:
+
+```java
+TextBox name = factory.textBox()
+        .setSuggestionProvider(TextBox.SuggestionProvider.words(List.of("Ana", "Ben", "Cleo", "Dev")))
+        .onEvent(TextBox.COMPLETED, event -> greet(event.value().text()));
+```
+
+A provider is a function from the text and the caret to a list of `TextBox.Suggestion`s. A suggestion holds the text the list shows and the range of the box's text it replaces, so one provider can complete the word at the caret and another the whole text:
+
+```java
+box.setSuggestionProvider((text, caret) -> text.startsWith("/")
+        ? commands.stream()
+                .filter(command -> command.startsWith(text))
+                .map(command -> new TextBox.Suggestion(command, 0, text.length()))
+                .toList()
+        : List.of());
+```
+
+`SuggestionProvider.words(list)` completes the word around the caret from a list, matching what is typed before the caret and ignoring case. It suggests nothing for a caret with no word before it.
+
+The box asks the provider after each edit by the user that changes the text, and on Ctrl+Space. If there are suggestions, the list shows them with the first highlighted, at least as wide as the box and up to `setMaxVisibleSuggestions(n)` rows tall (8 by default) before it scrolls. If there are none, the list closes. A read-only or disabled box and one in password mode never ask.
+
+| Keys or input | While the list is open |
+|---|---|
+| Up, Down | Move the highlight, wrapping at either end |
+| Tab, Enter, keypad Enter | Accept the highlighted suggestion. Enter then does not submit. |
+| Click on a row | Accept that suggestion. The box keeps focus and its caret. |
+| Escape | Close the list |
+| Moving the caret with the keys, losing focus, `setText`, a press outside the list | Close the list |
+
+Accepting closes the list, then replaces the suggestion's range with its text and puts the caret after it. That is an edit by the user, so it goes through `TextInput.EDIT` like typing, and the list stays closed until the next edit. `showSuggestions()` and `hideSuggestions()` open and close the list from code, and `shownSuggestions()` returns what it shows.
 
 ### Events
 
@@ -309,6 +348,8 @@ The caret is one unit wide and blinks every half second on the host's clock. It 
 | `TextInput.EDITED` | Post | After every change of the text, with the new and previous text, including `setText` and `setMaxLength` cutting |
 | `TextBox.SUBMIT` | Pre | When the user presses Enter or keypad Enter. Cancel to ignore it. |
 | `TextBox.SUBMITTED` | Post | After a submit nobody canceled, with the text |
+| `TextBox.COMPLETE` | Pre | When the user accepts a suggestion, with the suggestion. Cancel to keep the text, or set another suggestion to apply instead. |
+| `TextBox.COMPLETED` | Post | After an accepted suggestion was applied, unless `TextInput.EDIT` canceled the edit |
 
 ### Size
 
@@ -795,6 +836,72 @@ There is one cell per item, null items being empty cells, in rows of `setColumns
 | `GridView.CLICKED` | Post | After a click nobody canceled |
 | `Activatable.ACTIVATE` | Pre | After the click's `GridView.CLICK`, when a left double click, or a single one with `setActivateOnClick`, would activate a cell |
 | `Activatable.ACTIVATED` | Post | After an activation nobody canceled |
+
+## DualList
+
+Two lists side by side with buttons between them that move items across, for picking a subset such as the members of a group.
+
+```java
+DualList<String> members = factory.<String>dualList()
+        .setTitle(DualList.Side.LEFT, "Players")
+        .setTitle(DualList.Side.RIGHT, "Members")
+        .setItems(DualList.Side.LEFT, List.of("Ana", "Ben", "Cleo"))
+        .setItems(DualList.Side.RIGHT, List.of("Dev"))
+        .onEvent(DualList.MOVED, event -> group.setMembers(members.items(DualList.Side.RIGHT)));
+```
+
+The `>` button moves the selected item of the left list to the end of the right one and `<` the other way; `>>` and `<<` move every item across, in order. A double click on a row, or Enter in a list, moves that row's item. Each button is enabled only while it can act. When the selected item moves, the selection goes to the item that took its place, so pressing the same button again moves the next one. `move(item, side)` and `moveAll(side)` move items from code.
+
+At most one item is selected across both lists. As a `SingleSelection`, the dual list counts the left items first and then the right ones, so index `items(Side.LEFT).size()` is the first item on the right, and `selectedSide()` says which list has the selection. The key function (`setKeyFunction`) matches items for `selectItem`, for moves and for keeping the selection when `setItems` replaces a side. Both lists build their rows with the one cell factory (`setCellFactory`). Items must not be null.
+
+Each list asks to be 100 units wide and tall enough for `setVisibleRows(n)` rows (6 by default). The buttons sit in a column between the lists, 4 units apart and 4 from each list. When either side has a title, a row of titles sits above the lists.
+
+| Key | Required | Used for |
+|---|---|---|
+| `duallist.list` | no | Behind each list. Nothing if missing. |
+| `duallist.title` | no | The titles. Falls back to `label.text`. |
+
+The rows use the `ListView` keys and the buttons the `Button` keys.
+
+| Event | Kind | Fires |
+|---|---|---|
+| `DualList.MOVE` | Pre | When the user moves an item with a button, a double click or Enter, once per item for `>>` and `<<`. The value is a `DualList.Move` naming the item and where it would go, the end of the other list. Cancel to leave it, or set another move: an item on the other side of the one the move names, and an index there, which is clamped. |
+| `DualList.MOVED` | Post | After every move, including `move` and `moveAll`. The value names the item's new side and index, and `previous()` the side and index it left. |
+| `SingleSelection.SELECT` | Pre | When the user selects a row by a press or the arrow keys, with the index across both lists |
+| `SingleSelection.SELECTED` | Post | After every change of the selected index or item, including `select`, moves and `setItems` |
+
+## ColorPicker
+
+Picks an ARGB color with a square for saturation and brightness, a strip for hue, an optional strip for alpha and a hex field.
+
+```java
+ColorPicker tint = factory.colorPicker()
+        .setAlphaShown(true)
+        .setColor(settings.tint())
+        .onEvent(ColorPicker.PICKED, event -> settings.setTint(event.value()));
+```
+
+The color is an `int` in ARGB order, opaque white by default. A press or drag in the square sets the saturation (left to right) and brightness (bottom to top), and on the strips the hue (red at the top, through yellow, green, cyan, blue and magenta, to red at the bottom) or the alpha (opaque at the top). Drags follow the pointer outside the area they started in. The hex field takes `RRGGBB` or `AARRGGBB`, with or without `#`, on Enter or when it loses focus; six digits keep the current alpha, and anything else puts the current color back. The picker itself is not focusable, so keyboard users type into the hex field.
+
+The picker keeps the hue, saturation and brightness as well as the color, so a gray or black color keeps the hue the user chose: drag the brightness down to black and back up and the hue is still there. `setColor` works the hue out from the color, keeping the old hue for a gray and the old saturation too for black. `hue()`, `saturation()` and `brightness()` read them. `setAlphaShown(false)`, the default, hides the alpha strip and leaves the alpha as it is.
+
+The square asks to be 96 units on each side, each strip is 10 wide and 4 to the right, and below them sit a swatch of the color and the hex field. Given more room, the square takes it.
+
+| Key | Required | Used for |
+|---|---|---|
+| `colorpicker.frame` | no | One unit larger than the square, each strip and the swatch, behind them. Nothing if missing. |
+| `colorpicker.marker` | no | The ring in the square and the bars on the strips. Falls back to white. |
+| `colorpicker.marker.outline` | no | A one-unit line around the markers. Falls back to black. |
+| `colorpicker.disabled` | no | Over the square and strips while disabled. Nothing if missing. |
+
+The hex field uses the `TextBox` keys. The alpha strip and the swatch draw a gray and white checkerboard behind translucent colors.
+
+| Event | Kind | Fires |
+|---|---|---|
+| `ColorPicker.PICK` | Pre | When a press, a drag or a hex code would change the color, with the new color. During a drag it fires for each move that changes it. Cancel to keep the color, or set another one, which applies as `setColor` does. |
+| `ColorPicker.PICKED` | Post | After every change of the color, including `setColor` |
+
+The color is an `int`, which `Ranged`'s `double` cannot hold, so the picker has its own events.
 
 ## Controls that do not exist yet
 

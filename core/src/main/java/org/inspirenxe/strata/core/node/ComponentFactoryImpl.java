@@ -7,6 +7,7 @@ import org.inspirenxe.strata.api.control.button.CheckBox;
 import org.inspirenxe.strata.api.control.button.RadioGroup;
 import org.inspirenxe.strata.api.control.button.ToggleSwitch;
 import org.inspirenxe.strata.api.control.collection.ComboBox;
+import org.inspirenxe.strata.api.control.collection.DualList;
 import org.inspirenxe.strata.api.control.collection.GridView;
 import org.inspirenxe.strata.api.control.collection.ListView;
 import org.inspirenxe.strata.api.control.collection.TableColumn;
@@ -16,6 +17,7 @@ import org.inspirenxe.strata.api.control.display.Image;
 import org.inspirenxe.strata.api.control.display.Label;
 import org.inspirenxe.strata.api.control.display.ProgressBar;
 import org.inspirenxe.strata.api.control.display.Separator;
+import org.inspirenxe.strata.api.control.field.ColorPicker;
 import org.inspirenxe.strata.api.control.field.Slider;
 import org.inspirenxe.strata.api.control.field.Spinner;
 import org.inspirenxe.strata.api.control.field.TextArea;
@@ -52,6 +54,7 @@ import org.inspirenxe.strata.core.control.button.CheckBoxImpl;
 import org.inspirenxe.strata.core.control.button.RadioGroupImpl;
 import org.inspirenxe.strata.core.control.button.ToggleSwitchImpl;
 import org.inspirenxe.strata.core.control.collection.ComboBoxImpl;
+import org.inspirenxe.strata.core.control.collection.DualListImpl;
 import org.inspirenxe.strata.core.control.collection.GridViewImpl;
 import org.inspirenxe.strata.core.control.collection.ListViewImpl;
 import org.inspirenxe.strata.core.control.collection.TableColumnImpl;
@@ -61,6 +64,7 @@ import org.inspirenxe.strata.core.control.display.ImageImpl;
 import org.inspirenxe.strata.core.control.display.LabelImpl;
 import org.inspirenxe.strata.core.control.display.ProgressBarImpl;
 import org.inspirenxe.strata.core.control.display.SeparatorImpl;
+import org.inspirenxe.strata.core.control.field.ColorPickerImpl;
 import org.inspirenxe.strata.core.control.field.SliderImpl;
 import org.inspirenxe.strata.core.control.field.SpinnerImpl;
 import org.inspirenxe.strata.core.control.field.TextAreaImpl;
@@ -342,6 +346,16 @@ public final class ComponentFactoryImpl implements ComponentFactory {
     @Override
     public <T> GridView<T> gridView(final Function<? super T, ? extends Component<?>> cellFactory) {
         return new GridViewImpl<>(this, cellFactory);
+    }
+
+    @Override
+    public <T> DualList<T> dualList(final Function<? super T, ? extends Component<?>> cellFactory) {
+        return new DualListImpl<>(this, cellFactory);
+    }
+
+    @Override
+    public ColorPicker colorPicker() {
+        return new ColorPickerImpl(this);
     }
 
     @Override

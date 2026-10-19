@@ -48,6 +48,14 @@ Every key the built-in controls and hosts respond to. Control means Control with
 
 Not handled, so they bubble to ancestors and the engine: Tab, Escape, Enter, Up, Down, Page Up, Page Down, and every Control combination not listed above.
 
+With a suggestion provider, Ctrl+Space shows the suggestions. While the suggestion list is open:
+
+| Keys | Action |
+|---|---|
+| Up, Down | Move the highlight, wrapping at either end |
+| Tab, Enter, keypad Enter | Accept the highlighted suggestion |
+| Escape | Close the list |
+
 ## Mouse in a TextBox
 
 | Input | Action |

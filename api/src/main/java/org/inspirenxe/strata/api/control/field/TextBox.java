@@ -8,6 +8,9 @@ import org.inspirenxe.strata.api.event.ValueEvent;
 import org.inspirenxe.strata.api.event.ValueRequestEvent;
 import org.inspirenxe.strata.api.geom.Insets;
 
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
 import java.util.Objects;
 
 /**
@@ -33,14 +36,37 @@ import java.util.Objects;
  * <p>The caret blinks every half second on the host's clock and shows again after each edit or move. When the text
  * is wider than the box, it scrolls sideways to keep the caret in view.</p>
  *
+ * <h2>Suggestions</h2>
+ * <p>With a {@linkplain #setSuggestionProvider suggestion provider}, the box offers completions in a popup list
+ * below it. After each edit by the user that changes the text, and on Ctrl+Space, the box asks the provider for
+ * suggestions for its text and caret. If there are any, the list shows them with the first highlighted; if there are
+ * none, it closes. While the list is open:</p>
+ * <ul>
+ *     <li>Up and Down move the highlight, wrapping at either end.</li>
+ *     <li>Tab, Enter or keypad Enter accepts the highlighted suggestion, and a click accepts the one clicked. Enter
+ *     then does not submit.</li>
+ *     <li>Escape closes the list.</li>
+ *     <li>Moving the caret with the keys, losing focus, {@link #setText} and a press outside the list close it.</li>
+ * </ul>
+ * <p>Accepting replaces the suggestion's range of the text with its text, puts the caret after it and closes the
+ * list. The change is an edit by the user, so it goes through {@link #EDIT} like typing, and the list does not open
+ * again until the next edit. A read-only or disabled box and one in password mode show no suggestions.</p>
+ *
+ * <pre>{@code
+ * TextBox name = factory.textBox()
+ *         .setSuggestionProvider(TextBox.SuggestionProvider.words(List.of("Ana", "Ben", "Cleo", "Dev")))
+ *         .onEvent(TextBox.COMPLETED, event -> greet(event.value().text()));
+ * }</pre>
+ *
  * <h2>Focus and the engine</h2>
  * <p>The box is focusable and tabbable and shows the text cursor. Focus by Tab puts the caret at the end; focus by
  * a click puts it at the click, unless the box {@linkplain #setSelectAllOnFocus selects all on focus}. While focused
  * it asks the engine for text input (required on SDL-based engines, which send no characters otherwise) and
  * consumes every key that types a character, so engine shortcuts on those keys, such as a game's inventory key, do
  * not fire. Tab and Escape are not consumed: Tab moves focus and Escape still reaches the engine. Enter is consumed only
- * when a handler for {@link #SUBMIT} or {@link #SUBMITTED} is on the box or on an ancestor those events reach. A
- * disabled box ignores input.</p>
+ * when a handler for {@link #SUBMIT} or {@link #SUBMITTED} is on the box or on an ancestor those events reach. While
+ * the suggestion list is open, the box consumes Up, Down, Tab, Enter and Escape itself. A disabled box ignores
+ * input.</p>
  *
  * <h2>Text and indexes</h2>
  * <p>Caret and selection indexes count UTF-16 chars, like {@link String} indexes, but never fall inside a surrogate
@@ -61,6 +87,9 @@ import java.util.Objects;
  *     <li>{@link TextInput#EDITED}: Fired after the text changed: by an edit of the user's, by {@link #setText}, or by
  *     {@link #setMaxLength} cutting it. The value is the new text and {@code previous()} the text before; neither is
  *     null. An edit whose final text equals the old one fires nothing. Fires for changes made from code too.</li>
+ *     <li>{@link #COMPLETE}: Fired when the user accepts a suggestion, before the text changes. The value is the
+ *     suggestion. Cancel it to keep the text as it is, or set another suggestion to apply that one instead.</li>
+ *     <li>{@link #COMPLETED}: Fired after an accepted suggestion was applied, with the suggestion.</li>
  * </ul>
  *
  * <pre>{@code
@@ -84,7 +113,13 @@ import java.util.Objects;
  *     {@value #STYLE_TEXT_DISABLED}.</li>
  *     <li>{@value #STYLE_SELECTION} (paint, optional): drawn behind selected text. Falls back to translucent blue.</li>
  *     <li>{@value #STYLE_CARET} (paint, optional): the one-unit-wide caret. Falls back to light gray.</li>
+ *     <li>{@value #STYLE_SUGGESTIONS} (paint, optional): behind the suggestion list. Falls back to
+ *     {@value org.inspirenxe.strata.api.control.collection.ComboBox#STYLE_POPUP}.</li>
+ *     <li>{@value #STYLE_SUGGESTION_TEXT} (text style, optional): the text of each suggestion. Falls back to
+ *     {@value #STYLE_TEXT}.</li>
  * </ul>
+ * <p>The suggestion rows are drawn with the {@link org.inspirenxe.strata.api.control.collection.ListView} row keys,
+ * the highlighted one as the selected row.</p>
  *
  * <h2>Size</h2>
  * <p>The desired size is 120 units wide and one line plus the text padding tall (4 units left and right, 5 top and
@@ -133,6 +168,18 @@ public interface TextBox extends Component<TextBox>, TextInput<TextBox> {
      * Style key for the caret (paint, optional).
      */
     String STYLE_CARET = "textbox.caret";
+    /**
+     * Style key for behind the suggestion list (paint, optional).
+     */
+    String STYLE_SUGGESTIONS = "textbox.suggestions";
+    /**
+     * Style key for the text of each suggestion (text style, optional).
+     */
+    String STYLE_SUGGESTION_TEXT = "textbox.suggestion.text";
+    /**
+     * How many suggestions show before the list scrolls, unless told otherwise.
+     */
+    int DEFAULT_MAX_VISIBLE_SUGGESTIONS = 8;
 
     /**
      * Fired when the user presses Enter or keypad Enter while the box has focus, whether or not anything handles
@@ -145,6 +192,20 @@ public interface TextBox extends Component<TextBox>, TextInput<TextBox> {
      * {@code previous()} equals it. There is no method to submit from code, so only Enter fires it.
      */
     EventType<ValueEvent<TextBox, String>> SUBMITTED = EventType.valueReport("text_box.submitted");
+    /**
+     * Fired when the user accepts a suggestion from the list, by Tab, Enter or a click, after the list closed and
+     * before the text changes. The value is the suggestion. Cancel the event to keep the text as it is, or set
+     * another suggestion to apply that one instead; the value must not be set to null. The final suggestion's range
+     * is clamped to the text, and the change then goes through {@link #EDIT} like typing. Fires only for the user's
+     * actions; there is no method to accept a suggestion from code.
+     */
+    EventType<ValueRequestEvent<TextBox, Suggestion>> COMPLETE = EventType.valueRequest("text_box.complete");
+    /**
+     * Fired after the suggestion a {@link #COMPLETE} request ended with was applied. The value is that suggestion,
+     * and {@code previous()} equals it. A completion that {@link #EDIT} canceled fires nothing. {@link #EDITED}
+     * reports the change of text as usual, before this.
+     */
+    EventType<ValueEvent<TextBox, Suggestion>> COMPLETED = EventType.valueReport("text_box.completed");
 
     /**
      * Returns the text.
@@ -288,6 +349,141 @@ public interface TextBox extends Component<TextBox>, TextInput<TextBox> {
      * @return this box
      */
     TextBox setSelectAllOnFocus(boolean selectAll);
+
+    /**
+     * Sets what offers suggestions as the user types, and closes the suggestion list if it is open. The box asks
+     * the provider after each edit by the user that changes the text, and on Ctrl+Space, as the class description
+     * says. It never asks while read-only, disabled or in password mode.
+     *
+     * @param provider returns the suggestions for a text and caret, or {@code null} for none; none by default
+     * @return this box
+     */
+    TextBox setSuggestionProvider(SuggestionProvider provider);
+
+    /**
+     * Returns how many suggestions show before the list scrolls.
+     *
+     * @return the maximum; {@value #DEFAULT_MAX_VISIBLE_SUGGESTIONS} by default
+     */
+    int maxVisibleSuggestions();
+
+    /**
+     * Sets how many suggestions show before the list scrolls. The list takes the new height the next time it opens or
+     * its suggestions change.
+     *
+     * @param count the most rows the list shows at once
+     * @return this box
+     * @throws IllegalArgumentException if {@code count} is less than 1
+     */
+    TextBox setMaxVisibleSuggestions(int count);
+
+    /**
+     * Asks the provider for suggestions for the current text and caret, as Ctrl+Space does, and shows them, or closes
+     * the list if there are none. Does nothing without a provider, while read-only, disabled or in password mode, or
+     * while the box is not in a shown tree.
+     *
+     * @return this box
+     */
+    TextBox showSuggestions();
+
+    /**
+     * Closes the suggestion list if it is open.
+     *
+     * @return this box
+     */
+    TextBox hideSuggestions();
+
+    /**
+     * Returns the suggestions the open list shows.
+     *
+     * @return an unmodifiable list in the provider's order; empty when the list is closed
+     */
+    List<Suggestion> shownSuggestions();
+
+    /**
+     * A completion for the text of a box: the text that replaces a range of the box's text when the user accepts it.
+     * The list shows {@link #text()}.
+     *
+     * @param text what replaces the range; line breaks are removed when it applies
+     * @param start the char index where the replaced range starts
+     * @param end the char index where the replaced range ends, exclusive; equal to {@code start} to insert
+     */
+    record Suggestion(String text, int start, int end) {
+
+        /**
+         * Checks the text and the range.
+         *
+         * @throws IllegalArgumentException if {@code start} is negative or greater than {@code end}
+         */
+        public Suggestion {
+            Objects.requireNonNull(text, "text");
+            if (start < 0 || start > end) {
+                throw new IllegalArgumentException("Range must satisfy 0 <= start <= end: " + start + " to " + end);
+            }
+        }
+    }
+
+    /**
+     * Works out the suggestions for the text of a box.
+     *
+     * <pre>{@code
+     * // Commands after a slash, replacing the whole text
+     * box.setSuggestionProvider((text, caret) -> text.startsWith("/")
+     *         ? commands.stream()
+     *                 .filter(command -> command.startsWith(text))
+     *                 .map(command -> new TextBox.Suggestion(command, 0, text.length()))
+     *                 .toList()
+     *         : List.of());
+     * }</pre>
+     */
+    @FunctionalInterface
+    interface SuggestionProvider {
+
+        /**
+         * Returns the suggestions for a text and caret, in the order the list shows them. Called on the UI thread
+         * each time the box asks, so it should be quick.
+         *
+         * @param text the box's whole text, unmasked
+         * @param caret the caret, a char index from 0 to {@code text.length()}
+         * @return the suggestions, or an empty list for none; never null
+         */
+        List<Suggestion> suggest(String text, int caret);
+
+        /**
+         * Returns a provider that completes the word at the caret from a list. The word is the run of characters
+         * other than whitespace around the caret. Every entry that starts with the part of the word before the
+         * caret, ignoring case, is suggested in the list's order, except an entry equal to the whole word. Each
+         * suggestion replaces the whole word. A caret with no word before it gets no suggestions.
+         *
+         * @param words the words to offer; copied, so later changes to the collection are not seen
+         * @return the provider
+         */
+        static SuggestionProvider words(final Collection<String> words) {
+            final List<String> copy = List.copyOf(words);
+            return (text, caret) -> {
+                int start = caret;
+                while (start > 0 && !Character.isWhitespace(text.codePointBefore(start))) {
+                    start -= Character.charCount(text.codePointBefore(start));
+                }
+                if (start == caret) {
+                    return List.of();
+                }
+                int end = caret;
+                while (end < text.length() && !Character.isWhitespace(text.codePointAt(end))) {
+                    end += Character.charCount(text.codePointAt(end));
+                }
+                final String typed = text.substring(start, caret);
+                final String word = text.substring(start, end);
+                final List<Suggestion> found = new ArrayList<>();
+                for (final String candidate : copy) {
+                    if (candidate.regionMatches(true, 0, typed, 0, typed.length()) && !candidate.equals(word)) {
+                        found.add(new Suggestion(candidate, start, end));
+                    }
+                }
+                return found;
+            };
+        }
+    }
 
     /**
      * A text box's own state in a {@link org.inspirenxe.strata.api.component.ComponentSnapshot}. Indexes follow

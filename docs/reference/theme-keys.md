@@ -63,6 +63,10 @@ A style set with `Label.setStyle` overrides the key.
 | `textbox.text.readonly` | `TextBox.STYLE_TEXT_READ_ONLY` | text style | no | `textbox.text.disabled` |
 | `textbox.selection` | `TextBox.STYLE_SELECTION` | paint | no | `0x806A9FFF`, translucent blue |
 | `textbox.caret` | `TextBox.STYLE_CARET` | paint | no | `0xFFE0E0E0`, light gray |
+| `textbox.suggestions` | `TextBox.STYLE_SUGGESTIONS` | paint | no | `combobox.popup` |
+| `textbox.suggestion.text` | `TextBox.STYLE_SUGGESTION_TEXT` | text style | no | `textbox.text` |
+
+The suggestion list also uses the `ListView` and `ScrollPanel` keys.
 
 ## ScrollPanel
 
@@ -211,6 +215,19 @@ Both read the `ListView` and `ScrollPanel` keys for their rows.
 | `grid.cell.hovered` | `GridView.STYLE_CELL_HOVERED` | paint | no | Nothing |
 | `grid.cell.selected` | `GridView.STYLE_CELL_SELECTED` | paint | no | `grid.cell.hovered` |
 
+## DualList and ColorPicker
+
+A dual list's rows also use the `ListView` and `ScrollPanel` keys and its buttons the `Button` keys. A color picker's hex field uses the `TextBox` keys.
+
+| Key | Constant | Kind | Required | Fallback |
+|---|---|---|---|---|
+| `duallist.list` | `DualList.STYLE_LIST` | paint | no | Nothing |
+| `duallist.title` | `DualList.STYLE_TITLE` | text style | no | `label.text` |
+| `colorpicker.frame` | `ColorPicker.STYLE_FRAME` | paint | no | Nothing |
+| `colorpicker.marker` | `ColorPicker.STYLE_MARKER` | paint | no | `0xFFFFFFFF`, white |
+| `colorpicker.marker.outline` | `ColorPicker.STYLE_MARKER_OUTLINE` | paint | no | `0xFF000000`, black |
+| `colorpicker.disabled` | `ColorPicker.STYLE_DISABLED` | paint | no | Nothing |
+
 ## Overlays and tooltips
 
 | Key | Constant | Kind | Required | Fallback |
@@ -331,6 +348,14 @@ Both read the `ListView` and `ScrollPanel` keys for their rows.
 | `grid.cell` | solid `0xFF1B1C1F` |
 | `grid.cell.hovered` | solid `0x40FFFFFF` |
 | `grid.cell.selected` | solid `0x606A9FFF` |
+| `textbox.suggestions` | solid `0xFF16171A` |
+| `textbox.suggestion.text` | `0xFFE0E0E0` |
+| `duallist.list` | solid `0xFF16171A` |
+| `duallist.title` | `0xFFC8C8C8` |
+| `colorpicker.frame` | solid `0xFF3C3F44` |
+| `colorpicker.marker` | solid `0xFFFFFFFF` |
+| `colorpicker.marker.outline` | solid `0xFF000000` |
+| `colorpicker.disabled` | solid `0xA0141518` |
 | `toast.background` | solid `0xF02B2D31` |
 | `toast.text` | `0xFFF0F0F0` |
 | `overlay.backdrop` | solid `0x60000000` |

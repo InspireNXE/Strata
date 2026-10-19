@@ -7,7 +7,7 @@ Every number Strata picks for you.
 | Setting | Default |
 |---|---|
 | Visible, enabled | yes |
-| Focusable, tabbable | no, except buttons, check boxes, radio buttons, toggle switches, sliders, text boxes, text areas, lists (also inside tables and trees), combo boxes, tab bars and expanders. Menus are focusable but not tabbable. |
+| Focusable, tabbable | no, except buttons, check boxes, radio buttons, toggle switches, sliders, text boxes, text areas, lists (also inside tables, trees and dual lists), combo boxes, tab bars and expanders. Menus are focusable but not tabbable. A color picker is neither, but its hex field is. |
 | Tab index | 0 |
 | Cursor | none (inherits; `ARROW` at the root) |
 | Margin | `Insets.NONE` |
@@ -80,6 +80,9 @@ Every number Strata picks for you.
 | | Caret blink | every 500 ms |
 | | Cursor | `TEXT` |
 | | Filter, read-only, select all on focus | none, off, off |
+| | Suggestion provider | none |
+| | Suggestions shown before scrolling | 8 |
+| | Suggestion rows | one line plus 4, text 4 in from the left; the list at least as wide as the box |
 | `ListView` | Row height and spacing | 20 and 0 |
 | | Selection | none; deselecting by pressing off; activation by double click |
 | | Smallest desired width | 40 |
@@ -133,6 +136,15 @@ Every number Strata picks for you.
 | | Content inset | 1 |
 | | Selectable | no |
 | | Activation | a left double click |
+| `DualList` | List width, rows shown | 100 each, 6 rows of 20 |
+| | Spacing | 4 between the lists, the buttons and the title row |
+| | Titles, items, selection | none, none, none |
+| | Cell factory, key function | a label of `String.valueOf(item)`, the item itself |
+| `ColorPicker` | Color | `0xFFFFFFFF`, opaque white |
+| | Alpha strip | hidden |
+| | Square, strip width, spacing | 96 square, 10, 4 |
+| | Checkerboard cells | 4, white and `0xFFC8C8C8` |
+| | Cursor | `CROSSHAIR`, and `TEXT` over the hex field |
 
 ## Input
 
