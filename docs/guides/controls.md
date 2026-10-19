@@ -1,6 +1,6 @@
 # Controls
 
-Strata's built-in controls are interfaces in the subpackages of `org.inspirenxe.strata.api.control`, made by the factory: `display` (`Label`, `Image`, `ProgressBar`, `Separator`), `button` (`Button`, `CheckBox`, `RadioButton`, `RadioGroup`, `ToggleSwitch`), `field` (`TextBox`, `TextArea`, `Spinner`, `Slider`), `collection` (`ListView`, `ComboBox`, `TableView`, `TreeView`, `GridView`), `menu` (`Menu`, `MenuBar`), `pane` (`TabBar`, `Expander`, `SplitPane`) and `window` (`Window`, `MessageBox`). Each one has [events](events.md): a request (Pre) for each change the user can make, which a handler can cancel or rewrite, and a report (Post) for each change from any source. Each section below lists them in an Events table. Their theme keys are listed on each control below and in the [theme key reference](../reference/theme-keys.md). Scrolling is a container, [`ScrollPanel`](layout.md#scrollpanel), and popups, dialogs and tooltips are in [Overlays and tooltips](overlays.md).
+Strata's built-in controls are interfaces in the subpackages of `org.inspirenxe.strata.api.control`, made by the factory: `display` (`Label`, `Image`, `ProgressBar`, `Separator`), `button` (`Button`, `CycleButton`, `CheckBox`, `RadioButton`, `RadioGroup`, `ToggleSwitch`), `field` (`TextBox`, `TextArea`, `Spinner`, `Slider`), `collection` (`ListView`, `ComboBox`, `TableView`, `TreeView`, `GridView`), `menu` (`Menu`, `MenuBar`), `pane` (`TabBar`, `Expander`, `SplitPane`) and `window` (`Window`, `MessageBox`). Each one has [events](events.md): a request (Pre) for each change the user can make, which a handler can cancel or rewrite, and a report (Post) for each change from any source. Each section below lists them in an Events table. Their theme keys are listed on each control below and in the [theme key reference](../reference/theme-keys.md). Scrolling is a container, [`ScrollPanel`](layout.md#scrollpanel), and popups, dialogs and tooltips are in [Overlays and tooltips](overlays.md).
 
 ## Attributes
 
@@ -8,15 +8,15 @@ Controls that do the same kind of thing share small interfaces called attributes
 
 | Attribute | Package | What it adds | Events | Controls |
 |---|---|---|---|---|
-| `HasText` | `text` | `text()`, `setText` | | `Button`, `CheckBox`, `RadioButton`, `ToggleSwitch`, `Label`, `ProgressBar`, and through `TextInput` the text fields |
+| `HasText` | `text` | `text()`, `setText` | | `Button`, `CycleButton`, `CheckBox`, `RadioButton`, `ToggleSwitch`, `Label`, `ProgressBar`, and through `TextInput` the text fields |
 | `Titled` | `text` | `title()`, `setTitle` | | `Window`, `Expander` |
 | `TextInput` | `text` | the caret, the selection, `setMaxLength`, `setReadOnly`, `setTextPadding` | `EDIT`, `EDITED` | `TextBox`, `TextArea` |
 | `Toggle` | `value` | `isSelected()`, `setSelected`, `toggle()` | `TOGGLE`, `TOGGLED` | `CheckBox`, `ToggleSwitch`, `RadioButton` |
 | `Ranged` | `value` | `value()`, `setValue`, `min()`, `max()`, `setRange` | `CHANGE`, `CHANGED` | `Slider`, `Spinner`, `ProgressBar` |
 | `Stepped` | `value` | `Ranged` plus `step()`, `setStep` | | `Slider`, `Spinner` |
-| `ItemSource` | `item` | `items()`, `setItems`, `refresh()`, `setKeyFunction` | | `ListView`, `TableView`, `TreeView`, `ComboBox`, `GridView` |
+| `ItemSource` | `item` | `items()`, `setItems`, `refresh()`, `setKeyFunction` | | `ListView`, `TableView`, `TreeView`, `ComboBox`, `GridView`, `CycleButton` |
 | `CellSource` | `item` | `setCellFactory` | | `ListView`, `TreeView`, `GridView` |
-| `SingleSelection` | `item` | `selectedIndex()`, `selected()`, `select(index)`, `selectItem(item)`, `clearSelection()` | `SELECT`, `SELECTED` | the collections, `TabBar`, `MenuBar`, `RadioGroup` |
+| `SingleSelection` | `item` | `selectedIndex()`, `selected()`, `select(index)`, `selectItem(item)`, `clearSelection()` | `SELECT`, `SELECTED` | the collections, `CycleButton`, `TabBar`, `MenuBar`, `RadioGroup` |
 | `Activatable` | `item` | `setActivateOnClick` | `ACTIVATE`, `ACTIVATED` | `ListView`, `TableView`, `TreeView`, `GridView` |
 | `RowView` | `item` | row height and spacing, the placeholder, scrolling, `setDeselectable` | | `ListView`, `TableView`, `TreeView` |
 | `Closable` | `popup` | `close()` | `CLOSE`, `CLOSED` | `Window`, `Overlay`, and through `Openable` the others |
@@ -99,7 +99,7 @@ A canvas draws a placeholder for a visual it did not make. Each adapter document
 
 ## Button
 
-A push button with a text caption.
+A push button with a text caption, an icon, or both.
 
 ```java
 Button save = factory.button("Save").onEvent(Button.PRESSED, event -> this.save());
@@ -109,7 +109,11 @@ Button save = factory.button("Save").onEvent(Button.PRESSED, event -> this.save(
 |---|---|
 | `setText(text)` | One line. A new layout runs. |
 | `press()` | Presses it from code: fires `PRESSED` but no `PRESS` request. Does nothing while disabled. |
-| `setTextPadding(Insets)` | Space between the caption and the edges. 8 left and right, 5 top and bottom by default. |
+| `setTextPadding(Insets)` | Space between the caption and the edges. 8 left and right, 5 top and bottom by default; 2 on every side for an icon with no caption; none for a link. |
+| `setIcon(SpriteId)`, `setIcon(Visual)` | Shows an icon before the caption. A visual is drawn at its natural size. |
+| `setIconSize(width, height)` | The size the icon is drawn at, 16 by 16 by default. Strata cannot ask an engine for a sprite's size, so the caller gives it. |
+| `clearIcon()` | Removes the icon. |
+| `setLink(boolean)` | Makes the button a link. See below. |
 
 A button presses on a left click, or on a press of Enter, keypad Enter or Space while it has focus. Held keys that repeat do not press it again. It consumes those inputs. A disabled button does neither and draws its disabled face.
 
@@ -129,6 +133,56 @@ It is focusable and tabbable, shows the hand cursor, and has a minimum size of 2
 | `Button.PRESSED` | Post | After every press, including `press()` |
 
 To react to other mouse buttons, such as a right click, handle `CLICK` yourself; see [Clicks](events.md#clicks).
+
+### Icons
+
+```java
+Button refresh = factory.button("Refresh").setIcon(SpriteId.of("mymod", "refresh"));
+Button settings = factory.button().setIcon(icon);
+```
+
+The icon is drawn 4 units before the caption, and the two are centered together as one block. A button with an icon and no caption is meant to be square: it pads by 2 units on every side, so a 16 by 16 icon gives 20 by 20. A disabled button draws its icon in half-bright gray. `setIcon` with a sprite keeps the current icon size, and with a visual takes the visual's size.
+
+### Links
+
+```java
+Button terms = factory.button("Terms of sale").setLink(true).onEvent(Button.PRESSED, event -> this.openTerms());
+```
+
+A link has no frame. It draws only its caption, and the caption underlines while the link is hovered or focused. It has no padding and no minimum size, so it sits in a line of other text. It presses, focuses and fires events exactly like a button. `setLink(false)` brings the frame and the 20 by 20 minimum size back.
+
+| Key | Used for |
+|---|---|
+| `button.link.text` (optional) | The caption. Falls back to `button.text`. |
+| `button.link.text.hovered` (optional) | The caption while hovered or focused. Falls back to `button.link.text` underlined. |
+| `button.link.text.disabled` (optional) | The caption when disabled. Falls back to `button.text.disabled`. |
+
+A link reads none of the face keys and no focus ring.
+
+## CycleButton
+
+A button that steps through a list of values, one on each click, and shows the current one after its label, as in `Difficulty: Hard`.
+
+```java
+CycleButton<Difficulty> difficulty = factory.<Difficulty>cycleButton("Difficulty")
+        .setItems(List.of(Difficulty.values()))
+        .onEvent(SingleSelection.SELECTED, event -> this.apply());
+```
+
+| Method | Default | Notes |
+|---|---|---|
+| `setText(label)` | empty | The text before the value (`HasText`). With no label only the value shows, and with no value only the label. |
+| `setValueLabelFunction(function)` | `String::valueOf` | Turns a value into its text. |
+| `setItems(list)` | none | The values (`ItemSource`). The selection stays on the item with the same key, or moves to the first item. |
+| `select(index)`, `selectItem(item)` | the first item | Chooses a value from code (`SingleSelection`). |
+| `cycle(steps)` | | Moves the selection from code, wrapping at the ends. One step forward from nothing selects the first item. |
+
+A left click, or Enter or Space while focused, selects the next value, and the first one after the last. A right click, or Shift with any of those, selects the previous one. A disabled button, or one with fewer than two values, ignores them. The button asks for the label plus its widest value, so cycling never changes its size, and it is focusable, tabbable and at least 20 by 20 units. It draws with the `button.*` keys of [`Button`](#button).
+
+| Event | Kind | Fires |
+|---|---|---|
+| `SingleSelection.SELECT` | Pre | When the user steps to another value, with the index about to be selected. Cancel to keep the value, or set another index (-1 clears). |
+| `SingleSelection.SELECTED` | Post | After the selection changed from any source, with the index and the previous index |
 
 ## CheckBox
 

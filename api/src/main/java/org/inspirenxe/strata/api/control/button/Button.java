@@ -6,11 +6,13 @@ import org.inspirenxe.strata.api.event.ControlEvent;
 import org.inspirenxe.strata.api.event.EventType;
 import org.inspirenxe.strata.api.event.RequestEvent;
 import org.inspirenxe.strata.api.geom.Insets;
+import org.inspirenxe.strata.api.theme.SpriteId;
+import org.inspirenxe.strata.api.visual.Visual;
 
 import java.util.Objects;
 
 /**
- * A push button with a text caption.
+ * A push button with a text caption, an icon, or both.
  *
  * <p>The button is pressed when it is left-clicked, or when it has focus and Enter or Space is pressed (not
  * repeated). It consumes those inputs. Each press fires {@link #PRESS}, then {@link #PRESSED} unless a handler
@@ -19,6 +21,13 @@ import java.util.Objects;
  * <p>It is focusable and tabbable, shows the hand cursor, and has a minimum size of 20 by 20. Its desired size is
  * the caption plus the text padding (8 units left and right, 5 top and bottom by default). The caption is centered
  * in whatever size the button ends up.</p>
+ *
+ * <p>An {@linkplain #setIcon(SpriteId) icon} is drawn before the caption, 4 units from it, and the two are centered
+ * together. A button with an icon and no caption is meant to be square, so it pads by 2 units on every side and a
+ * 16 by 16 icon gives 20 by 20. A disabled button draws its icon in half-bright gray.</p>
+ *
+ * <p>{@linkplain #setLink A link} has no frame: it draws only its caption, which underlines while hovered or
+ * focused, and pads by nothing and has no minimum size.</p>
  *
  * <h2>Theme keys</h2>
  * <ul>
@@ -31,6 +40,15 @@ import java.util.Objects;
  *     <li>{@value #STYLE_TEXT} (text style, optional): the caption. Falls back to the default text style.</li>
  *     <li>{@value #STYLE_TEXT_DISABLED} (text style, optional): the caption when disabled. Falls back to
  *     {@value #STYLE_TEXT}.</li>
+ * </ul>
+ *
+ * <p>A link reads no face and no focus ring, and these keys instead:</p>
+ * <ul>
+ *     <li>{@value #STYLE_LINK_TEXT} (text style, optional): the caption. Falls back to {@value #STYLE_TEXT}.</li>
+ *     <li>{@value #STYLE_LINK_TEXT_HOVERED} (text style, optional): the caption while hovered or focused. Falls back
+ *     to {@value #STYLE_LINK_TEXT} underlined.</li>
+ *     <li>{@value #STYLE_LINK_TEXT_DISABLED} (text style, optional): the caption when disabled. Falls back to
+ *     {@value #STYLE_TEXT_DISABLED}.</li>
  * </ul>
  *
  * <pre>{@code
@@ -69,6 +87,18 @@ public interface Button extends Component<Button>, HasText<Button> {
      * Style key for the caption when disabled (text style, optional).
      */
     String STYLE_TEXT_DISABLED = "button.text.disabled";
+    /**
+     * Style key for the caption of a link (text style, optional).
+     */
+    String STYLE_LINK_TEXT = "button.link.text";
+    /**
+     * Style key for the caption of a link while hovered or focused (text style, optional).
+     */
+    String STYLE_LINK_TEXT_HOVERED = "button.link.text.hovered";
+    /**
+     * Style key for the caption of a link when disabled (text style, optional).
+     */
+    String STYLE_LINK_TEXT_DISABLED = "button.link.text.disabled";
 
     /**
      * Fired when the user presses the button by click or key, before it is pressed. Canceling it refuses the press,
@@ -98,10 +128,92 @@ public interface Button extends Component<Button>, HasText<Button> {
     /**
      * Sets the space between the caption and the button's edges, which with the caption gives the desired size.
      *
-     * @param padding the padding; 8 left and right, 5 top and bottom by default
+     * @param padding the padding; by default 8 left and right and 5 top and bottom, 2 on every side for a button
+     *     with an icon and no caption, and none for a link
      * @return this button
      */
     Button setTextPadding(Insets padding);
+
+    /**
+     * Returns the icon sprite.
+     *
+     * @return the sprite, or null if the icon is a visual or there is none
+     */
+    SpriteId iconSprite();
+
+    /**
+     * Returns the icon visual.
+     *
+     * @return the visual, or null if the icon is a sprite or there is none
+     */
+    Visual iconVisual();
+
+    /**
+     * Shows a sprite before the caption, replacing any icon. The size stays what it was, 16 by 16 by default. A new
+     * layout runs.
+     *
+     * @param sprite the sprite; see {@link SpriteId} for where engines look for it
+     * @return this button
+     */
+    Button setIcon(SpriteId sprite);
+
+    /**
+     * Shows a visual before the caption, replacing any icon, at the visual's natural size. A new layout runs.
+     *
+     * @param visual the visual
+     * @return this button
+     */
+    Button setIcon(Visual visual);
+
+    /**
+     * Removes the icon. A new layout runs.
+     *
+     * @return this button
+     */
+    Button clearIcon();
+
+    /**
+     * Returns the width the icon is drawn at.
+     *
+     * @return the width in UI units; 16 by default
+     */
+    float iconWidth();
+
+    /**
+     * Returns the height the icon is drawn at.
+     *
+     * @return the height in UI units; 16 by default
+     */
+    float iconHeight();
+
+    /**
+     * Sets the size the icon is drawn at. Strata cannot ask an engine for a sprite's size, so the caller gives it.
+     * A new layout runs.
+     *
+     * @param width the width in UI units, finite and not negative
+     * @param height the height in UI units, finite and not negative
+     * @return this button
+     * @throws IllegalArgumentException if either size is negative, infinite or not a number
+     */
+    Button setIconSize(float width, float height);
+
+    /**
+     * Returns whether the button is a link.
+     *
+     * @return true if it draws no frame
+     */
+    boolean isLink();
+
+    /**
+     * Makes the button a link or a framed button again. A link draws no face and no focus ring, only its caption in
+     * the link text styles, and the caption underlines while the link is hovered or focused. It has no minimum size
+     * and, unless {@link #setTextPadding} was called, no padding; turning the link off restores the minimum size of
+     * 20 by 20. A new layout runs.
+     *
+     * @param link true for a link
+     * @return this button
+     */
+    Button setLink(boolean link);
 
     /**
      * Presses the button as if it had been clicked, firing {@link #PRESSED} but not {@link #PRESS}. Does nothing
