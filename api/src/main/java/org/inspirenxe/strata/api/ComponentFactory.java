@@ -3,6 +3,7 @@ package org.inspirenxe.strata.api;
 import org.inspirenxe.strata.api.component.Component;
 import org.inspirenxe.strata.api.control.button.Button;
 import org.inspirenxe.strata.api.control.button.CheckBox;
+import org.inspirenxe.strata.api.control.button.CycleButton;
 import org.inspirenxe.strata.api.control.button.RadioGroup;
 import org.inspirenxe.strata.api.control.button.ToggleSwitch;
 import org.inspirenxe.strata.api.control.collection.ComboBox;
@@ -550,6 +551,38 @@ public interface ComponentFactory {
      * @return a new grid
      */
     <T> GridView<T> gridView(Function<? super T, ? extends Component<?>> cellFactory);
+
+    /**
+     * Makes a {@link CycleButton} with no label and no values that shows each value as
+     * {@link String#valueOf(Object)}.
+     *
+     * @param <T> the type of the values
+     * @return a new cycle button
+     */
+    default <T> CycleButton<T> cycleButton() {
+        return this.cycleButton("");
+    }
+
+    /**
+     * Makes a {@link CycleButton} with no values that shows each value as {@link String#valueOf(Object)}.
+     *
+     * @param <T> the type of the values
+     * @param text the label shown before the value
+     * @return a new cycle button
+     */
+    default <T> CycleButton<T> cycleButton(String text) {
+        return this.cycleButton(text, String::valueOf);
+    }
+
+    /**
+     * Makes a {@link CycleButton} with no values.
+     *
+     * @param <T> the type of the values
+     * @param text the label shown before the value
+     * @param valueLabelFunction returns the text for a value
+     * @return a new cycle button
+     */
+    <T> CycleButton<T> cycleButton(String text, Function<? super T, String> valueLabelFunction);
 
     /**
      * Creates the peer of a new leaf component. Called by {@link CustomComponent}'s constructor; do not call it

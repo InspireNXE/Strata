@@ -13,6 +13,11 @@ Every style key the built-in controls read. A theme lacking a required key canno
 | `button.focus` | `Button.STYLE_FOCUS` | paint | no | No focus ring |
 | `button.text` | `Button.STYLE_TEXT` | text style | no | `TextStyle.DEFAULT` |
 | `button.text.disabled` | `Button.STYLE_TEXT_DISABLED` | text style | no | `button.text` |
+| `button.link.text` | `Button.STYLE_LINK_TEXT` | text style | no | `button.text` |
+| `button.link.text.hovered` | `Button.STYLE_LINK_TEXT_HOVERED` | text style | no | `button.link.text` underlined |
+| `button.link.text.disabled` | `Button.STYLE_LINK_TEXT_DISABLED` | text style | no | `button.text.disabled` |
+
+The `button.link.*` keys apply to a button made a link, which reads no face keys. A `CycleButton` reads the same keys as a button.
 
 ## Label
 

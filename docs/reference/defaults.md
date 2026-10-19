@@ -52,7 +52,9 @@ Every number Strata picks for you.
 | | Spans | none: plain text |
 | | Text scale | 1 |
 | | Overflow | `VISIBLE` |
-| `Button` | Text padding | 8 left and right, 5 top and bottom |
+| `Button` | Text padding | 8 left and right, 5 top and bottom; 2 on every side with an icon and no caption; none for a link |
+| | Icon size, gap to the caption | 16 by 16, 4 |
+| | Link | off; a link has no minimum size |
 | | Minimum size | 20 by 20 |
 | | Cursor | `HAND` |
 | | Focus ring | one unit, inside the edge, if the theme has `button.focus` |
@@ -84,6 +86,10 @@ Every number Strata picks for you.
 | | Selection | none; deselecting by pressing off; activation by double click |
 | | Smallest desired width | 40 |
 | | Wheel | one row and its spacing a notch |
+| `CycleButton` | Label, value label function | empty, `String::valueOf` |
+| | Selection | the first item once there are items |
+| | Padding, minimum size, cursor | as `Button` |
+| | Desired size | label plus widest value, with 8 and 5 of padding |
 | `ComboBox` | Rows shown before scrolling | 8 |
 | | Selection | the first option once there are options |
 | | Label function, key function | `toString`, the option itself |

@@ -3,6 +3,8 @@ package org.inspirenxe.strata.sandbox;
 import org.inspirenxe.strata.api.ComponentFactory;
 import org.inspirenxe.strata.api.component.Component;
 import org.inspirenxe.strata.api.component.Tooltip;
+import org.inspirenxe.strata.api.control.button.Button;
+import org.inspirenxe.strata.api.control.button.CycleButton;
 import org.inspirenxe.strata.api.control.button.RadioButton;
 import org.inspirenxe.strata.api.control.button.RadioGroup;
 import org.inspirenxe.strata.api.control.button.ToggleSwitch;
@@ -33,9 +35,12 @@ import org.inspirenxe.strata.api.screen.Screen;
 import org.inspirenxe.strata.api.screen.ScreenHandle;
 import org.inspirenxe.strata.api.theme.Paint;
 import org.inspirenxe.strata.api.theme.Theme;
+import org.inspirenxe.strata.api.visual.Visual;
 import org.inspirenxe.strata.spi.ScreenStack;
 import org.inspirenxe.strata.swing.SwingSnapshot;
+import org.inspirenxe.strata.swing.SwingVisuals;
 
+import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
 import java.util.Arrays;
@@ -98,6 +103,7 @@ public final class ControlsScreen implements Screen {
                 .setSpacing(6)
                 .setPadding(Insets.of(8))
                 .add(this.choices(ui))
+                .add(this.buttons(ui))
                 .add(this.numbers(ui))
                 .add(this.offers(ui))
                 .add(this.notes(ui))
@@ -148,6 +154,43 @@ public final class ControlsScreen implements Screen {
                 .setSpacing(6)
                 .add(radios)
                 .add(toggles);
+    }
+
+    private Component<?> buttons(final ComponentFactory ui) {
+        final CycleButton<String> order = ui.<String>cycleButton("Order")
+                .setItems(List.of("Newest", "Cheapest", "Ending soon"));
+        final Button refresh = ui.button("Refresh")
+                .setIcon(icon());
+        final Button settings = ui.button()
+                .setIcon(icon());
+        final Button terms = ui.button("Terms of sale")
+                .setLink(true);
+        final Button gone = ui.button("Seller gone")
+                .setLink(true)
+                .setEnabled(false);
+        return ui.stackPanel(Orientation.HORIZONTAL)
+                .setSpacing(10)
+                .add(order)
+                .add(refresh)
+                .add(settings)
+                .add(terms)
+                .add(gone);
+    }
+
+    /**
+     * Draws a 16 by 16 stand-in icon: a filled circle with a lighter ring.
+     */
+    private static Visual icon() {
+        final BufferedImage image = new BufferedImage(16, 16, BufferedImage.TYPE_INT_ARGB);
+        for (int y = 0; y < 16; y++) {
+            for (int x = 0; x < 16; x++) {
+                final int distance = (x - 8) * (x - 8) + (y - 8) * (y - 8);
+                if (distance <= 42) {
+                    image.setRGB(x, y, distance > 30 ? 0xFFB0D0FF : 0xFF4C86E0);
+                }
+            }
+        }
+        return SwingVisuals.image(image);
     }
 
     private Component<?> numbers(final ComponentFactory ui) {

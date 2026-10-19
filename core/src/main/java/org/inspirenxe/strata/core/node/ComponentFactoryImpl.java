@@ -4,6 +4,7 @@ import org.inspirenxe.strata.api.ComponentFactory;
 import org.inspirenxe.strata.api.component.Component;
 import org.inspirenxe.strata.api.control.button.Button;
 import org.inspirenxe.strata.api.control.button.CheckBox;
+import org.inspirenxe.strata.api.control.button.CycleButton;
 import org.inspirenxe.strata.api.control.button.RadioGroup;
 import org.inspirenxe.strata.api.control.button.ToggleSwitch;
 import org.inspirenxe.strata.api.control.collection.ComboBox;
@@ -49,6 +50,7 @@ import org.inspirenxe.strata.api.theme.Theme;
 import org.inspirenxe.strata.api.visual.Visual;
 import org.inspirenxe.strata.core.control.button.ButtonImpl;
 import org.inspirenxe.strata.core.control.button.CheckBoxImpl;
+import org.inspirenxe.strata.core.control.button.CycleButtonImpl;
 import org.inspirenxe.strata.core.control.button.RadioGroupImpl;
 import org.inspirenxe.strata.core.control.button.ToggleSwitchImpl;
 import org.inspirenxe.strata.core.control.collection.ComboBoxImpl;
@@ -226,6 +228,11 @@ public final class ComponentFactoryImpl implements ComponentFactory {
     @Override
     public <T> ListView<T> listView(final Function<? super T, ? extends Component<?>> cellFactory) {
         return new ListViewImpl<>(this, cellFactory);
+    }
+
+    @Override
+    public <T> CycleButton<T> cycleButton(final String text, final Function<? super T, String> valueLabelFunction) {
+        return new CycleButtonImpl<>(this, text, valueLabelFunction);
     }
 
     @Override
