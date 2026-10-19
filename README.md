@@ -8,14 +8,13 @@ Strata is a GUI library for Java games that does not depend on any engine. You b
 - typed events that handlers can cancel
 - themes that map style keys to colors, gradients and sprites
 
-This repository has the Java2D/Swing adapter. The Minecraft adapter lives in the [Strata-Minecraft](https://github.com/InspireNXE/Strata-Minecraft) repository.
+This repository holds the library alone. Adapters live in their own repositories: the Java2D/Swing adapter in Strata-Swing and the Minecraft adapter in [Strata-Minecraft](https://github.com/InspireNXE/Strata-Minecraft).
 
 | Module | What it is |
 |---|---|
 | `api` | What developers compile against: interfaces, value records, the `ComponentFactory`, the controls (`Label`, `Image`, `Button`, `CheckBox`, `Slider`, `TextBox`, `ListView`, `ComboBox`, `Window`, `MessageBox`, `TabBar`, `ProgressBar`, `Separator`, `RadioButton`, `ToggleSwitch`, `Spinner`, `TextArea`, `TableView`, `TreeView`, `Menu`, `MenuBar`, `Expander`, `SplitPane`, `GridView`) and the attributes they share (`Toggle`, `SingleSelection`, `TextInput` and others), the containers (including `ScrollPanel`), overlays and tooltips, and the extension points (`CustomComponent`, `CustomComposite`, `CustomContainer`, `Painter`, `Environment`). |
 | `spi` | What engine adapters implement (`Canvas`, `Platform`) and drive (`ScreenHost`, `ScreenStack`), plus contract tests for adapters. |
 | `core` | The implementation behind both. Only adapters use it directly. |
-| `canvas-swing` | The Java2D/Swing adapter: `StrataPanel` and `SwingSnapshot`. |
 
 [docs/DESIGN.md](docs/DESIGN.md) covers the design and where its ideas come from (MalisisCore and Wintergreen), and [docs/ROADMAP.md](docs/ROADMAP.md) tracks what is built and what is next. The Javadoc of `api` and `spi` is the contract, including what adapters must guarantee.
 
@@ -63,7 +62,7 @@ Building needs JDK 25.
 ./gradlew build
 ```
 
-Every control has a page in the gallery, which runs on the Java2D adapter and lives in the Strata-Gallery repository, a sibling of this one at `../Strata-Gallery`. From there:
+Every control has a page in the gallery, which runs on the Java2D adapter from Strata-Swing and lives in the Strata-Gallery repository, a sibling of this one at `../Strata-Gallery`. From there:
 
 ```bash
 ./gradlew :gallery:run
