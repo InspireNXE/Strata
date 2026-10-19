@@ -302,7 +302,7 @@ public final class ListViewImpl<T> extends CustomComposite<ListView<T>> implemen
      * @param activate takes a row the user activated
      * @param selected told the new and previous index after every change of selection
      */
-    void route(final IntConsumer select, final IntConsumer activate, final SelectionReport selected) {
+    public void route(final IntConsumer select, final IntConsumer activate, final SelectionReport selected) {
         this.selectRoute = Objects.requireNonNull(select, "select");
         this.activateRoute = Objects.requireNonNull(activate, "activate");
         this.selectedRoute = Objects.requireNonNull(selected, "selected");
@@ -311,8 +311,10 @@ public final class ListViewImpl<T> extends CustomComposite<ListView<T>> implemen
     /**
      * Selects the row a request ended with, as {@link #select} does, or clears the selection for -1. A null or any
      * other index outside the items is ignored.
+     *
+     * @param index the row to select, -1 for none, or null
      */
-    void applySelect(final Integer index) {
+    public void applySelect(final Integer index) {
         if (index != null && index >= -1 && index < this.items.size()) {
             this.select(index);
         }
@@ -404,7 +406,7 @@ public final class ListViewImpl<T> extends CustomComposite<ListView<T>> implemen
      * Told the new and previous selected index of a routed list.
      */
     @FunctionalInterface
-    interface SelectionReport {
+    public interface SelectionReport {
         /**
          * Told after the selection changed.
          *

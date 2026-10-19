@@ -2,6 +2,8 @@ package org.inspirenxe.strata.core.control.field;
 
 import org.inspirenxe.strata.api.ComponentFactory;
 import org.inspirenxe.strata.api.component.CursorKind;
+import org.inspirenxe.strata.api.control.collection.ComboBox;
+import org.inspirenxe.strata.api.control.display.Label;
 import org.inspirenxe.strata.api.control.field.TextBox;
 import org.inspirenxe.strata.api.event.CharEvent;
 import org.inspirenxe.strata.api.event.DragEvent;
@@ -18,12 +20,17 @@ import org.inspirenxe.strata.api.input.Key;
 import org.inspirenxe.strata.api.input.KeyAction;
 import org.inspirenxe.strata.api.input.Modifiers;
 import org.inspirenxe.strata.api.input.MouseButton;
+import org.inspirenxe.strata.api.layout.Anchor;
+import org.inspirenxe.strata.api.overlay.Overlay;
 import org.inspirenxe.strata.api.text.TextMetrics;
+import org.inspirenxe.strata.api.text.TextOverflow;
 import org.inspirenxe.strata.api.text.TextSpan;
 import org.inspirenxe.strata.api.text.TextStyle;
 import org.inspirenxe.strata.api.theme.Paint;
 import org.inspirenxe.strata.api.theme.Theme;
+import org.inspirenxe.strata.core.control.collection.ListViewImpl;
 
+import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 import java.util.function.UnaryOperator;
@@ -43,6 +50,12 @@ import java.util.function.UnaryOperator;
  * directly, without putting the old text back first. Enter fires {@link TextBox#SUBMIT} on every press, but is
  * consumed only when a handler for {@link TextBox#SUBMIT} or {@link TextBox#SUBMITTED} is on the path, so an
  * ancestor's key handler still sees Enter from a box nobody submits.</p>
+ *
+ * <p>The suggestion list is a {@link ListViewImpl} in a popup, not focusable, built when it first opens and dropped
+ * when it closes. The box routes the list's input to itself, so the list fires no events. Its rows are one line of
+ * {@link TextBox#STYLE_SUGGESTION_TEXT} plus 4 units tall, with the text 4 units in from the left, and it is at least
+ * as wide as the box. A press on a row takes focus away from the box, as a press on anything that cannot take focus
+ * does; the box keeps the list open through that and takes focus back without moving the caret.</p>
  *
  * <p>Where it departs from Wintergreen:</p>
  * <ul>
@@ -67,6 +80,7 @@ public final class TextBoxImpl extends CustomComponent<TextBox> implements TextB
     private static final Paint DEFAULT_SELECTION = Paint.solid(0x806A9FFF);
     private static final Paint DEFAULT_CARET = Paint.solid(0xFFE0E0E0);
 
+    private final ComponentFactory ui;
     private final StringBuilder buffer;
     private final Runnable drawContent;
     private int maxLength;
@@ -76,6 +90,19 @@ public final class TextBoxImpl extends CustomComponent<TextBox> implements TextB
     private UnaryOperator<String> filter;
     private boolean readOnly;
     private boolean selectAllOnFocus;
+
+    // Suggestions
+    private SuggestionProvider suggestionProvider;
+    private int maxVisibleSuggestions;
+    private List<Suggestion> suggestions;
+    private Overlay suggestionPopup;
+    private ListViewImpl<Suggestion> suggestionList;
+    // Set while an accepted suggestion applies, so the edit does not ask for suggestions again
+    private boolean completing;
+    // Whether the last user edit applied, for a completion to report
+    private boolean editApplied;
+    // Set while the box takes focus back from a press on the list, so the caret stays put
+    private boolean refocusing;
 
     // The text and selection before the edit in progress, for a rejected edit to fall back to
     private String beforeText;
@@ -101,6 +128,8 @@ public final class TextBoxImpl extends CustomComponent<TextBox> implements TextB
     private TextStyle textStyle;
     private TextStyle disabledTextStyle;
     private TextStyle readOnlyTextStyle;
+    private Paint suggestionsPaint;
+    private TextStyle suggestionTextStyle;
 
     // Derived from text and caret, recomputed only after a change
     private boolean visualsDirty;
@@ -123,11 +152,14 @@ public final class TextBoxImpl extends CustomComponent<TextBox> implements TextB
     @SuppressWarnings("this-escape")
     public TextBoxImpl(final ComponentFactory ui) {
         super(ui);
+        this.ui = ui;
         this.buffer = new StringBuilder();
         this.drawContent = this::drawContent;
         this.maxLength = Integer.MAX_VALUE;
         this.maskCodePoint = '*';
         this.textPadding = Insets.of(4f, 5f);
+        this.maxVisibleSuggestions = DEFAULT_MAX_VISIBLE_SUGGESTIONS;
+        this.suggestions = List.of();
         this.normal = Paint.NONE;
         this.focusedPaint = Paint.NONE;
         this.disabledPaint = Paint.NONE;
@@ -136,6 +168,8 @@ public final class TextBoxImpl extends CustomComponent<TextBox> implements TextB
         this.textStyle = TextStyle.DEFAULT;
         this.disabledTextStyle = TextStyle.DEFAULT;
         this.readOnlyTextStyle = TextStyle.DEFAULT;
+        this.suggestionsPaint = Paint.NONE;
+        this.suggestionTextStyle = TextStyle.DEFAULT;
         this.display = TextSpan.of("");
         this.contentBox = Rect.ZERO;
         this.visualsDirty = true;
@@ -163,6 +197,7 @@ public final class TextBoxImpl extends CustomComponent<TextBox> implements TextB
             this.buffer.append(clean);
             this.caret = this.buffer.length();
             this.anchor = this.caret;
+            this.hideSuggestions();
             this.changed(previous);
         }
         return this;
@@ -198,6 +233,9 @@ public final class TextBoxImpl extends CustomComponent<TextBox> implements TextB
     public TextBox setPassword(final boolean password) {
         this.password = password;
         this.visualsDirty = true;
+        if (password) {
+            this.hideSuggestions();
+        }
         return this;
     }
 
@@ -276,6 +314,9 @@ public final class TextBoxImpl extends CustomComponent<TextBox> implements TextB
     public TextBox setReadOnly(final boolean readOnly) {
         this.readOnly = readOnly;
         this.visualsDirty = true;
+        if (readOnly) {
+            this.hideSuggestions();
+        }
         return this;
     }
 
@@ -288,6 +329,201 @@ public final class TextBoxImpl extends CustomComponent<TextBox> implements TextB
     public TextBox setSelectAllOnFocus(final boolean selectAll) {
         this.selectAllOnFocus = selectAll;
         return this;
+    }
+
+    // ------------------------------------------------------------------
+    // Suggestions
+    // ------------------------------------------------------------------
+
+    @Override
+    public TextBox setSuggestionProvider(final SuggestionProvider provider) {
+        this.suggestionProvider = provider;
+        return this.hideSuggestions();
+    }
+
+    @Override
+    public int maxVisibleSuggestions() {
+        return this.maxVisibleSuggestions;
+    }
+
+    @Override
+    public TextBox setMaxVisibleSuggestions(final int count) {
+        if (count < 1) {
+            throw new IllegalArgumentException("At least one suggestion must show: " + count);
+        }
+        this.maxVisibleSuggestions = count;
+        return this;
+    }
+
+    @Override
+    public TextBox showSuggestions() {
+        if (this.suggestionProvider == null || this.readOnly || this.password || !this.isEnabled() || !this.isAttached()) {
+            return this;
+        }
+        final List<Suggestion> found = List.copyOf(this.suggestionProvider.suggest(this.buffer.toString(), this.caret));
+        if (found.isEmpty()) {
+            return this.hideSuggestions();
+        }
+        final float rowHeight = this.environment().text().lineHeight(this.suggestionTextStyle) + 4f;
+        this.suggestions = found;
+        if (this.suggestionList == null) {
+            final ListViewImpl<Suggestion> list = new ListViewImpl<>(this.ui, this::suggestionCell);
+            list.route(this::pressSuggestion, this::acceptSuggestion, (index, previous) -> { });
+            list.setFocusable(false);
+            list.setTabbable(false);
+            list.setActivateOnClick(true);
+            list.setBackground(this.suggestionsPaint);
+            list.setItems(found);
+            this.suggestionList = list;
+            final Overlay popup = this.ui.overlays().popup(list, this.bounds());
+            this.suggestionPopup = popup;
+            popup.onEvent(Overlay.CLOSED, event -> {
+                if (this.suggestionPopup == popup) {
+                    this.suggestionPopup = null;
+                    this.suggestionList = null;
+                    this.suggestions = List.of();
+                }
+            });
+        } else {
+            this.suggestionList.setItems(found);
+        }
+        this.suggestionList.setRowHeight(rowHeight);
+        this.suggestionList.setMinSize(this.bounds().width(), 0f);
+        this.suggestionList.setHeight(rowHeight * Math.min(this.maxVisibleSuggestions, found.size()));
+        this.suggestionList.select(0);
+        return this;
+    }
+
+    @Override
+    public TextBox hideSuggestions() {
+        final Overlay popup = this.suggestionPopup;
+        this.suggestionPopup = null;
+        this.suggestionList = null;
+        this.suggestions = List.of();
+        if (popup != null) {
+            popup.close();
+        }
+        return this;
+    }
+
+    @Override
+    public List<Suggestion> shownSuggestions() {
+        return this.suggestions;
+    }
+
+    private Label suggestionCell(final Suggestion suggestion) {
+        final Label label = this.ui.label(suggestion.text()).setStyle(this.suggestionTextStyle);
+        label.setMargin(Insets.of(4f, 0f));
+        label.setOverflow(TextOverflow.ELLIPSIS);
+        label.setAnchor(Anchor.MIDDLE_LEFT);
+        return label;
+    }
+
+    /**
+     * Highlights the row a press landed on and takes focus back from the press.
+     */
+    private void pressSuggestion(final int index) {
+        if (this.suggestionList != null) {
+            this.suggestionList.applySelect(index);
+        }
+        this.refocus();
+    }
+
+    /**
+     * Takes focus back without moving the caret, after a press on the list took it.
+     */
+    private void refocus() {
+        if (!this.isFocused()) {
+            this.refocusing = true;
+            try {
+                this.requestFocus();
+            } finally {
+                this.refocusing = false;
+            }
+        }
+    }
+
+    /**
+     * Closes the list and asks to apply the suggestion at an index of it. Does nothing for an index outside it.
+     */
+    private void acceptSuggestion(final int index) {
+        if (index < 0 || index >= this.suggestions.size()) {
+            return;
+        }
+        final Suggestion suggestion = this.suggestions.get(index);
+        this.hideSuggestions();
+        this.refocus();
+        this.request(COMPLETE, suggestion, this::applySuggestion);
+    }
+
+    /**
+     * Applies the suggestion a {@link TextBox#COMPLETE} request ended with, as an edit by the user: replaces its range,
+     * clamped to the text, with its text cut to the room the length limit leaves, and puts the caret after it. Then
+     * reports {@link TextBox#COMPLETED} if the edit applied. A null suggestion is ignored.
+     */
+    private void applySuggestion(final Suggestion suggestion) {
+        if (suggestion == null || !this.isEnabled() || !this.beginEdit()) {
+            return;
+        }
+        final int start = this.snap(suggestion.start());
+        final int end = this.snap(suggestion.end());
+        final int kept = this.codePoints() - this.buffer.codePointCount(start, end);
+        final String fitted = truncate(sanitize(suggestion.text()), this.maxLength - kept);
+        this.buffer.replace(start, end, fitted);
+        this.caret = start + fitted.length();
+        this.anchor = this.caret;
+        this.editApplied = false;
+        this.completing = true;
+        try {
+            this.edited();
+        } finally {
+            this.completing = false;
+        }
+        if (this.editApplied) {
+            this.report(COMPLETED, suggestion, suggestion);
+        }
+    }
+
+    /**
+     * Handles a key for the open suggestion list.
+     *
+     * @return true if the list used the key
+     */
+    private boolean suggestionKey(final KeyEvent event) {
+        final Modifiers modifiers = event.modifiers();
+        if (modifiers.control() || modifiers.alt() || this.suggestionList == null) {
+            return false;
+        }
+        final Key key = event.key();
+        final boolean press = event.action() == KeyAction.PRESS;
+        final int count = this.suggestions.size();
+        final int current = this.suggestionList.selectedIndex();
+        switch (key) {
+            case UP -> this.suggestionList.select(current <= 0 ? count - 1 : current - 1);
+            case DOWN -> this.suggestionList.select(current < 0 || current >= count - 1 ? 0 : current + 1);
+            case ESCAPE -> {
+                if (!press) {
+                    return false;
+                }
+                this.hideSuggestions();
+            }
+            default -> {
+                if (!press || current < 0 || !(key.isEnter() || key == Key.TAB && !modifiers.shift())) {
+                    return false;
+                }
+                this.acceptSuggestion(current);
+            }
+        }
+        return true;
+    }
+
+    /**
+     * Asks for suggestions again after an edit by the user, if the box has a provider and focus.
+     */
+    private void suggestAfterEdit() {
+        if (this.suggestionProvider != null && this.isFocused()) {
+            this.showSuggestions();
+        }
     }
 
     // ------------------------------------------------------------------
@@ -314,6 +550,11 @@ public final class TextBoxImpl extends CustomComponent<TextBox> implements TextB
         this.textStyle = theme.textStyleOr(STYLE_TEXT, TextStyle.DEFAULT);
         this.disabledTextStyle = theme.textStyleOr(STYLE_TEXT_DISABLED, this.textStyle);
         this.readOnlyTextStyle = theme.textStyleOr(STYLE_TEXT_READ_ONLY, this.disabledTextStyle);
+        this.suggestionsPaint = theme.paintOr(STYLE_SUGGESTIONS, theme.paintOr(ComboBox.STYLE_POPUP, Paint.NONE));
+        this.suggestionTextStyle = theme.textStyleOr(STYLE_SUGGESTION_TEXT, this.textStyle);
+        if (this.suggestionList != null) {
+            this.suggestionList.setBackground(this.suggestionsPaint);
+        }
         this.visualsDirty = true;
     }
 
@@ -516,6 +757,10 @@ public final class TextBoxImpl extends CustomComponent<TextBox> implements TextB
 
     @Override
     protected void onFocusGained(final FocusEvent event) {
+        if (this.refocusing) {
+            this.moved();
+            return;
+        }
         // A press that gave focus places the caret right after this; keyboard focus starts at the end
         this.anchor = this.selectAllOnFocus ? 0 : this.buffer.length();
         this.caret = this.buffer.length();
@@ -523,12 +768,31 @@ public final class TextBoxImpl extends CustomComponent<TextBox> implements TextB
     }
 
     @Override
+    protected void onFocusLost(final FocusEvent event) {
+        // A press on the list takes focus first; keep the list open for it
+        if (this.suggestionList == null || !this.suggestionList.isHoverWithin()) {
+            this.hideSuggestions();
+        }
+    }
+
+    @Override
     protected void onKey(final KeyEvent event) {
         if (!event.action().isDown() || !this.isEnabled()) {
             return;
         }
+        if (this.suggestionPopup != null && this.suggestionKey(event)) {
+            event.consume();
+            return;
+        }
         final Key key = event.key();
         final Modifiers modifiers = event.modifiers();
+        if (key == Key.SPACE && modifiers.control() && !modifiers.alt() && this.suggestionProvider != null) {
+            if (event.action() == KeyAction.PRESS) {
+                this.showSuggestions();
+            }
+            event.consume();
+            return;
+        }
         if (key.isEnter() && event.action() == KeyAction.PRESS) {
             final boolean heard = this.isHandled(SUBMIT) || this.isHandled(SUBMITTED);
             if (this.request(SUBMIT)) {
@@ -630,6 +894,11 @@ public final class TextBoxImpl extends CustomComponent<TextBox> implements TextB
         }
         final int codePoint = event.codePoint();
         if (Character.isISOControl(codePoint)) {
+            return;
+        }
+        // Ctrl+Space asks for suggestions; an engine that also types its space must not insert it
+        if (codePoint == ' ' && event.modifiers().control() && !event.modifiers().alt() && this.suggestionProvider != null) {
+            event.consume();
             return;
         }
         this.insert(Character.toString(codePoint));
@@ -777,14 +1046,19 @@ public final class TextBoxImpl extends CustomComponent<TextBox> implements TextB
                 this.anchor = this.caret;
             }
         }
+        this.editApplied = true;
         if (this.buffer.toString().equals(this.beforeText)) {
             this.moved();
             return;
         }
         this.changed(this.beforeText);
+        if (!this.completing) {
+            this.suggestAfterEdit();
+        }
     }
 
     private void moveTo(final int index, final boolean extend) {
+        this.hideSuggestions();
         this.caret = this.snap(index);
         if (!extend) {
             this.anchor = this.caret;

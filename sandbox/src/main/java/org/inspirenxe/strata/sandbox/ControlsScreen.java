@@ -8,6 +8,7 @@ import org.inspirenxe.strata.api.control.button.CycleButton;
 import org.inspirenxe.strata.api.control.button.RadioButton;
 import org.inspirenxe.strata.api.control.button.RadioGroup;
 import org.inspirenxe.strata.api.control.button.ToggleSwitch;
+import org.inspirenxe.strata.api.control.collection.DualList;
 import org.inspirenxe.strata.api.control.collection.GridView;
 import org.inspirenxe.strata.api.control.collection.TableColumn;
 import org.inspirenxe.strata.api.control.collection.TableView;
@@ -15,9 +16,11 @@ import org.inspirenxe.strata.api.control.collection.TreeView;
 import org.inspirenxe.strata.api.control.display.BusyIndicator;
 import org.inspirenxe.strata.api.control.display.Label;
 import org.inspirenxe.strata.api.control.display.ProgressBar;
+import org.inspirenxe.strata.api.control.field.ColorPicker;
 import org.inspirenxe.strata.api.control.field.Slider;
 import org.inspirenxe.strata.api.control.field.Spinner;
 import org.inspirenxe.strata.api.control.field.TextArea;
+import org.inspirenxe.strata.api.control.field.TextBox;
 import org.inspirenxe.strata.api.control.menu.Menu;
 import org.inspirenxe.strata.api.control.menu.MenuBar;
 import org.inspirenxe.strata.api.control.pane.Expander;
@@ -33,6 +36,7 @@ import org.inspirenxe.strata.api.layout.Anchor;
 import org.inspirenxe.strata.api.layout.GridLength;
 import org.inspirenxe.strata.api.layout.HorizontalAlignment;
 import org.inspirenxe.strata.api.layout.Orientation;
+import org.inspirenxe.strata.api.layout.ScrollPanel;
 import org.inspirenxe.strata.api.layout.StackPanel;
 import org.inspirenxe.strata.api.layout.VerticalAlignment;
 import org.inspirenxe.strata.api.screen.Screen;
@@ -65,6 +69,9 @@ public final class ControlsScreen implements Screen {
     private MenuBar menuBar;
     private TreeView<Category> tree;
     private TableView<Offer> table;
+    private ScrollPanel scroll;
+    private Component<?> inputs;
+    private TextBox seller;
 
     @Override
     public void opened(final ScreenHandle handle) {
@@ -112,6 +119,11 @@ public final class ControlsScreen implements Screen {
                 .add(this.numbers(ui))
                 .add(this.offers(ui))
                 .add(this.notes(ui))
+                .add(this.inputs(ui))
+                .setAnchor(Anchor.FILL);
+
+        this.scroll = ui.scrollPanel()
+                .add(right)
                 .setAnchor(Anchor.FILL);
 
         final Component<?> left = ui.gridPanel()
@@ -123,7 +135,7 @@ public final class ControlsScreen implements Screen {
 
         final SplitPane split = ui.splitPane(Orientation.HORIZONTAL)
                 .setFirst(left)
-                .setSecond(right)
+                .setSecond(this.scroll)
                 .setPosition(0.24f)
                 .setAnchor(Anchor.FILL);
 
@@ -328,8 +340,43 @@ public final class ControlsScreen implements Screen {
                 .setAlignment(HorizontalAlignment.STRETCH, VerticalAlignment.TOP);
     }
 
+    private Component<?> inputs(final ComponentFactory ui) {
+        final Label sellerLabel = ui.label("Seller");
+        this.seller = ui.textBox()
+                .setSuggestionProvider(TextBox.SuggestionProvider.words(List.of("Ana", "Anders", "Ben", "Cleo", "Dev")))
+                .setWidth(110);
+        final StackPanel seller = ui.stackPanel()
+                .setSpacing(2)
+                .add(sellerLabel)
+                .add(this.seller);
+
+        final DualList<String> members = ui.<String>dualList()
+                .setTitle(DualList.Side.LEFT, "Players")
+                .setTitle(DualList.Side.RIGHT, "Members")
+                .setItems(DualList.Side.LEFT, List.of("Ana", "Ben", "Cleo"))
+                .setItems(DualList.Side.RIGHT, List.of("Dev"))
+                .setVisibleRows(4)
+                .select(1);
+
+        final ColorPicker tint = ui.colorPicker()
+                .setAlphaShown(true)
+                .setColor(0xFF3A8EE6);
+        tint.setHeight(93);
+
+        final StackPanel pickers = ui.stackPanel(Orientation.HORIZONTAL)
+                .setSpacing(12)
+                .add(seller)
+                .add(tint);
+        this.inputs = ui.stackPanel()
+                .setSpacing(6)
+                .add(pickers)
+                .add(members);
+        return this.inputs;
+    }
+
     /**
-     * Renders the screen as it opens, with the File menu and its submenu open, and with a toast.
+     * Renders the screen as it opens, with the File menu and its submenu open, with a toast, and with the seller box
+     * showing suggestions.
      *
      * @param directory where to write the images
      * @param theme the theme to render with
@@ -345,6 +392,14 @@ public final class ControlsScreen implements Screen {
             stack.key(Key.DOWN, KeyAction.PRESS, Modifiers.NONE);
             stack.key(Key.DOWN, KeyAction.PRESS, Modifiers.NONE);
             stack.key(Key.RIGHT, KeyAction.PRESS, Modifiers.NONE);
+        });
+        render(directory, theme, "controls-suggestions", (screen, stack) -> {
+            layout(stack);
+            screen.scroll.scrollToVisible(screen.inputs);
+            layout(stack);
+            screen.seller.requestFocus();
+            stack.charTyped('a', Modifiers.NONE);
+            layout(stack);
         });
         render(directory, theme, "controls-toast", (screen, stack) -> {
             layout(stack);

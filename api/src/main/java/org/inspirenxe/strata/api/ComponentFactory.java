@@ -7,6 +7,7 @@ import org.inspirenxe.strata.api.control.button.CycleButton;
 import org.inspirenxe.strata.api.control.button.RadioGroup;
 import org.inspirenxe.strata.api.control.button.ToggleSwitch;
 import org.inspirenxe.strata.api.control.collection.ComboBox;
+import org.inspirenxe.strata.api.control.collection.DualList;
 import org.inspirenxe.strata.api.control.collection.GridView;
 import org.inspirenxe.strata.api.control.collection.ListView;
 import org.inspirenxe.strata.api.control.collection.TableColumn;
@@ -17,6 +18,7 @@ import org.inspirenxe.strata.api.control.display.Image;
 import org.inspirenxe.strata.api.control.display.Label;
 import org.inspirenxe.strata.api.control.display.ProgressBar;
 import org.inspirenxe.strata.api.control.display.Separator;
+import org.inspirenxe.strata.api.control.field.ColorPicker;
 import org.inspirenxe.strata.api.control.field.Slider;
 import org.inspirenxe.strata.api.control.field.Spinner;
 import org.inspirenxe.strata.api.control.field.TextArea;
@@ -631,6 +633,33 @@ public interface ComponentFactory {
     default BusyIndicator busyIndicator(final String text) {
         return this.busyIndicator().setText(text);
     }
+
+    /**
+     * Makes a {@link DualList} with no items and no titles, whose cells are labels showing
+     * {@link String#valueOf(Object)} of each item. Set other cells with {@code setCellFactory}.
+     *
+     * @param <T> the type of the items
+     * @return a new dual list
+     */
+    default <T> DualList<T> dualList() {
+        return this.dualList(item -> this.label(String.valueOf(item)));
+    }
+
+    /**
+     * Makes a {@link DualList} with no items and no titles.
+     *
+     * @param <T> the type of the items
+     * @param cellFactory makes the component for an item's row, in either list
+     * @return a new dual list
+     */
+    <T> DualList<T> dualList(Function<? super T, ? extends Component<?>> cellFactory);
+
+    /**
+     * Makes a {@link ColorPicker} set to opaque white, with the alpha strip hidden.
+     *
+     * @return a new color picker
+     */
+    ColorPicker colorPicker();
 
     /**
      * Creates the peer of a new leaf component. Called by {@link CustomComponent}'s constructor; do not call it
