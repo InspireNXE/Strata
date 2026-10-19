@@ -7,24 +7,37 @@ import org.inspirenxe.strata.api.theme.Paint;
 
 /**
  * The geometry of one scroll bar: its track, and a thumb sized by the visible fraction of the content and placed by
- * the offset. Used by {@link ScrollPanelImpl} and the list view.
+ * the offset. Used by {@link ScrollPanelImpl}, the list view and the text area, which paint their bars themselves,
+ * and by the scroll bar control, so all of them measure alike.
  *
- * <p>The thumb is the track's length times the visible fraction, at least {@link ScrollPanel#MIN_THUMB_LENGTH}
- * and at most the track less 8 units, but never longer than the track.</p>
+ * <p>The thumb is the track's length times the visible fraction, at least the minimum length and at most the track
+ * less 8 units, but never longer than the track. When the whole content shows, the thumb fills the track.</p>
  */
-public final class ScrollBar {
+public final class ScrollTrack {
     private final boolean vertical;
+    private final float minThumbLength;
     private Rect track;
     private float visible;
     private float extent;
 
     /**
-     * Creates a bar with an empty track.
+     * Creates a bar with an empty track and a thumb at least {@link ScrollPanel#MIN_THUMB_LENGTH} long.
      *
      * @param vertical true for a bar that scrolls up and down
      */
-    public ScrollBar(final boolean vertical) {
+    public ScrollTrack(final boolean vertical) {
+        this(vertical, ScrollPanel.MIN_THUMB_LENGTH);
+    }
+
+    /**
+     * Creates a bar with an empty track.
+     *
+     * @param vertical true for a bar that scrolls up and down
+     * @param minThumbLength the shortest the thumb gets, in UI units
+     */
+    public ScrollTrack(final boolean vertical, final float minThumbLength) {
         this.vertical = vertical;
+        this.minThumbLength = minThumbLength;
         this.track = Rect.ZERO;
     }
 
@@ -60,8 +73,8 @@ public final class ScrollBar {
             return track;
         }
         float length = track * this.visible / this.extent;
-        length = Math.max(length, ScrollPanel.MIN_THUMB_LENGTH);
-        length = Math.min(length, Math.max(ScrollPanel.MIN_THUMB_LENGTH, track - 8f));
+        length = Math.max(length, this.minThumbLength);
+        length = Math.min(length, Math.max(this.minThumbLength, track - 8f));
         return Math.min(length, track);
     }
 

@@ -12,6 +12,7 @@ import org.inspirenxe.strata.api.extension.Painter;
 import org.inspirenxe.strata.api.geom.Rect;
 import org.inspirenxe.strata.api.geom.Size;
 import org.inspirenxe.strata.api.input.MouseButton;
+import org.inspirenxe.strata.api.layout.Orientation;
 import org.inspirenxe.strata.api.text.TextMetrics;
 import org.inspirenxe.strata.api.text.TextSpan;
 import org.inspirenxe.strata.api.text.TextStyle;
@@ -23,8 +24,9 @@ import java.util.Set;
 import java.util.function.DoubleFunction;
 
 /**
- * The core {@link Slider}. The track covers the whole bounds; the thumb is {@value #THUMB_WIDTH} units wide and as
- * tall as the slider. A pointer position maps to the value whose thumb would be centered on it.
+ * The core {@link Slider}. The track covers the whole bounds; the thumb is {@value #THUMB_WIDTH} units along the
+ * track and spans the slider across it. A pointer position maps to the value whose thumb would be centered on it,
+ * along the track's axis only. A vertical slider swaps the desired width and height and counts from the bottom.
  *
  * <p>Snapping: a value is clamped to the range, then moved to the nearest {@code min + k * step}; if the maximum is
  * nearer to the requested value than that grid point, the maximum is used instead, so the maximum is always
@@ -36,15 +38,15 @@ import java.util.function.DoubleFunction;
  */
 public final class SliderImpl extends CustomComponent<Slider> implements Slider {
     /**
-     * The thumb's width.
+     * The thumb's length along the track: its width on a horizontal slider, its height on a vertical one.
      */
     public static final float THUMB_WIDTH = 8f;
     /**
-     * The desired width.
+     * The desired length along the track: the width of a horizontal slider, the height of a vertical one.
      */
     public static final float DEFAULT_WIDTH = 150f;
     /**
-     * The desired height.
+     * The desired thickness across the track: the height of a horizontal slider, the width of a vertical one.
      */
     public static final float DEFAULT_HEIGHT = 20f;
     /**
@@ -59,6 +61,7 @@ public final class SliderImpl extends CustomComponent<Slider> implements Slider 
     private double max;
     private double step;
     private DoubleFunction<String> label;
+    private Orientation orientation;
     private String labelText;
 
     private Paint track;
@@ -91,6 +94,7 @@ public final class SliderImpl extends CustomComponent<Slider> implements Slider 
         this.min = 0d;
         this.max = 1d;
         this.labelText = "";
+        this.orientation = Orientation.HORIZONTAL;
         this.track = Paint.NONE;
         this.trackFocused = Paint.NONE;
         this.trackDisabled = Paint.NONE;
@@ -164,6 +168,18 @@ public final class SliderImpl extends CustomComponent<Slider> implements Slider 
     }
 
     @Override
+    public Orientation orientation() {
+        return this.orientation;
+    }
+
+    @Override
+    public Slider setOrientation(final Orientation orientation) {
+        this.orientation = Objects.requireNonNull(orientation, "orientation");
+        this.invalidateLayout();
+        return this;
+    }
+
+    @Override
     public Slider setLabel(final DoubleFunction<String> label) {
         this.label = label;
         this.updateLabel();
@@ -206,10 +222,16 @@ public final class SliderImpl extends CustomComponent<Slider> implements Slider 
         return (this.value - this.min) / (this.max - this.min);
     }
 
-    private void setFromPointer(final float x) {
+    private void setFromPointer(final float x, final float y) {
         final Rect bounds = this.bounds();
-        final float travel = bounds.width() - THUMB_WIDTH;
-        final double fraction = travel > 0f ? ((double) x - bounds.x() - THUMB_WIDTH * 0.5d) / travel : 0d;
+        final double fraction;
+        if (this.orientation == Orientation.HORIZONTAL) {
+            final float travel = bounds.width() - THUMB_WIDTH;
+            fraction = travel > 0f ? ((double) x - bounds.x() - THUMB_WIDTH * 0.5d) / travel : 0d;
+        } else {
+            final float travel = bounds.height() - THUMB_WIDTH;
+            fraction = travel > 0f ? ((double) bounds.bottom() - y - THUMB_WIDTH * 0.5d) / travel : 0d;
+        }
         this.change(this.min + fraction * (this.max - this.min));
     }
 
@@ -248,7 +270,9 @@ public final class SliderImpl extends CustomComponent<Slider> implements Slider 
 
     @Override
     protected Size measure(final MeasureContext context, final float availableWidth, final float availableHeight) {
-        return new Size(DEFAULT_WIDTH, DEFAULT_HEIGHT);
+        return this.orientation == Orientation.HORIZONTAL
+                ? new Size(DEFAULT_WIDTH, DEFAULT_HEIGHT)
+                : new Size(DEFAULT_HEIGHT, DEFAULT_WIDTH);
     }
 
     @Override
@@ -265,9 +289,16 @@ public final class SliderImpl extends CustomComponent<Slider> implements Slider 
         } else {
             thumbFace = this.thumb;
         }
-        final float travel = Math.max(0f, bounds.width() - THUMB_WIDTH);
-        thumbFace.paint(painter, new Rect(bounds.x() + (float) (this.fraction() * travel), bounds.y(),
-                Math.min(THUMB_WIDTH, bounds.width()), bounds.height()));
+        if (this.orientation == Orientation.HORIZONTAL) {
+            final float travel = Math.max(0f, bounds.width() - THUMB_WIDTH);
+            thumbFace.paint(painter, new Rect(bounds.x() + (float) (this.fraction() * travel), bounds.y(),
+                    Math.min(THUMB_WIDTH, bounds.width()), bounds.height()));
+        } else {
+            final float length = Math.min(THUMB_WIDTH, bounds.height());
+            final float travel = Math.max(0f, bounds.height() - THUMB_WIDTH);
+            thumbFace.paint(painter, new Rect(bounds.x(), bounds.bottom() - length - (float) (this.fraction() * travel),
+                    bounds.width(), length));
+        }
 
         if (!this.labelText.isEmpty()) {
             this.labelBounds = bounds;
@@ -298,7 +329,7 @@ public final class SliderImpl extends CustomComponent<Slider> implements Slider 
     @Override
     protected void onPointerPress(final PointerButtonEvent event) {
         if (event.button() == MouseButton.LEFT && this.isEnabled()) {
-            this.setFromPointer(event.x());
+            this.setFromPointer(event.x(), event.y());
             event.consume();
         }
     }
@@ -313,7 +344,7 @@ public final class SliderImpl extends CustomComponent<Slider> implements Slider 
     @Override
     protected void onDrag(final DragEvent event) {
         if (event.button() == MouseButton.LEFT && this.isEnabled()) {
-            this.setFromPointer(event.x());
+            this.setFromPointer(event.x(), event.y());
             event.consume();
         }
     }

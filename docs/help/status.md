@@ -23,7 +23,7 @@ Publishing to Maven and depending on Strata from a separate project have not bee
 
 ## Not built yet
 
-- Controls: vertical slider, multiple selection in lists, tables and trees, editable table cells.
+- Controls: multiple selection in lists, tables and trees, editable table cells.
 - Inline sprites in text. `SpriteSpan` and `InlineElement` are reserved.
 - Firing custom event types.
 - Narration and other accessibility support.

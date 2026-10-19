@@ -21,7 +21,7 @@ import org.inspirenxe.strata.api.text.TextSpan;
 import org.inspirenxe.strata.api.text.TextStyle;
 import org.inspirenxe.strata.api.theme.Paint;
 import org.inspirenxe.strata.api.theme.Theme;
-import org.inspirenxe.strata.core.layout.ScrollBar;
+import org.inspirenxe.strata.core.layout.ScrollTrack;
 
 import java.util.HashMap;
 import java.util.Iterator;
@@ -49,7 +49,7 @@ public final class ListViewImpl<T> extends CustomComposite<ListView<T>> implemen
     private static final float GUTTER = ScrollPanel.BAR_WIDTH + ScrollPanel.BAR_GAP;
 
     private final Map<Integer, Component<?>> rows;
-    private final ScrollBar bar;
+    private final ScrollTrack bar;
     private final Runnable drawRows;
     private List<T> items;
     private Function<? super T, ? extends Component<?>> cellFactory;
@@ -102,7 +102,7 @@ public final class ListViewImpl<T> extends CustomComposite<ListView<T>> implemen
     public ListViewImpl(final ComponentFactory ui, final Function<? super T, ? extends Component<?>> cellFactory) {
         super(ui);
         this.rows = new HashMap<>();
-        this.bar = new ScrollBar(true);
+        this.bar = new ScrollTrack(true);
         this.drawRows = this::drawRows;
         this.items = List.of();
         this.cellFactory = Objects.requireNonNull(cellFactory, "cellFactory");

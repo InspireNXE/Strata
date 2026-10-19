@@ -12,6 +12,7 @@ import org.inspirenxe.strata.api.control.collection.ListView;
 import org.inspirenxe.strata.api.control.collection.TableColumn;
 import org.inspirenxe.strata.api.control.collection.TableView;
 import org.inspirenxe.strata.api.control.collection.TreeView;
+import org.inspirenxe.strata.api.control.display.BusyIndicator;
 import org.inspirenxe.strata.api.control.display.Image;
 import org.inspirenxe.strata.api.control.display.Label;
 import org.inspirenxe.strata.api.control.display.ProgressBar;
@@ -27,6 +28,7 @@ import org.inspirenxe.strata.api.control.menu.MenuItem;
 import org.inspirenxe.strata.api.control.menu.MenuSeparator;
 import org.inspirenxe.strata.api.control.menu.SubmenuItem;
 import org.inspirenxe.strata.api.control.pane.Expander;
+import org.inspirenxe.strata.api.control.pane.ScrollBar;
 import org.inspirenxe.strata.api.control.pane.SplitPane;
 import org.inspirenxe.strata.api.control.pane.Tab;
 import org.inspirenxe.strata.api.control.pane.TabBar;
@@ -583,6 +585,52 @@ public interface ComponentFactory {
      * @return a new cycle button
      */
     <T> CycleButton<T> cycleButton(String text, Function<? super T, String> valueLabelFunction);
+
+    /**
+     * Makes a {@link Slider} over the range 0 to 1, at 0, with no step, running the given way.
+     *
+     * @param orientation {@link Orientation#HORIZONTAL} for a slider across, {@link Orientation#VERTICAL} for one up
+     * @return a new slider
+     */
+    default Slider slider(final Orientation orientation) {
+        return this.slider().setOrientation(orientation);
+    }
+
+    /**
+     * Makes a vertical {@link ScrollBar} with nothing to scroll. Give it lengths with
+     * {@link ScrollBar#setExtent(double, double)}.
+     *
+     * @return a new scroll bar
+     */
+    ScrollBar scrollBar();
+
+    /**
+     * Makes a {@link ScrollBar} with nothing to scroll, running the given way.
+     *
+     * @param orientation {@link Orientation#VERTICAL} for content that scrolls up and down,
+     *                    {@link Orientation#HORIZONTAL} for content that scrolls sideways
+     * @return a new scroll bar
+     */
+    default ScrollBar scrollBar(final Orientation orientation) {
+        return this.scrollBar().setOrientation(orientation);
+    }
+
+    /**
+     * Makes a {@link BusyIndicator} with no caption.
+     *
+     * @return a new busy indicator
+     */
+    BusyIndicator busyIndicator();
+
+    /**
+     * Makes a {@link BusyIndicator} with a caption above its dots.
+     *
+     * @param text the caption
+     * @return a new busy indicator
+     */
+    default BusyIndicator busyIndicator(final String text) {
+        return this.busyIndicator().setText(text);
+    }
 
     /**
      * Creates the peer of a new leaf component. Called by {@link CustomComponent}'s constructor; do not call it

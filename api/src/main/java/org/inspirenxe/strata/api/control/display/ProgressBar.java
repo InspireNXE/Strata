@@ -11,10 +11,18 @@ import org.inspirenxe.strata.api.control.attribute.value.Ranged;
  * <p>It asks for 100 units of width and one line plus 4 units of height; stretch it or give it a size. It is not
  * focusable and has no default behavior for input, so it never fires {@link Ranged#CHANGE}.</p>
  *
+ * <h2>Indeterminate</h2>
+ * <p>For work whose length is not known, {@link #setIndeterminate(boolean)} replaces the fill with a segment a
+ * quarter of the bar's width, at least 8 units, that slides in at the left edge and out at the right, once every 1.5
+ * seconds, and then starts again. It follows the host's clock and moves in whole units. The value and the caption
+ * are kept, and the caption is still drawn; the value shows again once the bar is no longer indeterminate.</p>
+ *
  * <h2>Theme keys</h2>
  * <ul>
  *     <li>{@value #STYLE_TRACK} (paint, required): the whole bar, under the fill.</li>
  *     <li>{@value #STYLE_FILL} (paint, required): the filled part.</li>
+ *     <li>{@value #STYLE_SEGMENT} (paint, optional): the moving segment of an indeterminate bar. Falls back to
+ *     {@value #STYLE_FILL}.</li>
  *     <li>{@value #STYLE_TEXT} (text style, optional): the caption. Falls back to the default style.</li>
  * </ul>
  *
@@ -41,6 +49,26 @@ public interface ProgressBar extends Component<ProgressBar>, HasText<ProgressBar
      * Style key for the caption (text style, optional).
      */
     String STYLE_TEXT = "progress.text";
+    /**
+     * Style key for the moving segment of an indeterminate bar (paint, optional).
+     */
+    String STYLE_SEGMENT = "progress.segment";
+
+    /**
+     * Returns whether the bar shows a moving segment instead of its value.
+     *
+     * @return true if indeterminate; false by default
+     */
+    boolean isIndeterminate();
+
+    /**
+     * Shows a moving segment instead of the value, for work whose length is not known, or shows the value again.
+     * The value is kept either way, and no event fires.
+     *
+     * @param indeterminate true for a moving segment
+     * @return this bar
+     */
+    ProgressBar setIndeterminate(boolean indeterminate);
 
     /**
      * Returns the value.
