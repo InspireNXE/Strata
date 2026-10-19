@@ -1,6 +1,6 @@
 package org.inspirenxe.strata.core.theme;
 
-import org.inspirenxe.strata.api.geom.Insets;
+import org.inspirenxe.strata.api.geometry.Insets;
 import org.inspirenxe.strata.api.text.TextStyle;
 import org.inspirenxe.strata.api.theme.Paint;
 import org.inspirenxe.strata.api.theme.SpriteId;

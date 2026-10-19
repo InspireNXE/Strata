@@ -5,4 +5,4 @@
  * grows to the right and y grows downward. How a UI unit maps to screen pixels is up to the engine adapter. An
  * adapter may divide screen pixels by a scale the player picks, and the Swing adapter uses a fixed scale factor.</p>
  */
-package org.inspirenxe.strata.api.geom;
+package org.inspirenxe.strata.api.geometry;

@@ -1,5 +1,6 @@
-package org.inspirenxe.strata.api.event;
+package org.inspirenxe.strata.api.event.input;
 
+import org.inspirenxe.strata.api.event.Cancelable;
 import org.inspirenxe.strata.api.input.Modifiers;
 
 /**

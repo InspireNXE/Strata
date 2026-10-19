@@ -3,7 +3,7 @@ package org.inspirenxe.strata.examples.layout;
 import org.inspirenxe.strata.api.control.button.Button;
 import org.inspirenxe.strata.api.control.display.Label;
 import org.inspirenxe.strata.api.control.field.TextBox;
-import org.inspirenxe.strata.api.geom.Insets;
+import org.inspirenxe.strata.api.geometry.Insets;
 import org.inspirenxe.strata.api.layout.AbsolutePanel;
 import org.inspirenxe.strata.api.layout.Anchor;
 import org.inspirenxe.strata.api.layout.AnchorPanel;

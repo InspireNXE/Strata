@@ -2,20 +2,20 @@ package org.inspirenxe.strata.core;
 
 import org.inspirenxe.strata.api.ComponentFactory;
 import org.inspirenxe.strata.api.component.Component;
-import org.inspirenxe.strata.api.event.ControlEvent;
 import org.inspirenxe.strata.api.event.EventType;
-import org.inspirenxe.strata.api.event.EventTypes;
-import org.inspirenxe.strata.api.event.RequestEvent;
 import org.inspirenxe.strata.api.event.Subscription;
-import org.inspirenxe.strata.api.event.ValueEvent;
-import org.inspirenxe.strata.api.event.ValueRequestEvent;
+import org.inspirenxe.strata.api.event.control.ControlEvent;
+import org.inspirenxe.strata.api.event.control.RequestEvent;
+import org.inspirenxe.strata.api.event.control.ValueEvent;
+import org.inspirenxe.strata.api.event.control.ValueRequestEvent;
+import org.inspirenxe.strata.api.event.input.InputEvents;
 import org.inspirenxe.strata.api.extension.ArrangeContext;
 import org.inspirenxe.strata.api.extension.CustomComponent;
 import org.inspirenxe.strata.api.extension.CustomComposite;
 import org.inspirenxe.strata.api.extension.MeasureContext;
 import org.inspirenxe.strata.api.extension.Painter;
-import org.inspirenxe.strata.api.geom.Rect;
-import org.inspirenxe.strata.api.geom.Size;
+import org.inspirenxe.strata.api.geometry.Rect;
+import org.inspirenxe.strata.api.geometry.Size;
 import org.inspirenxe.strata.api.layout.AbsolutePanel;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -322,7 +322,7 @@ class EventSystemTest {
             final AbsolutePanel panel = EventSystemTest.this.ui.absolutePanel().add(wrapper);
             EventSystemTest.this.test.show(panel);
             final List<String> seen = new ArrayList<>();
-            panel.onEvent(EventTypes.CLICK, e -> seen.add("outside"));
+            panel.onEvent(InputEvents.CLICK, e -> seen.add("outside"));
 
             final Rect inner = wrapper.inner.bounds();
             EventSystemTest.this.test.click(inner.x() + 1f, inner.y() + 1f);

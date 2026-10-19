@@ -1,7 +1,7 @@
 package org.inspirenxe.strata.core.control;
 
 import org.inspirenxe.strata.api.extension.Painter;
-import org.inspirenxe.strata.api.geom.Rect;
+import org.inspirenxe.strata.api.geometry.Rect;
 import org.inspirenxe.strata.api.theme.Paint;
 
 /**

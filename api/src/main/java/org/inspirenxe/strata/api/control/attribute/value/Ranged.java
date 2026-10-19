@@ -2,8 +2,8 @@ package org.inspirenxe.strata.api.control.attribute.value;
 
 import org.inspirenxe.strata.api.event.EventTarget;
 import org.inspirenxe.strata.api.event.EventType;
-import org.inspirenxe.strata.api.event.ValueEvent;
-import org.inspirenxe.strata.api.event.ValueRequestEvent;
+import org.inspirenxe.strata.api.event.control.ValueEvent;
+import org.inspirenxe.strata.api.event.control.ValueRequestEvent;
 
 /**
  * A control that shows a number within a range, such as a slider, a spinner or a progress bar.

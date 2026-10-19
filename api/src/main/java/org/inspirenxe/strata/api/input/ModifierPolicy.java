@@ -2,7 +2,7 @@ package org.inspirenxe.strata.api.input;
 
 /**
  * How a keyboard shortcut treats the modifiers held when its key is pressed. See
- * {@link org.inspirenxe.strata.api.event.KeyEvent#is}.
+ * {@link org.inspirenxe.strata.api.event.input.KeyEvent#is}.
  */
 public enum ModifierPolicy {
     /**

@@ -1,7 +1,7 @@
 package org.inspirenxe.strata.core.event;
 
 import org.inspirenxe.strata.api.component.Component;
-import org.inspirenxe.strata.api.event.ModifiersEvent;
+import org.inspirenxe.strata.api.event.input.ModifiersEvent;
 import org.inspirenxe.strata.api.input.Modifiers;
 
 import java.util.Objects;

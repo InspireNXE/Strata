@@ -12,8 +12,8 @@ import org.inspirenxe.strata.api.control.display.Image;
 import org.inspirenxe.strata.api.control.display.Label;
 import org.inspirenxe.strata.api.control.field.TextBox;
 import org.inspirenxe.strata.api.control.window.Window;
-import org.inspirenxe.strata.api.event.EventTypes;
-import org.inspirenxe.strata.api.geom.Insets;
+import org.inspirenxe.strata.api.event.input.InputEvents;
+import org.inspirenxe.strata.api.geometry.Insets;
 import org.inspirenxe.strata.api.layout.Anchor;
 import org.inspirenxe.strata.api.layout.AnchorPanel;
 import org.inspirenxe.strata.api.layout.GridLength;
@@ -98,7 +98,7 @@ public final class ExchangeScreen implements Screen {
         final AnchorPanel screen = ui.anchorPanel()
                 .add(window)
                 .setAnchor(Anchor.FILL)
-                .onEvent(EventTypes.MODIFIERS_CHANGED, event -> {
+                .onEvent(InputEvents.MODIFIERS_CHANGED, event -> {
                     this.control = event.modifiers().control();
                     this.updateControls();
                 });

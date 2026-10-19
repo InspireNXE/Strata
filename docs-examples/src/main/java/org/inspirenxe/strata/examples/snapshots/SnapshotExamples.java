@@ -6,7 +6,7 @@ import org.inspirenxe.strata.api.control.attribute.value.Toggle;
 import org.inspirenxe.strata.api.control.button.Button;
 import org.inspirenxe.strata.api.control.button.CheckBox;
 import org.inspirenxe.strata.api.control.field.TextBox;
-import org.inspirenxe.strata.api.event.EventTypes;
+import org.inspirenxe.strata.api.event.input.InputEvents;
 import org.inspirenxe.strata.api.layout.StackPanel;
 
 import java.util.ArrayDeque;
@@ -34,7 +34,7 @@ public final class SnapshotExamples {
 
     static void common(final Button save) {
         // --8<-- [start:common]
-        save.onEvent(EventTypes.CLICK, event -> {
+        save.onEvent(InputEvents.CLICK, event -> {
             final ComponentSnapshot before = event.snapshot();
             // Every snapshot has what every component has: flags, layout inputs and bounds
             System.out.println("Clicked at " + before.bounds() + ", focused: " + before.focused());
@@ -45,7 +45,7 @@ public final class SnapshotExamples {
     static void ancestor(final StackPanel palette) {
         // --8<-- [start:ancestor]
         // A handler on a container: the snapshots cover the target and this container, not the other children
-        palette.onEvent(EventTypes.POINTER_PRESS, event -> {
+        palette.onEvent(InputEvents.POINTER_PRESS, event -> {
             final ComponentSnapshot target = event.snapshot();
             final ComponentSnapshot self = event.currentSnapshot();
             System.out.println(target.component() + " pressed while " + self.component() + " was at " + self.bounds());

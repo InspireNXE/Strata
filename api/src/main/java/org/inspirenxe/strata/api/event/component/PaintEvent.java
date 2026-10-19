@@ -1,7 +1,9 @@
-package org.inspirenxe.strata.api.event;
+package org.inspirenxe.strata.api.event.component;
 
+import org.inspirenxe.strata.api.event.Cancelable;
+import org.inspirenxe.strata.api.event.Event;
 import org.inspirenxe.strata.api.extension.Painter;
-import org.inspirenxe.strata.api.geom.Rect;
+import org.inspirenxe.strata.api.geometry.Rect;
 
 /**
  * Drawing a component: {@link org.inspirenxe.strata.api.component.Component#PAINTED} after the component and its

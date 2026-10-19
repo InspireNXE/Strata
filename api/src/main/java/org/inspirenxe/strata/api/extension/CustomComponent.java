@@ -6,27 +6,27 @@ import org.inspirenxe.strata.api.component.ComponentSnapshot;
 import org.inspirenxe.strata.api.component.Container;
 import org.inspirenxe.strata.api.component.CursorKind;
 import org.inspirenxe.strata.api.component.Tooltip;
-import org.inspirenxe.strata.api.event.CharEvent;
-import org.inspirenxe.strata.api.event.ControlEvent;
-import org.inspirenxe.strata.api.event.DragEvent;
 import org.inspirenxe.strata.api.event.Event;
 import org.inspirenxe.strata.api.event.EventHandler;
 import org.inspirenxe.strata.api.event.EventType;
-import org.inspirenxe.strata.api.event.EventTypes;
-import org.inspirenxe.strata.api.event.FocusEvent;
-import org.inspirenxe.strata.api.event.KeyEvent;
-import org.inspirenxe.strata.api.event.PointerButtonEvent;
-import org.inspirenxe.strata.api.event.PointerEvent;
-import org.inspirenxe.strata.api.event.RequestEvent;
-import org.inspirenxe.strata.api.event.ScrollEvent;
 import org.inspirenxe.strata.api.event.Subscription;
-import org.inspirenxe.strata.api.event.ValueEvent;
-import org.inspirenxe.strata.api.event.ValueRequestEvent;
+import org.inspirenxe.strata.api.event.control.ControlEvent;
+import org.inspirenxe.strata.api.event.control.RequestEvent;
+import org.inspirenxe.strata.api.event.control.ValueEvent;
+import org.inspirenxe.strata.api.event.control.ValueRequestEvent;
+import org.inspirenxe.strata.api.event.input.CharEvent;
+import org.inspirenxe.strata.api.event.input.DragEvent;
+import org.inspirenxe.strata.api.event.input.FocusEvent;
+import org.inspirenxe.strata.api.event.input.InputEvents;
+import org.inspirenxe.strata.api.event.input.KeyEvent;
+import org.inspirenxe.strata.api.event.input.PointerButtonEvent;
+import org.inspirenxe.strata.api.event.input.PointerEvent;
+import org.inspirenxe.strata.api.event.input.ScrollEvent;
 import org.inspirenxe.strata.api.extension.peer.ComponentHooks;
 import org.inspirenxe.strata.api.extension.peer.ComponentPeer;
-import org.inspirenxe.strata.api.geom.Insets;
-import org.inspirenxe.strata.api.geom.Rect;
-import org.inspirenxe.strata.api.geom.Size;
+import org.inspirenxe.strata.api.geometry.Insets;
+import org.inspirenxe.strata.api.geometry.Rect;
+import org.inspirenxe.strata.api.geometry.Size;
 import org.inspirenxe.strata.api.layout.HorizontalAlignment;
 import org.inspirenxe.strata.api.layout.VerticalAlignment;
 import org.inspirenxe.strata.api.theme.Border;
@@ -197,7 +197,7 @@ public abstract class CustomComponent<T extends Component<T>> implements Compone
     /**
      * Returns whether focusing this component should start text input on the engine. Return true for components
      * that take typed characters: some engines, SDL-based ones among them, send no
-     * {@link org.inspirenxe.strata.api.event.CharEvent}s otherwise. The default is false.
+     * {@link org.inspirenxe.strata.api.event.input.CharEvent}s otherwise. The default is false.
      *
      * @return true if the component accepts typed text
      */
@@ -206,7 +206,7 @@ public abstract class CustomComponent<T extends Component<T>> implements Compone
     }
 
     /**
-     * Default behavior for {@link EventTypes#POINTER_ENTER}. The default does nothing.
+     * Default behavior for {@link InputEvents#POINTER_ENTER}. The default does nothing.
      *
      * @param event the event
      */
@@ -214,7 +214,7 @@ public abstract class CustomComponent<T extends Component<T>> implements Compone
     }
 
     /**
-     * Default behavior for {@link EventTypes#POINTER_EXIT}. The default does nothing.
+     * Default behavior for {@link InputEvents#POINTER_EXIT}. The default does nothing.
      *
      * @param event the event
      */
@@ -222,7 +222,7 @@ public abstract class CustomComponent<T extends Component<T>> implements Compone
     }
 
     /**
-     * Default behavior for {@link EventTypes#POINTER_MOVE}. The default does nothing.
+     * Default behavior for {@link InputEvents#POINTER_MOVE}. The default does nothing.
      *
      * @param event the event
      */
@@ -230,7 +230,7 @@ public abstract class CustomComponent<T extends Component<T>> implements Compone
     }
 
     /**
-     * Default behavior for {@link EventTypes#POINTER_PRESS}. The default does nothing.
+     * Default behavior for {@link InputEvents#POINTER_PRESS}. The default does nothing.
      *
      * @param event the event
      */
@@ -238,7 +238,7 @@ public abstract class CustomComponent<T extends Component<T>> implements Compone
     }
 
     /**
-     * Default behavior for {@link EventTypes#POINTER_RELEASE}. The default does nothing.
+     * Default behavior for {@link InputEvents#POINTER_RELEASE}. The default does nothing.
      *
      * @param event the event
      */
@@ -246,7 +246,7 @@ public abstract class CustomComponent<T extends Component<T>> implements Compone
     }
 
     /**
-     * Default behavior for {@link EventTypes#CLICK}. The default does nothing.
+     * Default behavior for {@link InputEvents#CLICK}. The default does nothing.
      *
      * @param event the event
      */
@@ -254,7 +254,7 @@ public abstract class CustomComponent<T extends Component<T>> implements Compone
     }
 
     /**
-     * Default behavior for {@link EventTypes#DRAG_START}. The default does nothing.
+     * Default behavior for {@link InputEvents#DRAG_START}. The default does nothing.
      *
      * @param event the event
      */
@@ -262,7 +262,7 @@ public abstract class CustomComponent<T extends Component<T>> implements Compone
     }
 
     /**
-     * Default behavior for {@link EventTypes#DRAG}. The default does nothing.
+     * Default behavior for {@link InputEvents#DRAG}. The default does nothing.
      *
      * @param event the event
      */
@@ -270,7 +270,7 @@ public abstract class CustomComponent<T extends Component<T>> implements Compone
     }
 
     /**
-     * Default behavior for {@link EventTypes#DRAG_END}. The default does nothing.
+     * Default behavior for {@link InputEvents#DRAG_END}. The default does nothing.
      *
      * @param event the event
      */
@@ -278,7 +278,7 @@ public abstract class CustomComponent<T extends Component<T>> implements Compone
     }
 
     /**
-     * Default behavior for {@link EventTypes#SCROLL}. The default does nothing.
+     * Default behavior for {@link InputEvents#SCROLL}. The default does nothing.
      *
      * @param event the event
      */
@@ -286,7 +286,7 @@ public abstract class CustomComponent<T extends Component<T>> implements Compone
     }
 
     /**
-     * Default behavior for {@link EventTypes#KEY}. The default does nothing.
+     * Default behavior for {@link InputEvents#KEY}. The default does nothing.
      *
      * @param event the event
      */
@@ -294,7 +294,7 @@ public abstract class CustomComponent<T extends Component<T>> implements Compone
     }
 
     /**
-     * Default behavior for {@link EventTypes#CHAR}. The default does nothing.
+     * Default behavior for {@link InputEvents#CHAR}. The default does nothing.
      *
      * @param event the event
      */
@@ -302,7 +302,7 @@ public abstract class CustomComponent<T extends Component<T>> implements Compone
     }
 
     /**
-     * Default behavior for {@link EventTypes#FOCUS_GAINED}. The default does nothing.
+     * Default behavior for {@link InputEvents#FOCUS_GAINED}. The default does nothing.
      *
      * @param event the event
      */
@@ -310,7 +310,7 @@ public abstract class CustomComponent<T extends Component<T>> implements Compone
     }
 
     /**
-     * Default behavior for {@link EventTypes#FOCUS_LOST}. The default does nothing.
+     * Default behavior for {@link InputEvents#FOCUS_LOST}. The default does nothing.
      *
      * @param event the event
      */
@@ -318,7 +318,7 @@ public abstract class CustomComponent<T extends Component<T>> implements Compone
     }
 
     /**
-     * Default behavior for event types other than those in {@link EventTypes}. The default does nothing.
+     * Default behavior for event types other than those in {@link InputEvents}. The default does nothing.
      *
      * @param type the event's type
      * @param event the event
@@ -361,33 +361,33 @@ public abstract class CustomComponent<T extends Component<T>> implements Compone
     }
 
     private void handleEvent(final EventType<?> type, final Event event) {
-        if (type == EventTypes.POINTER_ENTER) {
+        if (type == InputEvents.POINTER_ENTER) {
             this.onPointerEnter((PointerEvent) event);
-        } else if (type == EventTypes.POINTER_EXIT) {
+        } else if (type == InputEvents.POINTER_EXIT) {
             this.onPointerExit((PointerEvent) event);
-        } else if (type == EventTypes.POINTER_MOVE) {
+        } else if (type == InputEvents.POINTER_MOVE) {
             this.onPointerMove((PointerEvent) event);
-        } else if (type == EventTypes.POINTER_PRESS) {
+        } else if (type == InputEvents.POINTER_PRESS) {
             this.onPointerPress((PointerButtonEvent) event);
-        } else if (type == EventTypes.POINTER_RELEASE) {
+        } else if (type == InputEvents.POINTER_RELEASE) {
             this.onPointerRelease((PointerButtonEvent) event);
-        } else if (type == EventTypes.CLICK) {
+        } else if (type == InputEvents.CLICK) {
             this.onClick((PointerButtonEvent) event);
-        } else if (type == EventTypes.DRAG_START) {
+        } else if (type == InputEvents.DRAG_START) {
             this.onDragStart((DragEvent) event);
-        } else if (type == EventTypes.DRAG) {
+        } else if (type == InputEvents.DRAG) {
             this.onDrag((DragEvent) event);
-        } else if (type == EventTypes.DRAG_END) {
+        } else if (type == InputEvents.DRAG_END) {
             this.onDragEnd((DragEvent) event);
-        } else if (type == EventTypes.SCROLL) {
+        } else if (type == InputEvents.SCROLL) {
             this.onScroll((ScrollEvent) event);
-        } else if (type == EventTypes.KEY) {
+        } else if (type == InputEvents.KEY) {
             this.onKey((KeyEvent) event);
-        } else if (type == EventTypes.CHAR) {
+        } else if (type == InputEvents.CHAR) {
             this.onChar((CharEvent) event);
-        } else if (type == EventTypes.FOCUS_GAINED) {
+        } else if (type == InputEvents.FOCUS_GAINED) {
             this.onFocusGained((FocusEvent) event);
-        } else if (type == EventTypes.FOCUS_LOST) {
+        } else if (type == InputEvents.FOCUS_LOST) {
             this.onFocusLost((FocusEvent) event);
         } else {
             this.onOtherEvent(type, event);

@@ -1,7 +1,7 @@
 package org.inspirenxe.strata.core.event;
 
 import org.inspirenxe.strata.api.component.Component;
-import org.inspirenxe.strata.api.event.ControlEvent;
+import org.inspirenxe.strata.api.event.control.ControlEvent;
 
 /**
  * A control's report without a value. It has no default behavior on the components it passes.

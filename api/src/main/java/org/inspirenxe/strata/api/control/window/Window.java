@@ -1,12 +1,12 @@
 package org.inspirenxe.strata.api.control.window;
 
 import org.inspirenxe.strata.api.component.Container;
-import org.inspirenxe.strata.api.event.EventType;
-import org.inspirenxe.strata.api.event.ValueEvent;
-import org.inspirenxe.strata.api.event.ValueRequestEvent;
-import org.inspirenxe.strata.api.geom.Size;
 import org.inspirenxe.strata.api.control.attribute.popup.Closable;
 import org.inspirenxe.strata.api.control.attribute.text.Titled;
+import org.inspirenxe.strata.api.event.EventType;
+import org.inspirenxe.strata.api.event.control.ValueEvent;
+import org.inspirenxe.strata.api.event.control.ValueRequestEvent;
+import org.inspirenxe.strata.api.geometry.Size;
 
 /**
  * A framed panel with a title bar, a close button, and content below the bar. Screens use it as their main frame,

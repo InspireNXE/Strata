@@ -6,8 +6,8 @@ import org.inspirenxe.strata.api.component.Component;
 import org.inspirenxe.strata.api.extension.ArrangeContext;
 import org.inspirenxe.strata.api.extension.CustomContainer;
 import org.inspirenxe.strata.api.extension.MeasureContext;
-import org.inspirenxe.strata.api.geom.Rect;
-import org.inspirenxe.strata.api.geom.Size;
+import org.inspirenxe.strata.api.geometry.Rect;
+import org.inspirenxe.strata.api.geometry.Size;
 
 /**
  * Lays children out left to right and starts a new row when the next child would not fit, like words in a

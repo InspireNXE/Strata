@@ -1,11 +1,12 @@
-package org.inspirenxe.strata.api.event;
+package org.inspirenxe.strata.api.event.input;
 
 import org.inspirenxe.strata.api.component.Component;
+import org.inspirenxe.strata.api.event.Cancelable;
 
 import java.util.Optional;
 
 /**
- * Keyboard focus moving. Used by {@link EventTypes#FOCUS_GAINED} and {@link EventTypes#FOCUS_LOST}. When focus
+ * Keyboard focus moving. Used by {@link InputEvents#FOCUS_GAINED} and {@link InputEvents#FOCUS_LOST}. When focus
  * moves from one component to another, the old one gets {@code FOCUS_LOST} first, then the new one gets
  * {@code FOCUS_GAINED}; both run after the focus has already changed.
  *

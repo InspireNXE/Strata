@@ -1,11 +1,11 @@
 package org.inspirenxe.strata.core.node;
 
 import org.inspirenxe.strata.api.component.Component;
+import org.inspirenxe.strata.api.extension.CustomComponent;
 import org.inspirenxe.strata.api.extension.peer.ComponentHooks;
 import org.inspirenxe.strata.api.extension.peer.ContainerPeer;
-import org.inspirenxe.strata.api.extension.CustomComponent;
-import org.inspirenxe.strata.api.geom.Insets;
-import org.inspirenxe.strata.api.geom.Rect;
+import org.inspirenxe.strata.api.geometry.Insets;
+import org.inspirenxe.strata.api.geometry.Rect;
 import org.inspirenxe.strata.core.paint.CanvasPainter;
 import org.inspirenxe.strata.spi.Canvas;
 

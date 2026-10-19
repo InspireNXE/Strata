@@ -1,10 +1,10 @@
-package org.inspirenxe.strata.api.event;
+package org.inspirenxe.strata.api.event.input;
 
 import org.inspirenxe.strata.api.input.ScrollKind;
 
 /**
  * A scroll from a mouse wheel or trackpad, fired at the component under the pointer. Used by
- * {@link EventTypes#SCROLL}.
+ * {@link InputEvents#SCROLL}.
  *
  * <p>Amounts are in wheel notches: one notch of a notched wheel is 1, and a trackpad reports fractions. Horizontal
  * scrolling comes from tilting wheels, trackpads, and on some engines from Shift plus a vertical wheel.</p>

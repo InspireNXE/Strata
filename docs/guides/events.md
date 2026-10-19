@@ -5,12 +5,12 @@ Everything a component does reaches your code as an event: input such as clicks 
 ## Registering a handler
 
 ```java
-component.onEvent(EventTypes.CLICK, event -> { ... });                         // priority 0
-component.onEvent(EventTypes.CLICK, -100, event -> { ... });                   // runs before priority 0
-Subscription drag = component.subscribe(EventTypes.DRAG, 0, event -> { ... }); // removable later
+component.onEvent(InputEvents.CLICK, event -> { ... });                         // priority 0
+component.onEvent(InputEvents.CLICK, -100, event -> { ... });                   // runs before priority 0
+Subscription drag = component.subscribe(InputEvents.DRAG, 0, event -> { ... }); // removable later
 ```
 
-Event types are typed keys. `EventTypes.CLICK` is an `EventType<PointerButtonEvent>`, so the handler receives a `PointerButtonEvent` without a cast. Input types are the constants in `EventTypes`. A control's events are constants on the [attributes](controls.md#attributes) it has, such as `TextInput.EDITED` for every text field and `SingleSelection.SELECTED` for every list, table and tree, or on the control itself for what only it does, such as `Button.PRESS`. Every component has `Component.PAINT`, `Component.PAINTED` and `Component.MEASURED`. Always use the constants, because types are compared by identity.
+Event types are typed keys. `InputEvents.CLICK` is an `EventType<PointerButtonEvent>`, so the handler receives a `PointerButtonEvent` without a cast. Input types are the constants in `InputEvents`. A control's events are constants on the [attributes](controls.md#attributes) it has, such as `TextInput.EDITED` for every text field and `SingleSelection.SELECTED` for every list, table and tree, or on the control itself for what only it does, such as `Button.PRESS`. Every component has `Component.PAINT`, `Component.PAINTED` and `Component.MEASURED`. Always use the constants, because types are compared by identity.
 
 `onEvent` returns the component, so registration chains with the setters:
 

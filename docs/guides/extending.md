@@ -124,7 +124,7 @@ Fire requests only for what the user does, and reports after every change, whoev
 | `acceptsTextInput()` | When it gains focus | false |
 | `snapshotState()` | When an event with [snapshots](snapshots.md#your-own-components) captures it | null |
 | `onClick(event)` and the other `on...` hooks | The default-behavior step of each input event, after the handlers, unless canceled | Nothing |
-| `onOtherEvent(type, event)` | For event types not in `EventTypes` | Nothing |
+| `onOtherEvent(type, event)` | For event types not in `InputEvents` | Nothing |
 
 ### Rules
 

@@ -21,7 +21,7 @@ import org.inspirenxe.strata.api.control.menu.Menu;
 import org.inspirenxe.strata.api.control.menu.MenuBar;
 import org.inspirenxe.strata.api.control.pane.Tab;
 import org.inspirenxe.strata.api.control.pane.TabBar;
-import org.inspirenxe.strata.api.event.ValueEvent;
+import org.inspirenxe.strata.api.event.control.ValueEvent;
 import org.inspirenxe.strata.api.layout.AbsolutePanel;
 import org.inspirenxe.strata.api.layout.GridLength;
 import org.junit.jupiter.api.Nested;

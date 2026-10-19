@@ -1,7 +1,7 @@
 package org.inspirenxe.strata.core.event;
 
 import org.inspirenxe.strata.api.component.Component;
-import org.inspirenxe.strata.api.event.MeasureEvent;
+import org.inspirenxe.strata.api.event.component.MeasureEvent;
 import org.inspirenxe.strata.api.extension.MeasureContext;
 
 /**

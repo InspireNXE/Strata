@@ -1,7 +1,7 @@
 package org.inspirenxe.strata.core.event;
 
 import org.inspirenxe.strata.api.component.Component;
-import org.inspirenxe.strata.api.event.RequestEvent;
+import org.inspirenxe.strata.api.event.control.RequestEvent;
 
 /**
  * A control's request without a value. It has no default behavior on the components it passes; the control that

@@ -82,7 +82,7 @@ Adapters can make styled-lines tooltips from the engine's own tooltip text, for 
 
 ## Held modifiers
 
-`EventTypes.MODIFIERS_CHANGED` fires at the screen's content and each open overlay whenever the held modifiers change, by a modifier key or by input that arrives with different ones. Use it for controls that change while a key is held:
+`InputEvents.MODIFIERS_CHANGED` fires at the screen's content and each open overlay whenever the held modifiers change, by a modifier key or by input that arrives with different ones. Use it for controls that change while a key is held:
 
 ```java
 --8<-- "overlays/OverlayExamples.java:modifiers"

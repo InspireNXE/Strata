@@ -1,10 +1,12 @@
-package org.inspirenxe.strata.api.event;
+package org.inspirenxe.strata.api.event.input;
+
+import org.inspirenxe.strata.api.event.EventType;
 
 /**
  * The event types Strata fires. Every component can receive every type; built-in controls act on the ones listed
  * under "default behavior" below. Positions in pointer events are in the host's coordinates.
  */
-public final class EventTypes {
+public final class InputEvents {
     /**
      * The pointer moved onto the target, which is now the deepest component under it. Direct: ancestors are not
      * told. Also fired when a component appears under a still pointer after a layout change, on the next pointer
@@ -81,6 +83,6 @@ public final class EventTypes {
      */
     public static final EventType<ModifiersEvent> MODIFIERS_CHANGED = EventType.direct("modifiers_changed", ModifiersEvent.class);
 
-    private EventTypes() {
+    private InputEvents() {
     }
 }

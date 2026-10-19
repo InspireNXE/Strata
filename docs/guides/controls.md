@@ -835,7 +835,7 @@ Menu menu = factory.menu()
         .addSubmenu("Send to", sendMenu)
         .addSeparator()
         .addCheckItem("Show prices", settings.prices(), settings::setPrices);
-cell.onEvent(EventTypes.CLICK, event -> {
+cell.onEvent(InputEvents.CLICK, event -> {
     if (event.button() == MouseButton.RIGHT) {
         menu.openAt(event.x(), event.y());
     }

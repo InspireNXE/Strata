@@ -6,9 +6,9 @@ import org.inspirenxe.strata.api.component.Tooltip;
 import org.inspirenxe.strata.api.event.Event;
 import org.inspirenxe.strata.api.event.EventHandler;
 import org.inspirenxe.strata.api.event.EventType;
-import org.inspirenxe.strata.api.event.EventTypes;
 import org.inspirenxe.strata.api.event.Subscription;
-import org.inspirenxe.strata.api.geom.Rect;
+import org.inspirenxe.strata.api.event.input.InputEvents;
+import org.inspirenxe.strata.api.geometry.Rect;
 import org.inspirenxe.strata.api.input.Key;
 import org.inspirenxe.strata.api.input.KeyAction;
 import org.inspirenxe.strata.api.input.Modifier;
@@ -514,11 +514,11 @@ public final class Root {
             final Node target = press.target;
             if (!press.dragging && (Math.abs(x - press.startX) > DRAG_THRESHOLD || Math.abs(y - press.startY) > DRAG_THRESHOLD)) {
                 press.dragging = true;
-                target.fire(EventTypes.DRAG_START, new DragEventImpl(target.facade(), press.startX, press.startY, modifiers,
+                target.fire(InputEvents.DRAG_START, new DragEventImpl(target.facade(), press.startX, press.startY, modifiers,
                         entry.getKey(), press.clicks, press.startX, press.startY, 0f, 0f));
             }
             if (press.dragging && target.root() == this) {
-                target.fire(EventTypes.DRAG, new DragEventImpl(target.facade(), x, y, modifiers, entry.getKey(),
+                target.fire(InputEvents.DRAG, new DragEventImpl(target.facade(), x, y, modifiers, entry.getKey(),
                         press.clicks, press.startX, press.startY, x - press.lastX, y - press.lastY));
                 dragging = true;
             }
@@ -528,7 +528,7 @@ public final class Root {
 
         this.updateHover(x, y, modifiers);
         if (this.hovered != null) {
-            this.hovered.fire(EventTypes.POINTER_MOVE, new PointerEventImpl(this.hovered.facade(), x, y, modifiers));
+            this.hovered.fire(InputEvents.POINTER_MOVE, new PointerEventImpl(this.hovered.facade(), x, y, modifiers));
         }
         this.updateTooltip();
         return dragging || this.hovered != null;
@@ -590,7 +590,7 @@ public final class Root {
         final int clicks = this.clickCounter.press(target, button, x, y, this.platform.clock().millis());
         this.presses.put(button, new Press(target, clicks, x, y));
         target.setPressed(true);
-        target.fire(EventTypes.POINTER_PRESS, new PointerButtonEventImpl(target.facade(), x, y, modifiers, button, clicks));
+        target.fire(InputEvents.POINTER_PRESS, new PointerButtonEventImpl(target.facade(), x, y, modifiers, button, clicks));
         return true;
     }
 
@@ -611,12 +611,12 @@ public final class Root {
             return true;
         }
 
-        target.fire(EventTypes.POINTER_RELEASE, new PointerButtonEventImpl(target.facade(), x, y, modifiers, button, press.clicks));
+        target.fire(InputEvents.POINTER_RELEASE, new PointerButtonEventImpl(target.facade(), x, y, modifiers, button, press.clicks));
         if (press.dragging) {
-            target.fire(EventTypes.DRAG_END, new DragEventImpl(target.facade(), x, y, modifiers, button, press.clicks,
+            target.fire(InputEvents.DRAG_END, new DragEventImpl(target.facade(), x, y, modifiers, button, press.clicks,
                     press.startX, press.startY, x - press.lastX, y - press.lastY));
         } else if (target.root() == this && target.isEnabled() && target.bounds().contains(x, y)) {
-            target.fire(EventTypes.CLICK, new PointerButtonEventImpl(target.facade(), x, y, modifiers, button, press.clicks));
+            target.fire(InputEvents.CLICK, new PointerButtonEventImpl(target.facade(), x, y, modifiers, button, press.clicks));
         }
         this.updateHover(x, y, modifiers);
         return true;
@@ -643,7 +643,7 @@ public final class Root {
         if (this.hovered == null) {
             return false;
         }
-        final boolean handled = this.hovered.fire(EventTypes.SCROLL,
+        final boolean handled = this.hovered.fire(InputEvents.SCROLL,
                 new ScrollEventImpl(this.hovered.facade(), x, y, modifiers, scrollX, scrollY, kind)).isHandled();
         if (handled) {
             this.layout();
@@ -662,7 +662,7 @@ public final class Root {
             final Node old = this.hovered;
             this.hovered = null;
             old.setHovered(false);
-            old.fire(EventTypes.POINTER_EXIT, new PointerEventImpl(old.facade(), this.pointerX, this.pointerY, Modifiers.NONE));
+            old.fire(InputEvents.POINTER_EXIT, new PointerEventImpl(old.facade(), this.pointerX, this.pointerY, Modifiers.NONE));
         }
         this.updateTooltip();
     }
@@ -715,11 +715,11 @@ public final class Root {
         this.hovered = next;
         if (previous != null) {
             previous.setHovered(false);
-            previous.fire(EventTypes.POINTER_EXIT, new PointerEventImpl(previous.facade(), x, y, modifiers));
+            previous.fire(InputEvents.POINTER_EXIT, new PointerEventImpl(previous.facade(), x, y, modifiers));
         }
         if (next != null) {
             next.setHovered(true);
-            next.fire(EventTypes.POINTER_ENTER, new PointerEventImpl(next.facade(), x, y, modifiers));
+            next.fire(InputEvents.POINTER_ENTER, new PointerEventImpl(next.facade(), x, y, modifiers));
         }
     }
 
@@ -816,7 +816,7 @@ public final class Root {
         if (target == null) {
             return false;
         }
-        if (target.fire(EventTypes.KEY, new KeyEventImpl(target.facade(), key, action, modifiers)).isHandled()) {
+        if (target.fire(InputEvents.KEY, new KeyEventImpl(target.facade(), key, action, modifiers)).isHandled()) {
             return true;
         }
         if (key == Key.ESCAPE && action == KeyAction.PRESS) {
@@ -844,7 +844,7 @@ public final class Root {
         if (this.focused == null) {
             return false;
         }
-        return this.focused.fire(EventTypes.CHAR, new CharEventImpl(this.focused.facade(), codePoint, modifiers)).isHandled();
+        return this.focused.fire(InputEvents.CHAR, new CharEventImpl(this.focused.facade(), codePoint, modifiers)).isHandled();
     }
 
     /**
@@ -869,7 +869,7 @@ public final class Root {
         this.modifiers = next;
         for (final Node top : this.tops()) {
             if (top != this.tooltipNode) {
-                top.fire(EventTypes.MODIFIERS_CHANGED, new ModifiersEventImpl(top.facade(), next));
+                top.fire(InputEvents.MODIFIERS_CHANGED, new ModifiersEventImpl(top.facade(), next));
             }
         }
     }
@@ -994,14 +994,14 @@ public final class Root {
             if (previous.acceptsTextInput() && (next == null || !next.acceptsTextInput())) {
                 this.platform.textInput().stop();
             }
-            previous.fire(EventTypes.FOCUS_LOST, new FocusEventImpl(previous.facade(), next == null ? null : next.facade()));
+            previous.fire(InputEvents.FOCUS_LOST, new FocusEventImpl(previous.facade(), next == null ? null : next.facade()));
         }
         if (next != null) {
             next.setFocused(true);
             if (next.acceptsTextInput()) {
                 this.platform.textInput().start(next.bounds());
             }
-            next.fire(EventTypes.FOCUS_GAINED, new FocusEventImpl(next.facade(), previous == null ? null : previous.facade()));
+            next.fire(InputEvents.FOCUS_GAINED, new FocusEventImpl(next.facade(), previous == null ? null : previous.facade()));
             for (Node ancestor = next.parentNode(); ancestor != null && this.focused == next; ancestor = ancestor.parentNode()) {
                 ancestor.hooks().descendantFocused(next.facade());
             }
@@ -1170,7 +1170,7 @@ public final class Root {
                 throw new IllegalArgumentException("A toast must show for some time: " + millis);
             }
             final Layer layer = Root.this.open(content, null, false, Root.this.platform.clock().millis() + millis);
-            content.onEvent(EventTypes.CLICK, Integer.MAX_VALUE, event -> {
+            content.onEvent(InputEvents.CLICK, Integer.MAX_VALUE, event -> {
                 if (!event.isCancelled()) {
                     layer.close();
                 }

@@ -2,8 +2,8 @@ package org.inspirenxe.strata.api.control.attribute.value;
 
 import org.inspirenxe.strata.api.event.EventTarget;
 import org.inspirenxe.strata.api.event.EventType;
-import org.inspirenxe.strata.api.event.ValueEvent;
-import org.inspirenxe.strata.api.event.ValueRequestEvent;
+import org.inspirenxe.strata.api.event.control.ValueEvent;
+import org.inspirenxe.strata.api.event.control.ValueRequestEvent;
 
 /**
  * A control that is on or off, such as a check box, a switch or a radio button.

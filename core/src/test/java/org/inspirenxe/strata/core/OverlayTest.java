@@ -5,8 +5,8 @@ import org.inspirenxe.strata.api.component.Tooltip;
 import org.inspirenxe.strata.api.control.attribute.popup.Closable;
 import org.inspirenxe.strata.api.control.button.Button;
 import org.inspirenxe.strata.api.control.field.TextBox;
-import org.inspirenxe.strata.api.event.EventTypes;
-import org.inspirenxe.strata.api.geom.Rect;
+import org.inspirenxe.strata.api.event.input.InputEvents;
+import org.inspirenxe.strata.api.geometry.Rect;
 import org.inspirenxe.strata.api.input.Key;
 import org.inspirenxe.strata.api.input.KeyAction;
 import org.inspirenxe.strata.api.input.Modifier;
@@ -194,7 +194,7 @@ class OverlayTest {
     void modifierKeysAreTrackedAndReported() {
         final AbsolutePanel root = this.ui.absolutePanel();
         final List<Boolean> control = new ArrayList<>();
-        root.onEvent(EventTypes.MODIFIERS_CHANGED, event -> control.add(event.modifiers().control()));
+        root.onEvent(InputEvents.MODIFIERS_CHANGED, event -> control.add(event.modifiers().control()));
         this.test.show(root);
         this.test.host().key(Key.LEFT_CONTROL, KeyAction.PRESS, Modifiers.NONE);
         this.test.host().key(Key.LEFT_CONTROL, KeyAction.RELEASE, Modifiers.of(Modifier.CONTROL));

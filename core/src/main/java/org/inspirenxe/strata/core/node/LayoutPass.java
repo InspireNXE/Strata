@@ -3,8 +3,8 @@ package org.inspirenxe.strata.core.node;
 import org.inspirenxe.strata.api.component.Component;
 import org.inspirenxe.strata.api.extension.ArrangeContext;
 import org.inspirenxe.strata.api.extension.MeasureContext;
-import org.inspirenxe.strata.api.geom.Rect;
-import org.inspirenxe.strata.api.geom.Size;
+import org.inspirenxe.strata.api.geometry.Rect;
+import org.inspirenxe.strata.api.geometry.Size;
 import org.inspirenxe.strata.api.text.TextMetrics;
 
 /**

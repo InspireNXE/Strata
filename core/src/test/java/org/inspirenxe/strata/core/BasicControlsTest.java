@@ -9,9 +9,9 @@ import org.inspirenxe.strata.api.control.display.Image;
 import org.inspirenxe.strata.api.control.display.Label;
 import org.inspirenxe.strata.api.control.field.Slider;
 import org.inspirenxe.strata.api.control.field.TextBox;
-import org.inspirenxe.strata.api.event.EventTypes;
-import org.inspirenxe.strata.api.geom.Insets;
-import org.inspirenxe.strata.api.geom.Rect;
+import org.inspirenxe.strata.api.event.input.InputEvents;
+import org.inspirenxe.strata.api.geometry.Insets;
+import org.inspirenxe.strata.api.geometry.Rect;
 import org.inspirenxe.strata.api.input.Key;
 import org.inspirenxe.strata.api.input.KeyAction;
 import org.inspirenxe.strata.api.input.Modifiers;
@@ -211,7 +211,7 @@ class BasicControlsTest {
         @Test
         void aClickIsConsumed() {
             final List<Object> bubbled = new ArrayList<>();
-            this.box.parent().onEvent(EventTypes.CLICK, bubbled::add);
+            this.box.parent().onEvent(InputEvents.CLICK, bubbled::add);
             this.test.click(45, 8);
             assertEquals(List.of(), bubbled);
         }
@@ -219,7 +219,7 @@ class BasicControlsTest {
         @Test
         void snapshotsRecordTheStateBeforeTheClick() {
             final List<CheckBox.State> before = new ArrayList<>();
-            this.box.onEvent(EventTypes.CLICK, event -> event.snapshot().state(CheckBox.State.class).ifPresent(before::add));
+            this.box.onEvent(InputEvents.CLICK, event -> event.snapshot().state(CheckBox.State.class).ifPresent(before::add));
             this.test.click(45, 8);
             assertEquals(List.of(new CheckBox.State(false, "Music")), before);
         }

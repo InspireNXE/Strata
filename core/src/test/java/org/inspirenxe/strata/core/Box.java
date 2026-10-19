@@ -3,7 +3,7 @@ package org.inspirenxe.strata.core;
 import org.inspirenxe.strata.api.ComponentFactory;
 import org.inspirenxe.strata.api.extension.CustomComponent;
 import org.inspirenxe.strata.api.extension.MeasureContext;
-import org.inspirenxe.strata.api.geom.Size;
+import org.inspirenxe.strata.api.geometry.Size;
 
 /**
  * A leaf with a fixed natural size, built on the public extension point.

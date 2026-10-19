@@ -4,8 +4,8 @@ import org.inspirenxe.strata.api.component.ComponentSnapshot;
 import org.inspirenxe.strata.api.control.attribute.text.TextInput;
 import org.inspirenxe.strata.api.control.button.Button;
 import org.inspirenxe.strata.api.control.field.TextBox;
-import org.inspirenxe.strata.api.event.EventTypes;
-import org.inspirenxe.strata.api.geom.Rect;
+import org.inspirenxe.strata.api.event.input.InputEvents;
+import org.inspirenxe.strata.api.geometry.Rect;
 import org.inspirenxe.strata.api.input.Key;
 import org.inspirenxe.strata.api.input.KeyAction;
 import org.inspirenxe.strata.api.input.Modifiers;
@@ -48,7 +48,7 @@ class SnapshotTimingTest {
     @Test
     void aPressSnapshotAlreadyShowsFocusAndPress() {
         final List<ComponentSnapshot> taken = new ArrayList<>();
-        this.box.onEvent(EventTypes.POINTER_PRESS, event -> taken.add(event.snapshot()));
+        this.box.onEvent(InputEvents.POINTER_PRESS, event -> taken.add(event.snapshot()));
         final Rect bounds = this.box.bounds();
         this.host.pointerButton(bounds.x() + 2, bounds.y() + 2, MouseButton.LEFT, true, Modifiers.NONE);
         assertTrue(taken.getFirst().focused());

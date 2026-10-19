@@ -2,8 +2,8 @@ package org.inspirenxe.strata.api.control.attribute.item;
 
 import org.inspirenxe.strata.api.event.EventTarget;
 import org.inspirenxe.strata.api.event.EventType;
-import org.inspirenxe.strata.api.event.ValueEvent;
-import org.inspirenxe.strata.api.event.ValueRequestEvent;
+import org.inspirenxe.strata.api.event.control.ValueEvent;
+import org.inspirenxe.strata.api.event.control.ValueRequestEvent;
 
 /**
  * A control whose entries the user can activate, to open or use one, such as a list, a table, a tree or a grid.

@@ -1,9 +1,9 @@
 package org.inspirenxe.strata.api.control.attribute.popup;
 
-import org.inspirenxe.strata.api.event.ControlEvent;
 import org.inspirenxe.strata.api.event.EventTarget;
 import org.inspirenxe.strata.api.event.EventType;
-import org.inspirenxe.strata.api.event.RequestEvent;
+import org.inspirenxe.strata.api.event.control.ControlEvent;
+import org.inspirenxe.strata.api.event.control.RequestEvent;
 
 /**
  * Something that can be closed, such as a window, an overlay, a combo box's list or a menu.

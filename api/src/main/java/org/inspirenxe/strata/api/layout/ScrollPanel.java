@@ -3,8 +3,8 @@ package org.inspirenxe.strata.api.layout;
 import org.inspirenxe.strata.api.component.Component;
 import org.inspirenxe.strata.api.component.Container;
 import org.inspirenxe.strata.api.event.EventType;
-import org.inspirenxe.strata.api.event.ValueEvent;
-import org.inspirenxe.strata.api.geom.Rect;
+import org.inspirenxe.strata.api.event.control.ValueEvent;
+import org.inspirenxe.strata.api.geometry.Rect;
 
 /**
  * A container that shows part of content larger than itself and scrolls the rest into view.

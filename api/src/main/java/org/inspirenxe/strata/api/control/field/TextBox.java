@@ -3,10 +3,10 @@ package org.inspirenxe.strata.api.control.field;
 import org.inspirenxe.strata.api.component.Component;
 import org.inspirenxe.strata.api.control.attribute.text.TextInput;
 import org.inspirenxe.strata.api.event.EventType;
-import org.inspirenxe.strata.api.event.RequestEvent;
-import org.inspirenxe.strata.api.event.ValueEvent;
-import org.inspirenxe.strata.api.event.ValueRequestEvent;
-import org.inspirenxe.strata.api.geom.Insets;
+import org.inspirenxe.strata.api.event.control.RequestEvent;
+import org.inspirenxe.strata.api.event.control.ValueEvent;
+import org.inspirenxe.strata.api.event.control.ValueRequestEvent;
+import org.inspirenxe.strata.api.geometry.Insets;
 
 import java.util.ArrayList;
 import java.util.Collection;

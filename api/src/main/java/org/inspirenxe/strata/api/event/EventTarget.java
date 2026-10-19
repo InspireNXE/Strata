@@ -1,5 +1,7 @@
 package org.inspirenxe.strata.api.event;
 
+import org.inspirenxe.strata.api.event.input.InputEvents;
+
 /**
  * Something handlers can be registered on. Every {@link org.inspirenxe.strata.api.component.Component} is one, and
  * so are the few things with events that are not components, such as a radio group.
@@ -20,7 +22,7 @@ public interface EventTarget<S> {
      * Registers a handler with priority 0.
      *
      * @param <E> the event interface
-     * @param type the event type, such as {@link EventTypes#KEY} or a control's constant
+     * @param type the event type, such as {@link InputEvents#KEY} or a control's constant
      * @param handler the handler
      * @return this target, for chaining
      */

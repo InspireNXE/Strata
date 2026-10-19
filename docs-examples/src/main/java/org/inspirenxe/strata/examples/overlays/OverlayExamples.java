@@ -8,7 +8,7 @@ import org.inspirenxe.strata.api.control.display.Label;
 import org.inspirenxe.strata.api.control.field.TextBox;
 import org.inspirenxe.strata.api.control.window.MessageBox;
 import org.inspirenxe.strata.api.control.window.Window;
-import org.inspirenxe.strata.api.event.EventTypes;
+import org.inspirenxe.strata.api.event.input.InputEvents;
 import org.inspirenxe.strata.api.layout.AnchorPanel;
 import org.inspirenxe.strata.api.overlay.Overlay;
 import org.inspirenxe.strata.api.text.TextSpan;
@@ -76,7 +76,7 @@ public final class OverlayExamples {
 
     static void modifiers(final AnchorPanel screen, final Button buyOne) {
         // --8<-- [start:modifiers]
-        screen.onEvent(EventTypes.MODIFIERS_CHANGED, event ->
+        screen.onEvent(InputEvents.MODIFIERS_CHANGED, event ->
                 buyOne.setText(event.modifiers().control() ? "Delist" : "Buy 1"));
         // --8<-- [end:modifiers]
     }

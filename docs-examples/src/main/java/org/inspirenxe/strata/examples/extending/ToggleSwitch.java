@@ -3,8 +3,8 @@ package org.inspirenxe.strata.examples.extending;
 // --8<-- [start:interface]
 import org.inspirenxe.strata.api.component.Component;
 import org.inspirenxe.strata.api.event.EventType;
-import org.inspirenxe.strata.api.event.ValueEvent;
-import org.inspirenxe.strata.api.event.ValueRequestEvent;
+import org.inspirenxe.strata.api.event.control.ValueEvent;
+import org.inspirenxe.strata.api.event.control.ValueRequestEvent;
 
 /**
  * An on/off switch with a caption to its right: a track with a knob that sits left when off and right when on.

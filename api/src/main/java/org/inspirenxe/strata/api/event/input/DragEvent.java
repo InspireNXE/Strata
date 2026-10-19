@@ -1,14 +1,14 @@
-package org.inspirenxe.strata.api.event;
+package org.inspirenxe.strata.api.event.input;
 
 import org.inspirenxe.strata.api.input.MouseButton;
 
 /**
  * A drag: the pointer moving while a button that went down on the target is held. Used by
- * {@link EventTypes#DRAG_START}, {@link EventTypes#DRAG} and {@link EventTypes#DRAG_END}.
+ * {@link InputEvents#DRAG_START}, {@link InputEvents#DRAG} and {@link InputEvents#DRAG_END}.
  *
  * <p>A press only becomes a drag once the pointer moves more than 4 units from where the button went down. From
  * then on the target receives the drag events even while the pointer is outside it, and the release that ends the
- * drag does not also produce a {@link EventTypes#CLICK}. Each button drags independently.</p>
+ * drag does not also produce a {@link InputEvents#CLICK}. Each button drags independently.</p>
  *
  * <p>Only Strata creates events. Do not implement this interface.</p>
  */
@@ -45,7 +45,7 @@ public interface DragEvent extends PointerEvent {
 
     /**
      * Returns how far the pointer moved horizontally since the previous drag event. Zero for
-     * {@link EventTypes#DRAG_START}.
+     * {@link InputEvents#DRAG_START}.
      *
      * @return the horizontal movement
      */
@@ -53,7 +53,7 @@ public interface DragEvent extends PointerEvent {
 
     /**
      * Returns how far the pointer moved vertically since the previous drag event. Zero for
-     * {@link EventTypes#DRAG_START}.
+     * {@link InputEvents#DRAG_START}.
      *
      * @return the vertical movement
      */

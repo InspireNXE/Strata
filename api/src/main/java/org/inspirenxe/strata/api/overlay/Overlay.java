@@ -2,7 +2,7 @@ package org.inspirenxe.strata.api.overlay;
 
 import org.inspirenxe.strata.api.component.Component;
 import org.inspirenxe.strata.api.control.attribute.popup.Closable;
-import org.inspirenxe.strata.api.event.ControlEvent;
+import org.inspirenxe.strata.api.event.control.ControlEvent;
 
 /**
  * One open popup or dialog; see {@link Overlays}.

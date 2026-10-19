@@ -1,13 +1,13 @@
 package org.inspirenxe.strata.sandbox;
 
 import org.inspirenxe.strata.api.ComponentFactory;
-import org.inspirenxe.strata.api.event.PointerButtonEvent;
+import org.inspirenxe.strata.api.event.input.PointerButtonEvent;
 import org.inspirenxe.strata.api.extension.CustomComponent;
 import org.inspirenxe.strata.api.extension.MeasureContext;
 import org.inspirenxe.strata.api.extension.Painter;
-import org.inspirenxe.strata.api.geom.Insets;
-import org.inspirenxe.strata.api.geom.Rect;
-import org.inspirenxe.strata.api.geom.Size;
+import org.inspirenxe.strata.api.geometry.Insets;
+import org.inspirenxe.strata.api.geometry.Rect;
+import org.inspirenxe.strata.api.geometry.Size;
 
 /**
  * A custom component built on the public extension point: a row of color swatches, one of them selected.

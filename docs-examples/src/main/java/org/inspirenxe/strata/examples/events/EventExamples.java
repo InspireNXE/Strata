@@ -8,9 +8,9 @@ import org.inspirenxe.strata.api.control.button.Button;
 import org.inspirenxe.strata.api.control.display.Label;
 import org.inspirenxe.strata.api.control.field.Slider;
 import org.inspirenxe.strata.api.control.field.TextBox;
-import org.inspirenxe.strata.api.event.EventTypes;
 import org.inspirenxe.strata.api.event.Subscription;
-import org.inspirenxe.strata.api.geom.Rect;
+import org.inspirenxe.strata.api.event.input.InputEvents;
+import org.inspirenxe.strata.api.geometry.Rect;
 import org.inspirenxe.strata.api.input.Key;
 import org.inspirenxe.strata.api.input.Modifier;
 import org.inspirenxe.strata.api.input.ModifierPolicy;
@@ -39,7 +39,7 @@ public final class EventExamples {
         final Button saveButton = factory.button("Save")
                 .setEnabled(false)
                 .onEvent(Button.PRESSED, event -> save.run())
-                .onEvent(EventTypes.POINTER_ENTER, event -> System.out.println("Hovering Save"));
+                .onEvent(InputEvents.POINTER_ENTER, event -> System.out.println("Hovering Save"));
         // --8<-- [end:chain]
         return saveButton;
     }
@@ -91,7 +91,7 @@ public final class EventExamples {
         }
         // Labels have no click behavior, so their clicks bubble up to the panel.
         // target() is the label that was clicked; current() is the panel running this handler.
-        palette.onEvent(EventTypes.CLICK, event -> {
+        palette.onEvent(InputEvents.CLICK, event -> {
             if (event.target() != palette) {
                 selected.setText("Picked " + event.target().id());
                 event.consume();
@@ -103,7 +103,7 @@ public final class EventExamples {
 
     static void rightClick(final Button button) {
         // --8<-- [start:buttons]
-        button.onEvent(EventTypes.CLICK, event -> {
+        button.onEvent(InputEvents.CLICK, event -> {
             if (event.button() == MouseButton.RIGHT) {
                 System.out.println("Context menu at " + event.x() + ", " + event.y());
                 event.consume();
@@ -118,7 +118,7 @@ public final class EventExamples {
         // --8<-- [start:shortcut]
         // Key events go to the focused component first and bubble to the root,
         // so a handler on the root sees every key nothing else consumed.
-        root.onEvent(EventTypes.KEY, event -> {
+        root.onEvent(InputEvents.KEY, event -> {
             if (event.is(Key.S, Modifiers.of(Modifier.CONTROL), ModifierPolicy.EXACT)) {
                 save.run();
                 event.consume();
@@ -137,7 +137,7 @@ public final class EventExamples {
     static void subscriptions(final Button button) {
         // --8<-- [start:remove]
         // subscribe registers like onEvent and returns a way to remove the handler
-        final Subscription hover = button.subscribe(EventTypes.POINTER_ENTER, 0, event -> System.out.println("Hi"));
+        final Subscription hover = button.subscribe(InputEvents.POINTER_ENTER, 0, event -> System.out.println("Hi"));
         hover.close();
         // --8<-- [end:remove]
     }
@@ -178,7 +178,7 @@ public final class EventExamples {
             board.add(handle, position[0], position[1]);
 
             // Drag events keep going to the component the press started on, wherever the pointer goes
-            handle.onEvent(EventTypes.DRAG, event -> {
+            handle.onEvent(InputEvents.DRAG, event -> {
                 position[0] += event.deltaX();
                 position[1] += event.deltaY();
                 board.move(handle, position[0], position[1]);

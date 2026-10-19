@@ -1,4 +1,6 @@
-package org.inspirenxe.strata.api.event;
+package org.inspirenxe.strata.api.event.control;
+
+import org.inspirenxe.strata.api.event.Event;
 
 /**
  * A control's Post event: something happened, such as a press or a close. It fires after the fact, whether the user

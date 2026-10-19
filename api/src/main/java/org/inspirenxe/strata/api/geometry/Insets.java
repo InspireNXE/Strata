@@ -1,4 +1,4 @@
-package org.inspirenxe.strata.api.geom;
+package org.inspirenxe.strata.api.geometry;
 
 /**
  * Space on each side of a rectangle, in UI units. Strata uses insets for margins (outside a component), padding

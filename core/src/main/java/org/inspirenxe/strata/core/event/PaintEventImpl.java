@@ -1,9 +1,9 @@
 package org.inspirenxe.strata.core.event;
 
 import org.inspirenxe.strata.api.component.Component;
-import org.inspirenxe.strata.api.event.PaintEvent;
+import org.inspirenxe.strata.api.event.component.PaintEvent;
 import org.inspirenxe.strata.api.extension.Painter;
-import org.inspirenxe.strata.api.geom.Rect;
+import org.inspirenxe.strata.api.geometry.Rect;
 
 /**
  * The paint event of one component, serving as both {@link Component#PAINT} and {@link Component#PAINTED}. The

@@ -1,7 +1,7 @@
 package org.inspirenxe.strata.api.extension.peer;
 
 import org.inspirenxe.strata.api.component.Component;
-import org.inspirenxe.strata.api.geom.Insets;
+import org.inspirenxe.strata.api.geometry.Insets;
 
 import java.util.List;
 

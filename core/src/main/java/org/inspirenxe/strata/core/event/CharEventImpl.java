@@ -1,7 +1,7 @@
 package org.inspirenxe.strata.core.event;
 
 import org.inspirenxe.strata.api.component.Component;
-import org.inspirenxe.strata.api.event.CharEvent;
+import org.inspirenxe.strata.api.event.input.CharEvent;
 import org.inspirenxe.strata.api.input.Modifiers;
 
 /**

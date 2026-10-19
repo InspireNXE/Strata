@@ -1,6 +1,6 @@
 package org.inspirenxe.strata.spi;
 
-import org.inspirenxe.strata.api.geom.Rect;
+import org.inspirenxe.strata.api.geometry.Rect;
 
 /**
  * Where a host tells the engine that a text field gained or lost focus. Some engines deliver no typed characters

@@ -5,9 +5,9 @@ import org.inspirenxe.strata.api.control.attribute.popup.Closable;
 import org.inspirenxe.strata.api.control.attribute.popup.Openable;
 import org.inspirenxe.strata.api.control.display.Separator;
 import org.inspirenxe.strata.api.event.EventType;
-import org.inspirenxe.strata.api.event.ValueEvent;
-import org.inspirenxe.strata.api.event.ValueRequestEvent;
-import org.inspirenxe.strata.api.geom.Rect;
+import org.inspirenxe.strata.api.event.control.ValueEvent;
+import org.inspirenxe.strata.api.event.control.ValueRequestEvent;
+import org.inspirenxe.strata.api.geometry.Rect;
 
 import java.util.List;
 import java.util.function.Consumer;
@@ -61,7 +61,7 @@ import java.util.function.Consumer;
  *         .addItem("Copy", "Ctrl+C", this::copy)
  *         .addSeparator()
  *         .addCheckItem("Show prices", settings.prices(), settings::setPrices);
- * cell.onEvent(EventTypes.CLICK, event -> {
+ * cell.onEvent(InputEvents.CLICK, event -> {
  *     if (event.button() == MouseButton.RIGHT) {
  *         menu.openAt(event.x(), event.y());
  *     }

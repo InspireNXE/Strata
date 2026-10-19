@@ -1,12 +1,13 @@
-package org.inspirenxe.strata.api.event;
+package org.inspirenxe.strata.api.event.input;
 
+import org.inspirenxe.strata.api.event.Cancelable;
 import org.inspirenxe.strata.api.input.Key;
 import org.inspirenxe.strata.api.input.KeyAction;
 import org.inspirenxe.strata.api.input.ModifierPolicy;
 import org.inspirenxe.strata.api.input.Modifiers;
 
 /**
- * A physical key going down, repeating or coming up. Used by {@link EventTypes#KEY}.
+ * A physical key going down, repeating or coming up. Used by {@link InputEvents#KEY}.
  *
  * <p>Key events say which key, not which character: for typed text use {@link CharEvent}. A key event goes to the
  * focused component, or to the screen's root when nothing has focus, and bubbles.</p>

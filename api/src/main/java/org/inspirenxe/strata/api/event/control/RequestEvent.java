@@ -1,4 +1,6 @@
-package org.inspirenxe.strata.api.event;
+package org.inspirenxe.strata.api.event.control;
+
+import org.inspirenxe.strata.api.event.Cancelable;
 
 /**
  * A control's Pre event: the user asked the control to do something, such as press or close, and it has not

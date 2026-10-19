@@ -1,7 +1,7 @@
 package org.inspirenxe.strata.examples.adapter;
 
 // --8<-- [start:platform]
-import org.inspirenxe.strata.api.geom.Rect;
+import org.inspirenxe.strata.api.geometry.Rect;
 import org.inspirenxe.strata.api.text.TextMetrics;
 import org.inspirenxe.strata.spi.Capabilities;
 import org.inspirenxe.strata.spi.Clipboard;

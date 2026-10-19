@@ -1,8 +1,8 @@
 package org.inspirenxe.strata.api.extension;
 
 import org.inspirenxe.strata.api.component.Component;
-import org.inspirenxe.strata.api.geom.Rect;
-import org.inspirenxe.strata.api.geom.Size;
+import org.inspirenxe.strata.api.geometry.Rect;
+import org.inspirenxe.strata.api.geometry.Size;
 import org.inspirenxe.strata.api.text.TextMetrics;
 
 /**

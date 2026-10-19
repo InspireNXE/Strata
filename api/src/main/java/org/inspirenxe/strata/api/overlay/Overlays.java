@@ -1,7 +1,7 @@
 package org.inspirenxe.strata.api.overlay;
 
 import org.inspirenxe.strata.api.component.Component;
-import org.inspirenxe.strata.api.geom.Rect;
+import org.inspirenxe.strata.api.geometry.Rect;
 
 import java.util.List;
 import java.util.Optional;

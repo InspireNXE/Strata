@@ -2,8 +2,8 @@ package org.inspirenxe.strata.examples.adapter;
 
 // --8<-- [start:canvas]
 import org.inspirenxe.strata.api.component.CursorKind;
-import org.inspirenxe.strata.api.geom.Insets;
-import org.inspirenxe.strata.api.geom.Rect;
+import org.inspirenxe.strata.api.geometry.Insets;
+import org.inspirenxe.strata.api.geometry.Rect;
 import org.inspirenxe.strata.api.text.TextSpan;
 import org.inspirenxe.strata.api.theme.SpriteId;
 import org.inspirenxe.strata.api.visual.Visual;

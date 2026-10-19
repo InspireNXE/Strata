@@ -2,10 +2,10 @@ package org.inspirenxe.strata.api.control.button;
 
 import org.inspirenxe.strata.api.component.Component;
 import org.inspirenxe.strata.api.control.attribute.text.HasText;
-import org.inspirenxe.strata.api.event.ControlEvent;
 import org.inspirenxe.strata.api.event.EventType;
-import org.inspirenxe.strata.api.event.RequestEvent;
-import org.inspirenxe.strata.api.geom.Insets;
+import org.inspirenxe.strata.api.event.control.ControlEvent;
+import org.inspirenxe.strata.api.event.control.RequestEvent;
+import org.inspirenxe.strata.api.geometry.Insets;
 import org.inspirenxe.strata.api.theme.SpriteId;
 import org.inspirenxe.strata.api.visual.Visual;
 

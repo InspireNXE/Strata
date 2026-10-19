@@ -1,6 +1,6 @@
 package org.inspirenxe.strata.api.visual;
 
-import org.inspirenxe.strata.api.geom.Size;
+import org.inspirenxe.strata.api.geometry.Size;
 
 /**
  * Something an engine knows how to draw that Strata cannot describe itself, such as a game item or a loaded image

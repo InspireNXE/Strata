@@ -2,7 +2,7 @@ package org.inspirenxe.strata.api.control.field;
 
 import org.inspirenxe.strata.api.component.Component;
 import org.inspirenxe.strata.api.control.attribute.text.TextInput;
-import org.inspirenxe.strata.api.geom.Insets;
+import org.inspirenxe.strata.api.geometry.Insets;
 
 import java.util.Objects;
 

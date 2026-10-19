@@ -6,10 +6,10 @@
  * kinds:</p>
  * <ul>
  *     <li>Pre events ask to do something and are {@link org.inspirenxe.strata.api.event.Cancelable}: input (the
- *     types in {@link org.inspirenxe.strata.api.event.EventTypes}) and a control's requests, such as
- *     {@code TextBox.EDIT}. Requests fire only for what the user does, and a request with a value can be rewritten
- *     ({@link org.inspirenxe.strata.api.event.ValueRequestEvent#setValue}).</li>
- *     <li>Post events report that something happened, such as {@code TextBox.EDITED}, whether the user or code
+ *     types in {@link org.inspirenxe.strata.api.event.input.InputEvents}) and a control's requests, such as
+ *     {@code TextInput.EDIT}. Requests fire only for what the user does, and a request with a value can be rewritten
+ *     ({@link org.inspirenxe.strata.api.event.control.ValueRequestEvent#setValue}).</li>
+ *     <li>Post events report that something happened, such as {@code TextInput.EDITED}, whether the user or code
  *     caused it. They cannot be canceled.</li>
  * </ul>
  * <p>For every component an input event reaches, its handlers run, then its default behavior unless the event was
@@ -27,6 +27,11 @@
  *     }
  * }).onEvent(Button.PRESSED, event -> save());
  * }</pre>
+ *
+ * <p>This package holds what every event shares: {@link org.inspirenxe.strata.api.event.Event},
+ * {@link org.inspirenxe.strata.api.event.EventType}, the handlers and their registration. The events themselves are
+ * grouped below it: {@code input} for what the user does, {@code control} for the requests and reports of controls,
+ * and {@code component} for drawing and sizing.</p>
  *
  * <p>Only Strata creates events. Do not implement the event interfaces.</p>
  */

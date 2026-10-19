@@ -1,10 +1,10 @@
-package org.inspirenxe.strata.api.event;
+package org.inspirenxe.strata.api.event.input;
 
 import org.inspirenxe.strata.api.input.MouseButton;
 
 /**
- * A mouse button press, release or click. Used by {@link EventTypes#POINTER_PRESS},
- * {@link EventTypes#POINTER_RELEASE} and {@link EventTypes#CLICK}.
+ * A mouse button press, release or click. Used by {@link InputEvents#POINTER_PRESS},
+ * {@link InputEvents#POINTER_RELEASE} and {@link InputEvents#CLICK}.
  *
  * <p>Only Strata creates events. Do not implement this interface.</p>
  */

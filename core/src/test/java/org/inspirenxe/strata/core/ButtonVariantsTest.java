@@ -4,7 +4,7 @@ import org.inspirenxe.strata.api.ComponentFactory;
 import org.inspirenxe.strata.api.control.attribute.item.SingleSelection;
 import org.inspirenxe.strata.api.control.button.Button;
 import org.inspirenxe.strata.api.control.button.CycleButton;
-import org.inspirenxe.strata.api.geom.Rect;
+import org.inspirenxe.strata.api.geometry.Rect;
 import org.inspirenxe.strata.api.input.Key;
 import org.inspirenxe.strata.api.input.KeyAction;
 import org.inspirenxe.strata.api.input.Modifier;
@@ -241,7 +241,7 @@ class ButtonVariantsTest {
             this.button = ButtonVariantsTest.this.ui.button().setIcon(ICON).setIconSize(10, 12);
             ButtonVariantsTest.this.show(this.button);
             assertEquals(new Rect(0, 0, 20, 20), this.button.bounds());
-            this.button.setTextPadding(org.inspirenxe.strata.api.geom.Insets.of(10, 6));
+            this.button.setTextPadding(org.inspirenxe.strata.api.geometry.Insets.of(10, 6));
             ButtonVariantsTest.this.test.host().layout();
             assertEquals(new Rect(0, 0, 30, 24), this.button.bounds());
             assertThrows(IllegalArgumentException.class, () -> this.button.setIconSize(-1, 4));

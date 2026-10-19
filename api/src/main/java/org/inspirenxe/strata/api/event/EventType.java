@@ -1,10 +1,16 @@
 package org.inspirenxe.strata.api.event;
 
+import org.inspirenxe.strata.api.event.control.ControlEvent;
+import org.inspirenxe.strata.api.event.control.RequestEvent;
+import org.inspirenxe.strata.api.event.control.ValueEvent;
+import org.inspirenxe.strata.api.event.control.ValueRequestEvent;
+import org.inspirenxe.strata.api.event.input.InputEvents;
+
 import java.util.Objects;
 
 /**
  * A typed key for one kind of event, used to register handlers with {@link EventTarget#onEvent}. Input types are in
- * {@link EventTypes}, and each control declares its own as constants on its interface. Types are compared by
+ * {@link InputEvents}, and each control declares its own as constants on its interface. Types are compared by
  * identity in dispatch, so always use the constants rather than creating equal copies.
  *
  * @param <E> the event interface handlers receive

@@ -1,4 +1,4 @@
-package org.inspirenxe.strata.api.geom;
+package org.inspirenxe.strata.api.geometry;
 
 /**
  * A width and height in UI units. Measuring returns sizes; Strata treats a negative value as zero.

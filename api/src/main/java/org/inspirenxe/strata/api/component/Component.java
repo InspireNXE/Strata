@@ -2,10 +2,10 @@ package org.inspirenxe.strata.api.component;
 
 import org.inspirenxe.strata.api.event.EventTarget;
 import org.inspirenxe.strata.api.event.EventType;
-import org.inspirenxe.strata.api.event.MeasureEvent;
-import org.inspirenxe.strata.api.event.PaintEvent;
-import org.inspirenxe.strata.api.geom.Insets;
-import org.inspirenxe.strata.api.geom.Rect;
+import org.inspirenxe.strata.api.event.component.MeasureEvent;
+import org.inspirenxe.strata.api.event.component.PaintEvent;
+import org.inspirenxe.strata.api.geometry.Insets;
+import org.inspirenxe.strata.api.geometry.Rect;
 import org.inspirenxe.strata.api.layout.Anchor;
 import org.inspirenxe.strata.api.layout.HorizontalAlignment;
 import org.inspirenxe.strata.api.layout.VerticalAlignment;
@@ -36,7 +36,7 @@ import org.inspirenxe.strata.api.theme.Theme;
  *
  * <h2>Events</h2>
  * <p>Everything a component does reaches code as an event, registered with
- * {@link #onEvent(EventType, EventHandler)}: input (see {@link org.inspirenxe.strata.api.event.EventTypes}), a
+ * {@link #onEvent(EventType, EventHandler)}: input (see {@link org.inspirenxe.strata.api.event.input.InputEvents}), a
  * control's own requests and reports, and drawing and sizing ({@link #PAINT}, {@link #PAINTED},
  * {@link #MEASURED}). For each component an input event reaches, the handlers run in priority order, then the
  * component's own default behavior (a button pressing, a text box inserting a character) unless a handler canceled

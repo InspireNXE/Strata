@@ -2,8 +2,8 @@ package org.inspirenxe.strata.api.control.field;
 
 import org.inspirenxe.strata.api.component.Component;
 import org.inspirenxe.strata.api.event.EventType;
-import org.inspirenxe.strata.api.event.ValueEvent;
-import org.inspirenxe.strata.api.event.ValueRequestEvent;
+import org.inspirenxe.strata.api.event.control.ValueEvent;
+import org.inspirenxe.strata.api.event.control.ValueRequestEvent;
 
 /**
  * Picks an ARGB color: a square for saturation and brightness, a strip for hue, an optional strip for alpha, and a

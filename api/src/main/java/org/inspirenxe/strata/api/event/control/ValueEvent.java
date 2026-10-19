@@ -1,4 +1,4 @@
-package org.inspirenxe.strata.api.event;
+package org.inspirenxe.strata.api.event.control;
 
 /**
  * A control's Post event that carries a value: the new text after an edit, the new value of a slider, the row now

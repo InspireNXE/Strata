@@ -1,10 +1,11 @@
-package org.inspirenxe.strata.api.event;
+package org.inspirenxe.strata.api.event.input;
 
+import org.inspirenxe.strata.api.event.Cancelable;
 import org.inspirenxe.strata.api.input.Modifiers;
 
 /**
  * A character the user typed, after the keyboard layout and any input method have done their work. Used by
- * {@link EventTypes#CHAR}. Goes only to the focused component, and bubbles.
+ * {@link InputEvents#CHAR}. Goes only to the focused component, and bubbles.
  *
  * <p>Characters are Unicode code points, so characters outside the Basic Multilingual Plane, such as emoji, arrive
  * as one event. Some engines, SDL-based ones among them, deliver characters only while a component that accepts

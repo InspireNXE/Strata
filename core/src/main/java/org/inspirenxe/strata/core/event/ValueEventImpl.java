@@ -1,7 +1,7 @@
 package org.inspirenxe.strata.core.event;
 
 import org.inspirenxe.strata.api.component.Component;
-import org.inspirenxe.strata.api.event.ValueEvent;
+import org.inspirenxe.strata.api.event.control.ValueEvent;
 
 /**
  * A control's report that carries the value after a change and the one before it.

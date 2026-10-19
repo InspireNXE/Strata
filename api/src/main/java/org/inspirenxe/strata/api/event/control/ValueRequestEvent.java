@@ -1,4 +1,4 @@
-package org.inspirenxe.strata.api.event;
+package org.inspirenxe.strata.api.event.control;
 
 /**
  * A control's Pre event that carries the value a change is about to use: the text an edit would produce, the

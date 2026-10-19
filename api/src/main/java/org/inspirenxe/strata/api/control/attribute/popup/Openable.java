@@ -1,8 +1,8 @@
 package org.inspirenxe.strata.api.control.attribute.popup;
 
-import org.inspirenxe.strata.api.event.ControlEvent;
 import org.inspirenxe.strata.api.event.EventType;
-import org.inspirenxe.strata.api.event.RequestEvent;
+import org.inspirenxe.strata.api.event.control.ControlEvent;
+import org.inspirenxe.strata.api.event.control.RequestEvent;
 
 /**
  * A control that opens a popup and closes it again, such as a combo box or a menu. How it opens is particular to

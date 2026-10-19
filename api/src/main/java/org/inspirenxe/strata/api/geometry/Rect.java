@@ -1,4 +1,4 @@
-package org.inspirenxe.strata.api.geom;
+package org.inspirenxe.strata.api.geometry;
 
 /**
  * An axis-aligned rectangle in UI units.

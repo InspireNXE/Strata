@@ -2,9 +2,9 @@ package org.inspirenxe.strata.api.control.attribute.text;
 
 import org.inspirenxe.strata.api.event.EventTarget;
 import org.inspirenxe.strata.api.event.EventType;
-import org.inspirenxe.strata.api.event.ValueEvent;
-import org.inspirenxe.strata.api.event.ValueRequestEvent;
-import org.inspirenxe.strata.api.geom.Insets;
+import org.inspirenxe.strata.api.event.control.ValueEvent;
+import org.inspirenxe.strata.api.event.control.ValueRequestEvent;
+import org.inspirenxe.strata.api.geometry.Insets;
 
 /**
  * A control the user types text into, such as a text box or a text area.

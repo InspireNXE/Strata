@@ -1,6 +1,6 @@
 # Event types
 
-Every type is a constant in `EventTypes`. All positions in pointer events are in host coordinates, in UI units. See [Events](../guides/events.md) for how delivery works.
+Every type is a constant in `InputEvents`. All positions in pointer events are in host coordinates, in UI units. See [Events](../guides/events.md) for how delivery works.
 
 ## Pointer
 
