@@ -16,7 +16,7 @@ This repository holds the library alone. Adapters live in their own repositories
 | `spi` | What engine adapters implement (`Canvas`, `Platform`) and drive (`ScreenHost`, `ScreenStack`), plus contract tests for adapters. |
 | `core` | The implementation behind both. Only adapters use it directly. |
 
-[docs/DESIGN.md](docs/DESIGN.md) covers the design and where its ideas come from (MalisisCore and Wintergreen), and [docs/ROADMAP.md](docs/ROADMAP.md) tracks what is built and what is next. The Javadoc of `api` and `spi` is the contract, including what adapters must guarantee.
+[docs/design-implemented.md](docs/design-implemented.md) covers the design as built and where its ideas come from (MalisisCore and Wintergreen), [docs/design-pending.md](docs/design-pending.md) holds the proposals awaiting review and the open questions, and [docs/ROADMAP.md](docs/ROADMAP.md) tracks what is built and what is next. The Javadoc of `api` and `spi` is the contract, including what adapters must guarantee.
 
 The documentation site (guides, reference, platform notes and the compiled examples the pages show) is in the Strata-Docs repository, a sibling of this one at `../Strata-Docs`. It builds against this checkout, so check the two out side by side. Nothing is published yet.
 
