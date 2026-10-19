@@ -65,5 +65,5 @@ Building needs JDK 25.
 Every control has a page in the gallery, which runs on the Java2D adapter from Strata-Swing and lives in the Strata-Gallery repository, a sibling of this one at `../Strata-Gallery`. From there:
 
 ```bash
-./gradlew :gallery:run
+./gradlew run
 ```
