@@ -272,6 +272,7 @@ public final class TabBarImpl extends CustomComposite<TabBar> implements TabBar 
         private Paint selected;
         private Paint hovered;
         private Paint disabled;
+        private Paint selectedDisabled;
         private TextStyle textStyle;
         private TextStyle selectedText;
         private TextStyle disabledText;
@@ -290,6 +291,7 @@ public final class TabBarImpl extends CustomComposite<TabBar> implements TabBar 
             this.selected = Paint.NONE;
             this.hovered = Paint.NONE;
             this.disabled = Paint.NONE;
+            this.selectedDisabled = Paint.NONE;
             this.textStyle = TextStyle.DEFAULT;
             this.selectedText = TextStyle.DEFAULT;
             this.disabledText = TextStyle.DEFAULT;
@@ -319,6 +321,7 @@ public final class TabBarImpl extends CustomComposite<TabBar> implements TabBar 
             this.selected = theme.paintOr(STYLE_SELECTED, this.normal);
             this.hovered = theme.paintOr(STYLE_HOVERED, this.normal);
             this.disabled = theme.paintOr(STYLE_DISABLED, this.normal);
+            this.selectedDisabled = theme.paintOr(STYLE_SELECTED_DISABLED, this.disabled);
             this.textStyle = theme.textStyleOr(STYLE_TEXT, TextStyle.DEFAULT);
             this.selectedText = theme.textStyleOr(STYLE_TEXT_SELECTED, this.textStyle);
             this.disabledText = theme.textStyleOr(STYLE_TEXT_DISABLED, this.textStyle);
@@ -339,12 +342,14 @@ public final class TabBarImpl extends CustomComposite<TabBar> implements TabBar 
         @Override
         protected void paint(final Painter painter, final Rect bounds) {
             final boolean isSelected = this.index() == this.bar.selectedIndex;
+            // A disabled bar draws every tab disabled, keeping the selected one distinct
+            final boolean enabled = this.tab.isEnabled() && this.bar.isEnabled();
             final Paint face;
             final TextSpan caption;
             if (isSelected) {
-                face = this.selected;
-                caption = this.selectedSpan;
-            } else if (!this.tab.isEnabled()) {
+                face = enabled ? this.selected : this.selectedDisabled;
+                caption = enabled ? this.selectedSpan : this.disabledSpan;
+            } else if (!enabled) {
                 face = this.disabled;
                 caption = this.disabledSpan;
             } else {

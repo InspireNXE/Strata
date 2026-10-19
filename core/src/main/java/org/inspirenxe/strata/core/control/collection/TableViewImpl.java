@@ -64,7 +64,7 @@ public final class TableViewImpl<T> extends CustomComposite<TableView<T>> implem
     /**
      * The space between a title or a text cell and its column's edges, in UI units.
      */
-    public static final float CELL_PADDING = 4f;
+    public static final float CELL_PADDING = ComponentFactory.CELL_PADDING;
     /**
      * The room a sort arrow takes at the right of a sortable title, in UI units.
      */

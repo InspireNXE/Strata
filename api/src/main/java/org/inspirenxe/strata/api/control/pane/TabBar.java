@@ -54,7 +54,10 @@ import java.util.Optional;
  *     <li>{@value #STYLE_SELECTED} (paint, required): the selected tab.</li>
  *     <li>{@value #STYLE_HOVERED} (paint, optional): an unselected tab under the pointer. Falls back to
  *     {@value #STYLE_NORMAL}.</li>
- *     <li>{@value #STYLE_DISABLED} (paint, optional): a disabled tab. Falls back to {@value #STYLE_NORMAL}.</li>
+ *     <li>{@value #STYLE_DISABLED} (paint, optional): a disabled tab, and every unselected tab of a disabled bar.
+ *     Falls back to {@value #STYLE_NORMAL}.</li>
+ *     <li>{@value #STYLE_SELECTED_DISABLED} (paint, optional): the selected tab when it, or the whole bar, is
+ *     disabled, so the selection stays visible in the disabled look. Falls back to {@value #STYLE_DISABLED}.</li>
  *     <li>{@value #STYLE_TEXT} (text style, optional): an unselected tab's text. Falls back to the default
  *     style.</li>
  *     <li>{@value #STYLE_TEXT_SELECTED} (text style, optional): the selected tab's text. Falls back to
@@ -91,6 +94,10 @@ public interface TabBar extends Component<TabBar>, Focusable<TabBar>, HasCursor<
      * Style key for a disabled tab (paint, optional).
      */
     String STYLE_DISABLED = "tab.disabled";
+    /**
+     * Style key for the selected tab when it or the bar is disabled (paint, optional).
+     */
+    String STYLE_SELECTED_DISABLED = "tab.selected.disabled";
     /**
      * Style key for an unselected tab's text (text style, optional).
      */

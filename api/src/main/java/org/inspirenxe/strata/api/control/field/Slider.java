@@ -52,7 +52,9 @@ import java.util.function.DoubleFunction;
  * minimum) to the slider's right edge minus the thumb width (at the maximum). A vertical slider wants 20 by 150
  * units, and its thumb is 8 units tall and as wide as the slider; the thumb's bottom edge moves from the slider's
  * bottom edge (at the minimum) to its top edge plus the thumb height (at the maximum). An optional
- * {@linkplain #setLabel label} is drawn centered over the track, in either orientation, to show the setting.</p>
+ * {@linkplain #setLabel label} is drawn centered over the track, in either orientation, to show the setting. It is
+ * drawn last, over the thumb, so its text style should stay readable on the thumb as well as the track; the flat
+ * theme gives it a shadow, as vanilla-style sliders do.</p>
  *
  * <h2>Events</h2>
  * <ul>

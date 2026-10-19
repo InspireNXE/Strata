@@ -18,11 +18,7 @@ package org.inspirenxe.strata.core.control.collection;
 import org.inspirenxe.strata.api.ComponentFactory;
 import org.inspirenxe.strata.api.component.Component;
 import org.inspirenxe.strata.api.control.collection.TableColumn;
-import org.inspirenxe.strata.api.control.display.Label;
-import org.inspirenxe.strata.api.geometry.Insets;
-import org.inspirenxe.strata.api.layout.Anchor;
 import org.inspirenxe.strata.api.layout.GridLength;
-import org.inspirenxe.strata.api.text.TextOverflow;
 
 import java.util.Comparator;
 import java.util.Objects;
@@ -89,11 +85,7 @@ public final class TableColumnImpl<T> implements TableColumn<T> {
 
     private Function<T, Component<?>> textCells(final Function<? super T, String> text) {
         return item -> {
-            final Label label = this.ui.label(text.apply(item));
-            label.setOverflow(TextOverflow.ELLIPSIS);
-            label.setMargin(Insets.of(TableViewImpl.CELL_PADDING, 0f));
-            label.setAnchor(Anchor.MIDDLE_LEFT);
-            return label;
+            return this.ui.cellLabel(text.apply(item));
         };
     }
 

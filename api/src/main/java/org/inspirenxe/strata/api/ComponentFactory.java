@@ -55,7 +55,9 @@ import org.inspirenxe.strata.api.extension.CustomComponent;
 import org.inspirenxe.strata.api.extension.peer.ComponentHooks;
 import org.inspirenxe.strata.api.extension.peer.ComponentPeer;
 import org.inspirenxe.strata.api.extension.peer.ContainerPeer;
+import org.inspirenxe.strata.api.geometry.Insets;
 import org.inspirenxe.strata.api.layout.AbsolutePanel;
+import org.inspirenxe.strata.api.layout.Anchor;
 import org.inspirenxe.strata.api.layout.AnchorPanel;
 import org.inspirenxe.strata.api.layout.GridPanel;
 import org.inspirenxe.strata.api.layout.Orientation;
@@ -63,6 +65,7 @@ import org.inspirenxe.strata.api.layout.ScrollPanel;
 import org.inspirenxe.strata.api.layout.Spacer;
 import org.inspirenxe.strata.api.layout.StackPanel;
 import org.inspirenxe.strata.api.overlay.Overlays;
+import org.inspirenxe.strata.api.text.TextOverflow;
 import org.inspirenxe.strata.api.theme.SpriteId;
 import org.inspirenxe.strata.api.theme.Theme;
 import org.inspirenxe.strata.api.visual.Visual;
@@ -83,6 +86,11 @@ import java.util.function.Function;
  * <p>Strata provides the factory. Do not implement this interface.</p>
  */
 public interface ComponentFactory {
+    /**
+     * The margin, in UI units, on each side of the text in a row's default cell; see {@link #cellLabel(String)}.
+     */
+    float CELL_PADDING = 4f;
+
 
     /**
      * Returns the theme of the host this factory belongs to. It may change while the host runs; components are
@@ -179,6 +187,21 @@ public interface ComponentFactory {
     Label label(String text);
 
     /**
+     * Makes the label a list, tree, dual list or table row shows for text by default: {@value #CELL_PADDING} units
+     * of margin on each side, vertically centered, and cut short with an ellipsis when it does not fit. Use it in
+     * your own cell factories so text rows line up with the built-in ones.
+     *
+     * @param text the text
+     * @return a new label
+     */
+    default Label cellLabel(final String text) {
+        final Label label = this.label(text)
+                .setOverflow(TextOverflow.ELLIPSIS)
+                .setAnchor(Anchor.MIDDLE_LEFT);
+        return label.setMargin(Insets.of(CELL_PADDING, 0f));
+    }
+
+    /**
      * Makes an {@link Image} that draws nothing until it is given a {@linkplain Image#setSprite sprite} or a
      * {@linkplain Image#setVisual visual}, 16 by 16 units until {@linkplain Image#setImageSize resized}.
      *
@@ -258,7 +281,7 @@ public interface ComponentFactory {
      * @return a new list
      */
     default <T> ListView<T> listView() {
-        return this.listView(item -> this.label(String.valueOf(item)));
+        return this.listView(item -> this.cellLabel(String.valueOf(item)));
     }
 
     /**
@@ -450,7 +473,7 @@ public interface ComponentFactory {
      * @return a new tree
      */
     default <T> TreeView<T> treeView() {
-        return this.treeView(item -> this.label(String.valueOf(item)));
+        return this.treeView(item -> this.cellLabel(String.valueOf(item)));
     }
 
     /**
@@ -677,7 +700,7 @@ public interface ComponentFactory {
      * @return a new dual list
      */
     default <T> DualList<T> dualList() {
-        return this.dualList(item -> this.label(String.valueOf(item)));
+        return this.dualList(item -> this.cellLabel(String.valueOf(item)));
     }
 
     /**

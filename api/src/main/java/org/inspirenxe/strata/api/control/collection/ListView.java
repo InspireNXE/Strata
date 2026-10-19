@@ -87,6 +87,8 @@ import java.util.function.Function;
  *
  * <h2>Theme keys</h2>
  * <ul>
+ *     <li>{@value #STYLE_BACKGROUND} (paint, optional): the list's whole area, behind the rows, so an empty list or
+ *     the space below the last row is not see-through. Nothing is drawn if it is missing.</li>
  *     <li>{@value #STYLE_ROW_SELECTED} (paint, required): the selected row.</li>
  *     <li>{@value #STYLE_ROW} (paint, optional): every other row. Nothing is drawn if it is missing.</li>
  *     <li>{@value #STYLE_ROW_HOVERED} (paint, optional): a row under the pointer. Falls back to
@@ -112,6 +114,10 @@ import java.util.function.Function;
 public interface ListView<T> extends Component<ListView<T>>, Focusable<ListView<T>>, HasCursor<ListView<T>>,
         HasTooltip<ListView<T>>, ItemSource<T, ListView<T>>, CellSource<T, ListView<T>>,
         SingleSelection<T, ListView<T>>, Activatable<ListView<T>>, RowView<ListView<T>> {
+    /**
+     * Style key for the list's area behind its rows (paint, optional).
+     */
+    String STYLE_BACKGROUND = "list.background";
     /**
      * Style key for an unselected row (paint, optional).
      */

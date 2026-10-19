@@ -29,6 +29,7 @@ import org.inspirenxe.strata.api.layout.VerticalAlignment;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class LayoutTest {
 
@@ -121,6 +122,26 @@ class LayoutTest {
 
         assertEquals(60, grid.desiredWidth());
         assertEquals(30, right.bounds().x());
+    }
+
+    @Test
+    void wrappingLabelInAWeightedColumnWrapsAtTheColumn() {
+        final TestHost test = new TestHost(150, 200);
+        final ComponentFactory ui = test.factory();
+        // 6 units per character: "hello world again" is 102 wide, "hello world" 66
+        final Label label = ui.label("hello world again").setWrap(true);
+        final GridPanel grid = ui.gridPanel()
+                .columns(GridLength.fixed(70), GridLength.weighted(1))
+                .rows(GridLength.auto());
+        grid.add(new Box(ui, 10, 10), 0, 0).add(label, 0, 1);
+        grid.setAnchor(Anchor.FILL);
+
+        test.show(grid);
+
+        // The weighted column gets 150 - 70 = 80, so the label wraps after "hello world"
+        assertEquals(66, label.desiredWidth());
+        assertEquals(2 * TestPlatform.LINE_HEIGHT, label.desiredHeight());
+        assertTrue(label.bounds().right() <= 150);
     }
 
     @Test

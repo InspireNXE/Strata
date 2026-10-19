@@ -146,6 +146,10 @@ public final class TextBoxImpl extends CustomComponent<TextBox> implements TextB
     private TextStyle readOnlyTextStyle;
     private Paint suggestionsPaint;
     private TextStyle suggestionTextStyle;
+    private String placeholder;
+    private TextStyle placeholderStyle;
+    // Rebuilt when the placeholder or the theme changes
+    private TextSpan placeholderSpan;
 
     // Derived from text and caret, recomputed only after a change
     private boolean visualsDirty;
@@ -186,6 +190,9 @@ public final class TextBoxImpl extends CustomComponent<TextBox> implements TextB
         this.readOnlyTextStyle = TextStyle.DEFAULT;
         this.suggestionsPaint = Paint.NONE;
         this.suggestionTextStyle = TextStyle.DEFAULT;
+        this.placeholder = "";
+        this.placeholderStyle = TextStyle.DEFAULT;
+        this.placeholderSpan = TextSpan.of("");
         this.display = TextSpan.of("");
         this.contentBox = Rect.ZERO;
         this.visualsDirty = true;
@@ -241,6 +248,18 @@ public final class TextBoxImpl extends CustomComponent<TextBox> implements TextB
     @Override
     public boolean isPassword() {
         return this.password;
+    }
+
+    @Override
+    public String placeholder() {
+        return this.placeholder;
+    }
+
+    @Override
+    public TextBox setPlaceholder(final String placeholder) {
+        this.placeholder = placeholder == null ? "" : placeholder;
+        this.placeholderSpan = new TextSpan(this.placeholder, this.placeholderStyle);
+        return this;
     }
 
     @Override
@@ -566,6 +585,8 @@ public final class TextBoxImpl extends CustomComponent<TextBox> implements TextB
         this.readOnlyTextStyle = theme.textStyleOr(STYLE_TEXT_READ_ONLY, this.disabledTextStyle);
         this.suggestionsPaint = theme.paintOr(STYLE_SUGGESTIONS, theme.paintOr(ComboBox.STYLE_POPUP, Paint.NONE));
         this.suggestionTextStyle = theme.textStyleOr(STYLE_SUGGESTION_TEXT, this.textStyle);
+        this.placeholderStyle = theme.textStyleOr(STYLE_PLACEHOLDER, this.disabledTextStyle);
+        this.placeholderSpan = new TextSpan(this.placeholder, this.placeholderStyle);
         if (this.suggestionList != null) {
             ((ComponentFactoryImpl) this.ui).nodeOf(this.suggestionList).setBackground(this.suggestionsPaint);
         }
@@ -619,7 +640,11 @@ public final class TextBoxImpl extends CustomComponent<TextBox> implements TextB
             this.selectionPaint.paint(this.painter, new Rect(originX + this.selectionStartX, this.textY,
                     this.selectionEndX - this.selectionStartX, this.lineHeight));
         }
-        this.painter.text(this.display, originX, this.textY);
+        if (this.buffer.isEmpty() && !this.placeholder.isEmpty()) {
+            this.painter.text(this.placeholderSpan, this.contentBox.x(), this.textY);
+        } else {
+            this.painter.text(this.display, originX, this.textY);
+        }
     }
 
     private boolean caretShown() {

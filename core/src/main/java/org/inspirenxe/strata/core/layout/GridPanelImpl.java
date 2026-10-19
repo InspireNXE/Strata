@@ -37,7 +37,9 @@ import java.util.Objects;
  * The core {@link GridPanel}.
  *
  * <p>Measuring sizes tracks in two steps. A fixed track takes its size and an auto track the largest desired size
- * of its single-span children. Weighted tracks share one unit, the smallest that gives every weighted track's
+ * of its single-span children. Children in weighted columns are measured last, each offered its columns' share of
+ * the width the fixed and auto columns leave, so wrapping text wraps at the column it sits in; with unbounded width
+ * they are offered all of it. Weighted tracks share one unit, the smallest that gives every weighted track's
  * single-span children their desired size. Then each spanning child that still does not fit grows the auto tracks
  * it crosses by equal shares; a span with no auto track is not grown.</p>
  *
@@ -159,18 +161,23 @@ public final class GridPanelImpl extends CustomContainer<GridPanel> implements G
         final List<Component<?>> children = this.children();
         final Size[] outers = new Size[children.size()];
 
+        // Children outside weighted columns first, so the fixed and auto columns are known before the weighted
+        // columns share what they leave
         for (int i = 0; i < children.size(); i++) {
-            final Component<?> child = children.get(i);
-            final Cell cell = this.clampedCell(child, columnCount, rowCount);
-            final float width = fixedSpan(this.columns, cell.column(), cell.columnSpan(), this.columnSpacing, innerWidth);
-            final float height = fixedSpan(this.rows, cell.row(), cell.rowSpan(), this.rowSpacing, innerHeight);
-            outers[i] = context.measure(child, width, height);
-
-            if (cell.columnSpan() == 1) {
-                columnNeeds[cell.column()] = Math.max(columnNeeds[cell.column()], outers[i].width());
+            final Cell cell = this.clampedCell(children.get(i), columnCount, rowCount);
+            if (!crossesWeighted(this.columns, cell.column(), cell.columnSpan())) {
+                final float width = fixedSpan(this.columns, cell.column(), cell.columnSpan(), this.columnSpacing,
+                        innerWidth);
+                this.measureChild(context, children, outers, columnNeeds, rowNeeds, i, cell, width, innerHeight);
             }
-            if (cell.rowSpan() == 1) {
-                rowNeeds[cell.row()] = Math.max(rowNeeds[cell.row()], outers[i].height());
+        }
+        final float[] shares = weightedShares(this.columns, columnNeeds, columnCount, this.columnSpacing, innerWidth);
+        for (int i = 0; i < children.size(); i++) {
+            final Cell cell = this.clampedCell(children.get(i), columnCount, rowCount);
+            if (crossesWeighted(this.columns, cell.column(), cell.columnSpan())) {
+                final float width = shares == null ? innerWidth
+                        : spanOf(this.columns, shares, cell.column(), cell.columnSpan(), this.columnSpacing);
+                this.measureChild(context, children, outers, columnNeeds, rowNeeds, i, cell, width, innerHeight);
             }
         }
 
@@ -224,6 +231,72 @@ public final class GridPanelImpl extends CustomContainer<GridPanel> implements G
         final int column = Math.min(cell.column(), columnCount - 1);
         final int row = Math.min(cell.row(), rowCount - 1);
         return new Cell(row, column, Math.min(cell.rowSpan(), rowCount - row), Math.min(cell.columnSpan(), columnCount - column));
+    }
+
+    private void measureChild(final MeasureContext context, final List<Component<?>> children, final Size[] outers,
+                              final float[] columnNeeds, final float[] rowNeeds, final int index, final Cell cell,
+                              final float width, final float innerHeight) {
+        final float height = fixedSpan(this.rows, cell.row(), cell.rowSpan(), this.rowSpacing, innerHeight);
+        outers[index] = context.measure(children.get(index), width, height);
+        if (cell.columnSpan() == 1) {
+            columnNeeds[cell.column()] = Math.max(columnNeeds[cell.column()], outers[index].width());
+        }
+        if (cell.rowSpan() == 1) {
+            rowNeeds[cell.row()] = Math.max(rowNeeds[cell.row()], outers[index].height());
+        }
+    }
+
+    private static boolean crossesWeighted(final List<GridLength> tracks, final int start, final int span) {
+        for (int i = start; i < start + span && i < tracks.size(); i++) {
+            if (tracks.get(i) instanceof GridLength.Weighted) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * The size of every track as a child in a weighted track would get it: fixed tracks their size, auto tracks the
+     * needs found so far, and weighted tracks their share of what those leave. Null when the space is unbounded,
+     * since weighted tracks then take their children's natural size.
+     */
+    private static float[] weightedShares(final List<GridLength> tracks, final float[] needs, final int count,
+                                          final float spacing, final float inner) {
+        if (tracks.isEmpty() || !Float.isFinite(inner)) {
+            return null;
+        }
+        final float[] sizes = new float[count];
+        float used = spacing * (count - 1);
+        float totalWeight = 0f;
+        for (int i = 0; i < count; i++) {
+            switch (tracks.get(i)) {
+                case GridLength.Fixed fixed -> {
+                    sizes[i] = fixed.size();
+                    used += fixed.size();
+                }
+                case GridLength.Auto ignored -> {
+                    sizes[i] = needs[i];
+                    used += needs[i];
+                }
+                case GridLength.Weighted weighted -> totalWeight += weighted.weight();
+            }
+        }
+        final float remaining = Math.max(0f, inner - used);
+        for (int i = 0; i < count; i++) {
+            if (tracks.get(i) instanceof GridLength.Weighted weighted && totalWeight > 0f) {
+                sizes[i] = remaining * weighted.weight() / totalWeight;
+            }
+        }
+        return sizes;
+    }
+
+    private static float spanOf(final List<GridLength> tracks, final float[] sizes, final int start, final int span,
+                                final float spacing) {
+        float total = spacing * (span - 1);
+        for (int i = start; i < start + span; i++) {
+            total += sizes[i];
+        }
+        return total;
     }
 
     /**

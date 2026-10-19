@@ -129,6 +129,8 @@ import java.util.Objects;
  *     {@value #STYLE_TEXT}.</li>
  *     <li>{@value #STYLE_TEXT_READ_ONLY} (text style, optional): the text when read-only. Falls back to
  *     {@value #STYLE_TEXT_DISABLED}.</li>
+ *     <li>{@value #STYLE_PLACEHOLDER} (text style, optional): the {@linkplain #setPlaceholder placeholder}. Falls
+ *     back to {@value #STYLE_TEXT_DISABLED}.</li>
  *     <li>{@value #STYLE_SELECTION} (paint, optional): drawn behind selected text. Falls back to translucent blue.</li>
  *     <li>{@value #STYLE_CARET} (paint, optional): the one-unit-wide caret. Falls back to light gray.</li>
  *     <li>{@value #STYLE_SUGGESTIONS} (paint, optional): behind the suggestion list. Falls back to
@@ -196,6 +198,10 @@ public interface TextBox extends Component<TextBox>, Focusable<TextBox>, HasCurs
      */
     String STYLE_SUGGESTION_TEXT = "textbox.suggestion.text";
     /**
+     * Style key for the placeholder (text style, optional).
+     */
+    String STYLE_PLACEHOLDER = "textbox.placeholder";
+    /**
      * How many suggestions show before the list scrolls, unless told otherwise.
      */
     int DEFAULT_MAX_VISIBLE_SUGGESTIONS = 8;
@@ -257,6 +263,23 @@ public interface TextBox extends Component<TextBox>, Focusable<TextBox>, HasCurs
      * @throws IllegalArgumentException if {@code maxLength} is negative
      */
     TextBox setMaxLength(int maxLength);
+
+    /**
+     * Returns the placeholder.
+     *
+     * @return the placeholder; empty for a new box
+     */
+    String placeholder();
+
+    /**
+     * Sets the hint drawn in the {@value #STYLE_PLACEHOLDER} style while the box is empty, such as
+     * {@code "Search items"}. It shows whether or not the box has focus, goes away as soon as there is text, and is
+     * never part of {@link #text()}. Password mode does not mask it.
+     *
+     * @param placeholder the hint, or {@code null} or empty for none
+     * @return this box
+     */
+    TextBox setPlaceholder(String placeholder);
 
     /**
      * Returns whether the text is masked.

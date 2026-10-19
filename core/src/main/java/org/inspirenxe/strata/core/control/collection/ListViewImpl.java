@@ -91,6 +91,7 @@ public final class ListViewImpl<T> extends CustomComposite<ListView<T>> implemen
     private float dragGrab;
 
     // Theme
+    private Paint background;
     private Paint row;
     private Paint rowHovered;
     private Paint rowSelected;
@@ -126,6 +127,7 @@ public final class ListViewImpl<T> extends CustomComposite<ListView<T>> implemen
         this.selectedIndex = -1;
         this.reveal = -1;
         this.viewport = Rect.ZERO;
+        this.background = Paint.NONE;
         this.row = Paint.NONE;
         this.rowHovered = Paint.NONE;
         this.rowSelected = Paint.NONE;
@@ -440,6 +442,7 @@ public final class ListViewImpl<T> extends CustomComposite<ListView<T>> implemen
 
     @Override
     protected void onApplyTheme(final Theme theme) {
+        this.background = theme.paintOr(STYLE_BACKGROUND, Paint.NONE);
         this.row = theme.paintOr(STYLE_ROW, Paint.NONE);
         this.rowHovered = theme.paintOr(STYLE_ROW_HOVERED, this.row);
         this.rowSelected = theme.paintOr(STYLE_ROW_SELECTED, Paint.NONE);
@@ -530,6 +533,7 @@ public final class ListViewImpl<T> extends CustomComposite<ListView<T>> implemen
 
     @Override
     protected void paint(final Painter painter, final Rect bounds) {
+        this.background.paint(painter, bounds);
         if (this.items.isEmpty()) {
             if (this.placeholder != null && !this.placeholder.isEmpty()) {
                 final TextSpan span = new TextSpan(this.placeholder, this.placeholderStyle);
