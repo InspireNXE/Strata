@@ -3,7 +3,6 @@ package org.inspirenxe.strata.core.control.field;
 import org.inspirenxe.strata.api.ComponentFactory;
 import org.inspirenxe.strata.api.component.CursorKind;
 import org.inspirenxe.strata.api.control.field.TextBox;
-import org.inspirenxe.strata.api.control.field.TextBoxBehavior;
 import org.inspirenxe.strata.api.event.CharEvent;
 import org.inspirenxe.strata.api.event.DragEvent;
 import org.inspirenxe.strata.api.event.FocusEvent;
@@ -25,11 +24,8 @@ import org.inspirenxe.strata.api.text.TextStyle;
 import org.inspirenxe.strata.api.theme.Paint;
 import org.inspirenxe.strata.api.theme.Theme;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Objects;
 import java.util.Set;
-import java.util.function.Consumer;
 import java.util.function.UnaryOperator;
 
 /**
@@ -39,6 +35,14 @@ import java.util.function.UnaryOperator;
  * asks for {@link #DEFAULT_WIDTH} units of width, so give it a fixed width or stretch it to change that. Text sits
  * 4 units in from the left and right edges and 5 from the top and bottom unless the padding is changed. Text wider
  * than the box scrolls sideways to keep the caret in view.</p>
+ *
+ * <p>Every user edit that would change the text fires {@link TextBox#EDIT} when a handler is on its path. While the
+ * handlers run the box still holds the text and selection from before the edit. The final text then has its line
+ * breaks dropped, is cut to the length limit and goes through the internal filter, and the caret goes as many
+ * characters from its end as the edit left it, with nothing selected. With no handler on the path the edit applies
+ * directly, without putting the old text back first. Enter fires {@link TextBox#SUBMIT} on every press, but is
+ * consumed only when a handler for {@link TextBox#SUBMIT} or {@link TextBox#SUBMITTED} is on the path, so an
+ * ancestor's key handler still sees Enter from a box nobody submits.</p>
  *
  * <p>Where it departs from Wintergreen:</p>
  * <ul>
@@ -64,8 +68,6 @@ public final class TextBoxImpl extends CustomComponent<TextBox> implements TextB
     private static final Paint DEFAULT_CARET = Paint.solid(0xFFE0E0E0);
 
     private final StringBuilder buffer;
-    private final List<Consumer<String>> listeners;
-    private final List<Consumer<String>> submitListeners;
     private final Runnable drawContent;
     private int maxLength;
     private boolean password;
@@ -75,7 +77,7 @@ public final class TextBoxImpl extends CustomComponent<TextBox> implements TextB
     private boolean readOnly;
     private boolean selectAllOnFocus;
 
-    // The text and selection before the edit in progress, for the filter to fall back to
+    // The text and selection before the edit in progress, for a rejected edit to fall back to
     private String beforeText;
     private int beforeCaret;
     private int beforeAnchor;
@@ -117,14 +119,11 @@ public final class TextBoxImpl extends CustomComponent<TextBox> implements TextB
      * Creates an empty box with no length limit and password mode off.
      *
      * @param ui the factory that owns the box
-     * @param behavior the decorator for the box's hooks, or {@code null} for none
      */
     @SuppressWarnings("this-escape")
-    public TextBoxImpl(final ComponentFactory ui, final TextBoxBehavior behavior) {
-        super(ui, behavior);
+    public TextBoxImpl(final ComponentFactory ui) {
+        super(ui);
         this.buffer = new StringBuilder();
-        this.listeners = new ArrayList<>();
-        this.submitListeners = new ArrayList<>();
         this.drawContent = this::drawContent;
         this.maxLength = Integer.MAX_VALUE;
         this.maskCodePoint = '*';
@@ -159,11 +158,12 @@ public final class TextBoxImpl extends CustomComponent<TextBox> implements TextB
     public TextBox setText(final String text) {
         final String clean = truncate(sanitize(Objects.requireNonNull(text, "text")), this.maxLength);
         if (!clean.contentEquals(this.buffer)) {
+            final String previous = this.buffer.toString();
             this.buffer.setLength(0);
             this.buffer.append(clean);
             this.caret = this.buffer.length();
             this.anchor = this.caret;
-            this.changed();
+            this.changed(previous);
         }
         return this;
     }
@@ -180,10 +180,11 @@ public final class TextBoxImpl extends CustomComponent<TextBox> implements TextB
         }
         this.maxLength = maxLength;
         if (this.codePoints() > maxLength) {
+            final String previous = this.buffer.toString();
             this.buffer.setLength(this.buffer.offsetByCodePoints(0, maxLength));
             this.caret = Math.min(this.caret, this.buffer.length());
             this.anchor = Math.min(this.anchor, this.buffer.length());
-            this.changed();
+            this.changed(previous);
         }
         return this;
     }
@@ -253,22 +254,17 @@ public final class TextBoxImpl extends CustomComponent<TextBox> implements TextB
         return this;
     }
 
-    @Override
-    public TextBox onTextChanged(final Consumer<String> listener) {
-        this.listeners.add(Objects.requireNonNull(listener, "listener"));
-        return this;
-    }
-
-    @Override
-    public TextBox setFilter(final UnaryOperator<String> filter) {
+    /**
+     * Sets a filter for the parts of Strata that hold a box privately, such as a spinner's field. After an edit's
+     * {@link TextBox#EDIT} handlers, the filter gets the text the edit produced and returns the text to keep: the
+     * same string to accept it, another string to replace it, or {@code null} to reject the edit. Replaced text is
+     * cleaned of line breaks and cut to the length limit, and the caret keeps its distance from the end of the text.
+     * {@link #setText} is not filtered.
+     *
+     * @param filter the filter, or {@code null} for none
+     */
+    void setInternalFilter(final UnaryOperator<String> filter) {
         this.filter = filter;
-        return this;
-    }
-
-    @Override
-    public TextBox onSubmit(final Consumer<String> listener) {
-        this.submitListeners.add(Objects.requireNonNull(listener, "listener"));
-        return this;
     }
 
     @Override
@@ -533,12 +529,15 @@ public final class TextBoxImpl extends CustomComponent<TextBox> implements TextB
         }
         final Key key = event.key();
         final Modifiers modifiers = event.modifiers();
-        if (key.isEnter() && event.action() == KeyAction.PRESS && !this.submitListeners.isEmpty()) {
-            final String text = this.buffer.toString();
-            for (final Consumer<String> listener : List.copyOf(this.submitListeners)) {
-                listener.accept(text);
+        if (key.isEnter() && event.action() == KeyAction.PRESS) {
+            final boolean heard = this.isHandled(SUBMIT) || this.isHandled(SUBMITTED);
+            if (this.request(SUBMIT)) {
+                final String text = this.buffer.toString();
+                this.report(SUBMITTED, text, text);
             }
-            event.consume();
+            if (heard) {
+                event.consume();
+            }
             return;
         }
         final boolean shift = modifiers.shift();
@@ -700,7 +699,7 @@ public final class TextBoxImpl extends CustomComponent<TextBox> implements TextB
     }
 
     /**
-     * Remembers the text and selection before a user edit, for the filter to fall back to.
+     * Remembers the text and selection before a user edit, for a rejected edit to fall back to.
      *
      * @return false if the box is read-only and the edit must not happen
      */
@@ -715,9 +714,50 @@ public final class TextBoxImpl extends CustomComponent<TextBox> implements TextB
     }
 
     /**
-     * Ends a user edit: runs the filter, then tells listeners if the text changed.
+     * Ends a user edit. With no {@link TextBox#EDIT} handler on the path, or when the edit left the text as it was,
+     * this applies the edit at once. Otherwise it puts the text and selection back as they were before the edit and
+     * fires the request with the edited text, which applies the final text through {@code proceedEdit} unless a
+     * handler cancels it.
      */
     private void edited() {
+        if (!this.isHandled(EDIT)) {
+            this.applyEdit();
+            return;
+        }
+        final String candidate = this.buffer.toString();
+        if (candidate.equals(this.beforeText)) {
+            this.applyEdit();
+            return;
+        }
+        final int fromEnd = candidate.length() - this.caret;
+        this.buffer.setLength(0);
+        this.buffer.append(this.beforeText);
+        this.caret = this.beforeCaret;
+        this.anchor = this.beforeAnchor;
+        this.moved();
+        this.request(EDIT, candidate, text -> this.proceedEdit(text, fromEnd));
+    }
+
+    /**
+     * Applies the final text of an {@link TextBox#EDIT} request: drops line breaks from the text, cuts it to the
+     * length limit, and puts it in the box with the caret {@code fromEnd} characters before its end and nothing
+     * selected. For the edited text itself that is where the edit left the caret. Then it applies the text as the
+     * edit.
+     */
+    private void proceedEdit(final String text, final int fromEnd) {
+        final String fitted = truncate(sanitize(Objects.requireNonNull(text, "text")), this.maxLength);
+        this.buffer.setLength(0);
+        this.buffer.append(fitted);
+        this.caret = this.snap(this.buffer.length() - fromEnd);
+        this.anchor = this.caret;
+        this.applyEdit();
+    }
+
+    /**
+     * Applies the edit the buffer holds: runs the internal filter, then reports {@link TextBox#EDITED} if the text
+     * changed.
+     */
+    private void applyEdit() {
         if (this.filter != null) {
             final String candidate = this.buffer.toString();
             final String result = this.filter.apply(candidate);
@@ -741,7 +781,7 @@ public final class TextBoxImpl extends CustomComponent<TextBox> implements TextB
             this.moved();
             return;
         }
-        this.changed();
+        this.changed(this.beforeText);
     }
 
     private void moveTo(final int index, final boolean extend) {
@@ -757,12 +797,9 @@ public final class TextBoxImpl extends CustomComponent<TextBox> implements TextB
         this.blinkStart = this.environment().millis();
     }
 
-    private void changed() {
+    private void changed(final String previous) {
         this.moved();
-        final String text = this.buffer.toString();
-        for (final Consumer<String> listener : List.copyOf(this.listeners)) {
-            listener.accept(text);
-        }
+        this.report(EDITED, this.buffer.toString(), previous);
     }
 
     // ------------------------------------------------------------------

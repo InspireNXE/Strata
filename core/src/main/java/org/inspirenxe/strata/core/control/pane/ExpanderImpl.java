@@ -23,10 +23,7 @@ import org.inspirenxe.strata.api.theme.Paint;
 import org.inspirenxe.strata.api.theme.Theme;
 import org.inspirenxe.strata.core.control.Rings;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Objects;
-import java.util.function.Consumer;
 
 /**
  * The core {@link Expander}. The content is a child only while expanded. The expander shows the hand cursor while
@@ -38,7 +35,6 @@ public final class ExpanderImpl extends CustomComposite<Expander> implements Exp
      */
     public static final float PADDING = 4f;
 
-    private final List<Consumer<Boolean>> listeners;
     private String title;
     private Component<?> content;
     private boolean expanded;
@@ -65,7 +61,6 @@ public final class ExpanderImpl extends CustomComposite<Expander> implements Exp
     @SuppressWarnings("this-escape")
     public ExpanderImpl(final ComponentFactory ui, final String title) {
         super(ui);
-        this.listeners = new ArrayList<>();
         this.title = Objects.requireNonNull(title, "title");
         this.header = Paint.NONE;
         this.headerHovered = Paint.NONE;
@@ -105,7 +100,7 @@ public final class ExpanderImpl extends CustomComposite<Expander> implements Exp
         }
         this.content = content;
         if (content != null && this.expanded) {
-            this.addChild(content);
+            this.addContent(content);
         }
         this.invalidateLayout();
         return this;
@@ -124,15 +119,13 @@ public final class ExpanderImpl extends CustomComposite<Expander> implements Exp
         this.expanded = expanded;
         if (this.content != null) {
             if (expanded) {
-                this.addChild(this.content);
+                this.addContent(this.content);
             } else {
                 this.removeChild(this.content);
             }
         }
         this.invalidateLayout();
-        for (final Consumer<Boolean> listener : List.copyOf(this.listeners)) {
-            listener.accept(expanded);
-        }
+        this.report(TOGGLED, expanded, !expanded);
         return this;
     }
 
@@ -143,10 +136,18 @@ public final class ExpanderImpl extends CustomComposite<Expander> implements Exp
         }
     }
 
-    @Override
-    public Expander onExpandedChanged(final Consumer<Boolean> listener) {
-        this.listeners.add(Objects.requireNonNull(listener, "listener"));
-        return this;
+    /**
+     * Expands or collapses for the user through {@link Expander#TOGGLE}, applying the final value unless it is null.
+     * Does nothing while disabled.
+     */
+    private void userToggle() {
+        if (this.isEnabled()) {
+            this.request(TOGGLE, !this.expanded, expanded -> {
+                if (expanded != null) {
+                    this.setExpanded(expanded);
+                }
+            });
+        }
     }
 
     @Override
@@ -213,7 +214,7 @@ public final class ExpanderImpl extends CustomComposite<Expander> implements Exp
     @Override
     protected void onClick(final PointerButtonEvent event) {
         if (event.button() == MouseButton.LEFT && this.overHeader(event.y())) {
-            this.toggle();
+            this.userToggle();
             event.consume();
         }
     }
@@ -222,7 +223,7 @@ public final class ExpanderImpl extends CustomComposite<Expander> implements Exp
     protected void onKey(final KeyEvent event) {
         // Keys bubble up from the content; only the header's own keys flip it
         if (event.target() == this && event.action() == KeyAction.PRESS && (event.key().isEnter() || event.key() == Key.SPACE)) {
-            this.toggle();
+            this.userToggle();
             event.consume();
         }
     }

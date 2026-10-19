@@ -162,7 +162,7 @@ class BasicControlsTest {
         private final List<Boolean> seen = new ArrayList<>();
 
         CheckBoxes() {
-            this.box.onCheckedChanged(this.seen::add);
+            this.box.onEvent(CheckBox.TOGGLED, event -> this.seen.add(event.value()));
             this.test.show(this.test.factory().absolutePanel().add(this.box));
         }
 
@@ -209,7 +209,7 @@ class BasicControlsTest {
         @Test
         void aClickIsConsumed() {
             final List<Object> bubbled = new ArrayList<>();
-            this.box.parent().on(EventTypes.CLICK, bubbled::add);
+            this.box.parent().onEvent(EventTypes.CLICK, bubbled::add);
             this.test.click(45, 8);
             assertEquals(List.of(), bubbled);
         }
@@ -217,7 +217,7 @@ class BasicControlsTest {
         @Test
         void snapshotsRecordTheStateBeforeTheClick() {
             final List<CheckBox.State> before = new ArrayList<>();
-            this.box.onWithSnapshot(EventTypes.CLICK, event -> event.snapshot().state(CheckBox.State.class).ifPresent(before::add));
+            this.box.onEvent(EventTypes.CLICK, event -> event.snapshot().state(CheckBox.State.class).ifPresent(before::add));
             this.test.click(45, 8);
             assertEquals(List.of(new CheckBox.State(false, "Music")), before);
         }
@@ -231,7 +231,7 @@ class BasicControlsTest {
         private final List<Double> seen = new ArrayList<>();
 
         Sliders() {
-            this.slider.onValueChanged(this.seen::add);
+            this.slider.onEvent(Slider.CHANGED, event -> this.seen.add(event.value()));
             this.test.show(this.test.factory().absolutePanel().add(this.slider));
         }
 

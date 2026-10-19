@@ -1,8 +1,11 @@
 package org.inspirenxe.strata.api.control.button;
 
+import org.inspirenxe.strata.api.event.EventTarget;
+import org.inspirenxe.strata.api.event.EventType;
+import org.inspirenxe.strata.api.event.ValueEvent;
+
 import java.util.List;
 import java.util.Optional;
-import java.util.function.Consumer;
 
 /**
  * A set of {@link RadioButton}s of which at most one is selected. Each button stands for a value, and the group
@@ -13,11 +16,16 @@ import java.util.function.Consumer;
  * move the selection and focus to the previous enabled, visible button in the group, and Down and Right to the next
  * one, wrapping at the ends.</p>
  *
+ * <p>The group is an {@link EventTarget} of its own for {@link #SELECTED}. Its events reach only the handlers
+ * registered on the group, and do not bubble through the tree its buttons are in. To refuse a selection, handle
+ * {@link RadioButton#SELECT} on the buttons or on a container around them.</p>
+ *
  * <pre>{@code
  * RadioGroup<Difficulty> difficulty = factory.radioGroup();
  * column.add(difficulty.add("Easy", Difficulty.EASY))
  *         .add(difficulty.add("Hard", Difficulty.HARD));
- * difficulty.select(settings.difficulty()).onSelectionChanged(value -> value.ifPresent(settings::setDifficulty));
+ * difficulty.select(settings.difficulty())
+ *         .onEvent(RadioGroup.SELECTED, event -> difficulty.selected().ifPresent(settings::setDifficulty));
  * }</pre>
  *
  * <p>Get one from {@link org.inspirenxe.strata.api.ComponentFactory#radioGroup()}. Do not implement this
@@ -25,7 +33,15 @@ import java.util.function.Consumer;
  *
  * @param <T> the type of the values the buttons stand for
  */
-public interface RadioGroup<T> {
+public interface RadioGroup<T> extends EventTarget<RadioGroup<T>> {
+    /**
+     * Fired on the group after the selected button changed, by the user or by code. The value is the index of the
+     * selected button in {@link #buttons()}, or -1 when none is, and the previous value the index before the
+     * change. The {@linkplain ValueEvent#control() control} is the group and the {@linkplain ValueEvent#target()
+     * target} the newly selected button, or the deselected one when the selection was cleared. Reaches only the
+     * group's own handlers. Fires for changes made from code too.
+     */
+    EventType<ValueEvent<RadioGroup<?>, Integer>> SELECTED = EventType.valueReport("radio_group.selected");
 
     /**
      * Makes a new, unselected button in this group. The button is not added to any container.
@@ -67,8 +83,8 @@ public interface RadioGroup<T> {
     Optional<T> selected();
 
     /**
-     * Selects the first button that stands for a value, compared with {@link Object#equals}. Listeners run if the
-     * selection changed. Works on disabled buttons too.
+     * Selects the first button that stands for a value, compared with {@link Object#equals}. Fires
+     * {@link #SELECTED} if the selection changed. Works on disabled buttons too.
      *
      * @param value the value to select; may be null
      * @return this group
@@ -77,18 +93,9 @@ public interface RadioGroup<T> {
     RadioGroup<T> select(T value);
 
     /**
-     * Deselects every button. Listeners run if a button was selected.
+     * Deselects every button. Fires {@link #SELECTED} if a button was selected.
      *
      * @return this group
      */
     RadioGroup<T> clearSelection();
-
-    /**
-     * Adds a listener told the selected value after every change, by input or by code. Listeners run in the order
-     * they were added.
-     *
-     * @param listener receives the new value, or empty when nothing is selected or the button stands for null
-     * @return this group
-     */
-    RadioGroup<T> onSelectionChanged(Consumer<Optional<T>> listener);
 }

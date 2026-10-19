@@ -1,6 +1,9 @@
 package org.inspirenxe.strata.api.control.button;
 
 import org.inspirenxe.strata.api.component.Component;
+import org.inspirenxe.strata.api.event.ControlEvent;
+import org.inspirenxe.strata.api.event.EventType;
+import org.inspirenxe.strata.api.event.RequestEvent;
 import org.inspirenxe.strata.api.geom.Insets;
 
 import java.util.Objects;
@@ -8,8 +11,9 @@ import java.util.Objects;
 /**
  * A push button with a text caption.
  *
- * <p>The button runs its actions when it is left-clicked, or when it has focus and Enter or Space is pressed (not
- * repeated). It consumes those inputs. A disabled button does neither and draws its disabled look.</p>
+ * <p>The button is pressed when it is left-clicked, or when it has focus and Enter or Space is pressed (not
+ * repeated). It consumes those inputs. Each press fires {@link #PRESS}, then {@link #PRESSED} unless a handler
+ * canceled the request. A disabled button does neither and draws its disabled look.</p>
  *
  * <p>It is focusable and tabbable, shows the hand cursor, and has a minimum size of 20 by 20. Its desired size is
  * the caption plus the text padding (8 units left and right, 5 top and bottom by default). The caption is centered
@@ -29,7 +33,7 @@ import java.util.Objects;
  * </ul>
  *
  * <pre>{@code
- * Button save = factory.button("Save").onAction(this::save);
+ * Button save = factory.button("Save").onEvent(Button.PRESSED, event -> this.save());
  * }</pre>
  *
  * <p>Get one from {@link org.inspirenxe.strata.api.ComponentFactory#button(String)}. Do not implement this
@@ -66,6 +70,16 @@ public interface Button extends Component<Button> {
     String STYLE_TEXT_DISABLED = "button.text.disabled";
 
     /**
+     * Fired when the user presses the button by click or key, before it is pressed. Canceling it refuses the press,
+     * so {@link #PRESSED} does not fire. Fires only for the user's actions.
+     */
+    EventType<RequestEvent<Button>> PRESS = EventType.request("button.press");
+    /**
+     * Fired after the button was pressed, by the user or by {@link #press()}. Fires for presses made from code too.
+     */
+    EventType<ControlEvent<Button>> PRESSED = EventType.report("button.pressed");
+
+    /**
      * Returns the caption.
      *
      * @return the caption text
@@ -89,17 +103,8 @@ public interface Button extends Component<Button> {
     Button setTextPadding(Insets padding);
 
     /**
-     * Adds an action to run on every press. Actions run in the order they were added. An action may add more
-     * actions; they run from the next press.
-     *
-     * @param action the action
-     * @return this button
-     */
-    Button onAction(Runnable action);
-
-    /**
-     * Runs the button's actions as if it had been clicked. Does nothing while the button is disabled. Fires no
-     * events.
+     * Presses the button as if it had been clicked, firing {@link #PRESSED} but not {@link #PRESS}. Does nothing
+     * while the button is disabled.
      */
     void press();
 

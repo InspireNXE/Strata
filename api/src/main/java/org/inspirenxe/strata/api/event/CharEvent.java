@@ -12,7 +12,7 @@ import org.inspirenxe.strata.api.input.Modifiers;
  *
  * <p>Only Strata creates events. Do not implement this interface.</p>
  */
-public interface CharEvent extends Event {
+public interface CharEvent extends Cancelable {
 
     /**
      * Returns the typed character.

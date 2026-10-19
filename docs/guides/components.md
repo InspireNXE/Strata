@@ -6,7 +6,7 @@ Everything on screen is a `Component`. This page covers what all components shar
 
 There are exactly two ways to get a component:
 
-- From the `ComponentFactory` a screen receives: `anchorPanel()`, `stackPanel()`, `stackPanel(Orientation)`, `gridPanel()`, `absolutePanel()`, `label(text)`, `button(text)` and `textBox()`. The label, button and text box methods also have an overload that takes a [behavior](extending.md#decorate-a-built-in-with-a-behavior).
+- From the `ComponentFactory` a screen receives: `anchorPanel()`, `stackPanel()`, `stackPanel(Orientation)`, `gridPanel()`, `absolutePanel()`, `label(text)`, `button(text)` and `textBox()`. To change what a built-in does, handle its [events](events.md).
 - By subclassing `CustomComponent` or `CustomContainer`. See [Extending Strata](extending.md).
 
 Each factory call returns a new component with default settings, not attached to anything.
@@ -19,7 +19,7 @@ Each factory call returns a new component with default settings, not attached to
 `Component<T extends Component<T>>` is self-typed: every setter returns `T`, the type you see the component as. That is what makes chaining work without casts:
 
 ```java
-Button save = factory.button("Save").setEnabled(false).setTabIndex(2).onAction(this::save);
+Button save = factory.button("Save").setEnabled(false).setTabIndex(2).onEvent(Button.PRESSED, e -> this.save());
 ```
 
 Setters inherited from `Component` return the specific type: `setEnabled` on a `Button` returns `Button`, and `setPadding` on a `StackPanel` returns `StackPanel`. When a parameter or field only needs "some component", use `Component<?>`.

@@ -1,49 +1,49 @@
 package org.inspirenxe.strata.core.node;
 
+import org.inspirenxe.strata.api.component.Component;
 import org.inspirenxe.strata.api.component.ComponentSnapshot;
 import org.inspirenxe.strata.api.component.Container;
 import org.inspirenxe.strata.api.component.CursorKind;
 import org.inspirenxe.strata.api.component.Tooltip;
-import org.inspirenxe.strata.api.layout.HorizontalAlignment;
-import org.inspirenxe.strata.api.layout.VerticalAlignment;
-import org.inspirenxe.strata.api.event.CharEvent;
-import org.inspirenxe.strata.api.event.DragEvent;
+import org.inspirenxe.strata.api.event.ControlEvent;
 import org.inspirenxe.strata.api.event.Event;
 import org.inspirenxe.strata.api.event.EventHandler;
 import org.inspirenxe.strata.api.event.EventType;
-import org.inspirenxe.strata.api.event.FocusEvent;
-import org.inspirenxe.strata.api.event.KeyEvent;
-import org.inspirenxe.strata.api.event.Phase;
-import org.inspirenxe.strata.api.event.PointerButtonEvent;
-import org.inspirenxe.strata.api.event.PointerEvent;
-import org.inspirenxe.strata.api.event.ScrollEvent;
+import org.inspirenxe.strata.api.event.RequestEvent;
 import org.inspirenxe.strata.api.event.Subscription;
-import org.inspirenxe.strata.api.event.EventTypes;
-import org.inspirenxe.strata.api.extension.ComponentBehavior;
-import org.inspirenxe.strata.api.extension.peer.ComponentHooks;
-import org.inspirenxe.strata.api.extension.peer.ComponentPeer;
+import org.inspirenxe.strata.api.event.ValueEvent;
+import org.inspirenxe.strata.api.event.ValueRequestEvent;
 import org.inspirenxe.strata.api.extension.CustomComponent;
 import org.inspirenxe.strata.api.extension.Environment;
-import org.inspirenxe.strata.api.extension.Next;
+import org.inspirenxe.strata.api.extension.peer.ComponentHooks;
+import org.inspirenxe.strata.api.extension.peer.ComponentPeer;
 import org.inspirenxe.strata.api.geom.Insets;
 import org.inspirenxe.strata.api.geom.Rect;
 import org.inspirenxe.strata.api.geom.Size;
+import org.inspirenxe.strata.api.layout.HorizontalAlignment;
+import org.inspirenxe.strata.api.layout.VerticalAlignment;
 import org.inspirenxe.strata.api.theme.Border;
 import org.inspirenxe.strata.api.theme.Paint;
 import org.inspirenxe.strata.api.theme.Theme;
+import org.inspirenxe.strata.core.event.ControlEventImpl;
 import org.inspirenxe.strata.core.event.EventDispatcher;
 import org.inspirenxe.strata.core.event.EventImpl;
 import org.inspirenxe.strata.core.event.EventRouter;
+import org.inspirenxe.strata.core.event.MeasureEventImpl;
+import org.inspirenxe.strata.core.event.PaintEventImpl;
+import org.inspirenxe.strata.core.event.RequestEventImpl;
+import org.inspirenxe.strata.core.event.ValueEventImpl;
+import org.inspirenxe.strata.core.event.ValueRequestEventImpl;
 import org.inspirenxe.strata.core.paint.CanvasPainter;
 
 import java.util.Objects;
 import java.util.Set;
+import java.util.function.Consumer;
 
 /**
  * Core's half of every component: state, layout bookkeeping and event routing. The public object is the
  * {@link #facade()}, a {@link CustomComponent} whose {@code final} methods delegate here. Core reaches the facade's
- * protected hooks only through {@link ComponentHooks}, wrapped by the component's {@link ComponentBehavior} when it
- * has one.
+ * protected hooks only through {@link ComponentHooks}.
  *
  * <p>A new node is visible, enabled, not focusable and not tabbable, with tab index 0, no cursor, no margin, no
  * size limits, no fixed size, left and top alignment, no offset, no background, no border and no tooltip.</p>
@@ -65,11 +65,13 @@ public class Node implements ComponentPeer {
     private final CustomComponent<?> facade;
     private final ComponentHooks hooks;
     @SuppressWarnings("rawtypes")
-    private final ComponentBehavior behavior;
 
     private ContainerNode parent;
     private Root root;
     private EventDispatcher dispatcher;
+    private PaintEventImpl paintEvent;
+    private boolean content;
+    private MeasureEventImpl measureEvent;
     private Theme theme;
 
     private String id;
@@ -117,14 +119,11 @@ public class Node implements ComponentPeer {
      * @param ui the factory that owns the component
      * @param facade the public component this node implements
      * @param hooks the component's protected hooks
-     * @param behavior the decorator around those hooks, or {@code null} for none
      */
-    public Node(final ComponentFactoryImpl ui, final CustomComponent<?> facade, final ComponentHooks hooks,
-                final ComponentBehavior<?> behavior) {
+    public Node(final ComponentFactoryImpl ui, final CustomComponent<?> facade, final ComponentHooks hooks) {
         this.ui = Objects.requireNonNull(ui, "ui");
         this.facade = Objects.requireNonNull(facade, "facade");
         this.hooks = Objects.requireNonNull(hooks, "hooks");
-        this.behavior = behavior;
         this.visible = true;
         this.enabled = true;
         this.margin = Insets.NONE;
@@ -164,7 +163,7 @@ public class Node implements ComponentPeer {
     }
 
     /**
-     * Returns the component's protected hooks, without its behavior.
+     * Returns the component's protected hooks.
      *
      * @return the hooks
      */
@@ -209,11 +208,21 @@ public class Node implements ComponentPeer {
 
         final float w = width;
         final float h = height;
-        final Size content = this.behavior == null
-                ? this.hooks.measure(pass, w, h)
-                : this.behavior.measure(this.facade, pass, w, h, () -> this.hooks.measure(pass, w, h));
-        this.desiredWidth = this.clampWidth(Float.isNaN(this.explicitWidth) ? content.width() : this.explicitWidth);
-        this.desiredHeight = this.clampHeight(Float.isNaN(this.explicitHeight) ? content.height() : this.explicitHeight);
+        final Size content = this.hooks.measure(pass, w, h);
+        float contentWidth = content.width();
+        float contentHeight = content.height();
+        final EventDispatcher handlers = this.dispatcher;
+        if (handlers != null && handlers.hasHandlers(Component.MEASURED)) {
+            if (this.measureEvent == null) {
+                this.measureEvent = new MeasureEventImpl(this.facade);
+            }
+            final MeasureEventImpl event = this.measureEvent.begin(pass, w, h, contentWidth, contentHeight);
+            handlers.fire(Component.MEASURED, event);
+            contentWidth = event.width();
+            contentHeight = event.height();
+        }
+        this.desiredWidth = this.clampWidth(Float.isNaN(this.explicitWidth) ? contentWidth : this.explicitWidth);
+        this.desiredHeight = this.clampHeight(Float.isNaN(this.explicitHeight) ? contentHeight : this.explicitHeight);
     }
 
     /**
@@ -355,9 +364,9 @@ public class Node implements ComponentPeer {
     // ------------------------------------------------------------------
 
     /**
-     * Paints the component: its background and border, then its paint hook (through its behavior if it has one),
-     * then its children, then its over-children hook. Hidden components and components with empty bounds paint
-     * nothing.
+     * Paints the component. If it has {@link Component#PAINT} handlers they run first, and canceling skips the
+     * component's own drawing. Then come its background and border, its paint hook, its children, and its over-children hook, and last any {@link Component#PAINTED} handlers. Hidden
+     * components and components with empty bounds paint nothing. The paint event object is made once and reused.
      *
      * @param painter the painter for this frame
      */
@@ -366,16 +375,32 @@ public class Node implements ComponentPeer {
         if (!this.visible || this.bounds.isEmpty()) {
             return;
         }
-        this.background.paint(painter, this.bounds);
-        this.border.paint(painter, this.bounds);
-        if (this.behavior == null) {
+        final EventDispatcher handlers = this.dispatcher;
+        boolean own = true;
+        if (handlers != null && handlers.hasHandlers(Component.PAINT)) {
+            final PaintEventImpl event = this.paintEvent().begin(painter, this.bounds);
+            handlers.fire(Component.PAINT, event);
+            own = !event.isCancelled();
+        }
+        if (own) {
+            this.background.paint(painter, this.bounds);
+            this.border.paint(painter, this.bounds);
             this.hooks.paint(painter, this.bounds);
-        } else {
-            final Rect paintBounds = this.bounds;
-            this.behavior.paint(this.facade, painter, paintBounds, () -> this.hooks.paint(painter, paintBounds));
         }
         this.paintChildren(painter);
-        this.hooks.paintOverChildren(painter, this.bounds);
+        if (own) {
+            this.hooks.paintOverChildren(painter, this.bounds);
+        }
+        if (handlers != null && handlers.hasHandlers(Component.PAINTED)) {
+            handlers.fire(Component.PAINTED, this.paintEvent().begin(painter, this.bounds));
+        }
+    }
+
+    private PaintEventImpl paintEvent() {
+        if (this.paintEvent == null) {
+            this.paintEvent = new PaintEventImpl(this.facade);
+        }
+        return this.paintEvent;
     }
 
     /**
@@ -406,28 +431,88 @@ public class Node implements ComponentPeer {
     // ------------------------------------------------------------------
 
     @Override
-    public final <E extends Event> Subscription on(final EventType<E> type, final Phase phase,
-                                                   final EventHandler<? super E> handler, final Object owner) {
+    public final <E extends Event> Subscription subscribe(final EventType<E> type, final int priority,
+                                                          final EventHandler<? super E> handler) {
         if (this.dispatcher == null) {
             this.dispatcher = new EventDispatcher();
         }
-        return this.dispatcher.subscribe(type, phase, handler, owner, false);
+        return this.dispatcher.subscribe(type, priority, handler);
     }
 
     @Override
-    public final <E extends Event> Subscription onWithSnapshot(final EventType<E> type, final Phase phase,
-                                                               final EventHandler<? super E> handler,
-                                                               final Object owner) {
-        if (this.dispatcher == null) {
-            this.dispatcher = new EventDispatcher();
+    public final boolean isHandled(final EventType<?> type) {
+        // Control events stop at the first composite above, as EventRouter.next does
+        final Class<?> eventClass = type.eventClass();
+        final boolean input = eventClass != RequestEvent.class && eventClass != ValueRequestEvent.class
+                && eventClass != ControlEvent.class && eventClass != ValueEvent.class;
+        for (Node node = this; node != null; node = type.bubbles() ? EventRouter.next(node, this, input) : null) {
+            final EventDispatcher handlers = node.dispatcher;
+            if (handlers != null && handlers.hasHandlers(type)) {
+                return true;
+            }
         }
-        return this.dispatcher.subscribe(type, phase, handler, owner, true);
+        return false;
+    }
+
+    @Override
+    public final boolean request(final EventType<?> type) {
+        Node.requireClass(type, RequestEvent.class);
+        if (!this.isHandled(type)) {
+            return true;
+        }
+        return !Node.dispatchControl(type, new RequestEventImpl<>(this.facade), this).isCancelled();
+    }
+
+    @Override
+    @SuppressWarnings("unchecked")
+    public final <V> void request(final EventType<?> type, final V value, final Consumer<? super V> apply) {
+        Node.requireClass(type, ValueRequestEvent.class);
+        Objects.requireNonNull(apply, "apply");
+        if (!this.isHandled(type)) {
+            apply.accept(value);
+            return;
+        }
+        final ValueRequestEventImpl<?, V> event = Node.dispatchControl(type, new ValueRequestEventImpl<>(this.facade,
+                value), this);
+        if (!event.isCancelled()) {
+            apply.accept(event.value());
+        }
+    }
+
+    @Override
+    public final void report(final EventType<?> type) {
+        Node.requireClass(type, ControlEvent.class);
+        if (this.isHandled(type)) {
+            Node.dispatchControl(type, new ControlEventImpl<>(this.facade), this);
+        }
+    }
+
+    @Override
+    public final <V> void report(final EventType<?> type, final V value, final V previous) {
+        Node.requireClass(type, ValueEvent.class);
+        if (this.isHandled(type)) {
+            Node.dispatchControl(type, new ValueEventImpl<>(this.facade, value, previous), this);
+        }
+    }
+
+    /**
+     * Delivers a request or report whose type was checked against the event's class by the caller.
+     */
+    @SuppressWarnings({"unchecked", "rawtypes"})
+    private static <E extends EventImpl> E dispatchControl(final EventType<?> type, final E event, final Node target) {
+        return (E) EventRouter.dispatch((EventType) type, event, target);
+    }
+
+    private static void requireClass(final EventType<?> type, final Class<?> eventClass) {
+        Objects.requireNonNull(type, "type");
+        if (type.eventClass() != eventClass) {
+            throw new IllegalArgumentException(type + " is not a " + eventClass.getSimpleName() + " type");
+        }
     }
 
     /**
      * Records the component's current state, its own only, with the component's
-     * {@code CustomComponent.snapshotState} as the {@linkplain ComponentSnapshot#state() state}. The behavior, if
-     * any, is not consulted. {@link EventRouter} calls this before an event that has snapshots reaches any handler.
+     * {@code CustomComponent.snapshotState} as the {@linkplain ComponentSnapshot#state() state}. {@link EventRouter} calls this before an event that has snapshots reaches any handler.
      *
      * @return a new snapshot
      */
@@ -438,11 +523,18 @@ public class Node implements ComponentPeer {
                 this.background, this.bounds, this.desiredWidth, this.desiredHeight, this.hooks.snapshotState());
     }
 
-    @Override
-    public final void removeHandlers(final Object owner) {
-        if (this.dispatcher != null) {
-            this.dispatcher.removeOwner(owner);
-        }
+    /**
+     * Returns whether this node was added to its parent as content, which control events from inside it carry past
+     * every composite above. See {@code CustomComposite.addContent}.
+     *
+     * @return true if added as content
+     */
+    public final boolean isContent() {
+        return this.content;
+    }
+
+    final void setContent(final boolean content) {
+        this.content = content;
     }
 
     /**
@@ -467,51 +559,14 @@ public class Node implements ComponentPeer {
     }
 
     /**
-     * Runs this component's default behavior for an event. With a behavior, the matching behavior hook runs and
-     * gets the component's own handling as its {@code next}; event types without a behavior hook go straight to
-     * the component.
+     * Runs this component's default behavior for an input event: the matching {@code on...} hook of its
+     * {@code CustomComponent}.
      *
      * @param type the event type
      * @param event the event, of the class that {@code type} describes
      */
-    @SuppressWarnings("unchecked")
     public final void defaultAction(final EventType<?> type, final Event event) {
-        if (this.behavior == null) {
-            this.hooks.handle(type, event);
-            return;
-        }
-        final Next next = () -> this.hooks.handle(type, event);
-        if (type == EventTypes.POINTER_ENTER) {
-            this.behavior.onPointerEnter(this.facade, (PointerEvent) event, next);
-        } else if (type == EventTypes.POINTER_EXIT) {
-            this.behavior.onPointerExit(this.facade, (PointerEvent) event, next);
-        } else if (type == EventTypes.POINTER_MOVE) {
-            this.behavior.onPointerMove(this.facade, (PointerEvent) event, next);
-        } else if (type == EventTypes.POINTER_PRESS) {
-            this.behavior.onPointerPress(this.facade, (PointerButtonEvent) event, next);
-        } else if (type == EventTypes.POINTER_RELEASE) {
-            this.behavior.onPointerRelease(this.facade, (PointerButtonEvent) event, next);
-        } else if (type == EventTypes.CLICK) {
-            this.behavior.onClick(this.facade, (PointerButtonEvent) event, next);
-        } else if (type == EventTypes.DRAG_START) {
-            this.behavior.onDragStart(this.facade, (DragEvent) event, next);
-        } else if (type == EventTypes.DRAG) {
-            this.behavior.onDrag(this.facade, (DragEvent) event, next);
-        } else if (type == EventTypes.DRAG_END) {
-            this.behavior.onDragEnd(this.facade, (DragEvent) event, next);
-        } else if (type == EventTypes.SCROLL) {
-            this.behavior.onScroll(this.facade, (ScrollEvent) event, next);
-        } else if (type == EventTypes.KEY) {
-            this.behavior.onKey(this.facade, (KeyEvent) event, next);
-        } else if (type == EventTypes.CHAR) {
-            this.behavior.onChar(this.facade, (CharEvent) event, next);
-        } else if (type == EventTypes.FOCUS_GAINED) {
-            this.behavior.onFocusGained(this.facade, (FocusEvent) event, next);
-        } else if (type == EventTypes.FOCUS_LOST) {
-            this.behavior.onFocusLost(this.facade, (FocusEvent) event, next);
-        } else {
-            next.proceed();
-        }
+        this.hooks.handle(type, event);
     }
 
     // ------------------------------------------------------------------

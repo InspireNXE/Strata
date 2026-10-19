@@ -14,4 +14,4 @@ Each guide covers one part of Strata in depth: the rules, the defaults, the edge
 | [Screens](screens.md) | The screen lifecycle, rebuilding, closing and stacks |
 | [Themes](theming.md) | Style keys, paints, sprites and nine-slices |
 | [Text](text.md) | Text styles, spans, measurement and wrapping |
-| [Extending Strata](extending.md) | Behaviors, composition, custom components and custom layouts |
+| [Extending Strata](extending.md) | Changing built-ins through their events, composition, custom components with their own events, and custom layouts |

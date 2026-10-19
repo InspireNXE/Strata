@@ -2,9 +2,9 @@ package org.inspirenxe.strata.api.layout;
 
 import org.inspirenxe.strata.api.component.Component;
 import org.inspirenxe.strata.api.component.Container;
+import org.inspirenxe.strata.api.event.EventType;
+import org.inspirenxe.strata.api.event.ValueEvent;
 import org.inspirenxe.strata.api.geom.Rect;
-
-import java.util.function.Consumer;
 
 /**
  * A container that shows part of content larger than itself and scrolls the rest into view.
@@ -86,6 +86,13 @@ public interface ScrollPanel extends Container<ScrollPanel> {
      * How far one wheel notch scrolls by default, in UI units.
      */
     float DEFAULT_SCROLL_RATE = 10f;
+
+    /**
+     * Fired after the offset changed, by input or by a setter. The value is the panel's state after the change and
+     * the previous value its state before. Offsets clamped during layout because the content shrank are not
+     * reported. There is no request event for scrolling. Fires for changes made from code too.
+     */
+    EventType<ValueEvent<ScrollPanel, State>> SCROLLED = EventType.valueReport("scroll_panel.scrolled");
 
     /**
      * Returns the horizontal offset.
@@ -198,15 +205,6 @@ public interface ScrollPanel extends Container<ScrollPanel> {
     Rect viewport();
 
     /**
-     * Adds a listener told the new state whenever the offset changes by input or by a setter. Offsets clamped
-     * during layout because the content shrank are not reported.
-     *
-     * @param listener receives the state after the change
-     * @return this panel
-     */
-    ScrollPanel onScrollChanged(Consumer<State> listener);
-
-    /**
      * Whether an axis scrolls and when its scroll bar shows.
      */
     enum ScrollPolicy {
@@ -220,7 +218,7 @@ public interface ScrollPanel extends Container<ScrollPanel> {
 
     /**
      * A scroll panel's own state in a {@link org.inspirenxe.strata.api.component.ComponentSnapshot}, and what
-     * {@link #onScrollChanged} reports.
+     * {@link #SCROLLED} reports.
      *
      * @param scrollX the horizontal offset
      * @param scrollY the vertical offset

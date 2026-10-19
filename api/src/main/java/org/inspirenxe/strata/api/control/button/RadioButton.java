@@ -1,6 +1,8 @@
 package org.inspirenxe.strata.api.control.button;
 
 import org.inspirenxe.strata.api.component.Component;
+import org.inspirenxe.strata.api.event.EventType;
+import org.inspirenxe.strata.api.event.RequestEvent;
 
 import java.util.Objects;
 
@@ -9,7 +11,9 @@ import java.util.Objects;
  *
  * <p>A left click selects it, and so does Enter, keypad Enter or Space while it has focus (not repeated). Clicking a
  * selected button leaves it selected. Arrow keys move the selection through the group, as {@link RadioGroup}
- * describes. It consumes those inputs. A disabled button does none of this and draws its disabled look.</p>
+ * describes. It consumes those inputs. Each selection by the user fires {@link #SELECT} on the button about to be
+ * selected, and every change of selection fires {@link RadioGroup#SELECTED} on the group. A disabled button does
+ * none of this and draws its disabled look.</p>
  *
  * <p>It is focusable and tabbable and shows the hand cursor. It measures and lays out like a {@link CheckBox}: a
  * square box the caption's line height plus 8 units on a side, the caption 4 units to its right.</p>
@@ -83,6 +87,14 @@ public interface RadioButton extends Component<RadioButton> {
     String STYLE_TEXT_DISABLED = "radio.text.disabled";
 
     /**
+     * Fired on a button the user is about to select, by click, key or an arrow key pressed on another button of the
+     * group, before the selection changes. Canceling it leaves the selection, and the focus for an arrow key, as
+     * they are. Not fired when the button is already selected. Fires only for the user's actions; the group then
+     * reports the change with {@link RadioGroup#SELECTED}.
+     */
+    EventType<RequestEvent<RadioButton>> SELECT = EventType.request("radio_button.select");
+
+    /**
      * Returns the caption.
      *
      * @return the caption text
@@ -113,7 +125,7 @@ public interface RadioButton extends Component<RadioButton> {
 
     /**
      * Selects this button, deselecting the group's other buttons, or deselects it, leaving nothing selected. The
-     * group's listeners run if the selection changed. Works while disabled too.
+     * group fires {@link RadioGroup#SELECTED} if the selection changed. Works while disabled too.
      *
      * @param selected true to select this button
      * @return this button

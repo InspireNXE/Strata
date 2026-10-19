@@ -1,16 +1,19 @@
 package org.inspirenxe.strata.api.control.button;
 
 import org.inspirenxe.strata.api.component.Component;
+import org.inspirenxe.strata.api.event.EventType;
+import org.inspirenxe.strata.api.event.ValueEvent;
+import org.inspirenxe.strata.api.event.ValueRequestEvent;
 
 import java.util.Objects;
-import java.util.function.Consumer;
 
 /**
  * A switch that is on or off: a track with a knob that sits at the left when off and at the right when on, with a
  * caption to its right.
  *
  * <p>A left click anywhere on it flips it, and so does Enter, keypad Enter or Space while it has focus (not
- * repeated). It consumes those inputs. A disabled switch does neither and draws its disabled look.</p>
+ * repeated). It consumes those inputs. Each flip by the user fires {@link #TOGGLE}, and every change fires
+ * {@link #TOGGLED}. A disabled switch does neither and draws its disabled look.</p>
  *
  * <p>It is focusable and tabbable and shows the hand cursor. The track is the caption's line height plus 4 units
  * tall and twice that wide. The knob is a square 2 units in from the track's edges. The caption sits 4 units right
@@ -35,7 +38,8 @@ import java.util.function.Consumer;
  * </ul>
  *
  * <pre>{@code
- * ToggleSwitch pvp = factory.toggleSwitch("PvP").setOn(settings.pvp()).onToggled(settings::setPvp);
+ * ToggleSwitch pvp = factory.toggleSwitch("PvP").setOn(settings.pvp())
+ *         .onEvent(ToggleSwitch.TOGGLED, event -> settings.setPvp(event.value()));
  * }</pre>
  *
  * <p>Get one from {@link org.inspirenxe.strata.api.ComponentFactory#toggleSwitch(String)}. Do not implement this
@@ -80,6 +84,18 @@ public interface ToggleSwitch extends Component<ToggleSwitch> {
     String STYLE_TEXT_DISABLED = "toggle.text.disabled";
 
     /**
+     * Fired when the user flips the switch by click or key, before it changes. The value is the state the switch
+     * is about to take: true to turn it on. Canceling it leaves the switch as it is. A handler may set another
+     * value, which the switch applies like {@link #setOn}; null is ignored. Fires only for the user's actions.
+     */
+    EventType<ValueRequestEvent<ToggleSwitch, Boolean>> TOGGLE = EventType.valueRequest("toggle_switch.toggle");
+    /**
+     * Fired after the switch was turned on or off. The value is the new state and the previous value the old one.
+     * Fires for changes made from code too.
+     */
+    EventType<ValueEvent<ToggleSwitch, Boolean>> TOGGLED = EventType.valueReport("toggle_switch.toggled");
+
+    /**
      * Returns the caption.
      *
      * @return the caption text
@@ -102,7 +118,7 @@ public interface ToggleSwitch extends Component<ToggleSwitch> {
     boolean isOn();
 
     /**
-     * Turns the switch on or off. Listeners run if the state changed. Works while disabled too.
+     * Turns the switch on or off. Fires {@link #TOGGLED} if the state changed. Works while disabled too.
      *
      * @param on true to turn it on
      * @return this switch
@@ -110,19 +126,10 @@ public interface ToggleSwitch extends Component<ToggleSwitch> {
     ToggleSwitch setOn(boolean on);
 
     /**
-     * Flips the switch as if it had been clicked, and runs the listeners. Does nothing while disabled. Fires no
-     * events.
+     * Flips the switch as if it had been clicked, firing {@link #TOGGLED} but not {@link #TOGGLE}. Does nothing
+     * while disabled.
      */
     void toggle();
-
-    /**
-     * Adds a listener told the new state after every change, by input, {@link #toggle()} or {@link #setOn}.
-     * Listeners run in the order they were added.
-     *
-     * @param listener receives true when the switch turned on
-     * @return this switch
-     */
-    ToggleSwitch onToggled(Consumer<Boolean> listener);
 
     /**
      * A switch's own state in a {@link org.inspirenxe.strata.api.component.ComponentSnapshot}.

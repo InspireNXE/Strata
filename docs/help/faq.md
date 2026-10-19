@@ -34,7 +34,7 @@ No. A class that implements a component interface directly is rejected with `Ill
 
 ### Can I subclass the built-in controls?
 
-No, their implementations are hidden. Decorate them with a behavior, compose them, or write your own component. See [Extending Strata](../guides/extending.md).
+No, their implementations are hidden. Change them through their events, compose them, or write your own component. See [Extending Strata](../guides/extending.md).
 
 ### Do I need to call layout or repaint?
 
@@ -94,9 +94,9 @@ Read `clicks()` on the `CLICK` event. Strata delivers every click immediately wi
 
 Register a `KEY` handler on the screen's root and use `event.is(key, modifiers, policy)`. See [Shortcuts](../guides/input-focus.md#shortcuts).
 
-### What happens if I call `event.snapshot()` without registering with `onWithSnapshot`?
+### Why does `event.snapshot()` throw?
 
-If no handler on the event's path asked for snapshots, it throws `IllegalStateException`, and `snapshotOf` returns empty. If some other handler on the path asked, the target's snapshot exists and `snapshot()` works. Register every handler that reads snapshots with `onWithSnapshot`. See [When there is no snapshot](../guides/snapshots.md#when-there-is-no-snapshot).
+Only Pre events have snapshots. A Post event such as `TextBox.EDITED` fires after its change, so `snapshot()` throws `IllegalStateException` there; read `previous()` instead. Paint and measure events have none either. See [When there is no snapshot](../guides/snapshots.md#when-there-is-no-snapshot).
 
 ### Does a snapshot include a panel's children?
 

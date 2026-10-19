@@ -65,7 +65,6 @@ public final class MenuImpl extends CustomComponent<Menu> implements Menu {
 
     private final ComponentFactory ui;
     private final List<Item> items;
-    private final List<Runnable> closedListeners;
     private MenuImpl parent;
     private MenuBarImpl bar;
     private Overlay popup;
@@ -96,7 +95,6 @@ public final class MenuImpl extends CustomComponent<Menu> implements Menu {
         super(ui);
         this.ui = ui;
         this.items = new ArrayList<>();
-        this.closedListeners = new ArrayList<>();
         this.highlighted = -1;
         this.background = Paint.NONE;
         this.itemHovered = Paint.NONE;
@@ -233,7 +231,7 @@ public final class MenuImpl extends CustomComponent<Menu> implements Menu {
         this.returnFocus = this.parent == null ? this.focusedComponent() : null;
         this.highlighted = -1;
         this.popup = this.ui.overlays().popup(this, anchor);
-        this.popup.onClosed(this::closed);
+        this.popup.onEvent(Overlay.CLOSED, event -> this.closed());
         // Lay the popup out now, so keys pressed before the next frame find the items, and a submenu its anchor
         if (this.ui instanceof ComponentFactoryImpl factory && factory.root() != null) {
             factory.root().layout();
@@ -258,12 +256,6 @@ public final class MenuImpl extends CustomComponent<Menu> implements Menu {
         return this;
     }
 
-    @Override
-    public Menu onClosed(final Runnable listener) {
-        this.closedListeners.add(Objects.requireNonNull(listener, "listener"));
-        return this;
-    }
-
     /**
      * Runs once the popup has closed, however it closed.
      */
@@ -276,6 +268,9 @@ public final class MenuImpl extends CustomComponent<Menu> implements Menu {
         if (this.parent != null && this.parent.openSubmenu == this) {
             this.parent.openSubmenu = null;
         }
+        if (this.bar != null) {
+            this.bar.menuClosed(this);
+        }
         if (this.returnFocus != null) {
             final Component<?> focus = this.returnFocus;
             this.returnFocus = null;
@@ -283,9 +278,7 @@ public final class MenuImpl extends CustomComponent<Menu> implements Menu {
                 focus.requestFocus();
             }
         }
-        for (final Runnable listener : List.copyOf(this.closedListeners)) {
-            listener.run();
-        }
+        this.report(CLOSED);
     }
 
     private Component<?> focusedComponent() {
@@ -370,6 +363,22 @@ public final class MenuImpl extends CustomComponent<Menu> implements Menu {
             this.openSubmenu(index, true);
             return;
         }
+        this.request(CHOOSE, index, this::run);
+    }
+
+    /**
+     * Closes the chain, flips a check item, runs the item's action and reports {@link #CHOSEN}: what an accepted
+     * {@link #CHOOSE} request does. Ignores an index that is out of range or names a disabled item, a separator or a
+     * submenu item, as a handler may have rewritten it.
+     */
+    private void run(final int index) {
+        if (index < 0 || index >= this.items.size()) {
+            return;
+        }
+        final Item item = this.items.get(index);
+        if (!item.enabled || item.submenu != null) {
+            return;
+        }
         this.top().close();
         if (item.checkAction != null) {
             item.checked = !item.checked;
@@ -377,6 +386,7 @@ public final class MenuImpl extends CustomComponent<Menu> implements Menu {
         } else {
             item.action.run();
         }
+        this.report(CHOSEN, index, index);
     }
 
     // ------------------------------------------------------------------

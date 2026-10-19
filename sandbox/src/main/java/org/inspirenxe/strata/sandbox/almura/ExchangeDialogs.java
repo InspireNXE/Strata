@@ -58,13 +58,14 @@ final class ExchangeDialogs {
     static void buyQuantity(final ComponentFactory ui, final Listing listing, final LongConsumer buy) {
         final TextBox amount = ui.textBox().setText("1").setSelectAllOnFocus(true);
         amount.setWidth(45);
-        amount.setFilter(text -> {
-            final String digits = text.replaceAll("[^0-9]", "");
+        amount.onEvent(TextBox.EDIT, event -> {
+            final String digits = event.value().replaceAll("[^0-9]", "");
             if (digits.isEmpty()) {
-                return "";
+                event.setValue("");
+                return;
             }
             final long value = Long.parseLong(digits.length() > 12 ? digits.substring(0, 12) : digits);
-            return Long.toString(Math.min(value, listing.quantity()));
+            event.setValue(Long.toString(Math.min(value, listing.quantity())));
         });
         final Label per = Look.label(ui, Look.currency(listing.price()), Look.WHITE);
         final Label total = Look.label(ui, Look.currency(listing.price()), Look.WHITE);
@@ -85,16 +86,16 @@ final class ExchangeDialogs {
             total.setText(Look.currency(listing.price().multiply(BigDecimal.valueOf(value))));
             confirm.setEnabled(value > 0 && value <= listing.quantity());
         };
-        amount.onTextChanged(text -> validate.run());
+        amount.onEvent(TextBox.EDITED, event -> validate.run());
         final Runnable submit = () -> {
             if (confirm.isEnabled()) {
                 buy.accept(Long.parseLong(amount.text()));
                 window.close();
             }
         };
-        amount.onSubmit(text -> submit.run());
-        confirm.onAction(submit);
-        cancel.onAction(window::close);
+        amount.onEvent(TextBox.SUBMITTED, event -> submit.run());
+        confirm.onEvent(Button.PRESSED, event -> submit.run());
+        cancel.onEvent(Button.PRESSED, event -> window.close());
         ui.overlays().dialog(window);
     }
 
@@ -102,7 +103,11 @@ final class ExchangeDialogs {
         final TextBox price = ui.textBox().setSelectAllOnFocus(true);
         price.setText(stock.lastPrice() == null ? "" : stock.lastPrice().toPlainString());
         price.setWidth(65);
-        price.setFilter(text -> text.matches("\\d{0,12}(\\.\\d{0,2})?") ? text : null);
+        price.onEvent(TextBox.EDIT, event -> {
+            if (!event.value().matches("\\d{0,12}(\\.\\d{0,2})?")) {
+                event.cancel();
+            }
+        });
         final Button confirm = Look.button(ui, "List", 40);
         final Button cancel = Look.button(ui, "Cancel", 40);
         final StackPanel row = Look.row(ui, 2, price, Look.label(ui, "/ea", Look.WHITE));
@@ -111,7 +116,7 @@ final class ExchangeDialogs {
             final BigDecimal value = parse(price.text());
             confirm.setEnabled(value != null && value.signum() > 0 && value.compareTo(BigDecimal.valueOf(1_000_000_000_000L)) <= 0);
         };
-        price.onTextChanged(text -> validate.run());
+        price.onEvent(TextBox.EDITED, event -> validate.run());
         validate.run();
         final Runnable submit = () -> {
             if (confirm.isEnabled()) {
@@ -119,9 +124,9 @@ final class ExchangeDialogs {
                 window.close();
             }
         };
-        price.onSubmit(text -> submit.run());
-        confirm.onAction(submit);
-        cancel.onAction(window::close);
+        price.onEvent(TextBox.SUBMITTED, event -> submit.run());
+        confirm.onEvent(Button.PRESSED, event -> submit.run());
+        cancel.onEvent(Button.PRESSED, event -> window.close());
         ui.overlays().dialog(window);
     }
 
@@ -175,10 +180,16 @@ final class ExchangeDialogs {
         void open() {
             this.left = this.list();
             this.right = this.list();
-            this.left.onSelectionChanged(selected -> this.selected(true, selected));
-            this.right.onSelectionChanged(selected -> this.selected(false, selected));
-            this.left.onActivate(stock -> this.move(true, stock, stock.quantity()));
-            this.right.onActivate(stock -> this.move(false, stock, stock.quantity()));
+            this.left.onEvent(ListView.SELECTED, e -> this.selected(true, this.left.selected()));
+            this.right.onEvent(ListView.SELECTED, e -> this.selected(false, this.right.selected()));
+            this.left.onEvent(ListView.ACTIVATED, e -> {
+                final Stock stock = this.left.items().get(e.value());
+                this.move(true, stock, stock.quantity());
+            });
+            this.right.onEvent(ListView.ACTIVATED, e -> {
+                final Stock stock = this.right.items().get(e.value());
+                this.move(false, stock, stock.quantity());
+            });
             this.leftBar = this.ui.progressBar();
             this.rightBar = this.ui.progressBar();
 
@@ -186,16 +197,16 @@ final class ExchangeDialogs {
             this.stack = this.mover("S", "Move the selected stack");
             this.type = this.mover("T", "Move every stack of this type");
             this.all = this.mover("A", "Move everything");
-            this.one.onAction(() -> this.selection().ifPresent(stock -> this.move(this.toRight, stock, 1)));
-            this.stack.onAction(() -> this.selection().ifPresent(stock -> this.move(this.toRight, stock, stock.quantity())));
-            this.type.onAction(() -> this.selection().ifPresent(stock -> {
+            this.one.onEvent(Button.PRESSED, event -> this.selection().ifPresent(stock -> this.move(this.toRight, stock, 1)));
+            this.stack.onEvent(Button.PRESSED, event -> this.selection().ifPresent(stock -> this.move(this.toRight, stock, stock.quantity())));
+            this.type.onEvent(Button.PRESSED, event -> this.selection().ifPresent(stock -> {
                 for (final Stock same : List.copyOf(this.toRight ? this.inventory : this.unlisted)) {
                     if (same.item().equals(stock.item())) {
                         this.move(this.toRight, same, same.quantity());
                     }
                 }
             }));
-            this.all.onAction(() -> {
+            this.all.onEvent(Button.PRESSED, event -> {
                 for (final Stock each : List.copyOf(this.toRight ? this.inventory : this.unlisted)) {
                     this.move(this.toRight, each, each.quantity());
                 }
@@ -219,7 +230,7 @@ final class ExchangeDialogs {
             final Button cancel = Look.button(this.ui, "Cancel", 40);
             final Window window = window(this.ui, "Offer", 400, grid, ok, cancel);
             window.setHeight(325);
-            ok.onAction(() -> {
+            ok.onEvent(Button.PRESSED, event -> {
                 this.data.inventory.clear();
                 this.data.inventory.addAll(this.inventory);
                 this.data.mine.removeIf(stock -> !stock.listed());
@@ -227,7 +238,7 @@ final class ExchangeDialogs {
                 this.done.run();
                 window.close();
             });
-            cancel.onAction(window::close);
+            cancel.onEvent(Button.PRESSED, event -> window.close());
             this.refresh();
             if (!this.inventory.isEmpty()) {
                 this.left.select(0);

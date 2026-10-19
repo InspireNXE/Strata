@@ -2,6 +2,7 @@ package org.inspirenxe.strata.core.control.collection;
 
 import org.inspirenxe.strata.api.ComponentFactory;
 import org.inspirenxe.strata.api.component.Component;
+import org.inspirenxe.strata.api.control.collection.ListView;
 import org.inspirenxe.strata.api.control.collection.TreeView;
 import org.inspirenxe.strata.api.event.KeyEvent;
 import org.inspirenxe.strata.api.event.PointerButtonEvent;
@@ -23,13 +24,15 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
-import java.util.function.Consumer;
 import java.util.function.Function;
 
 /**
  * The core {@link TreeView}. It flattens the shown part of the hierarchy into entries of item, depth and whether the
  * item has children, and shows them in a {@link ListViewImpl} whose cells are rows of indent, arrow and the user's
- * cell. The list keeps focus; Left and Right bubble up from it to the tree.
+ * cell. The list keeps focus; Left and Right bubble up from it to the tree. The tree routes the list's input and
+ * selection changes to itself and fires them as its own events, so the list fires no {@link ListView} events. A
+ * change from code that moves the selection more than once, such as a collapse that rebuilds the rows, reports
+ * {@link TreeView#SELECTED} once at the end.
  *
  * @param <T> the type of the items
  */
@@ -39,8 +42,6 @@ public final class TreeViewImpl<T> extends CustomComposite<TreeView<T>> implemen
     private final ComponentFactory ui;
     private final ListViewImpl<Entry<T>> list;
     private final Set<Object> expanded;
-    private final List<Consumer<Optional<T>>> selectionListeners;
-    private final List<Consumer<T>> activateListeners;
     private List<T> roots;
     private List<Entry<T>> entries;
     private List<T> shown;
@@ -62,8 +63,6 @@ public final class TreeViewImpl<T> extends CustomComposite<TreeView<T>> implemen
         super(ui);
         this.ui = ui;
         this.expanded = new HashSet<>();
-        this.selectionListeners = new ArrayList<>();
-        this.activateListeners = new ArrayList<>();
         this.roots = List.of();
         this.entries = List.of();
         this.shown = List.of();
@@ -75,14 +74,9 @@ public final class TreeViewImpl<T> extends CustomComposite<TreeView<T>> implemen
         this.list = new ListViewImpl<>(ui, entry -> new Row<>(this.ui, this, entry));
         this.list.setAnchor(Anchor.FILL);
         this.list.setKeyFunction(entry -> this.keyFunction.apply(entry.item));
-        this.list.onSelectionChanged(entry -> {
+        this.list.route(this::userSelect, this::userActivate, (index, previous) -> {
             if (!this.quiet) {
-                this.fireSelection();
-            }
-        });
-        this.list.onActivate(entry -> {
-            for (final Consumer<T> listener : List.copyOf(this.activateListeners)) {
-                listener.accept(entry.item);
+                this.report(SELECTED, index, previous);
             }
         });
         this.addChild(this.list);
@@ -141,11 +135,51 @@ public final class TreeViewImpl<T> extends CustomComposite<TreeView<T>> implemen
     }
 
     /**
-     * Flattens the shown hierarchy and hands it to the list, which keeps the selection on the same key. Listeners
-     * run only if the selected item changed.
+     * Flattens the shown hierarchy and hands it to the list, which keeps the selection on the same key.
      */
     private void rebuild() {
+        this.changeSelection(this::flattenShown);
+    }
+
+    /**
+     * Runs a change that may move the selection several times, then reports {@link TreeView#SELECTED} once if the
+     * selected index or item changed. Inside another such change it only runs the change, and the outer one reports.
+     */
+    private void changeSelection(final Runnable change) {
+        if (this.quiet) {
+            change.run();
+            return;
+        }
+        final int beforeIndex = this.list.selectedIndex();
         final Optional<T> before = this.selected();
+        this.quiet = true;
+        try {
+            change.run();
+        } finally {
+            this.quiet = false;
+        }
+        final int index = this.list.selectedIndex();
+        if (index != beforeIndex || !this.selected().equals(before)) {
+            this.report(SELECTED, index, beforeIndex);
+        }
+    }
+
+    /**
+     * Reports {@link TreeView#EXPANDED} for each item, or nothing for null.
+     */
+    private void reportExpansions(final List<T> items, final boolean expanded) {
+        if (items == null) {
+            return;
+        }
+        for (final T item : items) {
+            this.report(EXPANDED, new Expansion<>(item, expanded), new Expansion<>(item, !expanded));
+        }
+    }
+
+    /**
+     * Flattens the shown hierarchy and hands it to the list, which keeps the selection on the same key.
+     */
+    private void flattenShown() {
         final List<Entry<T>> flat = new ArrayList<>();
         for (final T root : this.roots) {
             this.flatten(root, 0, flat);
@@ -156,15 +190,7 @@ public final class TreeViewImpl<T> extends CustomComposite<TreeView<T>> implemen
             items.add(entry.item);
         }
         this.shown = List.copyOf(items);
-        this.quiet = true;
-        try {
-            this.list.setItems(this.entries);
-        } finally {
-            this.quiet = false;
-        }
-        if (!this.selected().equals(before)) {
-            this.fireSelection();
-        }
+        this.list.setItems(this.entries);
     }
 
     private void flatten(final T item, final int depth, final List<Entry<T>> into) {
@@ -188,37 +214,31 @@ public final class TreeViewImpl<T> extends CustomComposite<TreeView<T>> implemen
         if (expanded == this.expanded.contains(key)) {
             return this;
         }
-        if (expanded) {
-            this.expanded.add(key);
-            this.rebuild();
-            return this;
-        }
-        // A selection inside the collapsing subtree moves up to the collapsing item
-        final int at = this.indexOf(key);
-        final int selected = this.list.selectedIndex();
-        boolean inside = false;
-        if (at >= 0 && selected > at) {
-            inside = true;
-            for (int i = at + 1; i <= selected; i++) {
-                if (this.entries.get(i).depth <= this.entries.get(at).depth) {
-                    inside = false;
-                    break;
+        this.changeSelection(() -> {
+            if (expanded) {
+                this.expanded.add(key);
+            } else {
+                // A selection inside the collapsing subtree moves up to the collapsing item
+                final int at = this.indexOf(key);
+                final int selected = this.list.selectedIndex();
+                boolean inside = false;
+                if (at >= 0 && selected > at) {
+                    inside = true;
+                    for (int i = at + 1; i <= selected; i++) {
+                        if (this.entries.get(i).depth <= this.entries.get(at).depth) {
+                            inside = false;
+                            break;
+                        }
+                    }
+                }
+                this.expanded.remove(key);
+                if (inside) {
+                    this.list.select(at);
                 }
             }
-        }
-        this.expanded.remove(key);
-        if (inside) {
-            this.quiet = true;
-            try {
-                this.list.select(at);
-            } finally {
-                this.quiet = false;
-            }
-        }
-        this.rebuild();
-        if (inside) {
-            this.fireSelection();
-        }
+            this.flattenShown();
+            this.report(EXPANDED, new Expansion<>(item, expanded), new Expansion<>(item, !expanded));
+        });
         return this;
     }
 
@@ -233,41 +253,64 @@ public final class TreeViewImpl<T> extends CustomComposite<TreeView<T>> implemen
 
     @Override
     public TreeView<T> expandAll() {
+        final List<T> opened = this.isHandled(EXPANDED) ? new ArrayList<>() : null;
         final List<T> pending = new ArrayList<>(this.roots);
         final Set<Object> seen = new HashSet<>();
         while (!pending.isEmpty()) {
             final T item = pending.removeLast();
             final List<? extends T> kids = this.childrenOf(item);
             if (!kids.isEmpty() && seen.add(this.key(item))) {
-                this.expanded.add(this.key(item));
+                if (this.expanded.add(this.key(item)) && opened != null) {
+                    opened.add(item);
+                }
                 pending.addAll(kids);
             }
         }
-        this.rebuild();
+        this.changeSelection(() -> {
+            this.flattenShown();
+            this.reportExpansions(opened, true);
+        });
         return this;
     }
 
     @Override
     public TreeView<T> collapseAll() {
-        int selected = this.list.selectedIndex();
-        while (selected > 0 && this.entries.get(selected).depth > 0) {
-            selected--;
+        final List<T> closed;
+        if (this.isHandled(EXPANDED) && !this.expanded.isEmpty()) {
+            closed = new ArrayList<>();
+            this.collectExpanded(this.roots, new HashSet<>(), closed);
+        } else {
+            closed = null;
         }
-        final boolean moved = selected != this.list.selectedIndex();
-        if (moved) {
-            this.quiet = true;
-            try {
-                this.list.select(selected);
-            } finally {
-                this.quiet = false;
+        this.changeSelection(() -> {
+            int selected = this.list.selectedIndex();
+            while (selected > 0 && this.entries.get(selected).depth > 0) {
+                selected--;
             }
-        }
-        this.expanded.clear();
-        this.rebuild();
-        if (moved) {
-            this.fireSelection();
-        }
+            if (selected != this.list.selectedIndex()) {
+                this.list.select(selected);
+            }
+            this.expanded.clear();
+            this.flattenShown();
+            this.reportExpansions(closed, false);
+        });
         return this;
+    }
+
+    /**
+     * Collects, depth first, every item reachable from {@code level} whose key is expanded, each key once.
+     */
+    private void collectExpanded(final List<? extends T> level, final Set<Object> seen, final List<T> into) {
+        for (final T item : level) {
+            final Object key = this.key(item);
+            if (!seen.add(key)) {
+                continue;
+            }
+            if (this.expanded.contains(key)) {
+                into.add(item);
+            }
+            this.collectExpanded(this.childrenOf(item), seen, into);
+        }
     }
 
     @Override
@@ -327,15 +370,19 @@ public final class TreeViewImpl<T> extends CustomComposite<TreeView<T>> implemen
             this.list.select(-1);
             return this;
         }
-        boolean opened = false;
-        for (int i = 0; i < path.size() - 1; i++) {
-            opened |= this.expanded.add(this.key(path.get(i)));
-        }
-        if (opened) {
-            this.rebuild();
-        }
-        final int index = this.indexOf(this.key(item));
-        this.list.select(index);
+        this.changeSelection(() -> {
+            final List<T> opened = new ArrayList<>();
+            for (int i = 0; i < path.size() - 1; i++) {
+                if (this.expanded.add(this.key(path.get(i)))) {
+                    opened.add(path.get(i));
+                }
+            }
+            if (!opened.isEmpty()) {
+                this.flattenShown();
+                this.reportExpansions(opened, true);
+            }
+            this.list.select(this.indexOf(this.key(item)));
+        });
         return this;
     }
 
@@ -357,27 +404,52 @@ public final class TreeViewImpl<T> extends CustomComposite<TreeView<T>> implemen
         return false;
     }
 
-    @Override
-    public TreeView<T> onSelectionChanged(final Consumer<Optional<T>> listener) {
-        this.selectionListeners.add(Objects.requireNonNull(listener, "listener"));
-        return this;
+    /**
+     * Asks to expand or collapse an item after a click on its arrow.
+     */
+    void toggle(final Entry<T> entry) {
+        this.userExpand(entry.item, !this.isExpanded(entry.item));
     }
 
-    @Override
-    public TreeView<T> onActivate(final Consumer<T> listener) {
-        this.activateListeners.add(Objects.requireNonNull(listener, "listener"));
-        return this;
+    /**
+     * Asks to expand or collapse an item for the user.
+     */
+    private void userExpand(final T item, final boolean expanded) {
+        this.request(EXPAND, new Expansion<>(item, expanded), this::applyExpansion);
     }
 
-    private void fireSelection() {
-        final Optional<T> selected = this.selected();
-        for (final Consumer<Optional<T>> listener : List.copyOf(this.selectionListeners)) {
-            listener.accept(selected);
+    /**
+     * Expands or collapses the item a request ended with, as {@link #setExpanded} does. A null value or item is
+     * ignored.
+     */
+    @SuppressWarnings("unchecked")
+    private void applyExpansion(final Expansion<?> expansion) {
+        if (expansion != null && expansion.item() != null) {
+            this.setExpanded((T) expansion.item(), expansion.expanded());
         }
     }
 
-    void toggle(final Entry<T> entry) {
-        this.setExpanded(entry.item, !this.isExpanded(entry.item));
+    /**
+     * Asks to select a row for the user. The list routes its own selections here.
+     */
+    private void userSelect(final int index) {
+        this.request(SELECT, index, this.list::applySelect);
+    }
+
+    /**
+     * Asks to activate a row the user activated in the list.
+     */
+    private void userActivate(final int index) {
+        this.request(ACTIVATE, index, this::applyActivate);
+    }
+
+    /**
+     * Reports the row a request ended with as activated. A null or an index outside the rows is ignored.
+     */
+    private void applyActivate(final Integer index) {
+        if (index != null && index >= 0 && index < this.entries.size()) {
+            this.report(ACTIVATED, index, index);
+        }
     }
 
     // ------------------------------------------------------------------
@@ -415,18 +487,18 @@ public final class TreeViewImpl<T> extends CustomComposite<TreeView<T>> implemen
                     return;
                 }
                 if (!this.isExpanded(entry.item)) {
-                    this.setExpanded(entry.item, true);
+                    this.userExpand(entry.item, true);
                 } else if (index + 1 < this.entries.size()) {
-                    this.list.select(index + 1);
+                    this.userSelect(index + 1);
                 }
             }
             case LEFT -> {
                 if (entry.parent && this.isExpanded(entry.item)) {
-                    this.setExpanded(entry.item, false);
+                    this.userExpand(entry.item, false);
                 } else {
                     for (int i = index - 1; i >= 0; i--) {
                         if (this.entries.get(i).depth < entry.depth) {
-                            this.list.select(i);
+                            this.userSelect(i);
                             break;
                         }
                     }
@@ -463,7 +535,7 @@ public final class TreeViewImpl<T> extends CustomComposite<TreeView<T>> implemen
             this.tree = tree;
             this.entry = entry;
             this.cell = tree.cellFactory.apply(entry.item);
-            this.addChild(this.cell);
+            this.addContent(this.cell);
             this.setAnchor(Anchor.FILL);
         }
 

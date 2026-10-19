@@ -18,11 +18,8 @@ import org.inspirenxe.strata.api.text.TextStyle;
 import org.inspirenxe.strata.api.theme.Paint;
 import org.inspirenxe.strata.api.theme.Theme;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Objects;
 import java.util.Set;
-import java.util.function.Consumer;
 
 /**
  * The switch implementation. Other code sees only {@link ToggleSwitch}.
@@ -33,7 +30,6 @@ public final class ToggleSwitchImpl extends CustomComponent<ToggleSwitch> implem
     private static final float KNOB = 8f;
     private static final float GAP = 4f;
 
-    private final List<Consumer<Boolean>> listeners;
     private final String text;
     private boolean on;
 
@@ -50,7 +46,6 @@ public final class ToggleSwitchImpl extends CustomComponent<ToggleSwitch> implem
     public ToggleSwitchImpl(final ComponentFactory factory, final String text) {
         super(factory);
         this.text = Objects.requireNonNull(text, "text");
-        this.listeners = new ArrayList<>();
         this.track = Paint.NONE;
         this.trackOn = Paint.NONE;
         this.knob = Paint.NONE;
@@ -66,23 +61,25 @@ public final class ToggleSwitchImpl extends CustomComponent<ToggleSwitch> implem
         return this.on;
     }
 
+    // --8<-- [start:events]
     @Override
     public ToggleSwitch setOn(final boolean on) {
         if (this.on != on) {
             this.on = on;
-            // Being on does not change the size, so no invalidateLayout() here
-            for (final Consumer<Boolean> listener : this.listeners) {
-                listener.accept(on);
-            }
+            // Being on does not change the size, so no invalidateLayout() here.
+            // Report every change, from the user or from code.
+            this.report(TOGGLED, on, !on);
         }
         return this.self();
     }
 
-    @Override
-    public ToggleSwitch onChange(final Consumer<Boolean> listener) {
-        this.listeners.add(Objects.requireNonNull(listener, "listener"));
-        return this.self();
+    /**
+     * Flips the switch for the user: asks first, then applies whatever value the handlers left.
+     */
+    private void userToggle() {
+        this.request(TOGGLE, !this.on, this::setOn);
     }
+    // --8<-- [end:events]
 
     // Theme
 
@@ -127,7 +124,7 @@ public final class ToggleSwitchImpl extends CustomComponent<ToggleSwitch> implem
     @Override
     protected void onClick(final PointerButtonEvent event) {
         if (event.button() == MouseButton.LEFT) {
-            this.setOn(!this.on);
+            this.userToggle();
             event.consume();
         }
     }
@@ -135,7 +132,7 @@ public final class ToggleSwitchImpl extends CustomComponent<ToggleSwitch> implem
     @Override
     protected void onKey(final KeyEvent event) {
         if (event.action() == KeyAction.PRESS && event.key() == Key.SPACE) {
-            this.setOn(!this.on);
+            this.userToggle();
             event.consume();
         }
     }

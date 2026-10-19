@@ -20,11 +20,8 @@ import org.inspirenxe.strata.api.theme.Paint;
 import org.inspirenxe.strata.api.theme.Theme;
 import org.inspirenxe.strata.core.control.Rings;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Objects;
 import java.util.Set;
-import java.util.function.Consumer;
 
 /**
  * The core {@link ToggleSwitch}. The track sits at the left edge, vertically centered, and the caption
@@ -45,7 +42,6 @@ public final class ToggleSwitchImpl extends CustomComponent<ToggleSwitch> implem
     public static final float KNOB_INSET = 2f;
     private static final Set<String> REQUIRED = Set.of(STYLE_TRACK, STYLE_TRACK_ON, STYLE_KNOB);
 
-    private final List<Consumer<Boolean>> listeners;
     private String text;
     private boolean on;
 
@@ -74,7 +70,6 @@ public final class ToggleSwitchImpl extends CustomComponent<ToggleSwitch> implem
     @SuppressWarnings("this-escape")
     public ToggleSwitchImpl(final ComponentFactory ui, final String text) {
         super(ui);
-        this.listeners = new ArrayList<>();
         this.text = Objects.requireNonNull(text, "text");
         this.track = Paint.NONE;
         this.trackOn = Paint.NONE;
@@ -113,9 +108,7 @@ public final class ToggleSwitchImpl extends CustomComponent<ToggleSwitch> implem
     public ToggleSwitch setOn(final boolean on) {
         if (this.on != on) {
             this.on = on;
-            for (final Consumer<Boolean> listener : List.copyOf(this.listeners)) {
-                listener.accept(on);
-            }
+            this.report(TOGGLED, on, !on);
         }
         return this;
     }
@@ -127,10 +120,18 @@ public final class ToggleSwitchImpl extends CustomComponent<ToggleSwitch> implem
         }
     }
 
-    @Override
-    public ToggleSwitch onToggled(final Consumer<Boolean> listener) {
-        this.listeners.add(Objects.requireNonNull(listener, "listener"));
-        return this;
+    /**
+     * Flips the switch for the user through {@link ToggleSwitch#TOGGLE}, applying the final value unless it is
+     * null. Does nothing while disabled.
+     */
+    private void userToggle() {
+        if (this.isEnabled()) {
+            this.request(TOGGLE, !this.on, on -> {
+                if (on != null) {
+                    this.setOn(on);
+                }
+            });
+        }
     }
 
     @Override
@@ -192,7 +193,7 @@ public final class ToggleSwitchImpl extends CustomComponent<ToggleSwitch> implem
     @Override
     protected void onClick(final PointerButtonEvent event) {
         if (event.button() == MouseButton.LEFT) {
-            this.toggle();
+            this.userToggle();
             event.consume();
         }
     }
@@ -200,7 +201,7 @@ public final class ToggleSwitchImpl extends CustomComponent<ToggleSwitch> implem
     @Override
     protected void onKey(final KeyEvent event) {
         if (event.action() == KeyAction.PRESS && (event.key().isEnter() || event.key() == Key.SPACE)) {
-            this.toggle();
+            this.userToggle();
             event.consume();
         }
     }

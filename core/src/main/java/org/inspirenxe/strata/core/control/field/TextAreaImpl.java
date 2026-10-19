@@ -26,13 +26,9 @@ import org.inspirenxe.strata.api.theme.Paint;
 import org.inspirenxe.strata.api.theme.Theme;
 import org.inspirenxe.strata.core.layout.ScrollBar;
 
-import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.List;
 import java.util.Objects;
 import java.util.Set;
-import java.util.function.Consumer;
-import java.util.function.UnaryOperator;
 
 /**
  * The core {@link TextArea}. It edits like {@link TextBoxImpl} and lays its text out in rows: one per line, and more
@@ -44,6 +40,12 @@ import java.util.function.UnaryOperator;
  * the start of the next row. The view scrolls to keep the caret in sight after the caret moves, but not on other
  * frames, so the wheel can scroll it away. Each wheel notch scrolls three lines, and selecting a whole line past its
  * end shows a 3-unit stub for the line break.</p>
+ *
+ * <p>Every user edit that would change the text fires {@link TextArea#EDIT} when a handler is on its path. While
+ * the handlers run the area still holds the text and selection from before the edit. The final text then has its
+ * line breaks turned into {@code \n} and is cut to the length limit, and the caret goes as many characters from its
+ * end as the edit left it, with nothing selected. With no handler on the path the edit applies directly, without
+ * putting the old text back first.</p>
  */
 public final class TextAreaImpl extends CustomComponent<TextArea> implements TextArea {
     /**
@@ -58,17 +60,15 @@ public final class TextAreaImpl extends CustomComponent<TextArea> implements Tex
     private static final float LINE_BREAK_WIDTH = 3f;
 
     private final StringBuilder buffer;
-    private final List<Consumer<String>> listeners;
     private final ScrollBar bar;
     private final Runnable drawContent;
     private int maxLength;
     private boolean wrap;
     private int visibleLines;
     private Insets textPadding;
-    private UnaryOperator<String> filter;
     private boolean readOnly;
 
-    // The text and selection before the edit in progress, for the filter to fall back to
+    // The text and selection before the edit in progress, for a rejected edit to fall back to
     private String beforeText;
     private int beforeCaret;
     private int beforeAnchor;
@@ -137,7 +137,6 @@ public final class TextAreaImpl extends CustomComponent<TextArea> implements Tex
     public TextAreaImpl(final ComponentFactory ui) {
         super(ui);
         this.buffer = new StringBuilder();
-        this.listeners = new ArrayList<>();
         this.bar = new ScrollBar(true);
         this.drawContent = this::drawContent;
         this.maxLength = Integer.MAX_VALUE;
@@ -185,13 +184,14 @@ public final class TextAreaImpl extends CustomComponent<TextArea> implements Tex
     public TextArea setText(final String text) {
         final String clean = truncate(normalize(Objects.requireNonNull(text, "text")), this.maxLength);
         if (!clean.contentEquals(this.buffer)) {
+            final String previous = this.buffer.toString();
             this.buffer.setLength(0);
             this.buffer.append(clean);
             this.caret = 0;
             this.anchor = 0;
             this.scrollX = 0f;
             this.scrollY = 0f;
-            this.changed();
+            this.changed(previous);
         }
         return this;
     }
@@ -208,10 +208,11 @@ public final class TextAreaImpl extends CustomComponent<TextArea> implements Tex
         }
         this.maxLength = maxLength;
         if (this.codePoints() > maxLength) {
+            final String previous = this.buffer.toString();
             this.buffer.setLength(this.buffer.offsetByCodePoints(0, maxLength));
             this.caret = Math.min(this.caret, this.buffer.length());
             this.anchor = Math.min(this.anchor, this.buffer.length());
-            this.changed();
+            this.changed(previous);
         }
         return this;
     }
@@ -283,18 +284,6 @@ public final class TextAreaImpl extends CustomComponent<TextArea> implements Tex
         this.anchor = 0;
         this.caret = this.buffer.length();
         this.moved();
-        return this;
-    }
-
-    @Override
-    public TextArea onTextChanged(final Consumer<String> listener) {
-        this.listeners.add(Objects.requireNonNull(listener, "listener"));
-        return this;
-    }
-
-    @Override
-    public TextArea setFilter(final UnaryOperator<String> filter) {
-        this.filter = filter;
         return this;
     }
 
@@ -978,34 +967,56 @@ public final class TextAreaImpl extends CustomComponent<TextArea> implements Tex
     }
 
     /**
-     * Ends a user edit: runs the filter, then tells listeners if the text changed.
+     * Ends a user edit. With no {@link TextArea#EDIT} handler on the path, or when the edit left the text as it was,
+     * this applies the edit at once. Otherwise it puts the text and selection back as they were before the edit and
+     * fires the request with the edited text, which applies the final text through {@code proceedEdit} unless a
+     * handler cancels it.
      */
     private void edited() {
         this.goalX = Float.NaN;
-        if (this.filter != null) {
-            final String candidate = this.buffer.toString();
-            final String result = this.filter.apply(candidate);
-            if (result == null || result.equals(this.beforeText)) {
-                this.buffer.setLength(0);
-                this.buffer.append(this.beforeText);
-                this.caret = this.beforeCaret;
-                this.anchor = this.beforeAnchor;
-                this.moved();
-                return;
-            }
-            if (!result.equals(candidate)) {
-                final int fromEnd = this.buffer.length() - this.caret;
-                this.buffer.setLength(0);
-                this.buffer.append(truncate(normalize(result), this.maxLength));
-                this.caret = this.snap(this.buffer.length() - fromEnd);
-                this.anchor = this.caret;
-            }
+        if (!this.isHandled(EDIT)) {
+            this.applyEdit();
+            return;
         }
+        final String candidate = this.buffer.toString();
+        if (candidate.equals(this.beforeText)) {
+            this.applyEdit();
+            return;
+        }
+        final int fromEnd = candidate.length() - this.caret;
+        this.buffer.setLength(0);
+        this.buffer.append(this.beforeText);
+        this.caret = this.beforeCaret;
+        this.anchor = this.beforeAnchor;
+        this.moved();
+        this.request(EDIT, candidate, text -> this.proceedEdit(text, fromEnd));
+    }
+
+    /**
+     * Applies the final text of an {@link TextArea#EDIT} request: turns its line breaks into {@code \n}, cuts
+     * it to the length limit, and puts it in the area with the caret {@code fromEnd} characters before its end and
+     * nothing selected. For the edited text itself that is where the edit left the caret. Then it applies the text
+     * as the edit.
+     */
+    private void proceedEdit(final String text, final int fromEnd) {
+        final String fitted = truncate(normalize(Objects.requireNonNull(text, "text")), this.maxLength);
+        this.buffer.setLength(0);
+        this.buffer.append(fitted);
+        this.caret = this.snap(this.buffer.length() - fromEnd);
+        this.anchor = this.caret;
+        this.goalX = Float.NaN;
+        this.applyEdit();
+    }
+
+    /**
+     * Applies the edit the buffer holds, reporting {@link TextArea#EDITED} if the text changed.
+     */
+    private void applyEdit() {
         if (this.buffer.toString().equals(this.beforeText)) {
             this.moved();
             return;
         }
-        this.changed();
+        this.changed(this.beforeText);
     }
 
     private void moveTo(final int index, final boolean extend) {
@@ -1023,13 +1034,10 @@ public final class TextAreaImpl extends CustomComponent<TextArea> implements Tex
         this.blinkStart = this.environment().millis();
     }
 
-    private void changed() {
+    private void changed(final String previous) {
         this.rowsDirty = true;
         this.moved();
-        final String text = this.buffer.toString();
-        for (final Consumer<String> listener : List.copyOf(this.listeners)) {
-            listener.accept(text);
-        }
+        this.report(EDITED, this.buffer.toString(), previous);
     }
 
     // ------------------------------------------------------------------

@@ -1,10 +1,9 @@
 package org.inspirenxe.strata.api.component;
 
-import org.inspirenxe.strata.api.event.Event;
-import org.inspirenxe.strata.api.event.EventHandler;
+import org.inspirenxe.strata.api.event.EventTarget;
 import org.inspirenxe.strata.api.event.EventType;
-import org.inspirenxe.strata.api.event.Phase;
-import org.inspirenxe.strata.api.event.Subscription;
+import org.inspirenxe.strata.api.event.MeasureEvent;
+import org.inspirenxe.strata.api.event.PaintEvent;
 import org.inspirenxe.strata.api.geom.Insets;
 import org.inspirenxe.strata.api.geom.Rect;
 import org.inspirenxe.strata.api.layout.Anchor;
@@ -36,19 +35,36 @@ import org.inspirenxe.strata.api.theme.Theme;
  * maximum}.</p>
  *
  * <h2>Events</h2>
- * <p>Strata routes input to components as events (see {@link org.inspirenxe.strata.api.event.EventTypes}). For each
- * component an event reaches, {@link Phase#BEFORE} handlers run first, then the component's own default behavior
- * (a button pressing, a text box inserting a character), then {@link Phase#AFTER} handlers. A {@code BEFORE}
- * handler that cancels the event skips the default behavior. A handler registered with
- * {@link #onWithSnapshot(EventType, Phase, EventHandler, Object)} can also read the state components had when the
- * event fired; see {@link ComponentSnapshot}.</p>
+ * <p>Everything a component does reaches code as an event, registered with
+ * {@link #onEvent(EventType, EventHandler)}: input (see {@link org.inspirenxe.strata.api.event.EventTypes}), a
+ * control's own requests and reports, and drawing and sizing ({@link #PAINT}, {@link #PAINTED},
+ * {@link #MEASURED}). For each component an input event reaches, the handlers run in priority order, then the
+ * component's own default behavior (a button pressing, a text box inserting a character) unless a handler canceled
+ * the event. A handler can read the state components had when the event fired; see {@link ComponentSnapshot}.</p>
  *
  * <h2>Threading</h2>
  * <p>Call components only from the engine's UI thread.</p>
  *
  * @param <T> the type callers see the component as, so setters can return it for chaining
  */
-public interface Component<T extends Component<T>> {
+public interface Component<T extends Component<T>> extends EventTarget<T> {
+
+    /**
+     * Fired before the component draws its background. Canceling it skips the component's own drawing; its
+     * children still draw. See {@link PaintEvent}.
+     */
+    EventType<PaintEvent.Pre> PAINT = EventType.direct("paint", PaintEvent.Pre.class);
+
+    /**
+     * Fired after the component and its children have drawn, so handlers draw on top. See {@link PaintEvent}.
+     */
+    EventType<PaintEvent> PAINTED = EventType.direct("painted", PaintEvent.class);
+
+    /**
+     * Fired after the component measured its content, so a handler can change the size it asks for. See
+     * {@link MeasureEvent}.
+     */
+    EventType<MeasureEvent> MEASURED = EventType.direct("measured", MeasureEvent.class);
 
     // Tree
 
@@ -478,98 +494,4 @@ public interface Component<T extends Component<T>> {
     void invalidateLayout();
 
     // Events
-
-    /**
-     * Registers a handler that runs in {@link Phase#BEFORE}, so it can cancel the component's default behavior.
-     *
-     * @param <E> the event interface
-     * @param type the event type, usually a constant from {@link org.inspirenxe.strata.api.event.EventTypes}
-     * @param handler the handler
-     * @return a subscription that removes the handler when closed
-     */
-    default <E extends Event> Subscription on(final EventType<E> type, final EventHandler<? super E> handler) {
-        return this.on(type, Phase.BEFORE, handler, null);
-    }
-
-    /**
-     * Registers a handler for one phase.
-     *
-     * @param <E> the event interface
-     * @param type the event type
-     * @param phase when the handler runs relative to the default behavior
-     * @param handler the handler
-     * @return a subscription that removes the handler when closed
-     */
-    default <E extends Event> Subscription on(final EventType<E> type, final Phase phase, final EventHandler<? super E> handler) {
-        return this.on(type, phase, handler, null);
-    }
-
-    /**
-     * Registers a handler for one phase, tagged with an owner. Handlers for the same type and phase run in the
-     * order they were registered. A handler may register or remove handlers while it runs; the change applies from
-     * the next event.
-     *
-     * @param <E> the event interface
-     * @param type the event type
-     * @param phase when the handler runs relative to the default behavior
-     * @param handler the handler
-     * @param owner a token for {@link #removeHandlers(Object)}, or {@code null}
-     * @return a subscription that removes the handler when closed; closing it twice does nothing
-     */
-    <E extends Event> Subscription on(EventType<E> type, Phase phase, EventHandler<? super E> handler, Object owner);
-
-    /**
-     * Registers a {@link Phase#BEFORE} handler that needs {@linkplain Event#snapshotOf(Component) snapshots}; see
-     * {@link #onWithSnapshot(EventType, Phase, EventHandler, Object)}.
-     *
-     * @param <E> the event interface
-     * @param type the event type
-     * @param handler the handler
-     * @return a subscription that removes the handler when closed
-     */
-    default <E extends Event> Subscription onWithSnapshot(final EventType<E> type, final EventHandler<? super E> handler) {
-        return this.onWithSnapshot(type, Phase.BEFORE, handler, null);
-    }
-
-    /**
-     * Registers a handler for one phase that needs {@linkplain Event#snapshotOf(Component) snapshots}; see
-     * {@link #onWithSnapshot(EventType, Phase, EventHandler, Object)}.
-     *
-     * @param <E> the event interface
-     * @param type the event type
-     * @param phase when the handler runs relative to the default behavior
-     * @param handler the handler
-     * @return a subscription that removes the handler when closed
-     */
-    default <E extends Event> Subscription onWithSnapshot(final EventType<E> type, final Phase phase,
-                                                          final EventHandler<? super E> handler) {
-        return this.onWithSnapshot(type, phase, handler, null);
-    }
-
-    /**
-     * Registers a handler like {@link #on(EventType, Phase, EventHandler, Object)}, and asks Strata to take
-     * snapshots for every event of this type whose path includes this component. Before the event reaches any
-     * handler, Strata records the state of the event's target and of this component, so the handler can compare
-     * {@link Event#snapshot()} or {@link Event#currentSnapshot()} with the live components.
-     *
-     * <p>Snapshots cost an allocation per captured component, so register this way only the handlers that read
-     * them. Events whose path has no such handler take no snapshots. Handlers registered with {@code on} on the same
-     * component run as before and may read the snapshots too while they exist.</p>
-     *
-     * @param <E> the event interface
-     * @param type the event type
-     * @param phase when the handler runs relative to the default behavior
-     * @param handler the handler
-     * @param owner a token for {@link #removeHandlers(Object)}, or {@code null}
-     * @return a subscription that removes the handler when closed; closing it twice does nothing
-     */
-    <E extends Event> Subscription onWithSnapshot(EventType<E> type, Phase phase, EventHandler<? super E> handler,
-                                                  Object owner);
-
-    /**
-     * Removes every handler on this component registered with the given owner. Compared by identity.
-     *
-     * @param owner the token passed to {@link #on(EventType, Phase, EventHandler, Object)}
-     */
-    void removeHandlers(Object owner);
 }

@@ -1,10 +1,12 @@
 package org.inspirenxe.strata.api.control.collection;
 
 import org.inspirenxe.strata.api.component.Component;
+import org.inspirenxe.strata.api.event.EventType;
+import org.inspirenxe.strata.api.event.ValueEvent;
+import org.inspirenxe.strata.api.event.ValueRequestEvent;
 
 import java.util.List;
 import java.util.Optional;
-import java.util.function.Consumer;
 import java.util.function.Function;
 
 /**
@@ -25,7 +27,7 @@ import java.util.function.Function;
  *     <li>At most one item is selected. A press on a row selects it; a press on the selected row deselects it only
  *     when the list {@linkplain #setDeselectable is deselectable}. A cell that consumes the press, such as a button,
  *     keeps the row from being selected.</li>
- *     <li>A double click, or Enter while the list has focus, {@linkplain #onActivate activates} the selected item.
+ *     <li>A double click, or Enter while the list has focus, {@linkplain #ACTIVATE activates} the selected item.
  *     With {@link #setActivateOnClick} a single click does, as in a drop-down.</li>
  *     <li>While focused: Up and Down move the selection, Page Up and Page Down by a viewport, Home and End to the
  *     ends; the list scrolls to keep the selection in view.</li>
@@ -35,6 +37,10 @@ import java.util.function.Function;
  *
  * <p>{@link #setItems} keeps the selection on the item with the same {@linkplain #setKeyFunction key}, so a list
  * refreshed from the server keeps the row the user picked. If no item has that key, nothing is selected.</p>
+ *
+ * <p>The events carry row indexes, so read the item from the list: {@code list.items().get(e.value())}. Handle
+ * {@link #SELECT} or {@link #ACTIVATE} to refuse or change what the user does, and {@link #SELECTED} or
+ * {@link #ACTIVATED} to react.</p>
  *
  * <p>The list is focusable and tabbable. It asks for the width of its widest built row, at least 40 units, and the
  * height of all its rows, but no more height than it is offered; give it a height or stretch it to scroll.</p>
@@ -53,8 +59,8 @@ import java.util.function.Function;
  * <pre>{@code
  * ListView<Listing> listings = factory.listView((Listing listing) -> factory.label(listing.name()))
  *         .setRowHeight(24)
- *         .setKeyFunction(Listing::record)
- *         .onActivate(listing -> buy(listing, 1));
+ *         .setKeyFunction(Listing::record);
+ * listings.onEvent(ListView.ACTIVATED, e -> buy(listings.items().get(e.value()), 1));
  * listings.setItems(fromServer);
  * }</pre>
  *
@@ -84,6 +90,34 @@ public interface ListView<T> extends Component<ListView<T>> {
      * The row height of a new list, in UI units.
      */
     float DEFAULT_ROW_HEIGHT = 20f;
+    /**
+     * Asked before the user changes the selection: a press on a row, a press on the selected row of a
+     * {@linkplain #setDeselectable deselectable} list, which clears it, or the Up, Down, Page Up, Page Down, Home and
+     * End keys while the list has focus. It fires only when the selection would change. The value is the index of
+     * the row about to be selected, or -1 when the user clears the selection. A handler may rewrite it to another
+     * index or to -1; the list then selects that row and scrolls it into view, as {@link #select} does, and ignores
+     * any other index outside the items. Fires only for the user's actions.
+     */
+    EventType<ValueRequestEvent<ListView<?>, Integer>> SELECT = EventType.valueRequest("list_view.select");
+    /**
+     * Told after the selection changed. The value is the selected index, or -1 when nothing is selected, and the
+     * previous value is the index before. It also fires when {@link #setItems} keeps the selection at the same index
+     * but on an item that is no longer equal to the one before, so the value can equal the previous value. Fires for
+     * changes made from code too, including {@link #setItems}.
+     */
+    EventType<ValueEvent<ListView<?>, Integer>> SELECTED = EventType.valueReport("list_view.selected");
+    /**
+     * Asked before the user activates a row: a double press on a row, or Enter while the list has focus and a row is
+     * selected. With {@link #setActivateOnClick} a click on a row activates it and a double press does not. The value
+     * is the row's index. A handler may rewrite it to another row; an index outside the items is ignored. Fires only
+     * for the user's actions.
+     */
+    EventType<ValueRequestEvent<ListView<?>, Integer>> ACTIVATE = EventType.valueRequest("list_view.activate");
+    /**
+     * Told after the user activated a row. The value is the row's index, and the previous value is the same index.
+     * The list has no method that activates a row from code.
+     */
+    EventType<ValueEvent<ListView<?>, Integer>> ACTIVATED = EventType.valueReport("list_view.activated");
 
     /**
      * Returns the items.
@@ -94,7 +128,7 @@ public interface ListView<T> extends Component<ListView<T>> {
 
     /**
      * Replaces the items and rebuilds the rows in view. The selection moves to the item with the selected item's
-     * key, or clears; listeners hear about it if the selected item or its index changed. The scroll offset is kept,
+     * key, or clears; {@link #SELECTED} fires if the selected item or its index changed. The scroll offset is kept,
      * clamped to the new length.
      *
      * @param items the items; the list keeps a copy
@@ -243,21 +277,4 @@ public interface ListView<T> extends Component<ListView<T>> {
      * @throws IndexOutOfBoundsException if the index is not an item's index
      */
     ListView<T> scrollToIndex(int index);
-
-    /**
-     * Adds a listener told the new selection whenever it changes, by input, by a setter or by {@link #setItems}.
-     *
-     * @param listener receives the selected item, or empty when the selection cleared
-     * @return this list
-     */
-    ListView<T> onSelectionChanged(Consumer<Optional<T>> listener);
-
-    /**
-     * Adds a listener told when an item is activated by a double click or Enter (or a click, with
-     * {@link #setActivateOnClick}).
-     *
-     * @param listener receives the activated item
-     * @return this list
-     */
-    ListView<T> onActivate(Consumer<T> listener);
 }

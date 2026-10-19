@@ -1,9 +1,8 @@
 package org.inspirenxe.strata.api.event;
 
 /**
- * A registered event handler. Removing the component from its tree does not remove its handlers; close the
- * subscription, or use an owner token with
- * {@link org.inspirenxe.strata.api.component.Component#removeHandlers(Object)}.
+ * A handler registered with {@link EventTarget#subscribe}, which can be removed before its target is discarded.
+ * Removing a component from its tree does not remove its handlers; close the subscription.
  */
 @FunctionalInterface
 public interface Subscription extends AutoCloseable {

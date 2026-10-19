@@ -1,7 +1,6 @@
 package org.inspirenxe.strata.core.node;
 
 import org.inspirenxe.strata.api.component.Component;
-import org.inspirenxe.strata.api.extension.ComponentBehavior;
 import org.inspirenxe.strata.api.extension.peer.ComponentHooks;
 import org.inspirenxe.strata.api.extension.peer.ContainerPeer;
 import org.inspirenxe.strata.api.extension.CustomComponent;
@@ -34,11 +33,9 @@ public final class ContainerNode extends Node implements ContainerPeer {
      * @param ui the factory that owns the container
      * @param facade the public container this node implements
      * @param hooks the container's protected hooks
-     * @param behavior the decorator around those hooks, or {@code null} for none
      */
-    public ContainerNode(final ComponentFactoryImpl ui, final CustomComponent<?> facade, final ComponentHooks hooks,
-                         final ComponentBehavior<?> behavior) {
-        super(ui, facade, hooks, behavior);
+    public ContainerNode(final ComponentFactoryImpl ui, final CustomComponent<?> facade, final ComponentHooks hooks) {
+        super(ui, facade, hooks);
         this.childNodes = new ArrayList<>();
         this.children = new ArrayList<>();
         this.childrenView = Collections.unmodifiableList(this.children);
@@ -83,6 +80,12 @@ public final class ContainerNode extends Node implements ContainerPeer {
     }
 
     @Override
+    public void addContent(final Component<?> child) {
+        this.add(child);
+        this.factory().nodeOf(child).setContent(true);
+    }
+
+    @Override
     public void remove(final Component<?> child) {
         final int index = this.children.indexOf(child);
         if (index < 0) {
@@ -96,6 +99,7 @@ public final class ContainerNode extends Node implements ContainerPeer {
             root.detachTree(node);
         }
         node.setParent(null);
+        node.setContent(false);
         this.invalidateLayout();
     }
 

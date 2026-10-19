@@ -4,12 +4,12 @@ import org.inspirenxe.strata.api.ComponentFactory;
 import org.inspirenxe.strata.api.component.Component;
 import org.inspirenxe.strata.api.control.button.Button;
 import org.inspirenxe.strata.api.control.display.Label;
+import org.inspirenxe.strata.api.control.field.Slider;
 import org.inspirenxe.strata.api.control.field.TextBox;
 import org.inspirenxe.strata.api.event.EventTypes;
-import org.inspirenxe.strata.api.event.Phase;
 import org.inspirenxe.strata.api.event.Subscription;
+import org.inspirenxe.strata.api.geom.Rect;
 import org.inspirenxe.strata.api.input.Key;
-import org.inspirenxe.strata.api.input.KeyAction;
 import org.inspirenxe.strata.api.input.Modifier;
 import org.inspirenxe.strata.api.input.ModifierPolicy;
 import org.inspirenxe.strata.api.input.Modifiers;
@@ -22,6 +22,8 @@ import org.inspirenxe.strata.api.screen.Screen;
 import org.inspirenxe.strata.api.screen.ScreenHandle;
 import org.inspirenxe.strata.api.theme.Paint;
 
+import java.util.function.Consumer;
+
 /**
  * The events guide's examples.
  */
@@ -30,23 +32,52 @@ public final class EventExamples {
     private EventExamples() {
     }
 
+    static Button chain(final ComponentFactory factory, final Runnable save) {
+        // --8<-- [start:chain]
+        final Button saveButton = factory.button("Save")
+                .setEnabled(false)
+                .onEvent(Button.PRESSED, event -> save.run())
+                .onEvent(EventTypes.POINTER_ENTER, event -> System.out.println("Hovering Save"));
+        // --8<-- [end:chain]
+        return saveButton;
+    }
+
     static void veto(final ComponentFactory factory, final TextBox confirmation) {
         // --8<-- [start:veto]
-        final Button delete = factory.button("Delete world").onAction(() -> System.out.println("Deleted"));
-        delete.on(EventTypes.CLICK, event -> {
-            if (!confirmation.text().equals("DELETE")) {
-                // BEFORE is the default phase: canceling here skips the button's own click handling
-                event.cancel();
-            }
-        });
+        // A Pre event: canceling it means the button never presses
+        final Button delete = factory.button("Delete world")
+                .onEvent(Button.PRESS, event -> {
+                    if (!confirmation.text().equals("DELETE")) {
+                        event.cancel();
+                    }
+                })
+                .onEvent(Button.PRESSED, event -> System.out.println("Deleted"));
         // --8<-- [end:veto]
     }
 
-    static void after(final TextBox name, final Label preview) {
-        // --8<-- [start:after]
-        // AFTER handlers see the result of the default behavior: here, the character is already inserted
-        name.on(EventTypes.CHAR, Phase.AFTER, event -> preview.setText(name.text().toUpperCase()));
-        // --8<-- [end:after]
+    static void rewrite(final Slider volume, final double[] cap) {
+        // --8<-- [start:rewrite]
+        // A Pre event with a value: set another one to change what the user did
+        volume.onEvent(Slider.CHANGE, event -> event.setValue(Math.min(event.value(), cap[0])));
+        // --8<-- [end:rewrite]
+    }
+
+    static void react(final TextBox name, final Label preview) {
+        // --8<-- [start:react]
+        // A Post event: the text has already changed, by typing or by setText
+        name.onEvent(TextBox.EDITED, event -> preview.setText(event.value().toUpperCase()));
+        // --8<-- [end:react]
+    }
+
+    static void form(final StackPanel form) {
+        // --8<-- [start:form]
+        // Every text box in the form, with one handler, before the boxes' own handlers at priority 0
+        form.onEvent(TextBox.EDIT, -100, event -> {
+            if (event.value().length() > 32) {
+                event.cancel();
+            }
+        });
+        // --8<-- [end:form]
     }
 
     static StackPanel delegated(final ComponentFactory factory) {
@@ -58,7 +89,7 @@ public final class EventExamples {
         }
         // Labels have no click behavior, so their clicks bubble up to the panel.
         // target() is the label that was clicked; current() is the panel running this handler.
-        palette.on(EventTypes.CLICK, event -> {
+        palette.onEvent(EventTypes.CLICK, event -> {
             if (event.target() != palette) {
                 selected.setText("Picked " + event.target().id());
                 event.consume();
@@ -70,7 +101,7 @@ public final class EventExamples {
 
     static void rightClick(final Button button) {
         // --8<-- [start:buttons]
-        button.on(EventTypes.CLICK, event -> {
+        button.onEvent(EventTypes.CLICK, event -> {
             if (event.button() == MouseButton.RIGHT) {
                 System.out.println("Context menu at " + event.x() + ", " + event.y());
                 event.consume();
@@ -85,7 +116,7 @@ public final class EventExamples {
         // --8<-- [start:shortcut]
         // Key events go to the focused component first and bubble to the root,
         // so a handler on the root sees every key nothing else consumed.
-        root.on(EventTypes.KEY, event -> {
+        root.onEvent(EventTypes.KEY, event -> {
             if (event.is(Key.S, Modifiers.of(Modifier.CONTROL), ModifierPolicy.EXACT)) {
                 save.run();
                 event.consume();
@@ -94,29 +125,38 @@ public final class EventExamples {
         // --8<-- [end:shortcut]
     }
 
-    static void submit(final TextBox name, final java.util.function.Consumer<String> submit) {
+    static void submit(final TextBox name, final Consumer<String> submit) {
         // --8<-- [start:submit]
-        // The text box does not consume Enter, so it reaches handlers on the box and its ancestors
-        name.on(EventTypes.KEY, event -> {
-            if (event.key().isEnter() && event.action() == KeyAction.PRESS) {
-                submit.accept(name.text());
-                event.consume();
-            }
-        });
+        // Enter in the box asks to submit; SUBMITTED fires once nothing refused
+        name.onEvent(TextBox.SUBMITTED, event -> submit.accept(event.value()));
         // --8<-- [end:submit]
     }
 
-    static void subscriptions(final Button button, final Object screen) {
+    static void subscriptions(final Button button) {
         // --8<-- [start:remove]
-        // Each registration returns a subscription that removes it
-        final Subscription subscription = button.on(EventTypes.POINTER_ENTER, event -> System.out.println("Hi"));
-        subscription.unsubscribe();
-
-        // Or tag handlers with an owner and remove them all at once
-        button.on(EventTypes.POINTER_ENTER, Phase.BEFORE, event -> System.out.println("Enter"), screen);
-        button.on(EventTypes.POINTER_EXIT, Phase.BEFORE, event -> System.out.println("Exit"), screen);
-        button.removeHandlers(screen);
+        // subscribe registers like onEvent and returns a way to remove the handler
+        final Subscription hover = button.subscribe(EventTypes.POINTER_ENTER, 0, event -> System.out.println("Hi"));
+        hover.close();
         // --8<-- [end:remove]
+    }
+
+    static void paint(final Button inbox, final boolean[] unread) {
+        // --8<-- [start:paint]
+        // A dot over the button's corner while there is something new
+        inbox.onEvent(Component.PAINTED, event -> {
+            if (unread[0]) {
+                final Rect bounds = event.bounds();
+                event.painter().fill(new Rect(bounds.right() - 6f, bounds.y() + 2f, 4f, 4f), 0xFFE8A33D);
+            }
+        });
+        // --8<-- [end:paint]
+    }
+
+    static void measure(final Label score) {
+        // --8<-- [start:measure]
+        // Never narrower than 80 units, whatever the text
+        score.onEvent(Component.MEASURED, event -> event.setWidth(Math.max(80f, event.width())));
+        // --8<-- [end:measure]
     }
 
     /**
@@ -136,7 +176,7 @@ public final class EventExamples {
             board.add(handle, position[0], position[1]);
 
             // Drag events keep going to the component the press started on, wherever the pointer goes
-            handle.on(EventTypes.DRAG, event -> {
+            handle.onEvent(EventTypes.DRAG, event -> {
                 position[0] += event.deltaX();
                 position[1] += event.deltaY();
                 board.move(handle, position[0], position[1]);
@@ -156,7 +196,7 @@ public final class EventExamples {
 
         @Override
         public Component<?> build(final ComponentFactory factory) {
-            final Button close = factory.button("Close").onAction(() -> this.handle.close());
+            final Button close = factory.button("Close").onEvent(Button.PRESSED, event -> this.handle.close());
             return factory.anchorPanel().add(close.setAnchor(Anchor.CENTER)).setAnchor(Anchor.FILL);
         }
 

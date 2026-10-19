@@ -20,10 +20,7 @@ import org.inspirenxe.strata.api.layout.Orientation;
 import org.inspirenxe.strata.api.theme.Paint;
 import org.inspirenxe.strata.api.theme.Theme;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Objects;
-import java.util.function.Consumer;
 
 /**
  * The core {@link SplitPane}. The divider is a private child component, so it can show its own cursor and receive
@@ -32,7 +29,6 @@ import java.util.function.Consumer;
 public final class SplitPaneImpl extends CustomComposite<SplitPane> implements SplitPane {
     private final Orientation orientation;
     private final Divider divider;
-    private final List<Consumer<Float>> listeners;
     private Component<?> first;
     private Component<?> second;
     private float position;
@@ -51,7 +47,6 @@ public final class SplitPaneImpl extends CustomComposite<SplitPane> implements S
     public SplitPaneImpl(final ComponentFactory ui, final Orientation orientation) {
         super(ui);
         this.orientation = Objects.requireNonNull(orientation, "orientation");
-        this.listeners = new ArrayList<>();
         this.position = 0.5f;
         this.minFirst = DEFAULT_MIN_SIZE;
         this.minSecond = DEFAULT_MIN_SIZE;
@@ -98,7 +93,7 @@ public final class SplitPaneImpl extends CustomComposite<SplitPane> implements S
             this.removeChild(old);
         }
         if (next != null && next != old) {
-            this.addChild(next);
+            this.addContent(next);
         }
         this.invalidateLayout();
         return next;
@@ -114,12 +109,11 @@ public final class SplitPaneImpl extends CustomComposite<SplitPane> implements S
         if (!(position >= 0f && position <= 1f)) {
             throw new IllegalArgumentException("Position must be from 0 to 1: " + position);
         }
-        if (position != this.position) {
+        final float previous = this.position;
+        if (position != previous) {
             this.position = position;
             this.invalidateArrangement();
-            for (final Consumer<Float> listener : List.copyOf(this.listeners)) {
-                listener.accept(position);
-            }
+            this.report(MOVED, position, previous);
         }
         return this;
     }
@@ -134,24 +128,45 @@ public final class SplitPaneImpl extends CustomComposite<SplitPane> implements S
         return this;
     }
 
-    @Override
-    public SplitPane onPositionChanged(final Consumer<Float> listener) {
-        this.listeners.add(Objects.requireNonNull(listener, "listener"));
-        return this;
-    }
-
     /**
-     * Moves the divider so the first side is a length along the split, kept within the minimum sizes when both fit.
+     * Moves the divider for the user so the first side is a length along the split, kept within the minimum sizes
+     * when both fit. {@link SplitPane#MOVE} fires only if the divider would move.
      */
     void dragTo(final float firstLength) {
         if (this.space <= 0f) {
             return;
         }
+        final float position = this.fit(firstLength);
+        if (position != this.position) {
+            this.request(MOVE, position, this::applyUserPosition);
+        }
+    }
+
+    /**
+     * Moves the divider to the final position of a {@link SplitPane#MOVE}, clamped to 0 to 1 and kept within the
+     * minimum sizes when both fit. Null and NaN are ignored.
+     */
+    private void applyUserPosition(final Float position) {
+        if (position == null || Float.isNaN(position) || this.space <= 0f) {
+            return;
+        }
+        float fitted = Math.max(0f, Math.min(1f, position));
+        if (this.minFirst + this.minSecond <= this.space) {
+            fitted = Math.max(this.minFirst / this.space, Math.min((this.space - this.minSecond) / this.space, fitted));
+        }
+        this.setPosition(fitted);
+    }
+
+    /**
+     * Turns a length of the first side into a position from 0 to 1, keeping both sides within their minimum sizes
+     * when both fit.
+     */
+    private float fit(final float firstLength) {
         float length = firstLength;
         if (this.minFirst + this.minSecond <= this.space) {
             length = Math.max(this.minFirst, Math.min(this.space - this.minSecond, length));
         }
-        this.setPosition(Math.max(0f, Math.min(1f, length / this.space)));
+        return Math.max(0f, Math.min(1f, length / this.space));
     }
 
     float firstStart() {

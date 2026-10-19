@@ -3,9 +3,9 @@ package org.inspirenxe.strata.api.event;
 import java.util.Objects;
 
 /**
- * A typed key for one kind of event, used to register handlers with
- * {@link org.inspirenxe.strata.api.component.Component#on}. Strata's own types are in {@link EventTypes}. Types are
- * compared by identity in dispatch, so always use the constants rather than creating equal copies.
+ * A typed key for one kind of event, used to register handlers with {@link EventTarget#onEvent}. Input types are in
+ * {@link EventTypes}, and each control declares its own as constants on its interface. Types are compared by
+ * identity in dispatch, so always use the constants rather than creating equal copies.
  *
  * @param <E> the event interface handlers receive
  * @param name a readable name, for debugging
@@ -43,6 +43,56 @@ public record EventType<E extends Event>(String name, Class<E> eventClass, boole
      */
     public static <E extends Event> EventType<E> direct(final String name, final Class<E> eventClass) {
         return new EventType<>(name, eventClass, false);
+    }
+
+    /**
+     * Creates a bubbling type for a control's request without a value, such as a press.
+     *
+     * @param <C> the control type
+     * @param name a readable name
+     * @return the new type
+     */
+    @SuppressWarnings({"unchecked", "rawtypes"})
+    public static <C> EventType<RequestEvent<C>> request(final String name) {
+        return new EventType<>(name, (Class) RequestEvent.class, true);
+    }
+
+    /**
+     * Creates a bubbling type for a control's request that carries a value, such as an edit.
+     *
+     * @param <C> the control type
+     * @param <V> the value type
+     * @param name a readable name
+     * @return the new type
+     */
+    @SuppressWarnings({"unchecked", "rawtypes"})
+    public static <C, V> EventType<ValueRequestEvent<C, V>> valueRequest(final String name) {
+        return new EventType<>(name, (Class) ValueRequestEvent.class, true);
+    }
+
+    /**
+     * Creates a bubbling type for a control's report without a value, such as a press having happened.
+     *
+     * @param <C> the control type
+     * @param name a readable name
+     * @return the new type
+     */
+    @SuppressWarnings({"unchecked", "rawtypes"})
+    public static <C> EventType<ControlEvent<C>> report(final String name) {
+        return new EventType<>(name, (Class) ControlEvent.class, true);
+    }
+
+    /**
+     * Creates a bubbling type for a control's report that carries a value, such as the text after an edit.
+     *
+     * @param <C> the control type
+     * @param <V> the value type
+     * @param name a readable name
+     * @return the new type
+     */
+    @SuppressWarnings({"unchecked", "rawtypes"})
+    public static <C, V> EventType<ValueEvent<C, V>> valueReport(final String name) {
+        return new EventType<>(name, (Class) ValueEvent.class, true);
     }
 
     /**

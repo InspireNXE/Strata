@@ -65,7 +65,7 @@ class TextBoxTest {
     @Test
     void typingInsertsAtCaretAndNotifies() {
         final List<String> seen = new ArrayList<>();
-        this.box.onTextChanged(seen::add);
+        this.box.onEvent(TextBox.EDITED, event -> seen.add(event.value()));
         this.box.requestFocus();
 
         this.type("hi");

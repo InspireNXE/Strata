@@ -19,7 +19,7 @@ The same rules apply to the component `Screen.build` returns.
 
 ### `IllegalStateException: No snapshot was taken for this event`
 
-A handler called `event.snapshot()` or `currentSnapshot()` on an event that has no snapshot of that component. Register the handler with `onWithSnapshot` instead of `on`. See [Event snapshots](../guides/snapshots.md#when-there-is-no-snapshot).
+A handler called `event.snapshot()` or `currentSnapshot()` on an event that has no snapshot of that component: a Post, paint or measure event, or a component that joined the path during delivery. On a Post event, read `previous()` instead. See [Event snapshots](../guides/snapshots.md#when-there-is-no-snapshot).
 
 ### `IllegalArgumentException: Sprite id needs a namespace`
 

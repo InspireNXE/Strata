@@ -8,7 +8,7 @@ import org.inspirenxe.strata.api.input.Modifiers;
  *
  * <p>Only Strata creates events. Do not implement this interface.</p>
  */
-public interface ModifiersEvent extends Event {
+public interface ModifiersEvent extends Cancelable {
 
     /**
      * Returns the modifiers now held.

@@ -21,7 +21,6 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
-import java.util.function.Consumer;
 import java.util.function.Function;
 
 /**
@@ -39,8 +38,6 @@ public final class SlotGridImpl<T> extends CustomComposite<SlotGrid<T>> implemen
 
     private final ComponentFactory ui;
     private final List<Slot<T>> slots;
-    private final List<Consumer<Click<T>>> clickListeners;
-    private final List<Consumer<Integer>> selectionListeners;
     private List<T> items;
     private Function<? super T, ? extends Component<?>> cellFactory;
     private Function<? super T, Tooltip> tooltips;
@@ -66,8 +63,6 @@ public final class SlotGridImpl<T> extends CustomComposite<SlotGrid<T>> implemen
         super(ui);
         this.ui = ui;
         this.slots = new ArrayList<>();
-        this.clickListeners = new ArrayList<>();
-        this.selectionListeners = new ArrayList<>();
         this.items = List.of();
         this.cellFactory = Objects.requireNonNull(cellFactory, "cellFactory");
         this.columns = DEFAULT_COLUMNS;
@@ -213,11 +208,10 @@ public final class SlotGridImpl<T> extends CustomComposite<SlotGrid<T>> implemen
         if (index != -1) {
             Objects.checkIndex(index, this.items.size());
         }
-        if (index != this.selectedIndex) {
+        final int previous = this.selectedIndex;
+        if (index != previous) {
             this.selectedIndex = index;
-            for (final Consumer<Integer> listener : List.copyOf(this.selectionListeners)) {
-                listener.accept(index);
-            }
+            this.report(SELECTED, index, previous);
         }
         return this;
     }
@@ -232,25 +226,34 @@ public final class SlotGridImpl<T> extends CustomComposite<SlotGrid<T>> implemen
         return -1;
     }
 
-    @Override
-    public SlotGrid<T> onSlotClicked(final Consumer<Click<T>> listener) {
-        this.clickListeners.add(Objects.requireNonNull(listener, "listener"));
-        return this;
-    }
-
-    @Override
-    public SlotGrid<T> onSelectionChanged(final Consumer<Integer> listener) {
-        this.selectionListeners.add(Objects.requireNonNull(listener, "listener"));
-        return this;
-    }
-
+    /**
+     * Handles a click on a slot: a left click asks to select it when the grid is selectable, then the click itself
+     * is asked for and reported.
+     */
     private void clicked(final int index, final PointerButtonEvent event) {
-        if (this.selectable && event.button() == MouseButton.LEFT) {
+        if (this.selectable && event.button() == MouseButton.LEFT && index != this.selectedIndex) {
+            this.request(SELECT, index, this::applySelect);
+        }
+        this.request(CLICK, new Click<>(index, this.items.get(index), event.button(), event.modifiers()),
+                this::applyClick);
+    }
+
+    /**
+     * Selects the slot a request ended with, or clears the selection for -1. A null or any other index outside the
+     * slots is ignored.
+     */
+    private void applySelect(final Integer index) {
+        if (index != null && index >= -1 && index < this.items.size()) {
             this.select(index);
         }
-        final Click<T> click = new Click<>(index, this.items.get(index), event.button(), event.modifiers());
-        for (final Consumer<Click<T>> listener : List.copyOf(this.clickListeners)) {
-            listener.accept(click);
+    }
+
+    /**
+     * Reports the click a request ended with. A null click or one whose index is not a slot's is ignored.
+     */
+    private void applyClick(final Click<?> click) {
+        if (click != null && click.index() >= 0 && click.index() < this.items.size()) {
+            this.report(CLICKED, click, click);
         }
     }
 
@@ -315,7 +318,7 @@ public final class SlotGridImpl<T> extends CustomComposite<SlotGrid<T>> implemen
             }
             if (item != null) {
                 this.content = this.grid.cellFactory.apply(item);
-                this.addChild(this.content);
+                this.addContent(this.content);
             }
             this.setTooltip(item == null || this.grid.tooltips == null ? null : this.grid.tooltips.apply(item));
             this.invalidateLayout();

@@ -4,7 +4,6 @@ import org.inspirenxe.strata.api.component.ComponentSnapshot;
 import org.inspirenxe.strata.api.control.button.Button;
 import org.inspirenxe.strata.api.control.field.TextBox;
 import org.inspirenxe.strata.api.event.EventTypes;
-import org.inspirenxe.strata.api.event.Phase;
 import org.inspirenxe.strata.api.geom.Rect;
 import org.inspirenxe.strata.api.input.Key;
 import org.inspirenxe.strata.api.input.KeyAction;
@@ -48,7 +47,7 @@ class SnapshotTimingTest {
     @Test
     void aPressSnapshotAlreadyShowsFocusAndPress() {
         final List<ComponentSnapshot> taken = new ArrayList<>();
-        this.box.onWithSnapshot(EventTypes.POINTER_PRESS, event -> taken.add(event.snapshot()));
+        this.box.onEvent(EventTypes.POINTER_PRESS, event -> taken.add(event.snapshot()));
         final Rect bounds = this.box.bounds();
         this.host.pointerButton(bounds.x() + 2, bounds.y() + 2, MouseButton.LEFT, true, Modifiers.NONE);
         assertTrue(taken.getFirst().focused());
@@ -56,10 +55,9 @@ class SnapshotTimingTest {
     }
 
     @Test
-    void aKeySnapshotHoldsTheTextBeforeTheEdit() {
+    void anEditRequestSnapshotHoldsTheTextBeforeTheEdit() {
         final List<TextBox.State> before = new ArrayList<>();
-        this.box.onWithSnapshot(EventTypes.KEY, Phase.AFTER,
-                event -> event.snapshot().state(TextBox.State.class).ifPresent(before::add));
+        this.box.onEvent(TextBox.EDIT, event -> event.snapshot().state(TextBox.State.class).ifPresent(before::add));
         this.box.requestFocus();
         this.host.key(Key.BACKSPACE, KeyAction.PRESS, Modifiers.NONE);
         assertEquals("ab", before.getFirst().text());
@@ -67,10 +65,10 @@ class SnapshotTimingTest {
     }
 
     @Test
-    void aClickSnapshotHoldsTheStateBeforeTheAction() {
+    void aPressRequestSnapshotHoldsTheStateBeforeThePress() {
         final List<ComponentSnapshot> taken = new ArrayList<>();
-        this.button.onAction(() -> this.button.setEnabled(false));
-        this.button.onWithSnapshot(EventTypes.CLICK, Phase.AFTER, event -> taken.add(event.snapshot()));
+        this.button.onEvent(Button.PRESSED, event -> this.button.setEnabled(false));
+        this.button.onEvent(Button.PRESS, event -> taken.add(event.snapshot()));
         final Rect bounds = this.button.bounds();
         this.host.pointerButton(bounds.x() + 2, bounds.y() + 2, MouseButton.LEFT, true, Modifiers.NONE);
         this.host.pointerButton(bounds.x() + 2, bounds.y() + 2, MouseButton.LEFT, false, Modifiers.NONE);

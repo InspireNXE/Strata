@@ -3,11 +3,8 @@ package org.inspirenxe.strata.sandbox;
 import org.inspirenxe.strata.api.ComponentFactory;
 import org.inspirenxe.strata.api.component.Component;
 import org.inspirenxe.strata.api.control.button.Button;
-import org.inspirenxe.strata.api.control.button.ButtonBehavior;
 import org.inspirenxe.strata.api.control.display.Label;
 import org.inspirenxe.strata.api.control.field.TextBox;
-import org.inspirenxe.strata.api.extension.Next;
-import org.inspirenxe.strata.api.extension.Painter;
 import org.inspirenxe.strata.api.geom.Rect;
 import org.inspirenxe.strata.api.layout.Anchor;
 import org.inspirenxe.strata.api.layout.GridLength;
@@ -53,21 +50,18 @@ public final class DemoScreen implements Screen {
     public Component<?> build(final ComponentFactory ui) {
         final Label counter = ui.label("Clicked 0 times");
 
-        final Button increment = ui.button("Click me").onAction(() -> {
+        final Button increment = ui.button("Click me").onEvent(Button.PRESSED, event -> {
             this.clicks++;
             counter.setText("Clicked " + this.clicks + " times");
         });
         final Button disabled = ui.button("Disabled").setEnabled(false);
         final Button toggle = ui.button("Toggle disabled");
-        toggle.onAction(() -> disabled.setEnabled(!disabled.isEnabled()));
+        toggle.onEvent(Button.PRESSED, event -> disabled.setEnabled(!disabled.isEnabled()));
 
-        // A built-in button decorated with a behavior: the normal look plus a corner marker
-        final Button marked = ui.button("Decorated", new ButtonBehavior() {
-            @Override
-            public void paint(final Button button, final Painter painter, final Rect bounds, final Next next) {
-                next.proceed();
-                painter.fill(new Rect(bounds.right() - 6f, bounds.y() + 2f, 4f, 4f), 0xFFE8A33D);
-            }
+        // A built-in button with a corner marker drawn over it after it paints
+        final Button marked = ui.button("Decorated").onEvent(Component.PAINTED, event -> {
+            final Rect bounds = event.bounds();
+            event.painter().fill(new Rect(bounds.right() - 6f, bounds.y() + 2f, 4f, 4f), 0xFFE8A33D);
         });
 
         final GridPanel buttons = ui.gridPanel()
@@ -92,7 +86,7 @@ public final class DemoScreen implements Screen {
 
         final Label greeting = ui.label("Hello, Strata");
         final TextBox name = ui.textBox().setText("Strata").setMaxLength(24)
-                .onTextChanged(text -> greeting.setText(text.isEmpty() ? "Hello?" : "Hello, " + text));
+                .onEvent(TextBox.EDITED, event -> greeting.setText(event.value().isEmpty() ? "Hello?" : "Hello, " + event.value()));
         name.setAlignment(HorizontalAlignment.STRETCH, VerticalAlignment.TOP);
         final TextBox secret = ui.textBox().setPassword(true).setText("hunter2");
         secret.setAlignment(HorizontalAlignment.STRETCH, VerticalAlignment.TOP);
@@ -120,7 +114,7 @@ public final class DemoScreen implements Screen {
         if (this.open != null) {
             column.add(ui.label("Almura mock-ups"));
             column.add(AlmuraMocks.buttons(ui, this.open));
-            column.add(ui.button("Standard controls").onAction(() -> this.open.accept(new ControlsScreen())));
+            column.add(ui.button("Standard controls").onEvent(Button.PRESSED, event -> this.open.accept(new ControlsScreen())));
             column.setWidth(400);
         }
         column.setBackground(Paint.solid(0xFF2B2D31));

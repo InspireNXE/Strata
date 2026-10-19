@@ -3,7 +3,6 @@ package org.inspirenxe.strata.core.control.button;
 import org.inspirenxe.strata.api.ComponentFactory;
 import org.inspirenxe.strata.api.component.CursorKind;
 import org.inspirenxe.strata.api.control.button.CheckBox;
-import org.inspirenxe.strata.api.control.button.CheckBoxBehavior;
 import org.inspirenxe.strata.api.event.KeyEvent;
 import org.inspirenxe.strata.api.event.PointerButtonEvent;
 import org.inspirenxe.strata.api.extension.CustomComponent;
@@ -21,11 +20,8 @@ import org.inspirenxe.strata.api.text.TextStyle;
 import org.inspirenxe.strata.api.theme.Paint;
 import org.inspirenxe.strata.api.theme.Theme;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Objects;
 import java.util.Set;
-import java.util.function.Consumer;
 
 /**
  * The core {@link CheckBox}. The box sits at the left edge, vertically centered, and the caption 4 units to its
@@ -47,7 +43,6 @@ public final class CheckBoxImpl extends CustomComponent<CheckBox> implements Che
     public static final float BOX_PADDING = 8f;
     private static final Set<String> REQUIRED = Set.of(STYLE_NORMAL, STYLE_HOVERED, STYLE_CHECKED, STYLE_CHECKED_HOVERED);
 
-    private final List<Consumer<Boolean>> listeners;
     private String text;
     private boolean checked;
     private float fixedBoxSize;
@@ -75,12 +70,10 @@ public final class CheckBoxImpl extends CustomComponent<CheckBox> implements Che
      *
      * @param ui the factory that owns the check box
      * @param text the caption
-     * @param behavior the decorator for the check box's hooks, or {@code null} for none
      */
     @SuppressWarnings("this-escape")
-    public CheckBoxImpl(final ComponentFactory ui, final String text, final CheckBoxBehavior behavior) {
-        super(ui, behavior);
-        this.listeners = new ArrayList<>();
+    public CheckBoxImpl(final ComponentFactory ui, final String text) {
+        super(ui);
         this.text = Objects.requireNonNull(text, "text");
         this.fixedBoxSize = Float.NaN;
         this.normal = Paint.NONE;
@@ -122,9 +115,7 @@ public final class CheckBoxImpl extends CustomComponent<CheckBox> implements Che
     public CheckBox setChecked(final boolean checked) {
         if (this.checked != checked) {
             this.checked = checked;
-            for (final Consumer<Boolean> listener : List.copyOf(this.listeners)) {
-                listener.accept(checked);
-            }
+            this.report(TOGGLED, checked, !checked);
         }
         return this;
     }
@@ -133,6 +124,20 @@ public final class CheckBoxImpl extends CustomComponent<CheckBox> implements Che
     public void toggle() {
         if (this.isEnabled()) {
             this.setChecked(!this.checked);
+        }
+    }
+
+    /**
+     * Toggles the box for the user through {@link CheckBox#TOGGLE}, applying the final value unless it is null. Does
+     * nothing while disabled.
+     */
+    private void userToggle() {
+        if (this.isEnabled()) {
+            this.request(TOGGLE, !this.checked, checked -> {
+                if (checked != null) {
+                    this.setChecked(checked);
+                }
+            });
         }
     }
 
@@ -148,12 +153,6 @@ public final class CheckBoxImpl extends CustomComponent<CheckBox> implements Che
         }
         this.fixedBoxSize = size;
         this.invalidateLayout();
-        return this;
-    }
-
-    @Override
-    public CheckBox onCheckedChanged(final Consumer<Boolean> listener) {
-        this.listeners.add(Objects.requireNonNull(listener, "listener"));
         return this;
     }
 
@@ -223,7 +222,7 @@ public final class CheckBoxImpl extends CustomComponent<CheckBox> implements Che
     @Override
     protected void onClick(final PointerButtonEvent event) {
         if (event.button() == MouseButton.LEFT) {
-            this.toggle();
+            this.userToggle();
             event.consume();
         }
     }
@@ -231,7 +230,7 @@ public final class CheckBoxImpl extends CustomComponent<CheckBox> implements Che
     @Override
     protected void onKey(final KeyEvent event) {
         if (event.action() == KeyAction.PRESS && (event.key().isEnter() || event.key() == Key.SPACE)) {
-            this.toggle();
+            this.userToggle();
             event.consume();
         }
     }

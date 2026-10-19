@@ -3,7 +3,6 @@ package org.inspirenxe.strata.core;
 import org.inspirenxe.strata.api.ComponentFactory;
 import org.inspirenxe.strata.api.control.button.Button;
 import org.inspirenxe.strata.api.event.EventTypes;
-import org.inspirenxe.strata.api.event.Phase;
 import org.inspirenxe.strata.api.input.Key;
 import org.inspirenxe.strata.api.input.KeyAction;
 import org.inspirenxe.strata.api.input.Modifier;
@@ -38,7 +37,7 @@ class InputTest {
     void clickCountsGrowWithinTimeAndDistance() {
         final Box box = new Box(this.ui, 50, 50);
         final List<Integer> counts = new ArrayList<>();
-        box.on(EventTypes.CLICK, event -> counts.add(event.clicks()));
+        box.onEvent(EventTypes.CLICK, event -> counts.add(event.clicks()));
         this.show(this.ui.absolutePanel().add(box, 10, 10));
 
         this.test.click(20, 20);
@@ -58,7 +57,7 @@ class InputTest {
     void clickMovedTooFarStartsOver() {
         final Box box = new Box(this.ui, 100, 100);
         final List<Integer> counts = new ArrayList<>();
-        box.on(EventTypes.CLICK, event -> counts.add(event.clicks()));
+        box.onEvent(EventTypes.CLICK, event -> counts.add(event.clicks()));
         this.show(this.ui.absolutePanel().add(box));
 
         this.test.click(10, 10);
@@ -71,10 +70,10 @@ class InputTest {
     void dragPastThresholdSuppressesClick() {
         final Box box = new Box(this.ui, 100, 100);
         final List<String> seen = new ArrayList<>();
-        box.on(EventTypes.CLICK, event -> seen.add("click"));
-        box.on(EventTypes.DRAG_START, event -> seen.add("start"));
-        box.on(EventTypes.DRAG, event -> seen.add("drag"));
-        box.on(EventTypes.DRAG_END, event -> seen.add("end"));
+        box.onEvent(EventTypes.CLICK, event -> seen.add("click"));
+        box.onEvent(EventTypes.DRAG_START, event -> seen.add("start"));
+        box.onEvent(EventTypes.DRAG, event -> seen.add("drag"));
+        box.onEvent(EventTypes.DRAG_END, event -> seen.add("end"));
         this.show(this.ui.absolutePanel().add(box));
 
         this.test.host().pointerButton(10, 10, MouseButton.LEFT, true, Modifiers.NONE);
@@ -90,7 +89,7 @@ class InputTest {
     void dragKeepsGoingOutsideTheTarget() {
         final Box box = new Box(this.ui, 20, 20);
         final List<Float> xs = new ArrayList<>();
-        box.on(EventTypes.DRAG, event -> xs.add(event.x()));
+        box.onEvent(EventTypes.DRAG, event -> xs.add(event.x()));
         this.show(this.ui.absolutePanel().add(box));
 
         this.test.host().pointerButton(5, 5, MouseButton.LEFT, true, Modifiers.NONE);
@@ -103,7 +102,7 @@ class InputTest {
     void releasingOneButtonDoesNotEndAnotherButtonsDrag() {
         final Box box = new Box(this.ui, 100, 100);
         final List<MouseButton> ended = new ArrayList<>();
-        box.on(EventTypes.DRAG_END, event -> ended.add(event.button()));
+        box.onEvent(EventTypes.DRAG_END, event -> ended.add(event.button()));
         this.show(this.ui.absolutePanel().add(box));
 
         this.test.host().pointerButton(10, 10, MouseButton.LEFT, true, Modifiers.NONE);
@@ -122,26 +121,24 @@ class InputTest {
     void cancelingSkipsDefaultBehavior() {
         final Button button = this.ui.button("Go");
         final int[] presses = {0};
-        button.onAction(() -> presses[0]++);
+        button.onEvent(Button.PRESSED, event -> presses[0]++);
         this.show(this.ui.absolutePanel().add(button));
 
         this.test.click(5, 5);
         assertEquals(1, presses[0]);
 
-        button.on(EventTypes.CLICK, Phase.BEFORE, event -> event.cancel());
+        button.onEvent(EventTypes.CLICK, event -> event.cancel());
         this.test.platform().advanceMillis(1000);
         this.test.click(5, 5);
         assertEquals(1, presses[0], "a canceled click must not press the button");
     }
 
     @Test
-    void handlersRemovedByOwner() {
+    void handlersRemovedBySubscription() {
         final Box box = new Box(this.ui, 10, 10);
-        final Object owner = new Object();
         final int[] calls = {0};
-        box.on(EventTypes.CLICK, Phase.AFTER, event -> calls[0]++, owner);
-        box.on(EventTypes.POINTER_PRESS, Phase.AFTER, event -> calls[0]++, owner);
-        box.removeHandlers(owner);
+        box.subscribe(EventTypes.CLICK, 0, event -> calls[0]++).close();
+        box.subscribe(EventTypes.POINTER_PRESS, 5, event -> calls[0]++).close();
         this.show(this.ui.absolutePanel().add(box));
 
         this.test.click(5, 5);
@@ -153,8 +150,8 @@ class InputTest {
         final Box box = new Box(this.ui, 10, 10);
         final AbsolutePanel panel = this.ui.absolutePanel().add(box);
         final List<Object> currents = new ArrayList<>();
-        box.on(EventTypes.CLICK, event -> currents.add(event.current()));
-        panel.on(EventTypes.CLICK, event -> {
+        box.onEvent(EventTypes.CLICK, event -> currents.add(event.current()));
+        panel.onEvent(EventTypes.CLICK, event -> {
             currents.add(event.current());
             assertSame(box, event.target());
         });
@@ -207,7 +204,7 @@ class InputTest {
     void enterPressesFocusedButton() {
         final Button button = this.ui.button("Go");
         final int[] presses = {0};
-        button.onAction(() -> presses[0]++);
+        button.onEvent(Button.PRESSED, event -> presses[0]++);
         this.show(this.ui.absolutePanel().add(button));
 
         button.requestFocus();
@@ -246,7 +243,7 @@ class InputTest {
         final TestHost host = new TestHost(quiet, Themes.flat(), 100, 100);
         final Box box = new Box(host.factory(), 10, 10).setFocusable(true);
         final List<KeyAction> actions = new ArrayList<>();
-        box.on(EventTypes.KEY, event -> actions.add(event.action()));
+        box.onEvent(EventTypes.KEY, event -> actions.add(event.action()));
         host.show(box);
         box.requestFocus();
 

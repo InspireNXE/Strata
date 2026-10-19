@@ -2,9 +2,7 @@ package org.inspirenxe.strata.api;
 
 import org.inspirenxe.strata.api.component.Component;
 import org.inspirenxe.strata.api.control.button.Button;
-import org.inspirenxe.strata.api.control.button.ButtonBehavior;
 import org.inspirenxe.strata.api.control.button.CheckBox;
-import org.inspirenxe.strata.api.control.button.CheckBoxBehavior;
 import org.inspirenxe.strata.api.control.button.RadioGroup;
 import org.inspirenxe.strata.api.control.button.ToggleSwitch;
 import org.inspirenxe.strata.api.control.collection.ComboBox;
@@ -13,17 +11,13 @@ import org.inspirenxe.strata.api.control.collection.SlotGrid;
 import org.inspirenxe.strata.api.control.collection.TableView;
 import org.inspirenxe.strata.api.control.collection.TreeView;
 import org.inspirenxe.strata.api.control.display.Image;
-import org.inspirenxe.strata.api.control.display.ImageBehavior;
 import org.inspirenxe.strata.api.control.display.Label;
-import org.inspirenxe.strata.api.control.display.LabelBehavior;
 import org.inspirenxe.strata.api.control.display.ProgressBar;
 import org.inspirenxe.strata.api.control.display.Separator;
 import org.inspirenxe.strata.api.control.field.Slider;
-import org.inspirenxe.strata.api.control.field.SliderBehavior;
 import org.inspirenxe.strata.api.control.field.Spinner;
 import org.inspirenxe.strata.api.control.field.TextArea;
 import org.inspirenxe.strata.api.control.field.TextBox;
-import org.inspirenxe.strata.api.control.field.TextBoxBehavior;
 import org.inspirenxe.strata.api.control.menu.Menu;
 import org.inspirenxe.strata.api.control.menu.MenuBar;
 import org.inspirenxe.strata.api.control.pane.Expander;
@@ -31,7 +25,6 @@ import org.inspirenxe.strata.api.control.pane.SplitPane;
 import org.inspirenxe.strata.api.control.pane.TabBar;
 import org.inspirenxe.strata.api.control.window.MessageBox;
 import org.inspirenxe.strata.api.control.window.Window;
-import org.inspirenxe.strata.api.extension.ComponentBehavior;
 import org.inspirenxe.strata.api.extension.CustomComponent;
 import org.inspirenxe.strata.api.extension.peer.ComponentHooks;
 import org.inspirenxe.strata.api.extension.peer.ComponentPeer;
@@ -131,30 +124,12 @@ public interface ComponentFactory {
     Label label(String text);
 
     /**
-     * Makes a {@link Label} decorated with a behavior.
-     *
-     * @param text the text
-     * @param behavior the behavior
-     * @return a new label
-     */
-    Label label(String text, LabelBehavior behavior);
-
-    /**
      * Makes an {@link Image}, 16 by 16 units until {@linkplain Image#setImageSize resized}.
      *
      * @param sprite the sprite to draw
      * @return a new image
      */
     Image image(SpriteId sprite);
-
-    /**
-     * Makes an {@link Image} decorated with a behavior.
-     *
-     * @param sprite the sprite to draw
-     * @param behavior the behavior
-     * @return a new image
-     */
-    Image image(SpriteId sprite, ImageBehavior behavior);
 
     /**
      * Makes an {@link Image} of an engine visual, at the visual's natural size.
@@ -173,30 +148,12 @@ public interface ComponentFactory {
     Button button(String text);
 
     /**
-     * Makes a {@link Button} decorated with a behavior.
-     *
-     * @param text the caption
-     * @param behavior the behavior
-     * @return a new button
-     */
-    Button button(String text, ButtonBehavior behavior);
-
-    /**
      * Makes an unchecked {@link CheckBox}.
      *
      * @param text the caption
      * @return a new check box
      */
     CheckBox checkBox(String text);
-
-    /**
-     * Makes an unchecked {@link CheckBox} decorated with a behavior.
-     *
-     * @param text the caption
-     * @param behavior the behavior
-     * @return a new check box
-     */
-    CheckBox checkBox(String text, CheckBoxBehavior behavior);
 
     /**
      * Makes a {@link Slider} over the range 0 to 1, at 0, with no step.
@@ -206,27 +163,11 @@ public interface ComponentFactory {
     Slider slider();
 
     /**
-     * Makes a {@link Slider} decorated with a behavior, over the range 0 to 1, at 0, with no step.
-     *
-     * @param behavior the behavior
-     * @return a new slider
-     */
-    Slider slider(SliderBehavior behavior);
-
-    /**
      * Makes an empty {@link TextBox}.
      *
      * @return a new text box
      */
     TextBox textBox();
-
-    /**
-     * Makes an empty {@link TextBox} decorated with a behavior.
-     *
-     * @param behavior the behavior
-     * @return a new text box
-     */
-    TextBox textBox(TextBoxBehavior behavior);
 
     /**
      * Makes an empty {@link ListView}.
@@ -381,10 +322,9 @@ public interface ComponentFactory {
      *
      * @param owner the component being constructed
      * @param hooks how the peer reaches the component's protected methods
-     * @param behavior the component's behavior, or {@code null}
      * @return the new peer
      */
-    ComponentPeer createPeer(CustomComponent<?> owner, ComponentHooks hooks, ComponentBehavior<?> behavior);
+    ComponentPeer createPeer(CustomComponent<?> owner, ComponentHooks hooks);
 
     /**
      * Creates the peer of a new container or composite. Called by
@@ -392,8 +332,7 @@ public interface ComponentFactory {
      *
      * @param owner the container being constructed
      * @param hooks how the peer reaches the container's protected methods
-     * @param behavior the container's behavior, or {@code null}
      * @return the new peer
      */
-    ContainerPeer createContainerPeer(CustomComponent<?> owner, ComponentHooks hooks, ComponentBehavior<?> behavior);
+    ContainerPeer createContainerPeer(CustomComponent<?> owner, ComponentHooks hooks);
 }

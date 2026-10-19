@@ -23,7 +23,7 @@ Publishing to Maven and depending on Strata from a separate project have not bee
 
 ## Not built yet
 
-- Controls: vertical slider, multiple selection in lists, tables and trees, editable table cells. Behavior interfaces for the newer controls.
+- Controls: vertical slider, multiple selection in lists, tables and trees, editable table cells.
 - Inline sprites in text. `SpriteSpan` and `InlineElement` are reserved.
 - Firing custom event types.
 - Narration and other accessibility support.
@@ -36,7 +36,7 @@ Publishing to Maven and depending on Strata from a separate project have not bee
 These are recorded in the [design document](../DESIGN.md#8-decisions-and-open-questions):
 
 - A platform shortcut modifier: Command on macOS, Control elsewhere.
-- Behavior interfaces for the newer controls, and whether `ListView` needs multiple selection.
+- Whether `ListView`, `TableView` and `TreeView` need multiple selection.
 
 ## Compatibility promise
 

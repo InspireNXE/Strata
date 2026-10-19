@@ -108,7 +108,7 @@ public final class StoreScreen implements Screen {
         this.ui = ui;
         final Window window = ui.window(this.data.name);
         window.setSize(this.admin ? 481 : 257, 300);
-        window.onClose(() -> {
+        window.onEvent(Window.CLOSED, event -> {
             if (this.handle != null) {
                 this.handle.close();
             }
@@ -129,12 +129,12 @@ public final class StoreScreen implements Screen {
     }
 
     private Component<?> buildStore(final ComponentFactory ui) {
-        this.tabs = ui.tabBar().addTab("Buy").addTab("Sell").setSpacing(4).onTabChanged(index -> this.refresh(false));
+        this.tabs = ui.tabBar().addTab("Buy").addTab("Sell").setSpacing(4).onEvent(TabBar.SELECTED, event -> this.refresh(false));
         this.tabs.setAlignment(HorizontalAlignment.STRETCH, VerticalAlignment.TOP);
-        this.search = ui.textBox().onSubmit(text -> this.refresh(false));
+        this.search = ui.textBox().onEvent(TextBox.SUBMITTED, event -> this.refresh(false));
         this.sort = ui.<Sort>comboBox(sort -> sort.label).setOptions(List.of(Sort.values()))
-                .onSelectionChanged(sort -> this.refresh(false));
-        final Button go = Look.button(ui, "Search", 50).onAction(() -> this.refresh(false));
+                .onEvent(ComboBox.SELECTED, e -> this.refresh(false));
+        final Button go = Look.button(ui, "Search", 50).onEvent(Button.PRESSED, event -> this.refresh(false));
 
         final GridPanel searchRow = Look.grid(ui, GridLength.auto(), GridLength.weighted(1), GridLength.fixed(78), GridLength.auto())
                 .rows(GridLength.auto()).setSpacing(2, 0);
@@ -145,17 +145,17 @@ public final class StoreScreen implements Screen {
 
         this.items = ui.<StoreItem>listView(this::storeCell).setRowHeight(24).setRowSpacing(1)
                 .setKeyFunction(StoreItem::record)
-                .onSelectionChanged(selected -> this.updateControls())
-                .onActivate(item -> this.transact(item, 1));
+                .onEvent(ListView.SELECTED, e -> this.updateControls())
+                .onEvent(ListView.ACTIVATED, e -> this.transact(this.items.items().get(e.value()), 1));
         Look.panel(this.items).setAnchor(Anchor.FILL);
 
-        this.one = Look.button(ui, "Buy 1", 60).onAction(() -> this.selected().ifPresent(item -> this.transact(item, 1)));
-        this.stack = Look.button(ui, "Buy 64", 60).onAction(() -> this.selected()
+        this.one = Look.button(ui, "Buy 1", 60).onEvent(Button.PRESSED, event -> this.selected().ifPresent(item -> this.transact(item, 1)));
+        this.stack = Look.button(ui, "Buy 64", 60).onEvent(Button.PRESSED, event -> this.selected()
                 .ifPresent(item -> this.transact(item, item.item().maxStack())));
-        this.quantity = Look.button(ui, "Buy Qty", 60).onAction(() -> this.selected()
+        this.quantity = Look.button(ui, "Buy Qty", 60).onEvent(Button.PRESSED, event -> this.selected()
                 .ifPresent(item -> StoreDialogs.transactQuantity(ui, item, this.buySide(), this.maxFor(item),
                         amount -> this.transact(item, amount))));
-        this.all = Look.button(ui, "Buy All", 60).onAction(() -> this.selected()
+        this.all = Look.button(ui, "Buy All", 60).onEvent(Button.PRESSED, event -> this.selected()
                 .ifPresent(item -> this.transact(item, this.maxFor(item))));
         final GridPanel buttons = Look.grid(ui, GridLength.auto(), GridLength.auto(), GridLength.weighted(1),
                 GridLength.auto(), GridLength.auto()).rows(GridLength.auto()).setSpacing(2, 0);
@@ -171,15 +171,15 @@ public final class StoreScreen implements Screen {
 
     private Component<?> buildAdmin(final ComponentFactory ui) {
         this.finder = ui.<String>comboBox(name -> name).setOptions(List.copyOf(this.finders.keySet()))
-                .setMaxVisibleOptions(24).onSelectionChanged(name -> this.refreshAdmin());
-        this.adminSearch = ui.textBox().onTextChanged(text -> this.refreshAdmin());
+                .setMaxVisibleOptions(24).onEvent(ComboBox.SELECTED, e -> this.refreshAdmin());
+        this.adminSearch = ui.textBox().onEvent(TextBox.EDITED, event -> this.refreshAdmin());
         this.adminItems = ui.<Item>listView(this::adminCell).setRowHeight(24).setRowSpacing(1)
                 .setKeyFunction(Item::name)
-                .onSelectionChanged(selected -> this.updateAdminControls())
-                .onActivate(this::listOrModify);
+                .onEvent(ListView.SELECTED, e -> this.updateAdminControls())
+                .onEvent(ListView.ACTIVATED, e -> this.listOrModify(this.adminItems.items().get(e.value())));
         Look.panel(this.adminItems).setAnchor(Anchor.FILL);
-        this.list = Look.button(ui, "List", 50).onAction(() -> this.adminItems.selected().ifPresent(this::listOrModify));
-        this.unlist = Look.button(ui, "Unlist", 50).onAction(() -> this.adminItems.selected().ifPresent(this::unlist));
+        this.list = Look.button(ui, "List", 50).onEvent(Button.PRESSED, event -> this.adminItems.selected().ifPresent(this::listOrModify));
+        this.unlist = Look.button(ui, "Unlist", 50).onEvent(Button.PRESSED, event -> this.adminItems.selected().ifPresent(this::unlist));
         this.total = Look.label(ui, "Total: 0", Look.WHITE);
 
         final GridPanel type = Look.grid(ui, GridLength.auto(), GridLength.weighted(1)).rows(GridLength.auto()).setSpacing(4, 0);

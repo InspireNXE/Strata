@@ -3,9 +3,7 @@ package org.inspirenxe.strata.core.node;
 import org.inspirenxe.strata.api.ComponentFactory;
 import org.inspirenxe.strata.api.component.Component;
 import org.inspirenxe.strata.api.control.button.Button;
-import org.inspirenxe.strata.api.control.button.ButtonBehavior;
 import org.inspirenxe.strata.api.control.button.CheckBox;
-import org.inspirenxe.strata.api.control.button.CheckBoxBehavior;
 import org.inspirenxe.strata.api.control.button.RadioGroup;
 import org.inspirenxe.strata.api.control.button.ToggleSwitch;
 import org.inspirenxe.strata.api.control.collection.ComboBox;
@@ -14,17 +12,13 @@ import org.inspirenxe.strata.api.control.collection.SlotGrid;
 import org.inspirenxe.strata.api.control.collection.TableView;
 import org.inspirenxe.strata.api.control.collection.TreeView;
 import org.inspirenxe.strata.api.control.display.Image;
-import org.inspirenxe.strata.api.control.display.ImageBehavior;
 import org.inspirenxe.strata.api.control.display.Label;
-import org.inspirenxe.strata.api.control.display.LabelBehavior;
 import org.inspirenxe.strata.api.control.display.ProgressBar;
 import org.inspirenxe.strata.api.control.display.Separator;
 import org.inspirenxe.strata.api.control.field.Slider;
-import org.inspirenxe.strata.api.control.field.SliderBehavior;
 import org.inspirenxe.strata.api.control.field.Spinner;
 import org.inspirenxe.strata.api.control.field.TextArea;
 import org.inspirenxe.strata.api.control.field.TextBox;
-import org.inspirenxe.strata.api.control.field.TextBoxBehavior;
 import org.inspirenxe.strata.api.control.menu.Menu;
 import org.inspirenxe.strata.api.control.menu.MenuBar;
 import org.inspirenxe.strata.api.control.pane.Expander;
@@ -32,7 +26,6 @@ import org.inspirenxe.strata.api.control.pane.SplitPane;
 import org.inspirenxe.strata.api.control.pane.TabBar;
 import org.inspirenxe.strata.api.control.window.MessageBox;
 import org.inspirenxe.strata.api.control.window.Window;
-import org.inspirenxe.strata.api.extension.ComponentBehavior;
 import org.inspirenxe.strata.api.extension.CustomComponent;
 import org.inspirenxe.strata.api.extension.Environment;
 import org.inspirenxe.strata.api.extension.peer.ComponentHooks;
@@ -180,67 +173,37 @@ public final class ComponentFactoryImpl implements ComponentFactory {
 
     @Override
     public Label label(final String text) {
-        return new LabelImpl(this, text, null);
-    }
-
-    @Override
-    public Label label(final String text, final LabelBehavior behavior) {
-        return new LabelImpl(this, text, Objects.requireNonNull(behavior, "behavior"));
+        return new LabelImpl(this, text);
     }
 
     @Override
     public Image image(final SpriteId sprite) {
-        return new ImageImpl(this, sprite, null);
-    }
-
-    @Override
-    public Image image(final SpriteId sprite, final ImageBehavior behavior) {
-        return new ImageImpl(this, sprite, Objects.requireNonNull(behavior, "behavior"));
+        return new ImageImpl(this, sprite);
     }
 
     @Override
     public Image image(final Visual visual) {
-        return new ImageImpl(this, visual, null);
+        return new ImageImpl(this, visual);
     }
 
     @Override
     public Button button(final String text) {
-        return new ButtonImpl(this, text, null);
-    }
-
-    @Override
-    public Button button(final String text, final ButtonBehavior behavior) {
-        return new ButtonImpl(this, text, Objects.requireNonNull(behavior, "behavior"));
+        return new ButtonImpl(this, text);
     }
 
     @Override
     public CheckBox checkBox(final String text) {
-        return new CheckBoxImpl(this, text, null);
-    }
-
-    @Override
-    public CheckBox checkBox(final String text, final CheckBoxBehavior behavior) {
-        return new CheckBoxImpl(this, text, Objects.requireNonNull(behavior, "behavior"));
+        return new CheckBoxImpl(this, text);
     }
 
     @Override
     public Slider slider() {
-        return new SliderImpl(this, null);
-    }
-
-    @Override
-    public Slider slider(final SliderBehavior behavior) {
-        return new SliderImpl(this, Objects.requireNonNull(behavior, "behavior"));
+        return new SliderImpl(this);
     }
 
     @Override
     public TextBox textBox() {
-        return new TextBoxImpl(this, null);
-    }
-
-    @Override
-    public TextBox textBox(final TextBoxBehavior behavior) {
-        return new TextBoxImpl(this, Objects.requireNonNull(behavior, "behavior"));
+        return new TextBoxImpl(this);
     }
 
     @Override
@@ -335,15 +298,13 @@ public final class ComponentFactoryImpl implements ComponentFactory {
     }
 
     @Override
-    public ComponentPeer createPeer(final CustomComponent<?> owner, final ComponentHooks hooks,
-                                    final ComponentBehavior<?> behavior) {
-        return new Node(this, owner, hooks, behavior);
+    public ComponentPeer createPeer(final CustomComponent<?> owner, final ComponentHooks hooks) {
+        return new Node(this, owner, hooks);
     }
 
     @Override
-    public ContainerPeer createContainerPeer(final CustomComponent<?> owner, final ComponentHooks hooks,
-                                             final ComponentBehavior<?> behavior) {
-        return new ContainerNode(this, owner, hooks, behavior);
+    public ContainerPeer createContainerPeer(final CustomComponent<?> owner, final ComponentHooks hooks) {
+        return new ContainerNode(this, owner, hooks);
     }
 
     /**

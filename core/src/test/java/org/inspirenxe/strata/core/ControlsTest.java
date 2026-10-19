@@ -112,19 +112,24 @@ class ControlsTest {
         }
 
         @Test
-        void aFilterCanRejectAnEdit() {
+        void anEditHandlerCanRejectAnEdit() {
             this.show();
             final List<String> heard = new ArrayList<>();
-            this.box.setFilter(text -> text.matches("\\d*") ? text : null).onTextChanged(heard::add);
+            this.box.onEvent(TextBox.EDIT, event -> {
+                if (!event.value().matches("\\d*")) {
+                    event.cancel();
+                }
+            }).onEvent(TextBox.EDITED, event -> heard.add(event.value()));
             this.type("1a2");
             assertEquals("12", this.box.text());
             assertEquals(List.of("1", "12"), heard);
         }
 
         @Test
-        void aFilterCanRewriteAnEdit() {
+        void anEditHandlerCanRewriteAnEdit() {
             this.show();
-            this.box.setFilter(text -> text.isEmpty() ? text : Long.toString(Math.min(Long.parseLong(text), 50)));
+            this.box.onEvent(TextBox.EDIT, event -> event.setValue(
+                    event.value().isEmpty() ? "" : Long.toString(Math.min(Long.parseLong(event.value()), 50))));
             this.type("99");
             assertEquals("50", this.box.text());
             assertEquals(2, this.box.caret());
@@ -134,7 +139,7 @@ class ControlsTest {
         void enterSubmitsAndIsConsumed() {
             this.show();
             final List<String> submitted = new ArrayList<>();
-            this.box.setText("go").onSubmit(submitted::add);
+            this.box.setText("go").onEvent(TextBox.SUBMITTED, event -> submitted.add(event.value()));
             assertTrue(ControlsTest.this.test.host().key(Key.ENTER, KeyAction.PRESS, Modifiers.NONE));
             assertEquals(List.of("go"), submitted);
         }
@@ -180,7 +185,7 @@ class ControlsTest {
         void clickingAnOptionSelectsItAndCloses() {
             this.show();
             final List<String> heard = new ArrayList<>();
-            this.combo.onSelectionChanged(heard::add);
+            this.combo.onEvent(ComboBox.SELECTED, e -> heard.add(this.combo.options().get(e.value())));
             ControlsTest.this.center(this.combo.bounds(), MouseButton.LEFT);
             assertTrue(this.combo.isOpen());
             ControlsTest.this.test.host().layout();
@@ -231,7 +236,7 @@ class ControlsTest {
         void escapeClosesADialogWindowAndTellsListeners() {
             ControlsTest.this.test.show(ControlsTest.this.ui.absolutePanel());
             final List<String> closed = new ArrayList<>();
-            final Window window = ControlsTest.this.ui.window("Title").onClose(() -> closed.add("window"));
+            final Window window = ControlsTest.this.ui.window("Title").onEvent(Window.CLOSED, event -> closed.add("window"));
             window.add(ControlsTest.this.ui.button("OK"));
             final var overlay = ControlsTest.this.ui.overlays().dialog(window);
             ControlsTest.this.key(Key.ESCAPE);
@@ -258,7 +263,7 @@ class ControlsTest {
         @Test
         void theCloseButtonClosesTheWindow() {
             final List<String> closed = new ArrayList<>();
-            final Window window = ControlsTest.this.ui.window("Title").onClose(() -> closed.add("x"));
+            final Window window = ControlsTest.this.ui.window("Title").onEvent(Window.CLOSED, event -> closed.add("x"));
             window.setSize(100, 60);
             ControlsTest.this.test.show(ControlsTest.this.ui.absolutePanel().add(window, 0, 0));
             ControlsTest.this.test.click(100 - 7, 5);
@@ -273,7 +278,7 @@ class ControlsTest {
             ControlsTest.this.test.show(ControlsTest.this.ui.absolutePanel());
             final List<MessageBox.Result> results = new ArrayList<>();
             final MessageBox box = ControlsTest.this.ui.messageBox("Delete", "Sure?", MessageBox.Buttons.YES_NO)
-                    .onResult(results::add);
+                    .onEvent(MessageBox.ANSWERED, event -> results.add(event.value()));
             final var overlay = ControlsTest.this.ui.overlays().dialog(box);
             // The first button is focused
             ControlsTest.this.key(Key.ENTER);
@@ -286,7 +291,7 @@ class ControlsTest {
             ControlsTest.this.test.show(ControlsTest.this.ui.absolutePanel());
             final List<MessageBox.Result> results = new ArrayList<>();
             ControlsTest.this.ui.overlays().dialog(ControlsTest.this.ui.messageBox("Save", "Save?", MessageBox.Buttons.YES_NO_CANCEL)
-                    .onResult(results::add));
+                    .onEvent(MessageBox.ANSWERED, event -> results.add(event.value())));
             ControlsTest.this.key(Key.ESCAPE);
             assertEquals(List.of(MessageBox.Result.CANCEL), results);
         }
@@ -299,7 +304,7 @@ class ControlsTest {
             final TabBar tabs = ControlsTest.this.ui.tabBar().addTab("Buy").addTab("Sell");
             tabs.setWidth(200);
             final List<Integer> heard = new ArrayList<>();
-            tabs.onTabChanged(heard::add);
+            tabs.onEvent(TabBar.SELECTED, event -> heard.add(event.value()));
             ControlsTest.this.test.show(ControlsTest.this.ui.absolutePanel().add(tabs, 0, 0));
             assertEquals(0, tabs.selectedIndex());
             assertEquals(16f, tabs.desiredHeight());

@@ -11,7 +11,7 @@ import java.util.Optional;
  *
  * <p>Only Strata creates events. Do not implement this interface.</p>
  */
-public interface FocusEvent extends Event {
+public interface FocusEvent extends Cancelable {
 
     /**
      * Returns the other side of the move.

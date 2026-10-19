@@ -79,7 +79,7 @@ public final class ExchangeScreen implements Screen {
         this.ui = ui;
         final Window window = ui.window("Exchange: " + this.data.name);
         window.setSize(600, 370);
-        window.onClose(() -> {
+        window.onEvent(Window.CLOSED, event -> {
             if (this.handle != null) {
                 this.handle.close();
             }
@@ -93,7 +93,7 @@ public final class ExchangeScreen implements Screen {
 
         final AnchorPanel screen = ui.anchorPanel().add(window);
         screen.setAnchor(Anchor.FILL);
-        screen.on(EventTypes.MODIFIERS_CHANGED, event -> {
+        screen.onEvent(EventTypes.MODIFIERS_CHANGED, event -> {
             this.control = event.modifiers().control();
             this.updateControls();
         });
@@ -113,14 +113,14 @@ public final class ExchangeScreen implements Screen {
     // ------------------------------------------------------------------
 
     private Component<?> buildMarket(final ComponentFactory ui) {
-        this.itemName = ui.textBox().onSubmit(text -> this.search());
+        this.itemName = ui.textBox().onEvent(TextBox.SUBMITTED, event -> this.search());
         this.itemName.setTabIndex(0);
-        this.seller = ui.textBox().onSubmit(text -> this.search());
+        this.seller = ui.textBox().onEvent(TextBox.SUBMITTED, event -> this.search());
         this.seller.setTabIndex(1);
         this.sort = ui.<Sort>comboBox(sort -> sort.label)
                 .setOptions(List.of(Sort.values()))
-                .onSelectionChanged(sort -> this.search());
-        final Button search = Look.button(ui, "Search", 80).onAction(this::search);
+                .onEvent(ComboBox.SELECTED, e -> this.search());
+        final Button search = Look.button(ui, "Search", 80).onEvent(Button.PRESSED, event -> this.search());
 
         final GridPanel fields = Look.grid(ui, GridLength.auto(), GridLength.fixed(120), GridLength.weighted(1),
                 GridLength.fixed(90)).rows(GridLength.auto(), GridLength.auto()).setSpacing(4, 3);
@@ -137,14 +137,14 @@ public final class ExchangeScreen implements Screen {
                 .setRowSpacing(1)
                 .setKeyFunction(Listing::record)
                 .setPlaceholder("No results found.")
-                .onSelectionChanged(selected -> this.updateControls())
-                .onActivate(listing -> this.buy(listing, 1));
+                .onEvent(ListView.SELECTED, e -> this.updateControls())
+                .onEvent(ListView.ACTIVATED, e -> this.buy(this.forSale.items().get(e.value()), 1));
         this.forSale.setAnchor(Anchor.FILL);
 
-        this.first = Look.button(ui, "|<", 20).onAction(() -> this.setPage(0));
-        this.previous = Look.button(ui, "<", 20).onAction(() -> this.setPage(this.pageIndex - 1));
-        this.next = Look.button(ui, ">", 20).onAction(() -> this.setPage(this.pageIndex + 1));
-        this.last = Look.button(ui, ">|", 20).onAction(() -> this.setPage(Integer.MAX_VALUE));
+        this.first = Look.button(ui, "|<", 20).onEvent(Button.PRESSED, event -> this.setPage(0));
+        this.previous = Look.button(ui, "<", 20).onEvent(Button.PRESSED, event -> this.setPage(this.pageIndex - 1));
+        this.next = Look.button(ui, ">", 20).onEvent(Button.PRESSED, event -> this.setPage(this.pageIndex + 1));
+        this.last = Look.button(ui, ">|", 20).onEvent(Button.PRESSED, event -> this.setPage(Integer.MAX_VALUE));
         this.page = ui.label("1/1").setTextAlignment(HorizontalAlignment.CENTER);
         final GridPanel paging = Look.grid(ui, GridLength.auto(), GridLength.auto(), GridLength.weighted(1),
                 GridLength.auto(), GridLength.auto()).rows(GridLength.auto()).setSpacing(2, 0);
@@ -162,12 +162,12 @@ public final class ExchangeScreen implements Screen {
                 .add(paging, 4, 0);
         Look.panel(searching).setPadding(4);
 
-        this.buyOne = Look.button(ui, "Buy 1", 60).onAction(() -> this.selectedListing().ifPresent(l -> this.buy(l, 1)));
-        this.buyStack = Look.button(ui, "Buy 64", 60).onAction(() -> this.selectedListing()
+        this.buyOne = Look.button(ui, "Buy 1", 60).onEvent(Button.PRESSED, event -> this.selectedListing().ifPresent(l -> this.buy(l, 1)));
+        this.buyStack = Look.button(ui, "Buy 64", 60).onEvent(Button.PRESSED, event -> this.selectedListing()
                 .ifPresent(l -> this.buy(l, l.item().maxStack())));
-        this.buyQuantity = Look.button(ui, "Buy Qty", 60).onAction(() -> this.selectedListing()
+        this.buyQuantity = Look.button(ui, "Buy Qty", 60).onEvent(Button.PRESSED, event -> this.selectedListing()
                 .ifPresent(l -> ExchangeDialogs.buyQuantity(ui, l, quantity -> this.buy(l, quantity))));
-        this.buyAll = Look.button(ui, "Buy All", 50).onAction(() -> this.selectedListing()
+        this.buyAll = Look.button(ui, "Buy All", 50).onEvent(Button.PRESSED, event -> this.selectedListing()
                 .ifPresent(l -> this.buy(l, l.quantity())));
         final GridPanel buying = Look.grid(ui, GridLength.auto(), GridLength.auto(), GridLength.weighted(1),
                 GridLength.auto(), GridLength.auto()).rows(GridLength.auto()).setSpacing(6, 0);
@@ -186,13 +186,13 @@ public final class ExchangeScreen implements Screen {
                 .setRowSpacing(1)
                 .setKeyFunction(Stock::record)
                 .setPlaceholder("Nothing to list.")
-                .onSelectionChanged(selected -> this.updateControls())
-                .onActivate(this::toggleListing);
+                .onEvent(ListView.SELECTED, e -> this.updateControls())
+                .onEvent(ListView.ACTIVATED, e -> this.toggleListing(this.listable.items().get(e.value())));
         this.listable.setAnchor(Anchor.FILL);
 
-        this.list = Look.button(ui, "List", 46).onAction(() -> this.selectedStock().ifPresent(this::toggleListing));
+        this.list = Look.button(ui, "List", 46).onEvent(Button.PRESSED, event -> this.selectedStock().ifPresent(this::toggleListing));
         this.limitLabel = ui.label("0/0").setTextAlignment(HorizontalAlignment.CENTER);
-        final Button offer = Look.button(ui, "", 30).onAction(() -> ExchangeDialogs.offer(ui, this.data, this::refreshListable));
+        final Button offer = Look.button(ui, "", 30).onEvent(Button.PRESSED, event -> ExchangeDialogs.offer(ui, this.data, this::refreshListable));
         offer.setText("+/-");
         offer.setTooltip("Move items between your inventory and the exchange");
 

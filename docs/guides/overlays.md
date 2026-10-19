@@ -53,7 +53,7 @@ A text toast draws on `toast.background` with `toast.text`, falling back to the 
 | Call | Does |
 |---|---|
 | `overlay.close()` | Closes it and detaches its content. Closing twice does nothing. |
-| `overlay.onClosed(listener)` | Runs once it has closed, however that happened |
+| `overlay.onEvent(Overlay.CLOSED, handler)` | Runs once it has closed, however that happened |
 | `overlays.of(component)` | Finds the overlay a component is shown in, for a button inside a dialog that closes it |
 | `overlays.open()` | Every open overlay, bottom first |
 | `overlays.closeAll()` | Closes them all, top first, toasts included |

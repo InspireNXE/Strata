@@ -3,9 +3,11 @@ package org.inspirenxe.strata.api.control.window;
 import org.inspirenxe.strata.api.component.Component;
 import org.inspirenxe.strata.api.control.button.Button;
 import org.inspirenxe.strata.api.control.display.Label;
+import org.inspirenxe.strata.api.event.EventType;
+import org.inspirenxe.strata.api.event.ValueEvent;
+import org.inspirenxe.strata.api.event.ValueRequestEvent;
 
 import java.util.List;
-import java.util.function.Consumer;
 
 /**
  * A {@link Window} with a message and a row of buttons, for confirmations and notices. Show it with
@@ -13,15 +15,18 @@ import java.util.function.Consumer;
  *
  * <p>The message wraps at {@link #MESSAGE_WIDTH} units. The buttons sit at the bottom right, in the order of the
  * {@link Buttons} set, the first one focused when the dialog opens. A button press, the close button or Escape
- * reports a {@link Result} to the listeners once and closes the overlay showing the box. The close button and Escape
- * report {@link Buttons#dismissResult()}.</p>
+ * answers once: the box reports a {@link Result} through {@link #ANSWERED} and closes the overlay showing it. The
+ * close button and Escape answer {@link Buttons#dismissResult()}.</p>
+ *
+ * <p>The box is a composite: the events of its window and buttons reach handlers on those parts and on the box,
+ * and nothing outside it. To hear the user's answer, handle {@link #ANSWER} and {@link #ANSWERED}.</p>
  *
  * <p>It uses the theme keys of {@link Window}, {@link Label} and {@link Button}.</p>
  *
  * <pre>{@code
  * factory.overlays().dialog(factory.messageBox("Delete", "Delete this exchange?", MessageBox.Buttons.YES_NO)
- *         .onResult(result -> {
- *             if (result == MessageBox.Result.YES) {
+ *         .onEvent(MessageBox.ANSWERED, event -> {
+ *             if (event.value() == MessageBox.Result.YES) {
  *                 delete(exchange);
  *             }
  *         }));
@@ -35,6 +40,23 @@ public interface MessageBox extends Component<MessageBox> {
      * The width the message wraps at, in UI units.
      */
     float MESSAGE_WIDTH = 280f;
+
+    /**
+     * Requested when the user answers: one of the buttons pressed with a click, Enter or Space, or the window's
+     * close button or Escape, which answer {@link Buttons#dismissResult()}. An Escape press counts when focus is
+     * inside the box, or when nothing has focus and the box is the content of the top dialog. The value is the
+     * answer. Unless a handler cancels the request, the box reports {@link #ANSWERED} and closes the overlay showing
+     * it; cancel it to keep the box open. A handler may rewrite the answer to any result, even one the box has no
+     * button for, and the box reports it as it is. Once the box has answered, it fires no more requests. Fires only
+     * for the user's actions.
+     */
+    EventType<ValueRequestEvent<MessageBox, Result>> ANSWER = EventType.valueRequest("message_box.answer");
+    /**
+     * Reported once, when the box answers, before the overlay showing it closes. The value is the answer, and
+     * {@link ValueEvent#previous()} is the same answer. Closing {@link #window()} from code answers
+     * {@link Buttons#dismissResult()} and reports it too, without an {@link #ANSWER} request.
+     */
+    EventType<ValueEvent<MessageBox, Result>> ANSWERED = EventType.valueReport("message_box.answered");
 
     /**
      * Returns the window the box is built on, to change its title or size.
@@ -52,14 +74,6 @@ public interface MessageBox extends Component<MessageBox> {
      * @return this box
      */
     MessageBox setButtonText(Result result, String caption);
-
-    /**
-     * Adds a listener told which button closed the box.
-     *
-     * @param listener receives the result
-     * @return this box
-     */
-    MessageBox onResult(Consumer<Result> listener);
 
     /**
      * What a message box reports.

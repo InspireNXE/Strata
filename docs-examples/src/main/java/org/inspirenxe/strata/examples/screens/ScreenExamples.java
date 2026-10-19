@@ -2,6 +2,7 @@ package org.inspirenxe.strata.examples.screens;
 
 import org.inspirenxe.strata.api.ComponentFactory;
 import org.inspirenxe.strata.api.component.Component;
+import org.inspirenxe.strata.api.control.button.Button;
 import org.inspirenxe.strata.api.layout.Anchor;
 import org.inspirenxe.strata.api.layout.StackPanel;
 import org.inspirenxe.strata.api.screen.Screen;
@@ -35,13 +36,13 @@ public final class ScreenExamples {
         public Component<?> build(final ComponentFactory factory) {
             final StackPanel rows = factory.stackPanel().setSpacing(2).setPadding(8);
             for (final String item : this.items) {
-                rows.add(factory.button("Remove " + item).onAction(() -> {
+                rows.add(factory.button("Remove " + item).onEvent(Button.PRESSED, event -> {
                     this.items.remove(item);
                     // The structure changed: ask for a new tree before the next frame
                     this.handle.invalidate();
                 }));
             }
-            rows.add(factory.button("Add eggs").onAction(() -> {
+            rows.add(factory.button("Add eggs").onEvent(Button.PRESSED, event -> {
                 this.items.add("Eggs");
                 this.handle.invalidate();
             }));
@@ -70,7 +71,7 @@ public final class ScreenExamples {
         panel.screens().push(factory -> {
             final StackPanel dialog = factory.stackPanel().setPadding(8).setSpacing(4)
                     .add(factory.label("Really quit?"))
-                    .add(factory.button("No").onAction(() -> panel.screens().pop()));
+                    .add(factory.button("No").onEvent(Button.PRESSED, event -> panel.screens().pop()));
             dialog.setBackground(Paint.solid(0xFF3A3D43));
             return factory.anchorPanel().add(dialog.setAnchor(Anchor.CENTER)).setAnchor(Anchor.FILL);
         });

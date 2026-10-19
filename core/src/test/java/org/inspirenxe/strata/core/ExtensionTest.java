@@ -3,17 +3,12 @@ package org.inspirenxe.strata.core;
 import org.inspirenxe.strata.api.ComponentFactory;
 import org.inspirenxe.strata.api.component.Component;
 import org.inspirenxe.strata.api.control.button.Button;
-import org.inspirenxe.strata.api.control.button.ButtonBehavior;
 import org.inspirenxe.strata.api.control.display.Label;
-import org.inspirenxe.strata.api.event.EventTypes;
 import org.inspirenxe.strata.api.event.PointerButtonEvent;
 import org.inspirenxe.strata.api.extension.ArrangeContext;
 import org.inspirenxe.strata.api.extension.CustomComponent;
 import org.inspirenxe.strata.api.extension.CustomContainer;
 import org.inspirenxe.strata.api.extension.MeasureContext;
-import org.inspirenxe.strata.api.extension.MeasureNext;
-import org.inspirenxe.strata.api.extension.Next;
-import org.inspirenxe.strata.api.extension.Painter;
 import org.inspirenxe.strata.api.geom.Rect;
 import org.inspirenxe.strata.api.geom.Size;
 import org.inspirenxe.strata.api.layout.AbsolutePanel;
@@ -35,81 +30,64 @@ class ExtensionTest {
     private final ComponentFactory ui = this.test.factory();
 
     // ------------------------------------------------------------------
-    // Decorating built-ins with behaviors
+    // Changing built-ins through their events
     // ------------------------------------------------------------------
 
     @Test
-    void behaviorExtendsBuiltInPaintThroughNext() {
-        final List<String> calls = new ArrayList<>();
-        final Button button = this.ui.button("Go", new ButtonBehavior() {
-            @Override
-            public void paint(final Button component, final Painter painter, final Rect bounds, final Next next) {
-                calls.add("before");
-                next.proceed();
-                painter.fill(new Rect(0, 0, 1, 1), 0xFFFF0000);
-                calls.add("after");
-            }
+    void paintedHandlersDrawOverTheBuiltInFace() {
+        final Button button = this.ui.button("Go");
+        final Rect mark = new Rect(0, 0, 1, 1);
+        button.onEvent(Component.PAINTED, event -> event.painter().fill(mark, 0xFFFF0000));
+        this.test.show(this.ui.absolutePanel().add(button));
+
+        final NullCanvas canvas = new NullCanvas();
+        this.test.host().render(canvas);
+
+        assertTrue(canvas.fills().contains(button.bounds()), "the normal button face is drawn");
+        assertTrue(canvas.fills().indexOf(mark) > canvas.fills().indexOf(button.bounds()), "and the mark over it");
+    }
+
+    @Test
+    void cancelingPaintReplacesTheBuiltInFace() {
+        final Button button = this.ui.button("Go");
+        final Rect mark = new Rect(0, 0, 1, 1);
+        button.onEvent(Component.PAINT, event -> {
+            event.painter().fill(mark, 0xFFFF0000);
+            event.cancel();
         });
         this.test.show(this.ui.absolutePanel().add(button));
 
         final NullCanvas canvas = new NullCanvas();
         this.test.host().render(canvas);
 
-        assertEquals(List.of("before", "after"), calls);
-        assertTrue(canvas.fills().contains(new Rect(0, 0, 1, 1)), "the behavior's own drawing is kept");
-        assertTrue(canvas.fills().contains(button.bounds()), "next drew the normal button face");
+        assertEquals(List.of(mark), canvas.fills());
+        assertTrue(canvas.texts().isEmpty(), "the caption belongs to the face and is skipped too");
     }
 
     @Test
-    void behaviorSkippingNextReplacesBuiltInBehavior() {
-        final int[] presses = {0};
-        final List<Button> seen = new ArrayList<>();
-        final Button button = this.ui.button("Go", new ButtonBehavior() {
-            @Override
-            public void onClick(final Button component, final PointerButtonEvent event, final Next next) {
-                seen.add(component);
-            }
-        }).onAction(() -> presses[0]++);
+    void measuredHandlersChangeABuiltInsSize() {
+        final Button button = this.ui.button("Go")
+                .onEvent(Component.MEASURED, event -> event.setWidth(Math.max(120f, event.width())));
+        this.test.show(this.ui.absolutePanel().add(button));
+        this.test.host().render(new NullCanvas());
+
+        assertEquals(120f, button.desiredWidth());
+    }
+
+    @Test
+    void cancelingThePressRequestSkipsTheReport() {
+        final List<String> seen = new ArrayList<>();
+        final Button button = this.ui.button("Go")
+                .onEvent(Button.PRESS, event -> {
+                    seen.add("asked");
+                    event.cancel();
+                })
+                .onEvent(Button.PRESSED, event -> seen.add("pressed"));
         this.test.show(this.ui.absolutePanel().add(button));
 
         this.test.click(5, 5);
 
-        assertEquals(0, presses[0], "without next the button's own click handling never runs");
-        assertEquals(List.of(button), seen);
-    }
-
-    @Test
-    void behaviorCanChangeMeasuredSize() {
-        final Button button = this.ui.button("Go", new ButtonBehavior() {
-            @Override
-            public Size measure(final Button component, final MeasureContext context, final float availableWidth,
-                                final float availableHeight, final MeasureNext next) {
-                final Size normal = next.proceed();
-                return new Size(normal.width() * 2, normal.height());
-            }
-        });
-        final Button plain = this.ui.button("Go");
-        this.test.show(this.ui.absolutePanel().add(button).add(plain, 0, 100));
-
-        assertEquals(plain.desiredWidth() * 2, button.desiredWidth());
-    }
-
-    @Test
-    void canceledEventSkipsBehaviorToo() {
-        final int[] calls = {0};
-        final Button button = this.ui.button("Go", new ButtonBehavior() {
-            @Override
-            public void onClick(final Button component, final PointerButtonEvent event, final Next next) {
-                calls[0]++;
-                next.proceed();
-            }
-        });
-        button.on(EventTypes.CLICK, event -> event.cancel());
-        this.test.show(this.ui.absolutePanel().add(button));
-
-        this.test.click(5, 5);
-
-        assertEquals(0, calls[0]);
+        assertEquals(List.of("asked"), seen);
     }
 
     // ------------------------------------------------------------------

@@ -19,11 +19,8 @@ import org.inspirenxe.strata.api.layout.ScrollPanel;
 import org.inspirenxe.strata.api.theme.Paint;
 import org.inspirenxe.strata.api.theme.Theme;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Objects;
 import java.util.Set;
-import java.util.function.Consumer;
 
 /**
  * The core {@link ScrollPanel}. An {@link ScrollPolicy#AUTO} axis measures its children once without its scroll
@@ -34,7 +31,6 @@ public final class ScrollPanelImpl extends CustomContainer<ScrollPanel> implemen
     private static final Set<String> REQUIRED = Set.of(STYLE_THUMB);
     private static final float GUTTER = BAR_WIDTH + BAR_GAP;
 
-    private final List<Consumer<State>> listeners;
     private final ScrollBar verticalBar;
     private final ScrollBar horizontalBar;
     private ScrollPolicy horizontalPolicy;
@@ -70,7 +66,6 @@ public final class ScrollPanelImpl extends CustomContainer<ScrollPanel> implemen
      */
     public ScrollPanelImpl(final ComponentFactory ui) {
         super(ui);
-        this.listeners = new ArrayList<>();
         this.verticalBar = new ScrollBar(true);
         this.horizontalBar = new ScrollBar(false);
         this.horizontalPolicy = ScrollPolicy.NEVER;
@@ -119,7 +114,8 @@ public final class ScrollPanelImpl extends CustomContainer<ScrollPanel> implemen
     }
 
     /**
-     * Moves to an offset, clamped once laid out, and reports a change.
+     * Moves to an offset, clamped once laid out, and fires {@link ScrollPanel#SCROLLED} on a change. The states are
+     * only made when a handler is on the path.
      *
      * @return true if the offset changed
      */
@@ -129,12 +125,12 @@ public final class ScrollPanelImpl extends CustomContainer<ScrollPanel> implemen
         if (nextX == this.scrollX && nextY == this.scrollY) {
             return false;
         }
+        final State previous = this.isHandled(SCROLLED) ? this.state() : null;
         this.scrollX = nextX;
         this.scrollY = nextY;
         this.invalidateArrangement();
-        final State state = this.state();
-        for (final Consumer<State> listener : List.copyOf(this.listeners)) {
-            listener.accept(state);
+        if (previous != null) {
+            this.report(SCROLLED, this.state(), previous);
         }
         return true;
     }
@@ -198,12 +194,6 @@ public final class ScrollPanelImpl extends CustomContainer<ScrollPanel> implemen
     @Override
     public Rect viewport() {
         return this.viewport;
-    }
-
-    @Override
-    public ScrollPanel onScrollChanged(final Consumer<State> listener) {
-        this.listeners.add(Objects.requireNonNull(listener, "listener"));
-        return this;
     }
 
     private State state() {

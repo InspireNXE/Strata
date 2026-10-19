@@ -2,7 +2,6 @@ package org.inspirenxe.strata.core.control.display;
 
 import org.inspirenxe.strata.api.ComponentFactory;
 import org.inspirenxe.strata.api.control.display.Label;
-import org.inspirenxe.strata.api.control.display.LabelBehavior;
 import org.inspirenxe.strata.api.extension.CustomComponent;
 import org.inspirenxe.strata.api.extension.MeasureContext;
 import org.inspirenxe.strata.api.extension.Painter;
@@ -59,10 +58,9 @@ public final class LabelImpl extends CustomComponent<Label> implements Label {
      *
      * @param ui the factory that owns the label
      * @param text the text, with {@code \n} for line breaks
-     * @param behavior the decorator for the label's hooks, or {@code null} for none
      */
-    public LabelImpl(final ComponentFactory ui, final String text, final LabelBehavior behavior) {
-        super(ui, behavior);
+    public LabelImpl(final ComponentFactory ui, final String text) {
+        super(ui);
         this.text = Objects.requireNonNull(text, "text");
         this.spans = List.of();
         this.themeStyle = TextStyle.DEFAULT;

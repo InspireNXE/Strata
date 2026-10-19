@@ -103,22 +103,24 @@ public final class ManagementScreen implements Screen {
                         .setAlignment(HorizontalAlignment.STRETCH, VerticalAlignment.MIDDLE))
                 .setRowHeight(20)
                 .setKeyFunction(Feature::id)
-                .onSelectionChanged(this::show)
-                .onActivate(feature -> this.open());
+                .onEvent(ListView.SELECTED, e -> this.show(this.list.selected()))
+                .onEvent(ListView.ACTIVATED, e -> this.open());
         Look.panel(this.list).setAnchor(Anchor.FILL);
 
-        this.id = this.field(0).setFilter(text -> text.replaceAll("[^A-Za-z0-9_.]", "").toLowerCase(Locale.ROOT));
+        this.id = this.field(0).onEvent(TextBox.EDIT,
+                event -> event.setValue(event.value().replaceAll("[^A-Za-z0-9_.]", "").toLowerCase(Locale.ROOT)));
         this.name = this.field(1);
-        this.permission = this.field(2).setFilter(text -> text.replaceAll("[^A-Za-z0-9_.]", "").toLowerCase(Locale.ROOT));
+        this.permission = this.field(2).onEvent(TextBox.EDIT,
+                event -> event.setValue(event.value().replaceAll("[^A-Za-z0-9_.]", "").toLowerCase(Locale.ROOT)));
         this.creator = this.field(3).setReadOnly(true);
         this.creatorId = this.field(4).setReadOnly(true);
         this.created = this.field(5).setReadOnly(true);
         this.creatorLabel = Look.label(ui, "Creator:", Look.WHITE);
         this.creatorIdLabel = Look.label(ui, "Creator UUID:", Look.WHITE);
         this.createdLabel = Look.label(ui, "Created:", Look.WHITE);
-        this.hidden = ui.checkBox("Hidden").onCheckedChanged(checked -> this.validate());
-        this.save = Look.button(ui, "Save", 40).onAction(this::save);
-        this.open = Look.button(ui, "Open", 40).onAction(this::open);
+        this.hidden = ui.checkBox("Hidden").onEvent(CheckBox.TOGGLED, event -> this.validate());
+        this.save = Look.button(ui, "Save", 40).onEvent(Button.PRESSED, event -> this.save());
+        this.open = Look.button(ui, "Open", 40).onEvent(Button.PRESSED, event -> this.open());
 
         final GridPanel detail = Look.grid(ui, GridLength.weighted(1), GridLength.fixed(140))
                 .rows(GridLength.auto(), GridLength.auto(), GridLength.auto(), GridLength.auto(), GridLength.auto(),
@@ -138,12 +140,12 @@ public final class ManagementScreen implements Screen {
         detail.setBorder(Look.PANEL_BORDER);
         detail.setPadding(4);
 
-        final Button add = Look.button(ui, "+", 20).onAction(() -> {
+        final Button add = Look.button(ui, "+", 20).onEvent(Button.PRESSED, event -> {
             this.list.select(-1);
             this.id.requestFocus();
         });
         add.setTooltip("Add");
-        final Button remove = Look.button(ui, "-", 20).onAction(this::confirmDelete);
+        final Button remove = Look.button(ui, "-", 20).onEvent(Button.PRESSED, event -> this.confirmDelete());
         remove.setTooltip("Delete");
         final Button close = Look.button(ui, "Close", 40);
 
@@ -163,8 +165,8 @@ public final class ManagementScreen implements Screen {
                 this.handle.close();
             }
         };
-        window.onClose(leave);
-        close.onAction(leave);
+        window.onEvent(Window.CLOSED, event -> leave.run());
+        close.onEvent(Button.PRESSED, event -> leave.run());
 
         this.list.setItems(this.features);
         this.list.select(0);
@@ -173,7 +175,8 @@ public final class ManagementScreen implements Screen {
     }
 
     private TextBox field(final int tabIndex) {
-        final TextBox box = this.ui.textBox().onTextChanged(text -> this.validate()).onSubmit(text -> this.save());
+        final TextBox box = this.ui.textBox().onEvent(TextBox.EDITED, event -> this.validate())
+                .onEvent(TextBox.SUBMITTED, event -> this.save());
         box.setTabIndex(tabIndex);
         return box;
     }
@@ -217,8 +220,8 @@ public final class ManagementScreen implements Screen {
         final boolean adding = this.list.selected().isEmpty();
         final MessageBox confirm = this.ui.messageBox(this.title,
                 "Are you sure you want to " + (adding ? "add" : "modify") + " " + this.name.text() + "?",
-                MessageBox.Buttons.YES_NO).onResult(result -> {
-                    if (result != MessageBox.Result.YES) {
+                MessageBox.Buttons.YES_NO).onEvent(MessageBox.ANSWERED, event -> {
+                    if (event.value() != MessageBox.Result.YES) {
                         return;
                     }
                     final Feature old = this.list.selected().orElse(null);
@@ -239,8 +242,8 @@ public final class ManagementScreen implements Screen {
 
     private void confirmDelete() {
         this.list.selected().ifPresent(feature -> this.ui.overlays().dialog(this.ui.messageBox(this.title,
-                "Are you sure you want to delete " + feature.name() + "?", MessageBox.Buttons.YES_NO).onResult(result -> {
-                    if (result == MessageBox.Result.YES) {
+                "Are you sure you want to delete " + feature.name() + "?", MessageBox.Buttons.YES_NO).onEvent(MessageBox.ANSWERED, event -> {
+                    if (event.value() == MessageBox.Result.YES) {
                         this.features.remove(feature);
                         this.list.setItems(this.features);
                         if (!this.features.isEmpty()) {

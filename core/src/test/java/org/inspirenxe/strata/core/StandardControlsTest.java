@@ -23,6 +23,7 @@ import org.inspirenxe.strata.api.input.KeyAction;
 import org.inspirenxe.strata.api.input.Modifier;
 import org.inspirenxe.strata.api.input.Modifiers;
 import org.inspirenxe.strata.api.input.MouseButton;
+import org.inspirenxe.strata.api.layout.AbsolutePanel;
 import org.inspirenxe.strata.api.layout.Anchor;
 import org.inspirenxe.strata.api.layout.GridLength;
 import org.inspirenxe.strata.api.layout.Orientation;
@@ -86,7 +87,7 @@ class StandardControlsTest {
             this.easy = this.group.add("Easy", "easy");
             this.normal = this.group.add("Normal", "normal");
             this.hard = this.group.add("Hard", "hard");
-            this.group.onSelectionChanged(this.heard::add);
+            this.group.onEvent(RadioGroup.SELECTED, event -> this.heard.add(this.group.selected()));
             StandardControlsTest.this.test.show(ui.stackPanel().add(this.easy).add(this.normal).add(this.hard));
         }
 
@@ -139,7 +140,7 @@ class StandardControlsTest {
         void aClickFlipsItUnlessDisabled() {
             final List<Boolean> heard = new ArrayList<>();
             final ToggleSwitch toggle = StandardControlsTest.this.topLeft(StandardControlsTest.this.ui.toggleSwitch("PvP"))
-                    .onToggled(heard::add);
+                    .onEvent(ToggleSwitch.TOGGLED, event -> heard.add(event.value()));
             StandardControlsTest.this.test.show(toggle);
             StandardControlsTest.this.test.click(5, 5);
             assertTrue(toggle.isOn());
@@ -156,7 +157,8 @@ class StandardControlsTest {
         private final List<Double> heard = new ArrayList<>();
 
         private void show() {
-            this.spinner = StandardControlsTest.this.topLeft(StandardControlsTest.this.ui.spinner()).onValueChanged(this.heard::add);
+            this.spinner = StandardControlsTest.this.topLeft(StandardControlsTest.this.ui.spinner())
+                    .onEvent(Spinner.CHANGED, event -> this.heard.add(event.value()));
             StandardControlsTest.this.test.show(this.spinner);
             StandardControlsTest.this.test.click(10, 9);
         }
@@ -411,7 +413,7 @@ class StandardControlsTest {
             this.show();
             final List<Optional<Node>> heard = new ArrayList<>();
             this.tree.select(this.leafA2a);
-            this.tree.onSelectionChanged(heard::add);
+            this.tree.onEvent(TreeView.SELECTED, e -> heard.add(this.tree.selected()));
             this.tree.setExpanded(this.a, false);
             assertEquals(Optional.of(this.a), this.tree.selected());
             assertEquals(List.of(Optional.of(this.a)), heard);
@@ -590,7 +592,7 @@ class StandardControlsTest {
             final var right = ui.anchorPanel().setAnchor(Anchor.FILL);
             final List<Float> heard = new ArrayList<>();
             final SplitPane split = StandardControlsTest.this.topLeft(ui.splitPane(Orientation.HORIZONTAL))
-                    .setFirst(left).setSecond(right).onPositionChanged(heard::add);
+                    .setFirst(left).setSecond(right).onEvent(SplitPane.MOVED, event -> heard.add(event.value()));
             split.setSize(204, 50);
             StandardControlsTest.this.test.show(split);
             assertEquals(100f, left.bounds().width());
@@ -665,13 +667,13 @@ class StandardControlsTest {
         @Test
         void slotsLayOutInRowsAndReportClicks() {
             final ComponentFactory ui = StandardControlsTest.this.ui;
-            final List<SlotGrid.Click<String>> clicks = new ArrayList<>();
+            final List<SlotGrid.Click<?>> clicks = new ArrayList<>();
             final SlotGrid<String> grid = StandardControlsTest.this.topLeft(ui.<String>slotGrid(ui::label))
                     .setColumns(3).setSpacing(2)
                     .setTooltips(Tooltip::text)
                     .setItems(Arrays.asList("a", null, "c", "d"))
                     .setSelectable(true)
-                    .onSlotClicked(clicks::add);
+                    .onEvent(SlotGrid.CLICKED, e -> clicks.add(e.value()));
             StandardControlsTest.this.test.show(grid);
             assertEquals(3 * 18f + 2 * 2f, grid.desiredWidth());
             assertEquals(2 * 18f + 2f, grid.desiredHeight());
@@ -695,6 +697,46 @@ class StandardControlsTest {
             grid.setItems(List.of("a", "b")).select(1).setItem(1, null);
             assertEquals(1, grid.selectedIndex());
             assertEquals(null, grid.item(1));
+        }
+    }
+    @Nested
+    class ContentEvents {
+        @Test
+        void aButtonInATableCellIsHeardAroundTheTable() {
+            final ComponentFactory ui = StandardControlsTest.this.ui;
+            final List<Button> buttons = new ArrayList<>();
+            final TableView<String> table = ui.<String>tableView()
+                    .addColumn("Name", GridLength.weighted(1), name -> {
+                        final Button button = ui.button(name);
+                        buttons.add(button);
+                        return button;
+                    })
+                    .setItems(List.of("Ana", "Ben"));
+            table.setWidth(200).setHeight(100);
+            final AbsolutePanel form = ui.absolutePanel().add(table);
+            StandardControlsTest.this.test.show(form);
+            StandardControlsTest.this.test.host().render(new NullCanvas());
+            final List<String> pressed = new ArrayList<>();
+            form.onEvent(Button.PRESSED, e -> pressed.add(e.control().text()));
+
+            buttons.get(0).press();
+
+            assertEquals(List.of("Ana"), pressed);
+        }
+
+        @Test
+        void aButtonInAnExpanderIsHeardAroundTheExpander() {
+            final ComponentFactory ui = StandardControlsTest.this.ui;
+            final Button button = ui.button("Inside");
+            final Expander expander = ui.expander("More").setContent(button).setExpanded(true);
+            final AbsolutePanel form = ui.absolutePanel().add(expander);
+            StandardControlsTest.this.test.show(form);
+            final List<String> pressed = new ArrayList<>();
+            form.onEvent(Button.PRESSED, e -> pressed.add(e.control().text()));
+
+            button.press();
+
+            assertEquals(List.of("Inside"), pressed);
         }
     }
 }

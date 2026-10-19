@@ -117,6 +117,28 @@ public final class RadioButtonImpl extends CustomComponent<RadioButton> implemen
         return this;
     }
 
+    /**
+     * Selects this button for the user unless a handler cancels {@link RadioButton#SELECT}. A button that is
+     * already selected skips the request.
+     *
+     * @param focus whether to focus the button once it is selected
+     */
+    void userSelect(final boolean focus) {
+        if (this.isSelected() || this.request(SELECT)) {
+            this.applySelect(focus);
+        }
+    }
+
+    /**
+     * Makes this button the group's selected one, and focuses it if asked.
+     */
+    private void applySelect(final boolean focus) {
+        this.group.choose(this);
+        if (focus) {
+            this.requestFocus();
+        }
+    }
+
     @Override
     protected Set<String> requiredStyleKeys() {
         return REQUIRED;
@@ -183,7 +205,7 @@ public final class RadioButtonImpl extends CustomComponent<RadioButton> implemen
     protected void onClick(final PointerButtonEvent event) {
         if (event.button() == MouseButton.LEFT) {
             if (this.isEnabled()) {
-                this.group.choose(this);
+                this.userSelect(false);
             }
             event.consume();
         }
@@ -196,7 +218,7 @@ public final class RadioButtonImpl extends CustomComponent<RadioButton> implemen
         }
         final Key key = event.key();
         if (event.action() == KeyAction.PRESS && (key.isEnter() || key == Key.SPACE)) {
-            this.group.choose(this);
+            this.userSelect(false);
             event.consume();
             return;
         }

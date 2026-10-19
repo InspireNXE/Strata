@@ -3,7 +3,6 @@ package org.inspirenxe.strata.core.control.button;
 import org.inspirenxe.strata.api.ComponentFactory;
 import org.inspirenxe.strata.api.component.CursorKind;
 import org.inspirenxe.strata.api.control.button.Button;
-import org.inspirenxe.strata.api.control.button.ButtonBehavior;
 import org.inspirenxe.strata.api.event.KeyEvent;
 import org.inspirenxe.strata.api.event.PointerButtonEvent;
 import org.inspirenxe.strata.api.extension.CustomComponent;
@@ -21,8 +20,6 @@ import org.inspirenxe.strata.api.text.TextStyle;
 import org.inspirenxe.strata.api.theme.Paint;
 import org.inspirenxe.strata.api.theme.Theme;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 
@@ -39,7 +36,6 @@ import java.util.Set;
 public final class ButtonImpl extends CustomComponent<Button> implements Button {
     private static final Set<String> REQUIRED = Set.of(STYLE_NORMAL, STYLE_HOVERED, STYLE_PRESSED, STYLE_DISABLED);
 
-    private final List<Runnable> actions;
     private String text;
     private Insets textPadding;
 
@@ -62,12 +58,10 @@ public final class ButtonImpl extends CustomComponent<Button> implements Button 
      *
      * @param ui the factory that owns the button
      * @param text the caption
-     * @param behavior the decorator for the button's hooks, or {@code null} for none
      */
     @SuppressWarnings("this-escape")
-    public ButtonImpl(final ComponentFactory ui, final String text, final ButtonBehavior behavior) {
-        super(ui, behavior);
-        this.actions = new ArrayList<>();
+    public ButtonImpl(final ComponentFactory ui, final String text) {
+        super(ui);
         this.text = Objects.requireNonNull(text, "text");
         this.textPadding = Insets.of(8f, 5f);
         this.normal = Paint.NONE;
@@ -105,18 +99,19 @@ public final class ButtonImpl extends CustomComponent<Button> implements Button 
     }
 
     @Override
-    public Button onAction(final Runnable action) {
-        this.actions.add(Objects.requireNonNull(action, "action"));
-        return this;
+    public void press() {
+        if (this.isEnabled()) {
+            this.report(PRESSED);
+        }
     }
 
-    @Override
-    public void press() {
-        if (!this.isEnabled()) {
-            return;
-        }
-        for (final Runnable action : List.copyOf(this.actions)) {
-            action.run();
+    /**
+     * Presses the button for the user: fires {@link Button#PRESS}, then {@link Button#PRESSED} unless a handler
+     * canceled the request. Does nothing while disabled.
+     */
+    private void userPress() {
+        if (this.isEnabled() && this.request(PRESS)) {
+            this.report(PRESSED);
         }
     }
 
@@ -175,7 +170,7 @@ public final class ButtonImpl extends CustomComponent<Button> implements Button 
     @Override
     protected void onClick(final PointerButtonEvent event) {
         if (event.button() == MouseButton.LEFT) {
-            this.press();
+            this.userPress();
             event.consume();
         }
     }
@@ -183,7 +178,7 @@ public final class ButtonImpl extends CustomComponent<Button> implements Button 
     @Override
     protected void onKey(final KeyEvent event) {
         if (event.action() == KeyAction.PRESS && (event.key().isEnter() || event.key() == Key.SPACE)) {
-            this.press();
+            this.userPress();
             event.consume();
         }
     }

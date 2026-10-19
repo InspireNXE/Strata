@@ -42,9 +42,9 @@ final class StoreDialogs {
                                  final LongConsumer transact) {
         final TextBox amount = ui.textBox().setText("1").setSelectAllOnFocus(true);
         amount.setWidth(45);
-        amount.setFilter(text -> {
-            final String digits = text.replaceAll("[^0-9]", "");
-            return digits.isEmpty() ? "" : Long.toString(Math.min(Long.parseLong(digits.length() > 12 ? digits.substring(0, 12) : digits), max));
+        amount.onEvent(TextBox.EDIT, event -> {
+            final String digits = event.value().replaceAll("[^0-9]", "");
+            event.setValue(digits.isEmpty() ? "" : Long.toString(Math.min(Long.parseLong(digits.length() > 12 ? digits.substring(0, 12) : digits), max)));
         });
         final Label total = Look.label(ui, Look.currency(item.price()), Look.WHITE);
         final Button confirm = Look.button(ui, buy ? "Buy" : "Sell", 40);
@@ -58,8 +58,8 @@ final class StoreDialogs {
                 .add(Look.label(ui, "Total:", Look.WHITE), 2, 0).add(total.setAnchor(Anchor.TOP_RIGHT), 2, 1);
         grid.setAlignment(HorizontalAlignment.STRETCH, VerticalAlignment.TOP);
         final Window window = ExchangeDialogs.window(ui, "Enter a Quantity", 130, grid, confirm, cancel);
-        amount.onTextChanged(text -> {
-            final long value = text.isEmpty() ? 0 : Long.parseLong(text);
+        amount.onEvent(TextBox.EDITED, event -> {
+            final long value = event.value().isEmpty() ? 0 : Long.parseLong(event.value());
             total.setText(Look.currency(item.price().multiply(BigDecimal.valueOf(value))));
             confirm.setEnabled(value >= 1 && value <= max);
         });
@@ -69,9 +69,9 @@ final class StoreDialogs {
                 window.close();
             }
         };
-        amount.onSubmit(text -> submit.run());
-        confirm.onAction(submit);
-        cancel.onAction(window::close);
+        amount.onEvent(TextBox.SUBMITTED, event -> submit.run());
+        confirm.onEvent(Button.PRESSED, event -> submit.run());
+        cancel.onEvent(Button.PRESSED, event -> window.close());
         ui.overlays().dialog(window);
     }
 
@@ -90,11 +90,11 @@ final class StoreDialogs {
                 .rows(GridLength.weighted(1)).setSpacing(4, 0);
         columns.add(buy.panel, 0, 0).add(sell.panel, 0, 1);
         final Window window = ExchangeDialogs.window(ui, "List " + item.name(), 250, columns, confirm, cancel);
-        confirm.onAction(() -> {
+        confirm.onEvent(Button.PRESSED, event -> {
             done.accept(buy.value(), sell.value());
             window.close();
         });
-        cancel.onAction(window::close);
+        cancel.onEvent(Button.PRESSED, event -> window.close());
         ui.overlays().dialog(window);
     }
 
@@ -110,10 +110,18 @@ final class StoreDialogs {
         private Runnable listener;
 
         Column(final ComponentFactory ui, final String title, final Optional<StoreItem> existing, final int tabIndex) {
-            this.price = ui.textBox().setFilter(text -> text.matches("\\d{0,8}(\\.\\d{0,2})?") ? text : null);
+            this.price = ui.textBox().onEvent(TextBox.EDIT, event -> {
+                if (!event.value().matches("\\d{0,8}(\\.\\d{0,2})?")) {
+                    event.cancel();
+                }
+            });
             this.price.setWidth(50);
             this.price.setTabIndex(tabIndex);
-            this.quantity = ui.textBox().setFilter(text -> text.matches("\\d{0,8}") ? text : null);
+            this.quantity = ui.textBox().onEvent(TextBox.EDIT, event -> {
+                if (!event.value().matches("\\d{0,8}")) {
+                    event.cancel();
+                }
+            });
             this.quantity.setWidth(50);
             this.quantity.setTabIndex(tabIndex + 1);
             this.infinite = ui.checkBox("Infinite");
@@ -126,9 +134,9 @@ final class StoreDialogs {
                     this.quantity.setText(Long.toString(item.quantity()));
                 }
             });
-            this.price.onTextChanged(text -> this.changed());
-            this.quantity.onTextChanged(text -> this.changed());
-            this.infinite.onCheckedChanged(checked -> this.changed());
+            this.price.onEvent(TextBox.EDITED, event -> this.changed());
+            this.quantity.onEvent(TextBox.EDITED, event -> this.changed());
+            this.infinite.onEvent(CheckBox.TOGGLED, event -> this.changed());
 
             this.panel = Look.grid(ui, GridLength.weighted(1), GridLength.auto())
                     .rows(GridLength.auto(), GridLength.auto(), GridLength.auto(), GridLength.auto(), GridLength.auto(),

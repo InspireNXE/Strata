@@ -76,7 +76,7 @@ public final class ControlExamples {
         // --8<-- [start:checkbox]
         final CheckBox music = factory.checkBox("Music")
                 .setChecked(settings.music())
-                .onCheckedChanged(settings::setMusic);
+                .onEvent(CheckBox.TOGGLED, event -> settings.setMusic(event.value()));
         // --8<-- [end:checkbox]
         return music;
     }
@@ -88,7 +88,7 @@ public final class ControlExamples {
                 .setStep(1)
                 .setValue(settings.volume())
                 .setLabel(value -> "Volume: " + (int) value + "%")
-                .onValueChanged(settings::setVolume);
+                .onEvent(Slider.CHANGED, event -> settings.setVolume(event.value()));
         volume.setAlignment(HorizontalAlignment.STRETCH, VerticalAlignment.TOP);
         // --8<-- [end:slider]
         return volume;
@@ -102,7 +102,7 @@ public final class ControlExamples {
                 .setStep(1)
                 .setValue(settings.distance())
                 .setLabel(value -> "Render distance: " + (int) value + " chunks")
-                .onValueChanged(value -> settings.setDistance((int) value));
+                .onEvent(Slider.CHANGED, event -> settings.setDistance(event.value().intValue()));
         // --8<-- [end:integers]
         return distance;
     }
@@ -124,7 +124,7 @@ public final class ControlExamples {
             final CheckBox music = checkBox(factory, settings);
             final CheckBox subtitles = factory.checkBox("Subtitles");
             final CheckBox locked = factory.checkBox("Locked option").setChecked(true).setEnabled(false);
-            music.onCheckedChanged(on -> status.setText(on ? "Music on" : "Music off"));
+            music.onEvent(CheckBox.TOGGLED, event -> status.setText(event.value() ? "Music on" : "Music off"));
 
             final Slider distance = integerSlider(factory, settings);
             distance.setAlignment(HorizontalAlignment.STRETCH, VerticalAlignment.TOP);

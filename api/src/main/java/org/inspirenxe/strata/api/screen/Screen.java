@@ -33,7 +33,7 @@ import org.inspirenxe.strata.api.component.Component;
  *     @Override
  *     public Component<?> build(ComponentFactory factory) {
  *         Label status = factory.label("Ready");
- *         Button save = factory.button("Save").onAction(() -> status.setText("Saved"));
+ *         Button save = factory.button("Save").onEvent(Button.PRESSED, event -> status.setText("Saved"));
  *         StackPanel column = factory.stackPanel().setSpacing(4).setPadding(8).add(status).add(save);
  *         return factory.anchorPanel().add(column.setAnchor(Anchor.CENTER)).setAnchor(Anchor.FILL);
  *     }

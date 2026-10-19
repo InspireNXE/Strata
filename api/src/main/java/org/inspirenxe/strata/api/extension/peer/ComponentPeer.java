@@ -6,7 +6,6 @@ import org.inspirenxe.strata.api.component.Tooltip;
 import org.inspirenxe.strata.api.event.Event;
 import org.inspirenxe.strata.api.event.EventHandler;
 import org.inspirenxe.strata.api.event.EventType;
-import org.inspirenxe.strata.api.event.Phase;
 import org.inspirenxe.strata.api.event.Subscription;
 import org.inspirenxe.strata.api.extension.Environment;
 import org.inspirenxe.strata.api.geom.Insets;
@@ -16,6 +15,8 @@ import org.inspirenxe.strata.api.layout.VerticalAlignment;
 import org.inspirenxe.strata.api.theme.Border;
 import org.inspirenxe.strata.api.theme.Paint;
 import org.inspirenxe.strata.api.theme.Theme;
+
+import java.util.function.Consumer;
 
 /**
  * Strata's half of a {@link org.inspirenxe.strata.api.extension.CustomComponent}: the state and bookkeeping every
@@ -378,34 +379,57 @@ public interface ComponentPeer {
     void invalidateArrangement();
 
     /**
-     * See {@link org.inspirenxe.strata.api.component.Component#on(EventType, Phase, EventHandler, Object)}.
+     * See {@link org.inspirenxe.strata.api.event.EventTarget#subscribe(EventType, int, EventHandler)}.
      *
      * @param <E> the event interface
      * @param type the event type
-     * @param phase the phase
+     * @param priority where the handler runs; the highest runs last
      * @param handler the handler
-     * @param owner the owner token, or null
-     * @return the subscription
+     * @return a subscription that removes the handler
      */
-    <E extends Event> Subscription on(EventType<E> type, Phase phase, EventHandler<? super E> handler, Object owner);
+    <E extends Event> Subscription subscribe(EventType<E> type, int priority, EventHandler<? super E> handler);
 
     /**
-     * See {@link org.inspirenxe.strata.api.component.Component#onWithSnapshot(EventType, Phase, EventHandler, Object)}.
+     * Fires a request without a value. See {@code CustomComponent.request(EventType)}.
      *
-     * @param <E> the event interface
+     * @param type the request type
+     * @return true unless a handler canceled the request
+     */
+    boolean request(EventType<?> type);
+
+    /**
+     * Fires a request with a value and applies the final value unless canceled. See
+     * {@code CustomComponent.request(EventType, Object, Consumer)}.
+     *
+     * @param <V> the value type
+     * @param type the request type
+     * @param value the value the user's action produced
+     * @param apply makes the change with the final value
+     */
+    <V> void request(EventType<?> type, V value, Consumer<? super V> apply);
+
+    /**
+     * Fires a report without a value. See {@code CustomComponent.report(EventType)}.
+     *
+     * @param type the report type
+     */
+    void report(EventType<?> type);
+
+    /**
+     * Fires a report with a value. See {@code CustomComponent.report(EventType, Object, Object)}.
+     *
+     * @param <V> the value type
+     * @param type the report type
+     * @param value the value after the change
+     * @param previous the value before the change
+     */
+    <V> void report(EventType<?> type, V value, V previous);
+
+    /**
+     * Returns whether a handler for a type is on the component's path. See {@code CustomComponent.isHandled}.
+     *
      * @param type the event type
-     * @param phase the phase
-     * @param handler the handler
-     * @param owner the owner token, or null
-     * @return the subscription
+     * @return true if firing the type would reach a handler
      */
-    <E extends Event> Subscription onWithSnapshot(EventType<E> type, Phase phase, EventHandler<? super E> handler,
-                                                  Object owner);
-
-    /**
-     * See {@link org.inspirenxe.strata.api.component.Component#removeHandlers(Object)}.
-     *
-     * @param owner the owner token
-     */
-    void removeHandlers(Object owner);
+    boolean isHandled(EventType<?> type);
 }

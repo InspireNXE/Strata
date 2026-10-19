@@ -3,7 +3,6 @@ package org.inspirenxe.strata.core.control.field;
 import org.inspirenxe.strata.api.ComponentFactory;
 import org.inspirenxe.strata.api.component.CursorKind;
 import org.inspirenxe.strata.api.control.field.Slider;
-import org.inspirenxe.strata.api.control.field.SliderBehavior;
 import org.inspirenxe.strata.api.event.DragEvent;
 import org.inspirenxe.strata.api.event.KeyEvent;
 import org.inspirenxe.strata.api.event.PointerButtonEvent;
@@ -19,11 +18,8 @@ import org.inspirenxe.strata.api.text.TextStyle;
 import org.inspirenxe.strata.api.theme.Paint;
 import org.inspirenxe.strata.api.theme.Theme;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Objects;
 import java.util.Set;
-import java.util.function.DoubleConsumer;
 import java.util.function.DoubleFunction;
 
 /**
@@ -34,6 +30,9 @@ import java.util.function.DoubleFunction;
  * nearer to the requested value than that grid point, the maximum is used instead, so the maximum is always
  * reachable. The label is clipped to the bounds, and its text is measured when it changes, during painting, through
  * the environment's text metrics.</p>
+ *
+ * <p>A press, drag or key that would change the value fires {@link Slider#CHANGE}, and the final value is set as
+ * {@link #setValue} sets it. A press, drag or key that leaves the value as it is fires nothing.</p>
  */
 public final class SliderImpl extends CustomComponent<Slider> implements Slider {
     /**
@@ -54,7 +53,6 @@ public final class SliderImpl extends CustomComponent<Slider> implements Slider 
     public static final int PAGE_STEPS = 10;
     private static final Set<String> REQUIRED = Set.of(STYLE_TRACK, STYLE_THUMB, STYLE_THUMB_HOVERED);
 
-    private final List<DoubleConsumer> listeners;
     private final Runnable drawLabel;
     private double value;
     private double min;
@@ -85,12 +83,10 @@ public final class SliderImpl extends CustomComponent<Slider> implements Slider 
      * Creates a slider over 0 to 1, at 0, with no step.
      *
      * @param ui the factory that owns the slider
-     * @param behavior the decorator for the slider's hooks, or {@code null} for none
      */
     @SuppressWarnings("this-escape")
-    public SliderImpl(final ComponentFactory ui, final SliderBehavior behavior) {
-        super(ui, behavior);
-        this.listeners = new ArrayList<>();
+    public SliderImpl(final ComponentFactory ui) {
+        super(ui);
         this.drawLabel = this::drawLabel;
         this.min = 0d;
         this.max = 1d;
@@ -179,12 +175,6 @@ public final class SliderImpl extends CustomComponent<Slider> implements Slider 
         return this.labelText;
     }
 
-    @Override
-    public Slider onValueChanged(final DoubleConsumer listener) {
-        this.listeners.add(Objects.requireNonNull(listener, "listener"));
-        return this;
-    }
-
     private double normalize(final double requested) {
         final double clamped = Math.clamp(requested, this.min, this.max);
         if (this.step <= 0d) {
@@ -198,11 +188,10 @@ public final class SliderImpl extends CustomComponent<Slider> implements Slider 
         if (next == this.value) {
             return;
         }
+        final double previous = this.value;
         this.value = next;
         this.updateLabel();
-        for (final DoubleConsumer listener : List.copyOf(this.listeners)) {
-            listener.accept(next);
-        }
+        this.report(CHANGED, next, previous);
     }
 
     private void updateLabel() {
@@ -221,7 +210,18 @@ public final class SliderImpl extends CustomComponent<Slider> implements Slider 
         final Rect bounds = this.bounds();
         final float travel = bounds.width() - THUMB_WIDTH;
         final double fraction = travel > 0f ? ((double) x - bounds.x() - THUMB_WIDTH * 0.5d) / travel : 0d;
-        this.apply(this.normalize(this.min + fraction * (this.max - this.min)));
+        this.change(this.min + fraction * (this.max - this.min));
+    }
+
+    /**
+     * Applies a value the user asked for, clamped and snapped. A value that differs from the current one fires
+     * {@link Slider#CHANGE} first, and the final value goes through {@code setValue}.
+     */
+    private void change(final double requested) {
+        final double normalized = this.normalize(requested);
+        if (normalized != this.value) {
+            this.request(CHANGE, normalized, this::setValue);
+        }
     }
 
     // ------------------------------------------------------------------
@@ -341,7 +341,7 @@ public final class SliderImpl extends CustomComponent<Slider> implements Slider 
             default -> Double.NaN;
         };
         if (!Double.isNaN(next)) {
-            this.apply(this.normalize(next));
+            this.change(next);
             event.consume();
         }
     }

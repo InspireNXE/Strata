@@ -3,13 +3,13 @@ package org.inspirenxe.strata.examples.snapshots;
 import org.inspirenxe.strata.api.component.ComponentSnapshot;
 import org.inspirenxe.strata.api.control.button.Button;
 import org.inspirenxe.strata.api.control.button.CheckBox;
-import org.inspirenxe.strata.api.control.display.Label;
 import org.inspirenxe.strata.api.control.field.TextBox;
 import org.inspirenxe.strata.api.event.EventTypes;
-import org.inspirenxe.strata.api.event.Phase;
 import org.inspirenxe.strata.api.layout.StackPanel;
 
+import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Deque;
 import java.util.List;
 
 /**
@@ -20,43 +20,33 @@ public final class SnapshotExamples {
     private SnapshotExamples() {
     }
 
-    static void beforeAndAfter(final TextBox name, final Label log) {
+    static Deque<TextBox.State> undo(final TextBox name) {
         // --8<-- [start:compare]
-        // onWithSnapshot instead of on: Strata records the text box before anything handles the key
-        name.onWithSnapshot(EventTypes.KEY, Phase.AFTER, event -> {
-            final TextBox.State before = event.snapshot().state(TextBox.State.class).orElseThrow();
-            if (!before.text().equals(name.text())) {
-                log.setText("\"" + before.text() + "\" became \"" + name.text() + "\"");
-            } else if (before.caret() != name.caret()) {
-                log.setText("Caret moved from " + before.caret() + " to " + name.caret());
-            }
-        });
+        // Every edit asks first, so the snapshot holds the text, caret and selection from before it
+        final Deque<TextBox.State> undo = new ArrayDeque<>();
+        name.onEvent(TextBox.EDIT, event ->
+                event.snapshot().state(TextBox.State.class).ifPresent(undo::push));
         // --8<-- [end:compare]
+        return undo;
     }
 
     static void common(final Button save) {
         // --8<-- [start:common]
-        // The button disables itself when pressed; the AFTER handler sees it before and after
-        save.onAction(() -> save.setEnabled(false));
-        save.onWithSnapshot(EventTypes.CLICK, Phase.AFTER, event -> {
+        save.onEvent(EventTypes.CLICK, event -> {
             final ComponentSnapshot before = event.snapshot();
             // Every snapshot has what every component has: flags, layout inputs and bounds
-            if (before.enabled() && !save.isEnabled()) {
-                System.out.println("This click disabled the button at " + before.bounds());
-            }
+            System.out.println("Clicked at " + before.bounds() + ", focused: " + before.focused());
         });
         // --8<-- [end:common]
     }
 
-    static void ancestor(final StackPanel form) {
+    static void ancestor(final StackPanel palette) {
         // --8<-- [start:ancestor]
         // A handler on a container: the snapshots cover the target and this container, not the other children
-        form.onWithSnapshot(EventTypes.CHAR, Phase.AFTER, event -> {
+        palette.onEvent(EventTypes.POINTER_PRESS, event -> {
             final ComponentSnapshot target = event.snapshot();
             final ComponentSnapshot self = event.currentSnapshot();
-            System.out.println(target.component() + " typed while " + self.component() + " was at " + self.bounds());
-            // Any other component on the path, or off it, has no snapshot
-            System.out.println(event.snapshotOf(form.children().getFirst()).isPresent());
+            System.out.println(target.component() + " pressed while " + self.component() + " was at " + self.bounds());
         });
         // --8<-- [end:ancestor]
     }
@@ -65,9 +55,17 @@ public final class SnapshotExamples {
         // --8<-- [start:keep]
         // Snapshots stay valid after the event, so they can be kept for undo or logging
         final List<CheckBox.State> history = new ArrayList<>();
-        box.onWithSnapshot(EventTypes.CLICK, event ->
+        box.onEvent(CheckBox.TOGGLE, event ->
                 event.snapshot().state(CheckBox.State.class).ifPresent(history::add));
         // --8<-- [end:keep]
         return history;
+    }
+
+    static void previous(final TextBox name) {
+        // --8<-- [start:previous]
+        // A Post event fires after its change, so it carries the value from before instead of a snapshot
+        name.onEvent(TextBox.EDITED, event ->
+                System.out.println("\"" + event.previous() + "\" became \"" + event.value() + "\""));
+        // --8<-- [end:previous]
     }
 }

@@ -38,17 +38,7 @@ public abstract class CustomComposite<T extends Component<T>> extends CustomComp
      * @param factory the factory of the host that will show this component
      */
     protected CustomComposite(final ComponentFactory factory) {
-        this(factory, null);
-    }
-
-    /**
-     * Creates the component and its peer, decorated by a behavior.
-     *
-     * @param factory the factory of the host that will show this component
-     * @param behavior wraps this component's hooks; {@code null} for none
-     */
-    protected CustomComposite(final ComponentFactory factory, final ComponentBehavior<T> behavior) {
-        super(factory, behavior, true);
+        super(factory, true);
     }
 
     final ContainerPeer containerPeer() {
@@ -137,6 +127,24 @@ public abstract class CustomComposite<T extends Component<T>> extends CustomComp
      */
     protected final void addChild(final Component<?> child) {
         this.containerPeer().add(child);
+    }
+
+    /**
+     * Adds a child that is content the composite shows for its user, such as a list's cell made by the user's cell
+     * factory or the panels on either side of a split pane. The child is still private in every other way: callers
+     * cannot reach it through this component.
+     *
+     * <p>The difference is in where control events go. Control events (requests and reports) of a composite's own
+     * parts stop at the composite, so a table's inner list is never heard outside the table. Control events from
+     * content added this way, and from anything inside it, pass the composite and every composite above it, so a
+     * button in a table cell is heard by a handler around the table.</p>
+     *
+     * @param child the child
+     * @throws IllegalArgumentException if the child already has a parent, is a host's content, would create a
+     *     cycle, or was made by another factory
+     */
+    protected final void addContent(final Component<?> child) {
+        this.containerPeer().addContent(child);
     }
 
     /**

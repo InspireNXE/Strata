@@ -33,12 +33,12 @@ final TextBox name = factory.textBox().setMaxLength(32);
 name.setAlignment(HorizontalAlignment.STRETCH, VerticalAlignment.TOP);
 
 final Button save = factory.button("Save")
-        .onAction(() -> status.setText("Saved " + name.text()));
+        .onEvent(Button.PRESSED, e -> status.setText("Saved " + name.text()));
 ```
 
 Every setter returns the component, so calls chain. `setMaxLength(32)` caps the text box at 32 code points. `STRETCH` makes the text box as wide as the slot its parent gives it. Without it, a text box keeps its default width of 120 units.
 
-`onAction` runs when the button is pressed, by a left click or by Enter or Space while it has focus. Changing the label's text is all it takes to update the screen: Strata notices the change, lays the tree out again before the next frame and redraws. You never call layout or repaint yourself.
+A `Button.PRESSED` handler runs after the button is pressed, by a left click or by Enter or Space while it has focus. Changing the label's text is all it takes to update the screen: Strata notices the change, lays the tree out again before the next frame and redraws. You never call layout or repaint yourself.
 
 ### A column
 
@@ -85,5 +85,5 @@ To get a PNG instead of a window, for example in a test or on a build server, us
 
 - [Core concepts](concepts.md) explains the model behind what you just wrote.
 - [Layout](../guides/layout.md) covers every container and how sizes are decided.
-- [Events](../guides/events.md) goes beyond `onAction`.
+- [Events](../guides/events.md) covers `onEvent` in depth: vetoing with Pre events, reacting with Post events, priorities and bubbling.
 - [Platforms](../platforms/index.md) covers the adapters and how engines differ.

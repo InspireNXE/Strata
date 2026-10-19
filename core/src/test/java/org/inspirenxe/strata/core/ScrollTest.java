@@ -110,7 +110,7 @@ class ScrollTest {
         void listenersHearInputAndSetters() {
             this.show();
             final List<Float> heard = new ArrayList<>();
-            this.panel.onScrollChanged(state -> heard.add(state.scrollY()));
+            this.panel.onEvent(ScrollPanel.SCROLLED, event -> heard.add(event.value().scrollY()));
             ScrollTest.this.wheel(30, 30, -2);
             this.panel.setScroll(0, 50);
             this.panel.setScroll(0, 50);
@@ -197,7 +197,7 @@ class ScrollTest {
         void aPressSelectsAndADoubleClickActivates() {
             this.show(10);
             final List<Integer> activated = new ArrayList<>();
-            this.list.onActivate(activated::add);
+            this.list.onEvent(ListView.ACTIVATED, e -> activated.add(this.list.items().get(e.value())));
             ScrollTest.this.test.click(10, 45);
             assertEquals(Optional.of(2), this.list.selected());
             ScrollTest.this.test.click(10, 45);
@@ -222,7 +222,7 @@ class ScrollTest {
             this.list.setKeyFunction(item -> item % 100);
             this.list.select(4);
             final List<Optional<Integer>> heard = new ArrayList<>();
-            this.list.onSelectionChanged(heard::add);
+            this.list.onEvent(ListView.SELECTED, e -> heard.add(this.list.selected()));
             this.list.setItems(List.of(9, 8, 104, 7));
             assertEquals(2, this.list.selectedIndex());
             assertEquals(List.of(Optional.of(104)), heard);

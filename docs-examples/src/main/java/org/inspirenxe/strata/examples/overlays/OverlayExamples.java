@@ -27,8 +27,8 @@ public final class OverlayExamples {
     static void confirmDelete(final ComponentFactory factory, final Runnable delete) {
         // --8<-- [start:message-box]
         factory.overlays().dialog(factory.messageBox("Delete", "Delete this exchange?", MessageBox.Buttons.YES_NO)
-                .onResult(result -> {
-                    if (result == MessageBox.Result.YES) {
+                .onEvent(MessageBox.ANSWERED, event -> {
+                    if (event.value() == MessageBox.Result.YES) {
                         delete.run();
                     }
                 }));
@@ -40,7 +40,7 @@ public final class OverlayExamples {
         final AnchorPanel menu = factory.anchorPanel().add(factory.label("Popup content"));
         menu.setPadding(4).setBackground(Paint.solid(0xF0101010));
         final Overlay popup = factory.overlays().popup(menu, more.bounds());
-        popup.onClosed(() -> more.setText("More"));
+        popup.onEvent(Overlay.CLOSED, event -> more.setText("More"));
         // --8<-- [end:popup]
         return popup;
     }
@@ -51,8 +51,8 @@ public final class OverlayExamples {
         final Button buy = factory.button("Buy");
         final Window window = factory.window("Enter a Quantity").add(amount);
         window.setWidth(130);
-        amount.onSubmit(text -> buy.press());
-        buy.onAction(() -> {
+        amount.onEvent(TextBox.SUBMITTED, event -> buy.press());
+        buy.onEvent(Button.PRESSED, event -> {
             // ... buy Long.parseLong(amount.text()) ...
             window.close();
         });
@@ -75,7 +75,7 @@ public final class OverlayExamples {
 
     static void modifiers(final AnchorPanel screen, final Button buyOne) {
         // --8<-- [start:modifiers]
-        screen.on(EventTypes.MODIFIERS_CHANGED, event ->
+        screen.onEvent(EventTypes.MODIFIERS_CHANGED, event ->
                 buyOne.setText(event.modifiers().control() ? "Delist" : "Buy 1"));
         // --8<-- [end:modifiers]
     }

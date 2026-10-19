@@ -3,17 +3,23 @@ package org.inspirenxe.strata.core.control.button;
 import org.inspirenxe.strata.api.ComponentFactory;
 import org.inspirenxe.strata.api.control.button.RadioButton;
 import org.inspirenxe.strata.api.control.button.RadioGroup;
+import org.inspirenxe.strata.api.event.Event;
+import org.inspirenxe.strata.api.event.EventHandler;
+import org.inspirenxe.strata.api.event.EventType;
+import org.inspirenxe.strata.api.event.Subscription;
+import org.inspirenxe.strata.core.event.EventDispatcher;
+import org.inspirenxe.strata.core.event.ValueEventImpl;
 
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.function.Consumer;
 
 /**
  * The core {@link RadioGroup}. It holds its buttons and their values side by side and tracks the selected button;
- * the buttons ask it whether they are selected.
+ * the buttons ask it whether they are selected. Its handlers live in a dispatcher of its own, created on the first
+ * registration, and {@link RadioGroup#SELECTED} reaches only them.
  *
  * @param <T> the type of the values the buttons stand for
  */
@@ -22,7 +28,7 @@ public final class RadioGroupImpl<T> implements RadioGroup<T> {
     private final List<RadioButtonImpl> buttons;
     private final List<RadioButton> view;
     private final List<T> values;
-    private final List<Consumer<Optional<T>>> listeners;
+    private EventDispatcher dispatcher;
     private RadioButtonImpl selected;
 
     /**
@@ -35,7 +41,6 @@ public final class RadioGroupImpl<T> implements RadioGroup<T> {
         this.buttons = new ArrayList<>();
         this.view = Collections.unmodifiableList(this.buttons);
         this.values = new ArrayList<>();
-        this.listeners = new ArrayList<>();
     }
 
     @Override
@@ -83,9 +88,19 @@ public final class RadioGroupImpl<T> implements RadioGroup<T> {
     }
 
     @Override
-    public RadioGroup<T> onSelectionChanged(final Consumer<Optional<T>> listener) {
-        this.listeners.add(Objects.requireNonNull(listener, "listener"));
+    public <E extends Event> RadioGroup<T> onEvent(final EventType<E> type, final int priority,
+                                                   final EventHandler<? super E> handler) {
+        this.subscribe(type, priority, handler);
         return this;
+    }
+
+    @Override
+    public <E extends Event> Subscription subscribe(final EventType<E> type, final int priority,
+                                                    final EventHandler<? super E> handler) {
+        if (this.dispatcher == null) {
+            this.dispatcher = new EventDispatcher();
+        }
+        return this.dispatcher.subscribe(type, priority, handler);
     }
 
     boolean isSelected(final RadioButtonImpl button) {
@@ -93,21 +108,25 @@ public final class RadioGroupImpl<T> implements RadioGroup<T> {
     }
 
     /**
-     * Makes a button the selected one, or none, and tells the listeners if that changed anything.
+     * Makes a button the selected one, or none, and fires {@link RadioGroup#SELECTED} on the group if that changed
+     * anything. The event's target is the newly selected button, or the deselected one when none is selected now.
      */
     void choose(final RadioButtonImpl button) {
-        if (this.selected == button) {
+        final RadioButtonImpl previous = this.selected;
+        if (previous == button) {
             return;
         }
         this.selected = button;
-        final Optional<T> value = this.selected();
-        for (final Consumer<Optional<T>> listener : List.copyOf(this.listeners)) {
-            listener.accept(value);
+        if (this.dispatcher != null && this.dispatcher.hasHandlers(SELECTED)) {
+            this.dispatcher.fire(SELECTED, new ValueEventImpl<>(button == null ? previous : button, this,
+                    this.buttons.indexOf(button), this.buttons.indexOf(previous)));
         }
     }
 
     /**
-     * Selects and focuses the next usable button after {@code from} in a direction, wrapping at the ends.
+     * Selects and focuses the next usable button after {@code from} in a direction for the user, wrapping at the
+     * ends. A handler may cancel the target button's {@link RadioButton#SELECT}, which leaves the selection and
+     * focus as they are.
      *
      * @return true if one was found
      */
@@ -117,8 +136,7 @@ public final class RadioGroupImpl<T> implements RadioGroup<T> {
         for (int step = 1; step < count; step++) {
             final RadioButtonImpl next = this.buttons.get(Math.floorMod(start + step * direction, count));
             if (next.isAttached() && next.isVisible() && next.isEnabled()) {
-                this.choose(next);
-                next.requestFocus();
+                next.userSelect(true);
                 return true;
             }
         }

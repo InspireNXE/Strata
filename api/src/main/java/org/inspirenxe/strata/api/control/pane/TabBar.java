@@ -2,12 +2,13 @@ package org.inspirenxe.strata.api.control.pane;
 
 import org.inspirenxe.strata.api.component.Component;
 import org.inspirenxe.strata.api.component.Tooltip;
-
-import java.util.function.IntConsumer;
+import org.inspirenxe.strata.api.event.EventType;
+import org.inspirenxe.strata.api.event.ValueEvent;
+import org.inspirenxe.strata.api.event.ValueRequestEvent;
 
 /**
- * A row of tabs, one of them selected. The bar only picks a tab; show the matching content yourself from
- * {@link #onTabChanged}.
+ * A row of tabs, one of them selected. The bar only picks a tab; show the matching content yourself when
+ * {@link #SELECTED} fires.
  *
  * <p>Tabs share the bar's width equally, with {@linkplain #setSpacing the spacing} between them, and are one line
  * plus 7 units tall. A click on an enabled tab selects it. While the bar has focus, Left and Right select the
@@ -33,7 +34,7 @@ import java.util.function.IntConsumer;
  *
  * <pre>{@code
  * TabBar sides = factory.tabBar().addTab("Buy").addTab("Sell")
- *         .onTabChanged(index -> showSide(index == 0 ? Side.BUY : Side.SELL));
+ *         .onEvent(TabBar.SELECTED, event -> showSide(event.value() == 0 ? Side.BUY : Side.SELL));
  * }</pre>
  *
  * <p>Get one from {@link org.inspirenxe.strata.api.ComponentFactory#tabBar()}. Do not implement this
@@ -68,6 +69,20 @@ public interface TabBar extends Component<TabBar> {
      * Style key for a disabled tab's text (text style, optional).
      */
     String STYLE_TEXT_DISABLED = "tab.text.disabled";
+
+    /**
+     * Fired when the user selects a tab, by a left click on an enabled tab or by Left or Right, which move to the
+     * nearest enabled tab in that direction, before the selection changes. The value is the index of the tab about
+     * to be selected. Not fired for a click on the selected tab. Canceling it keeps the current tab. A handler may
+     * set another index; an index out of range, a disabled tab or null is ignored. Fires only for the user's
+     * actions.
+     */
+    EventType<ValueRequestEvent<TabBar, Integer>> SELECT = EventType.valueRequest("tab_bar.select");
+    /**
+     * Fired after another tab was selected. The value is the new index and the previous value the old one. The
+     * first tab becoming selected when it is added fires nothing. Fires for changes made from code too.
+     */
+    EventType<ValueEvent<TabBar, Integer>> SELECTED = EventType.valueReport("tab_bar.selected");
 
     /**
      * Adds a tab at the end. The first tab added is selected.
@@ -140,7 +155,7 @@ public interface TabBar extends Component<TabBar> {
     int selectedIndex();
 
     /**
-     * Selects a tab, enabled or not.
+     * Selects a tab, enabled or not. Fires {@link #SELECTED} if the selection changed.
      *
      * @param index the tab's index
      * @return this bar
@@ -162,12 +177,4 @@ public interface TabBar extends Component<TabBar> {
      * @return this bar
      */
     TabBar setSpacing(float spacing);
-
-    /**
-     * Adds a listener told the new index whenever the selection changes, by input or by {@link #select}.
-     *
-     * @param listener receives the selected index
-     * @return this bar
-     */
-    TabBar onTabChanged(IntConsumer listener);
 }

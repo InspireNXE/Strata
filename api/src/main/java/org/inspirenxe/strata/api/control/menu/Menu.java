@@ -2,6 +2,10 @@ package org.inspirenxe.strata.api.control.menu;
 
 import org.inspirenxe.strata.api.component.Component;
 import org.inspirenxe.strata.api.control.display.Separator;
+import org.inspirenxe.strata.api.event.ControlEvent;
+import org.inspirenxe.strata.api.event.EventType;
+import org.inspirenxe.strata.api.event.ValueEvent;
+import org.inspirenxe.strata.api.event.ValueRequestEvent;
 import org.inspirenxe.strata.api.geom.Rect;
 
 import java.util.function.Consumer;
@@ -22,6 +26,9 @@ import java.util.function.Consumer;
  * <p>A menu is a component only so it can sit in a popup. Open it with {@link #open} or {@link #openAt} rather than
  * adding it to a container. Items are one line plus 6 units tall, with 14 units at the left for the check mark and 14
  * at the right for the submenu arrow, and separators 5 units tall.</p>
+ *
+ * <p>A menu is the whole content of its popup and has no parent, so its events ({@link #CHOOSE}, {@link #CHOSEN}
+ * and {@link #CLOSED}) reach only the handlers registered on the menu itself.</p>
  *
  * <h2>Theme keys</h2>
  * <ul>
@@ -76,6 +83,27 @@ public interface Menu extends Component<Menu> {
      * Style key for separator lines (paint, optional).
      */
     String STYLE_SEPARATOR = "menu.separator";
+
+    /**
+     * Requested when the user chooses an item: a click on it, or Enter, keypad Enter or Space while it is
+     * highlighted. The value is the item index. Unless a handler cancels the request, the menu closes its whole chain,
+     * flips a check item and runs the item's action. A rewritten index that is out of range or names a disabled
+     * item, a separator or a submenu item is ignored, which leaves the menu open. Items that open a submenu do not
+     * fire this event, and a choice in a submenu fires the submenu's event, not this menu's. Fires only for the
+     * user's actions.
+     */
+    EventType<ValueRequestEvent<Menu, Integer>> CHOOSE = EventType.valueRequest("menu.choose");
+    /**
+     * Reported after the user chose an item, once the menus have closed and the item's action has run. The value is
+     * the item index, and {@link ValueEvent#previous()} is the same index. Code cannot choose an item, so only the
+     * user's choices report it.
+     */
+    EventType<ValueEvent<Menu, Integer>> CHOSEN = EventType.valueReport("menu.chosen");
+    /**
+     * Reported each time the menu closes, for any reason: a choice, Escape, a press outside, a parent menu closing,
+     * or {@link #close()} called from code.
+     */
+    EventType<ControlEvent<Menu>> CLOSED = EventType.report("menu.closed");
 
     /**
      * Adds a command.
@@ -221,12 +249,4 @@ public interface Menu extends Component<Menu> {
      * @return this menu
      */
     Menu close();
-
-    /**
-     * Adds a listener told each time the menu closes, for any reason.
-     *
-     * @param listener the listener
-     * @return this menu
-     */
-    Menu onClosed(Runnable listener);
 }

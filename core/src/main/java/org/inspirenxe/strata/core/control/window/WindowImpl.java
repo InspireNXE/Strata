@@ -27,8 +27,6 @@ import org.inspirenxe.strata.api.theme.Theme;
 import org.inspirenxe.strata.core.node.ComponentFactoryImpl;
 import org.inspirenxe.strata.core.node.Node;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 
@@ -46,7 +44,6 @@ public final class WindowImpl extends CustomContainer<Window> implements Window 
     private static final Set<String> REQUIRED = Set.of(STYLE_BACKGROUND);
 
     private final ComponentFactory ui;
-    private final List<Runnable> listeners;
     private String title;
     private boolean closable;
     private boolean movable;
@@ -74,6 +71,12 @@ public final class WindowImpl extends CustomContainer<Window> implements Window 
     private float closeWidth;
 
     /**
+     * Runs in place of {@link #close()} once the user's {@link #CLOSE} request was accepted, for a control that holds
+     * this window privately, or {@code null} to close at once.
+     */
+    private Runnable closeHook;
+
+    /**
      * Creates an empty, centered window with 3 units of padding.
      *
      * @param ui the factory that owns the window
@@ -83,7 +86,6 @@ public final class WindowImpl extends CustomContainer<Window> implements Window 
     public WindowImpl(final ComponentFactory ui, final String title) {
         super(ui);
         this.ui = ui;
-        this.listeners = new ArrayList<>();
         this.title = Objects.requireNonNull(title, "title");
         this.closable = true;
         this.movable = true;
@@ -140,18 +142,36 @@ public final class WindowImpl extends CustomContainer<Window> implements Window 
 
     @Override
     public void close() {
-        for (final Runnable listener : List.copyOf(this.listeners)) {
-            listener.run();
-        }
+        this.report(CLOSED);
         if (this.isAttached()) {
             this.ui.overlays().of(this).ifPresent(Overlay::close);
         }
     }
 
-    @Override
-    public Window onClose(final Runnable listener) {
-        this.listeners.add(Objects.requireNonNull(listener, "listener"));
-        return this;
+    /**
+     * Sets what a close by the user does once its {@link #CLOSE} request was accepted, in place of {@link #close()}.
+     * A control that holds this window privately uses it to ask its own question first, and calls {@link #close()}
+     * itself when the window should close.
+     *
+     * @param hook what to run, or {@code null} to close at once
+     */
+    void setUserCloseHook(final Runnable hook) {
+        this.closeHook = hook;
+    }
+
+    /**
+     * Closes the window for the user: fires a {@link #CLOSE} request and, unless a handler canceled it, runs the hook
+     * set by {@link #setUserCloseHook} or {@link #close()}.
+     */
+    private void userClose() {
+        if (!this.request(CLOSE)) {
+            return;
+        }
+        if (this.closeHook != null) {
+            this.closeHook.run();
+        } else {
+            this.close();
+        }
     }
 
     private Rect titleBarRect(final Rect bounds) {
@@ -259,7 +279,7 @@ public final class WindowImpl extends CustomContainer<Window> implements Window 
         if (this.closePressed && this.closeRect(this.bounds()).contains(event.x(), event.y())) {
             this.closePressed = false;
             event.consume();
-            this.close();
+            this.userClose();
         }
     }
 
@@ -304,13 +324,26 @@ public final class WindowImpl extends CustomContainer<Window> implements Window 
 
     @Override
     protected void onKey(final KeyEvent event) {
+        this.escape(event);
+    }
+
+    /**
+     * Closes the window for the user on an Escape press while it is closable, if a handler for {@link #CLOSE} or
+     * {@link #CLOSED} is on its path or it is shown in an overlay, and consumes the press. Ignores every other key
+     * event. A control that holds this window privately calls this for Escape presses that reach the control without
+     * passing through the window.
+     *
+     * @param event the key event
+     */
+    void escape(final KeyEvent event) {
         if (event.key() != Key.ESCAPE || event.action() != KeyAction.PRESS || !this.closable) {
             return;
         }
-        // A screen's own window without listeners leaves Escape to the engine, which closes the screen
-        if (!this.listeners.isEmpty() || this.isAttached() && this.ui.overlays().of(this).isPresent()) {
+        // A screen's own window that nobody listens to leaves Escape to the engine, which closes the screen
+        if (this.isHandled(CLOSE) || this.isHandled(CLOSED)
+                || this.isAttached() && this.ui.overlays().of(this).isPresent()) {
             event.consume();
-            this.close();
+            this.userClose();
         }
     }
 }

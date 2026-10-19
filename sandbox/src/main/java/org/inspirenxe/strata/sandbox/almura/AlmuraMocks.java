@@ -2,6 +2,7 @@ package org.inspirenxe.strata.sandbox.almura;
 
 import org.inspirenxe.strata.api.ComponentFactory;
 import org.inspirenxe.strata.api.component.Component;
+import org.inspirenxe.strata.api.control.button.Button;
 import org.inspirenxe.strata.api.geom.Rect;
 import org.inspirenxe.strata.api.input.Key;
 import org.inspirenxe.strata.api.input.KeyAction;
@@ -39,10 +40,10 @@ public final class AlmuraMocks {
      */
     public static Component<?> buttons(final ComponentFactory ui, final Consumer<Screen> open) {
         return Look.row(ui, 4,
-                ui.button("Exchange").onAction(() -> open.accept(new ExchangeScreen())),
-                ui.button("Store").onAction(() -> open.accept(new StoreScreen(false))),
-                ui.button("Store (admin)").onAction(() -> open.accept(new StoreScreen(true))),
-                ui.button("Management").onAction(() -> open.accept(new ManagementScreen("Exchange"))));
+                ui.button("Exchange").onEvent(Button.PRESSED, event -> open.accept(new ExchangeScreen())),
+                ui.button("Store").onEvent(Button.PRESSED, event -> open.accept(new StoreScreen(false))),
+                ui.button("Store (admin)").onEvent(Button.PRESSED, event -> open.accept(new StoreScreen(true))),
+                ui.button("Management").onEvent(Button.PRESSED, event -> open.accept(new ManagementScreen("Exchange"))));
     }
 
     /**

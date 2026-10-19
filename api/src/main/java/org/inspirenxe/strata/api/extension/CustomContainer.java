@@ -59,17 +59,7 @@ public abstract class CustomContainer<T extends Container<T>> extends CustomComp
      * @param factory the factory of the host that will show this container
      */
     protected CustomContainer(final ComponentFactory factory) {
-        this(factory, null);
-    }
-
-    /**
-     * Creates the container and its peer, decorated by a behavior.
-     *
-     * @param factory the factory of the host that will show this container
-     * @param behavior wraps this container's hooks; {@code null} for none
-     */
-    protected CustomContainer(final ComponentFactory factory, final ComponentBehavior<T> behavior) {
-        super(factory, behavior);
+        super(factory);
     }
 
     /**

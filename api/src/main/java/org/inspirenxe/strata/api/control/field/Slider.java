@@ -1,8 +1,10 @@
 package org.inspirenxe.strata.api.control.field;
 
 import org.inspirenxe.strata.api.component.Component;
+import org.inspirenxe.strata.api.event.EventType;
+import org.inspirenxe.strata.api.event.ValueEvent;
+import org.inspirenxe.strata.api.event.ValueRequestEvent;
 
-import java.util.function.DoubleConsumer;
 import java.util.function.DoubleFunction;
 
 /**
@@ -11,8 +13,8 @@ import java.util.function.DoubleFunction;
  * <h2>Values</h2>
  * <p>The value lies between {@link #min()} and {@link #max()}, 0 and 1 by default. With a {@linkplain #setStep
  * step}, values snap to {@code min + k * step}; the maximum is always reachable even when it is not on that grid.
- * Every way of changing the value clamps and snaps it, and listeners run only when the result differs from the
- * current value.</p>
+ * Every way of changing the value clamps and snaps it, and {@link #CHANGED} fires only when the result differs from
+ * the current value.</p>
  *
  * <h2>Input</h2>
  * <ul>
@@ -53,7 +55,7 @@ import java.util.function.DoubleFunction;
  *         .setStep(1)
  *         .setValue(settings.volume())
  *         .setLabel(value -> "Volume: " + (int) value + "%")
- *         .onValueChanged(settings::setVolume);
+ *         .onEvent(Slider.CHANGED, event -> settings.setVolume(event.value()));
  * }</pre>
  *
  * <p>Get one from {@link org.inspirenxe.strata.api.ComponentFactory#slider()}. Do not implement this
@@ -94,6 +96,22 @@ public interface Slider extends Component<Slider> {
     String STYLE_TEXT_DISABLED = "slider.text.disabled";
 
     /**
+     * Fired when the user is about to change the value: a press or drag on the slider, or the arrow, Page Up, Page
+     * Down, Home and End keys while it has focus. During a drag it fires for each move that would change the value.
+     * The value is the new value, already clamped to the range and snapped to the step. Cancel the event to keep the
+     * current value, or set another value; it is clamped and snapped again as {@link #setValue} does, and must not be
+     * null or NaN. A press, drag or key that would leave the value as it is fires nothing. Fires only for the user's
+     * actions: {@link #setValue}, {@link #setRange} and {@link #setStep} fire none.
+     */
+    EventType<ValueRequestEvent<Slider, Double>> CHANGE = EventType.valueRequest("slider.change");
+    /**
+     * Fired after the value changed: by the user, by {@link #setValue}, or by {@link #setRange} or {@link #setStep}
+     * moving it. The value is the new value and {@code previous()} the value before; neither is null. During a drag
+     * it fires for each move that changes the value. Fires for changes made from code too.
+     */
+    EventType<ValueEvent<Slider, Double>> CHANGED = EventType.valueReport("slider.changed");
+
+    /**
      * Returns the value.
      *
      * @return the current value, between {@link #min()} and {@link #max()}
@@ -101,8 +119,8 @@ public interface Slider extends Component<Slider> {
     double value();
 
     /**
-     * Sets the value, clamped to the range and snapped to the step. Listeners run if the result differs from the
-     * current value. Works while disabled too.
+     * Sets the value, clamped to the range and snapped to the step. {@link #CHANGED} fires if the result differs
+     * from the current value; {@link #CHANGE} does not. Works while disabled too.
      *
      * @param value the new value
      * @return this slider
@@ -125,7 +143,8 @@ public interface Slider extends Component<Slider> {
     double max();
 
     /**
-     * Sets the range. The current value is clamped and snapped into it, and listeners run if that changes it.
+     * Sets the range. The current value is clamped and snapped into it, and {@link #CHANGED} fires if that changes
+     * it.
      *
      * @param min the smallest value
      * @param max the largest value
@@ -143,8 +162,8 @@ public interface Slider extends Component<Slider> {
     double step();
 
     /**
-     * Sets the step values snap to, measured from the minimum. The current value is snapped, and listeners run if
-     * that changes it.
+     * Sets the step values snap to, measured from the minimum. The current value is snapped, and {@link #CHANGED}
+     * fires if that changes it.
      *
      * @param step the step, or 0 for a continuous slider
      * @return this slider
@@ -174,16 +193,6 @@ public interface Slider extends Component<Slider> {
      * @return the label, or an empty string when there is no label
      */
     String labelText();
-
-    /**
-     * Adds a listener told the new value after every change, by input, {@link #setValue}, {@link #setRange} or
-     * {@link #setStep}. During a drag, it runs for each move that changes the value. Listeners run in the order they
-     * were added.
-     *
-     * @param listener receives the new value
-     * @return this slider
-     */
-    Slider onValueChanged(DoubleConsumer listener);
 
     /**
      * A slider's own state in a {@link org.inspirenxe.strata.api.component.ComponentSnapshot}.

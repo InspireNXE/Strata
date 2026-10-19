@@ -33,13 +33,13 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
-import java.util.function.Consumer;
 import java.util.function.Function;
 
 /**
  * The core {@link TableView}: a header component above a {@link ListViewImpl} whose cells are rows that place one
  * cell per column. Column offsets are worked out once per arrange, from the width the list gives its rows, and both
- * the header and every row read them.
+ * the header and every row read them. The table routes the list's input and selection changes to itself and fires
+ * them as its own events, so the list fires no {@link ListView} events.
  *
  * @param <T> the type of the items
  */
@@ -99,6 +99,7 @@ public final class TableViewImpl<T> extends CustomComposite<TableView<T>> implem
         this.header = new Header(ui, this);
         this.list = new ListViewImpl<>(ui, item -> new Row<>(this.ui, this, item));
         this.list.setAnchor(Anchor.FILL);
+        this.list.route(this::userSelect, this::userActivate, (index, previous) -> this.report(SELECTED, index, previous));
         this.addChild(this.header);
         this.addChild(this.list);
     }
@@ -150,11 +151,15 @@ public final class TableViewImpl<T> extends CustomComposite<TableView<T>> implem
     public TableView<T> setColumnComparator(final int column, final Comparator<? super T> comparator) {
         this.columns.get(column).comparator = comparator;
         if (column == this.sortColumn) {
+            final boolean wasAscending = this.ascending;
             if (comparator == null) {
                 this.sortColumn = -1;
                 this.ascending = true;
             }
             this.resort();
+            if (comparator == null) {
+                this.report(SORTED, new Sort(-1, true), new Sort(column, wasAscending));
+            }
         }
         this.invalidateLayout();
         return this;
@@ -168,9 +173,14 @@ public final class TableViewImpl<T> extends CustomComposite<TableView<T>> implem
                 throw new IllegalArgumentException("Column " + column + " is not sortable");
             }
         }
+        final int previousColumn = this.sortColumn;
+        final boolean previousAscending = this.ascending;
         this.sortColumn = column;
         this.ascending = column == -1 || ascending;
         this.resort();
+        if (column != previousColumn || this.ascending != previousAscending) {
+            this.report(SORTED, new Sort(column, this.ascending), new Sort(previousColumn, previousAscending));
+        }
         return this;
     }
 
@@ -198,13 +208,51 @@ public final class TableViewImpl<T> extends CustomComposite<TableView<T>> implem
     }
 
     /**
-     * Sorts by a column after a click on its title: ascending first, then flipping.
+     * Asks to sort by a column after a click on its title: ascending first, then flipping.
      */
     void titleClicked(final int column) {
         if (this.columns.get(column).comparator == null) {
             return;
         }
-        this.sortBy(column, column != this.sortColumn || !this.ascending);
+        final boolean ascending = column != this.sortColumn || !this.ascending;
+        this.request(SORT, new Sort(column, ascending), this::applySort);
+    }
+
+    /**
+     * Sorts as a request ended, unless the sort is null or names neither -1 nor a sortable column, which a handler
+     * can cause by rewriting the sort or removing the comparator.
+     */
+    private void applySort(final Sort sort) {
+        if (sort == null) {
+            return;
+        }
+        final int column = sort.column();
+        if (column == -1 || column >= 0 && column < this.columns.size() && this.isSortable(column)) {
+            this.sortBy(column, sort.ascending());
+        }
+    }
+
+    /**
+     * Asks to select a row the user chose in the list.
+     */
+    private void userSelect(final int index) {
+        this.request(SELECT, index, this.list::applySelect);
+    }
+
+    /**
+     * Asks to activate a row the user activated in the list.
+     */
+    private void userActivate(final int index) {
+        this.request(ACTIVATE, index, this::applyActivate);
+    }
+
+    /**
+     * Reports the row a request ended with as activated. A null or an index outside the rows is ignored.
+     */
+    private void applyActivate(final Integer index) {
+        if (index != null && index >= 0 && index < this.shown.size()) {
+            this.report(ACTIVATED, index, index);
+        }
     }
 
     boolean isSortable(final int column) {
@@ -275,18 +323,6 @@ public final class TableViewImpl<T> extends CustomComposite<TableView<T>> implem
     @Override
     public TableView<T> selectItem(final T item) {
         this.list.selectItem(item);
-        return this;
-    }
-
-    @Override
-    public TableView<T> onSelectionChanged(final Consumer<Optional<T>> listener) {
-        this.list.onSelectionChanged(listener);
-        return this;
-    }
-
-    @Override
-    public TableView<T> onActivate(final Consumer<T> listener) {
-        this.list.onActivate(listener);
         return this;
     }
 
@@ -492,7 +528,7 @@ public final class TableViewImpl<T> extends CustomComposite<TableView<T>> implem
             for (final Column<T> column : table.columns) {
                 final Component<?> cell = column.cellFactory.apply(item);
                 this.cells.add(cell);
-                this.addChild(cell);
+                this.addContent(cell);
             }
             this.setAnchor(Anchor.FILL);
         }

@@ -1,11 +1,13 @@
 package org.inspirenxe.strata.api.control.field;
 
 import org.inspirenxe.strata.api.component.Component;
+import org.inspirenxe.strata.api.event.EventType;
+import org.inspirenxe.strata.api.event.RequestEvent;
+import org.inspirenxe.strata.api.event.ValueEvent;
+import org.inspirenxe.strata.api.event.ValueRequestEvent;
 import org.inspirenxe.strata.api.geom.Insets;
 
 import java.util.Objects;
-import java.util.function.Consumer;
-import java.util.function.UnaryOperator;
 
 /**
  * A single-line text field.
@@ -21,9 +23,9 @@ import java.util.function.UnaryOperator;
  *     <li>Ctrl+A selects all. Ctrl+C copies, Ctrl+X cuts and Ctrl+V pastes, through the host's clipboard. Pasted
  *     line breaks are removed.</li>
  *     <li>Typing replaces the selection. Text past {@link #maxLength()} is dropped.</li>
- *     <li>A {@linkplain #setFilter filter} sees the text each edit would produce and may accept, change or reject
- *     it, so a box can take only digits.</li>
- *     <li>Enter, or keypad Enter, tells the {@linkplain #onSubmit submit listeners}.</li>
+ *     <li>A handler for {@link #EDIT} sees the text each edit would produce and may cancel or rewrite it, so a box
+ *     can take only digits. {@link #EDITED} reports every change of the text.</li>
+ *     <li>Enter, or keypad Enter, fires {@link #SUBMIT} and then {@link #SUBMITTED}.</li>
  * </ul>
  * <p>A {@linkplain #setReadOnly read-only} box still takes focus, selects and copies, but does not edit and shows no
  * caret.</p>
@@ -36,7 +38,8 @@ import java.util.function.UnaryOperator;
  * it asks the engine for text input (required on SDL-based engines, which send no characters otherwise) and
  * consumes every key that types a character, so engine shortcuts on those keys, such as a game's inventory key, do
  * not fire. Tab and Escape are not consumed: Tab moves focus and Escape still reaches the engine. Enter is consumed only
- * when the box has submit listeners. A disabled box ignores input.</p>
+ * when a handler for {@link #SUBMIT} or {@link #SUBMITTED} is on the box or on an ancestor those events reach. A
+ * disabled box ignores input.</p>
  *
  * <h2>Text and indexes</h2>
  * <p>Caret and selection indexes count UTF-16 chars, like {@link String} indexes, but never fall inside a surrogate
@@ -65,7 +68,7 @@ import java.util.function.UnaryOperator;
  * <pre>{@code
  * TextBox name = factory.textBox()
  *         .setMaxLength(32)
- *         .onTextChanged(text -> preview.setText("Hello, " + text));
+ *         .onEvent(TextBox.EDITED, event -> preview.setText("Hello, " + event.value()));
  * name.setAlignment(HorizontalAlignment.STRETCH, VerticalAlignment.TOP);
  * }</pre>
  *
@@ -107,6 +110,44 @@ public interface TextBox extends Component<TextBox> {
     String STYLE_CARET = "textbox.caret";
 
     /**
+     * Fired when the user is about to edit the text by typing, deleting, cutting or pasting. The value is the whole
+     * text the edit would produce. While handlers run, the box still holds the text and selection from before the
+     * edit. Cancel the event to reject the edit and keep the text and selection as they were, or set another text to
+     * rewrite it; the value must not be set to null. The final text has its line breaks removed and is cut to
+     * {@link #maxLength()} before it applies, and the caret goes as many characters before its end as the edit left
+     * it, with nothing selected. An edit that would leave the text as it is, such as typing into a full box, fires
+     * nothing, and a read-only box fires nothing. Fires only for the user's actions: {@link #setText} and
+     * {@link #setMaxLength} fire none.
+     *
+     * <pre>{@code
+     * // Up to four digits
+     * box.onEvent(TextBox.EDIT, event -> {
+     *     if (!event.value().matches("\\d{0,4}")) {
+     *         event.cancel();
+     *     }
+     * });
+     * }</pre>
+     */
+    EventType<ValueRequestEvent<TextBox, String>> EDIT = EventType.valueRequest("text_box.edit");
+    /**
+     * Fired after the text changed: by an edit of the user's, by {@link #setText}, or by {@link #setMaxLength}
+     * cutting it. The value is the new text and {@code previous()} the text before; neither is null. An edit whose
+     * final text equals the old one fires nothing. Fires for changes made from code too.
+     */
+    EventType<ValueEvent<TextBox, String>> EDITED = EventType.valueReport("text_box.edited");
+    /**
+     * Fired when the user presses Enter or keypad Enter while the box has focus, whether or not anything handles
+     * {@link #SUBMITTED}. A held key's repeats do not fire it, and neither does a disabled box. Cancel it to ignore
+     * the key, which is still consumed. Fires only for the user's actions.
+     */
+    EventType<RequestEvent<TextBox>> SUBMIT = EventType.request("text_box.submit");
+    /**
+     * Fired after a submit by the user that no handler of {@link #SUBMIT} canceled. The value is the text, and
+     * {@code previous()} equals it. There is no method to submit from code, so only Enter fires it.
+     */
+    EventType<ValueEvent<TextBox, String>> SUBMITTED = EventType.valueReport("text_box.submitted");
+
+    /**
      * Returns the text.
      *
      * @return the current text, never null
@@ -115,7 +156,7 @@ public interface TextBox extends Component<TextBox> {
 
     /**
      * Replaces the text, removing line breaks and cutting it to {@link #maxLength()}, and puts the caret at the
-     * end. Text-changed listeners run if the result differs from the current text.
+     * end. {@link #EDITED} fires if the result differs from the current text; {@link #EDIT} does not.
      *
      * @param text the new text
      * @return this box
@@ -130,7 +171,7 @@ public interface TextBox extends Component<TextBox> {
     int maxLength();
 
     /**
-     * Limits the text length. Text already longer is cut, and text-changed listeners run.
+     * Limits the text length. Text already longer is cut, and {@link #EDITED} fires.
      *
      * @param maxLength the most code points the box may hold
      * @return this box
@@ -216,42 +257,6 @@ public interface TextBox extends Component<TextBox> {
      * @return this box
      */
     TextBox selectAll();
-
-    /**
-     * Adds a listener told the new text after every change: typing, deleting, cutting, pasting,
-     * {@link #setText} and {@link #setMaxLength} cutting the text. Listeners run in the order they were added.
-     *
-     * @param listener receives the new text
-     * @return this box
-     */
-    TextBox onTextChanged(Consumer<String> listener);
-
-    /**
-     * Sets a filter for the edits the user makes: typing, deleting, cutting and pasting. After each edit the filter
-     * gets the text the edit produced and returns the text to keep: the same string to accept it, another string to
-     * replace it, or {@code null} to reject the edit and keep the text and selection as they were. Replaced text is
-     * cleaned of line breaks and cut to {@link #maxLength()}, and the caret keeps its distance from the end of the
-     * text. An edit the filter turns back into the old text changes nothing and tells no listener.
-     * {@link #setText} is not filtered.
-     *
-     * <pre>{@code
-     * // Up to four digits
-     * box.setFilter(text -> text.matches("\\d{0,4}") ? text : null);
-     * }</pre>
-     *
-     * @param filter the filter, or {@code null} for none
-     * @return this box
-     */
-    TextBox setFilter(UnaryOperator<String> filter);
-
-    /**
-     * Adds a listener told the text when Enter or keypad Enter is pressed (not repeated) while the box has focus.
-     * Once a box has a submit listener it consumes those presses.
-     *
-     * @param listener receives the text
-     * @return this box
-     */
-    TextBox onSubmit(Consumer<String> listener);
 
     /**
      * Returns whether the box is read-only.

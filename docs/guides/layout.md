@@ -188,7 +188,7 @@ Each axis has a policy: `NEVER` (the axis does not scroll, and children get the 
 | Up, Down, Page Up, Page Down, Home, End | When no focused descendant used them |
 | Focus | A descendant that gains focus is scrolled into view |
 
-`setScroll(x, y)`, `scrollBy`, `scrollToVisible(component)` and `onScrollChanged` work from code. Scrolling moves the children's real bounds without measuring them again, so pointer positions and `bounds()` stay in host coordinates inside a scroll panel. Children are clipped to the viewport, the bounds less the padding and the bar's gutter. For long lists of similar rows, use a [`ListView`](controls.md#listview), which builds only the rows in view.
+`setScroll(x, y)`, `scrollBy` and `scrollToVisible(component)` work from code, and `ScrollPanel.SCROLLED` reports every change of offset. Scrolling moves the children's real bounds without measuring them again, so pointer positions and `bounds()` stay in host coordinates inside a scroll panel. Children are clipped to the viewport, the bounds less the padding and the bar's gutter. For long lists of similar rows, use a [`ListView`](controls.md#listview), which builds only the rows in view.
 
 ## Clipping
 

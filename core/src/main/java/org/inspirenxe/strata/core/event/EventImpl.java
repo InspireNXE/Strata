@@ -61,14 +61,41 @@ public abstract class EventImpl implements Event {
         this.snapshots = snapshots;
     }
 
-    @Override
+    /**
+     * Cancels the event. Public only for the event kinds that are {@code Cancelable}; the others do not expose it.
+     */
     public final void cancel() {
         this.cancelled = true;
     }
 
-    @Override
+    /**
+     * Returns whether the event was canceled. Always false for event kinds that cannot be canceled.
+     *
+     * @return true after {@link #cancel()}
+     */
     public final boolean isCancelled() {
         return this.cancelled;
+    }
+
+    /**
+     * Returns whether each component the event passes runs its default behavior for it. Input events do; a
+     * control's request and report events do not, since only the control that fired them acts.
+     *
+     * @return true for input events
+     */
+    protected boolean runsDefaultActions() {
+        return true;
+    }
+
+    /**
+     * Clears the canceled and stopped flags, the snapshots and the current component, for an event object that is
+     * fired again.
+     */
+    protected final void reset() {
+        this.current = this.target;
+        this.cancelled = false;
+        this.propagationStopped = false;
+        this.snapshots = null;
     }
 
     @Override

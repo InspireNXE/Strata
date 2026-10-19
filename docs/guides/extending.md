@@ -4,7 +4,7 @@ There are three ways to extend Strata. Pick the lightest one that does the job.
 
 | Way | Use it to | Cost |
 |---|---|---|
-| [Decorate a built-in](#decorate-a-built-in-with-a-behavior) | Add drawing, filter input or change the size of a label, button or text box | One anonymous class |
+| [Handle a built-in's events](#change-a-built-in-through-its-events) | Add drawing, change sizes, or filter, rewrite or veto what the user does to any control | A lambda |
 | [Compose](#compose-built-ins) | Package several components as one reusable piece | A plain class |
 | [Write a new component](#write-a-new-component) or [layout](#write-a-new-layout) | Make something that does not exist yet | A subclass of `CustomComponent` or `CustomContainer` |
 
@@ -12,24 +12,36 @@ Strata's own controls and panels are written the third way, on the same public b
 
 ![A custom switch and a custom wrapping layout](../assets/images/extending-custom.png)
 
-## Decorate a built-in with a behavior
+## Change a built-in through its events
 
-Pass a behavior to the factory: `factory.button(text, ButtonBehavior)`, `factory.label(text, LabelBehavior)` or `factory.textBox(TextBoxBehavior)`. Each behavior hook wraps one of the component's own, and receives the component plus a `next` handle that runs the component's own behavior, much like calling `super`:
+Everything a control does goes through [events](events.md), so most changes to a built-in need no new class, only a handler:
 
-- Leave a hook alone and the component behaves as usual.
-- Call `next.proceed()` and add to it to extend the behavior.
-- Do not call `next` to replace the behavior.
+- To stop or change what the user does, handle the control's Pre event: cancel it, or set another value.
+- To react, handle its Post event.
+- To draw on top, handle `Component.PAINTED`; to draw instead, cancel `Component.PAINT`; to change the size it asks for, handle `Component.MEASURED`.
+
+Filter what a text box accepts, whether the user types or pastes:
+
+```java
+--8<-- "extending/ExtendingExamples.java:filter"
+```
+
+Rewrite a value on its way in:
+
+```java
+--8<-- "extending/ExtendingExamples.java:rewrite"
+```
+
+Ask before a window closes. Calling `window.close()` from code fires no `Window.CLOSE`, so the dialog can close it without asking again:
+
+```java
+--8<-- "extending/ExtendingExamples.java:veto"
+```
 
 Draw on top of a button:
 
 ```java
 --8<-- "extending/ExtendingExamples.java:paint"
-```
-
-Filter what a text box accepts:
-
-```java
---8<-- "extending/ExtendingExamples.java:filter"
 ```
 
 Change how big a label wants to be:
@@ -38,16 +50,13 @@ Change how big a label wants to be:
 --8<-- "extending/ExtendingExamples.java:measure"
 ```
 
-The hooks are `measure`, `paint`, and one per event type: `onPointerEnter`, `onPointerExit`, `onPointerMove`, `onPointerPress`, `onPointerRelease`, `onClick`, `onDragStart`, `onDrag`, `onDragEnd`, `onScroll`, `onKey`, `onChar`, `onFocusGained` and `onFocusLost`.
+A handler you want on many controls is a plain field or method, so reuse costs nothing:
 
-Rules for behaviors:
+```java
+--8<-- "extending/ExtendingExamples.java:reuse"
+```
 
-- Call `next` at most once per hook call, and only during that call.
-- Event hooks run in the default-behavior step, between the `BEFORE` and `AFTER` handlers, so a canceled event skips them too.
-- `measure` and `paint` follow the same rules as in a custom component: no layout changes, and no allocation in `paint` if you can avoid it.
-- One behavior object may be shared by several components. Keep per-component state off it, or key it by the component argument. The badge example above keeps its state in a local array because it makes one behavior per button.
-
-Behaviors versus event handlers: a `BEFORE` handler that cancels also skips the default behavior, but a behavior can run the default behavior conditionally, or run code around it, and it can change measuring and painting, which handlers cannot.
+Each control lists its events with its theme keys in [Controls](controls.md), and every event type's Javadoc lists the input that fires it.
 
 ## Compose built-ins
 
@@ -83,6 +92,27 @@ Its required keys must be in the theme:
 --8<-- "extending/ExtendingExamples.java:theme"
 ```
 
+### Events for your own control
+
+Declare your control's events as constants on its interface, a Pre request for each change the user can make and a Post report for each change from any source, and fire them from the implementation:
+
+```java
+--8<-- "extending/ToggleSwitch.java:events"
+```
+
+```java
+--8<-- "extending/ToggleSwitchImpl.java:events"
+```
+
+| Made with | Kind | Fire it with |
+|---|---|---|
+| `EventType.request(name)` | Pre, no value | `request(type)`, which returns whether to go ahead |
+| `EventType.valueRequest(name)` | Pre, with a value | `request(type, value, apply)`, which calls `apply` with the final value unless canceled |
+| `EventType.report(name)` | Post, no value | `report(type)` |
+| `EventType.valueReport(name)` | Post, with a value | `report(type, value, previous)` |
+
+Fire requests only for what the user does, and reports after every change, whoever made it, as the built-ins do. With no handler for a type on the path, `request` and `report` fire nothing and allocate nothing, and `request(type, value, apply)` just calls `apply`. `isHandled(type)` tells you whether anything listens, for work only an event needs. If your component is a `CustomComposite`, the events of the controls you build it from stop at it, so fire your own types for what the outside should hear.
+
 ### The hooks
 
 | Hook | Called | Default |
@@ -93,7 +123,7 @@ Its required keys must be in the theme:
 | `onApplyTheme(theme)` | On attach and whenever the theme changes, before the next layout | Nothing |
 | `acceptsTextInput()` | When it gains focus | false |
 | `snapshotState()` | When an event with [snapshots](snapshots.md#your-own-components) captures it | null |
-| `onClick(event)` and the other `on...` hooks | The default-behavior step of each event | Nothing |
+| `onClick(event)` and the other `on...` hooks | The default-behavior step of each input event, after the handlers, unless canceled | Nothing |
 | `onOtherEvent(type, event)` | For event types not in `EventTypes` | Nothing |
 
 ### Rules
@@ -157,7 +187,6 @@ Everything required of a custom component applies, plus:
 ## Things you cannot do
 
 - Implement `Component`, `Container` or a control interface directly. Strata rejects such classes.
-- Subclass the built-in controls. Their implementations are hidden in `core`. Decorate them with a behavior, or write your own.
-- Fire your own events. See [Custom event types](events.md#custom-event-types).
+- Subclass the built-in controls. Their implementations are hidden in `core`. Handle their events, compose them, or write your own.
 - Draw arbitrary geometry, such as lines or textured triangles. The painter offers rectangles, gradients, sprites and text only, because every engine can draw those. See [Status and limitations](../help/status.md).
 - Use `ComponentFactory.createPeer`, `createContainerPeer`, `CustomComponent.peer()` or anything in `api.extension.peer`. They are plumbing between the base classes and core.

@@ -8,7 +8,7 @@ import org.inspirenxe.strata.api.input.Modifiers;
  *
  * <p>Only Strata creates events. Do not implement this interface.</p>
  */
-public interface PointerEvent extends Event {
+public interface PointerEvent extends Cancelable {
 
     /**
      * Returns the pointer's x in the host's coordinates.

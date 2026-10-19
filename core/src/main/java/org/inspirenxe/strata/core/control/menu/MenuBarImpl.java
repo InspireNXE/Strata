@@ -76,12 +76,6 @@ public final class MenuBarImpl extends CustomComponent<MenuBar> implements MenuB
             throw new IllegalArgumentException(menu + " is already a submenu or in a menu bar");
         }
         impl.setBar(this);
-        final int index = this.menus.size();
-        impl.onClosed(() -> {
-            if (this.openIndex == index) {
-                this.openIndex = -1;
-            }
-        });
         this.titles.add(title);
         this.menus.add(impl);
         this.invalidateLayout();
@@ -103,12 +97,33 @@ public final class MenuBarImpl extends CustomComponent<MenuBar> implements MenuB
         return this.openIndex < 0 ? Optional.empty() : Optional.of(this.openIndex);
     }
 
-    private void openMenu(final int index, final boolean fromKeyboard) {
-        if (this.openIndex >= 0) {
-            this.menus.get(this.openIndex).close();
+    /**
+     * Called by a menu of this bar once it has closed, however it closed.
+     */
+    void menuClosed(final MenuImpl menu) {
+        if (this.openIndex >= 0 && this.menus.get(this.openIndex) == menu) {
+            this.openIndex = -1;
         }
-        if (index < 0 || index >= this.titleX.length) {
+    }
+
+    /**
+     * Opens a menu for the user through an {@link #OPEN} request.
+     */
+    private void userOpen(final int index, final boolean fromKeyboard) {
+        this.request(OPEN, index, chosen -> this.openMenu(chosen, fromKeyboard));
+    }
+
+    /**
+     * Closes the open menu and opens another, then reports {@link #OPENED} if it opened. Ignores an index that is
+     * out of range or names the menu already open, as a handler may have rewritten it.
+     */
+    private void openMenu(final int index, final boolean fromKeyboard) {
+        if (index < 0 || index >= this.titleX.length || index == this.openIndex) {
             return;
+        }
+        final int previous = this.openIndex;
+        if (previous >= 0) {
+            this.menus.get(previous).close();
         }
         final Rect bounds = this.bounds();
         final MenuImpl menu = this.menus.get(index);
@@ -118,6 +133,7 @@ public final class MenuBarImpl extends CustomComponent<MenuBar> implements MenuB
             if (fromKeyboard) {
                 menu.highlightFirst();
             }
+            this.report(OPENED, index, previous);
         }
     }
 
@@ -128,7 +144,7 @@ public final class MenuBarImpl extends CustomComponent<MenuBar> implements MenuB
         if (this.openIndex < 0 || this.menus.size() < 2) {
             return;
         }
-        this.openMenu(Math.floorMod(this.openIndex + direction, this.menus.size()), true);
+        this.userOpen(Math.floorMod(this.openIndex + direction, this.menus.size()), true);
     }
 
     @Override
@@ -187,7 +203,7 @@ public final class MenuBarImpl extends CustomComponent<MenuBar> implements MenuB
         if (this.openIndex >= 0) {
             final int index = this.titleAt(event.x());
             if (index >= 0 && index != this.openIndex) {
-                this.openMenu(index, false);
+                this.userOpen(index, false);
             }
         }
     }
@@ -204,7 +220,7 @@ public final class MenuBarImpl extends CustomComponent<MenuBar> implements MenuB
         if (index == this.openIndex) {
             this.menus.get(index).close();
         } else {
-            this.openMenu(index, false);
+            this.userOpen(index, false);
         }
         event.consume();
     }

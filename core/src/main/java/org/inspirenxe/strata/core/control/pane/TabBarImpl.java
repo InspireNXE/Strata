@@ -25,7 +25,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
-import java.util.function.IntConsumer;
 
 /**
  * The core {@link TabBar}. Each tab is a private child component, so it can have its own hover and tooltip. A tab
@@ -41,7 +40,6 @@ public final class TabBarImpl extends CustomComposite<TabBar> implements TabBar 
 
     private final ComponentFactory ui;
     private final List<Tab> tabs;
-    private final List<IntConsumer> listeners;
     private int selectedIndex;
     private float spacing;
 
@@ -55,7 +53,6 @@ public final class TabBarImpl extends CustomComposite<TabBar> implements TabBar 
         super(ui);
         this.ui = ui;
         this.tabs = new ArrayList<>();
-        this.listeners = new ArrayList<>();
         this.selectedIndex = -1;
         this.setFocusable(true);
         this.setTabbable(true);
@@ -116,13 +113,32 @@ public final class TabBarImpl extends CustomComposite<TabBar> implements TabBar 
     @Override
     public TabBar select(final int index) {
         Objects.checkIndex(index, this.tabs.size());
-        if (index != this.selectedIndex) {
+        final int previous = this.selectedIndex;
+        if (index != previous) {
             this.selectedIndex = index;
-            for (final IntConsumer listener : List.copyOf(this.listeners)) {
-                listener.accept(index);
-            }
+            this.report(SELECTED, index, previous);
         }
         return this;
+    }
+
+    /**
+     * Selects a tab for the user through {@link TabBar#SELECT}. The tab that is already selected skips the request
+     * and changes nothing.
+     */
+    private void userSelect(final int index) {
+        if (index != this.selectedIndex) {
+            this.request(SELECT, index, this::applyUserSelect);
+        }
+    }
+
+    /**
+     * Selects the tab a {@link TabBar#SELECT} ended with, ignoring null, an index out of range or a tab that cannot
+     * be selected.
+     */
+    private void applyUserSelect(final Integer index) {
+        if (index != null && index >= 0 && index < this.tabs.size() && this.tabs.get(index).selectable) {
+            this.select(index);
+        }
     }
 
     @Override
@@ -134,12 +150,6 @@ public final class TabBarImpl extends CustomComposite<TabBar> implements TabBar 
     public TabBar setSpacing(final float spacing) {
         this.spacing = spacing;
         this.invalidateLayout();
-        return this;
-    }
-
-    @Override
-    public TabBar onTabChanged(final IntConsumer listener) {
-        this.listeners.add(Objects.requireNonNull(listener, "listener"));
         return this;
     }
 
@@ -189,7 +199,7 @@ public final class TabBarImpl extends CustomComposite<TabBar> implements TabBar 
         }
         for (int i = this.selectedIndex + direction; i >= 0 && i < this.tabs.size(); i += direction) {
             if (this.tabs.get(i).selectable) {
-                this.select(i);
+                this.userSelect(i);
                 break;
             }
         }
@@ -285,7 +295,7 @@ public final class TabBarImpl extends CustomComposite<TabBar> implements TabBar 
         @Override
         protected void onClick(final PointerButtonEvent event) {
             if (event.button() == MouseButton.LEFT && this.selectable) {
-                this.bar.select(this.index());
+                this.bar.userSelect(this.index());
                 event.consume();
             }
         }

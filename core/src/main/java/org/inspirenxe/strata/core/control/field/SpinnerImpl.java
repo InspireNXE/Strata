@@ -4,6 +4,7 @@ import org.inspirenxe.strata.api.ComponentFactory;
 import org.inspirenxe.strata.api.component.CursorKind;
 import org.inspirenxe.strata.api.control.button.Button;
 import org.inspirenxe.strata.api.control.field.Spinner;
+import org.inspirenxe.strata.api.control.field.TextBox;
 import org.inspirenxe.strata.api.event.EventTypes;
 import org.inspirenxe.strata.api.event.KeyEvent;
 import org.inspirenxe.strata.api.event.PointerButtonEvent;
@@ -24,20 +25,24 @@ import org.inspirenxe.strata.core.control.Rings;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Locale;
-import java.util.Objects;
-import java.util.function.DoubleConsumer;
 import java.util.regex.Pattern;
 
 /**
  * The core {@link Spinner}: a {@link TextBoxImpl} child with the two step buttons painted in a column at the right.
  * The buttons are not components; the spinner itself is what the pointer hits there. While the spinner is disabled
  * its field is disabled too.
+ *
+ * <p>The step buttons, the wheel, Up, Down, Page Up and Page Down, and typed text taken on Enter or focus loss fire
+ * {@link Spinner#CHANGE} when they would change the value. A step first takes any typed text, which can fire it once
+ * for the text and once for the step. Whatever the handlers do, the field then shows the current value.
+ * {@link #increment} and {@link #decrement} called from code fire no request.</p>
+ *
+ * <p>The field is a private {@link TextBoxImpl} whose internal filter keeps out text that could not become a number
+ * in the range. The spinner is a composite and not a container, so the field's {@link TextBox} events stop at the
+ * spinner.</p>
  */
 public final class SpinnerImpl extends CustomComposite<Spinner> implements Spinner {
-    private final List<DoubleConsumer> listeners;
     private final TextBoxImpl field;
     private double value;
     private double min;
@@ -63,18 +68,17 @@ public final class SpinnerImpl extends CustomComposite<Spinner> implements Spinn
     @SuppressWarnings("this-escape")
     public SpinnerImpl(final ComponentFactory ui) {
         super(ui);
-        this.listeners = new ArrayList<>();
         this.max = 100.0;
         this.step = 1.0;
         this.buttons = Rect.ZERO;
         this.button = Paint.NONE;
         this.buttonHovered = Paint.NONE;
         this.buttonDisabled = Paint.NONE;
-        this.field = new TextBoxImpl(ui, null);
+        this.field = new TextBoxImpl(ui);
         this.field.setAnchor(Anchor.FILL);
-        this.field.setFilter(text -> this.accepted.matcher(text).matches() ? text : null);
-        this.field.onSubmit(text -> this.commit());
-        this.field.on(EventTypes.FOCUS_LOST, event -> this.commit());
+        this.field.setInternalFilter(text -> this.accepted.matcher(text).matches() ? text : null);
+        this.field.onEvent(TextBox.SUBMITTED, event -> this.commit(true));
+        this.field.onEvent(EventTypes.FOCUS_LOST, event -> this.commit(true));
         this.addChild(this.field);
         this.updatePattern();
         this.show();
@@ -92,13 +96,11 @@ public final class SpinnerImpl extends CustomComposite<Spinner> implements Spinn
             throw new IllegalArgumentException("Value must not be NaN");
         }
         final double next = this.fit(value);
-        final boolean changed = next != this.value;
+        final double previous = this.value;
         this.value = next;
         this.show();
-        if (changed) {
-            for (final DoubleConsumer listener : List.copyOf(this.listeners)) {
-                listener.accept(next);
-            }
+        if (next != previous) {
+            this.report(CHANGED, next, previous);
         }
         return this;
     }
@@ -156,7 +158,7 @@ public final class SpinnerImpl extends CustomComposite<Spinner> implements Spinn
     @Override
     public void increment() {
         if (this.isEnabled()) {
-            this.commit();
+            this.commit(false);
             this.setValue(this.value + this.step);
         }
     }
@@ -164,15 +166,33 @@ public final class SpinnerImpl extends CustomComposite<Spinner> implements Spinn
     @Override
     public void decrement() {
         if (this.isEnabled()) {
-            this.commit();
+            this.commit(false);
             this.setValue(this.value - this.step);
         }
     }
 
-    @Override
-    public Spinner onValueChanged(final DoubleConsumer listener) {
-        this.listeners.add(Objects.requireNonNull(listener, "listener"));
-        return this;
+    /**
+     * Steps the value for the user: takes the typed text first, then moves by {@code steps} steps, each through
+     * {@code change}. Does nothing while disabled.
+     */
+    private void stepBy(final int steps) {
+        if (this.isEnabled()) {
+            this.commit(true);
+            this.change(this.value + this.step * steps);
+        }
+    }
+
+    /**
+     * Sets a value the user asked for. A value that differs from the current one after clamping and rounding fires
+     * {@link Spinner#CHANGE}, whose final value goes through {@code setValue}, and then the field shows the value
+     * again, whatever the handlers did.
+     */
+    private void change(final double requested) {
+        final double fitted = this.fit(requested);
+        if (fitted != this.value) {
+            this.request(CHANGE, fitted, this::setValue);
+        }
+        this.show();
     }
 
     /**
@@ -200,13 +220,21 @@ public final class SpinnerImpl extends CustomComposite<Spinner> implements Spinn
 
     /**
      * Turns the field's text into the value, or puts the value back when the text is not a number.
+     *
+     * @param user true to set the value through {@code change}, false to call {@link #setValue} directly
      */
-    private void commit() {
-        final String text = this.field.text();
+    private void commit(final boolean user) {
+        final double parsed;
         try {
-            this.setValue(Double.parseDouble(text));
+            parsed = Double.parseDouble(this.field.text());
         } catch (final NumberFormatException ignored) {
             this.show();
+            return;
+        }
+        if (user) {
+            this.change(parsed);
+        } else {
+            this.setValue(parsed);
         }
     }
 
@@ -290,9 +318,9 @@ public final class SpinnerImpl extends CustomComposite<Spinner> implements Spinn
             return;
         }
         if (event.y() < this.buttons.y() + (float) Math.floor(this.buttons.height() * 0.5f)) {
-            this.increment();
+            this.stepBy(1);
         } else {
-            this.decrement();
+            this.stepBy(-1);
         }
         event.consume();
     }
@@ -303,9 +331,9 @@ public final class SpinnerImpl extends CustomComposite<Spinner> implements Spinn
             return;
         }
         if (event.scrollY() > 0f) {
-            this.increment();
+            this.stepBy(1);
         } else {
-            this.decrement();
+            this.stepBy(-1);
         }
         event.consume();
     }
@@ -324,8 +352,7 @@ public final class SpinnerImpl extends CustomComposite<Spinner> implements Spinn
             default -> 0;
         };
         if (steps != 0) {
-            this.commit();
-            this.setValue(this.value + this.step * steps);
+            this.stepBy(steps);
             event.consume();
         }
     }

@@ -1,6 +1,9 @@
 package org.inspirenxe.strata.api.control.window;
 
 import org.inspirenxe.strata.api.component.Container;
+import org.inspirenxe.strata.api.event.ControlEvent;
+import org.inspirenxe.strata.api.event.EventType;
+import org.inspirenxe.strata.api.event.RequestEvent;
 
 /**
  * A framed panel with a title bar, a close button, and content below the bar. Screens use it as their main frame,
@@ -16,8 +19,10 @@ import org.inspirenxe.strata.api.component.Container;
  *     <li>Dragging the title bar moves the window by its {@linkplain #setOffset offset}, kept inside the slot its
  *     parent gives it, while it {@linkplain #setMovable is movable}.</li>
  *     <li>A click on the close button {@linkplain #close closes} it while it {@linkplain #setClosable is
- *     closable}. So does an Escape press nothing inside consumed, if the window has close listeners or is shown in
- *     an overlay; otherwise Escape goes on to the engine, which usually closes the screen.</li>
+ *     closable}. So does an Escape press nothing inside consumed, if a handler for {@link #CLOSE} or
+ *     {@link #CLOSED} is registered on the window or an ancestor, or the window is shown in an overlay; otherwise
+ *     Escape goes on to the engine, which usually closes the screen. Either way the window fires {@link #CLOSE}
+ *     first.</li>
  * </ul>
  *
  * <h2>Theme keys</h2>
@@ -35,7 +40,7 @@ import org.inspirenxe.strata.api.component.Container;
  * <pre>{@code
  * Window window = factory.window("Exchange").add(content);
  * window.setSize(600, 370);
- * window.onClose(handle::close);
+ * window.onEvent(Window.CLOSED, event -> handle.close());
  * }</pre>
  *
  * <p>Get one from {@link org.inspirenxe.strata.api.ComponentFactory#window(String)}. Do not implement this
@@ -66,6 +71,22 @@ public interface Window extends Container<Window> {
      * The space above and below the title in the title bar, in UI units.
      */
     float TITLE_PADDING = 3f;
+
+    /**
+     * Requested when the user closes the window: a click on the close button, or an Escape press that the window
+     * acts on as described above. An Escape press reaches the window when focus is inside it, or when nothing has
+     * focus and the window is the content of the top dialog. Unless a handler cancels the request, the window does
+     * what {@link #close()} does. Cancel it to keep the window open, for example to ask about unsaved changes first;
+     * the Escape press is used either way. An overlay that closes without the window, such as a popup closed by a
+     * press outside it or by an Escape press that never reached the window, fires no request. Fires only for the
+     * user's actions.
+     */
+    EventType<RequestEvent<Window>> CLOSE = EventType.request("window.close");
+    /**
+     * Reported each time the window closes, before the overlay showing it closes. Fires for {@link #close()} called
+     * from code too.
+     */
+    EventType<ControlEvent<Window>> CLOSED = EventType.report("window.closed");
 
     /**
      * Returns the title.
@@ -114,16 +135,9 @@ public interface Window extends Container<Window> {
     Window setMovable(boolean movable);
 
     /**
-     * Closes the window: tells the close listeners, then closes the overlay showing it, if it is in one. A window
-     * that is a screen's content stays; close the screen from a listener.
+     * Closes the window: reports {@link #CLOSED}, then closes the overlay showing it, if it is in one. A window that
+     * is a screen's content stays; close the screen from a {@link #CLOSED} handler. Each call reports, even on a
+     * window that is not shown.
      */
     void close();
-
-    /**
-     * Adds a listener told when the window closes.
-     *
-     * @param listener runs on each {@link #close()}
-     * @return this window
-     */
-    Window onClose(Runnable listener);
 }

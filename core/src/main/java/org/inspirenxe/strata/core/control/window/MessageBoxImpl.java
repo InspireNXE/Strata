@@ -6,6 +6,7 @@ import org.inspirenxe.strata.api.control.button.Button;
 import org.inspirenxe.strata.api.control.display.Label;
 import org.inspirenxe.strata.api.control.window.MessageBox;
 import org.inspirenxe.strata.api.control.window.Window;
+import org.inspirenxe.strata.api.event.KeyEvent;
 import org.inspirenxe.strata.api.extension.ArrangeContext;
 import org.inspirenxe.strata.api.extension.CustomComposite;
 import org.inspirenxe.strata.api.extension.MeasureContext;
@@ -18,17 +19,14 @@ import org.inspirenxe.strata.api.layout.StackPanel;
 import org.inspirenxe.strata.api.layout.VerticalAlignment;
 import org.inspirenxe.strata.api.overlay.Overlay;
 
-import java.util.ArrayList;
 import java.util.EnumMap;
-import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.function.Consumer;
 
 /**
  * The core {@link MessageBox}: a {@link WindowImpl} holding a column of the wrapped message and a right-aligned row
  * of buttons, each {@link #BUTTON_WIDTH} units wide, 4 units apart. The box itself is centered and the window fills
- * it.
+ * it. An Escape press sent to the box itself, as when its dialog has nothing focused, counts as one on the window.
  */
 public final class MessageBoxImpl extends CustomComposite<MessageBox> implements MessageBox {
     /**
@@ -39,7 +37,6 @@ public final class MessageBoxImpl extends CustomComposite<MessageBox> implements
     private final ComponentFactory ui;
     private final WindowImpl window;
     private final Map<Result, Button> buttons;
-    private final List<Consumer<Result>> listeners;
     private final Result dismissResult;
     private boolean done;
 
@@ -52,11 +49,11 @@ public final class MessageBoxImpl extends CustomComposite<MessageBox> implements
      * @param buttonSet which buttons it has
      */
     @SuppressWarnings("this-escape")
-    public MessageBoxImpl(final ComponentFactory ui, final String title, final String message, final Buttons buttonSet) {
+    public MessageBoxImpl(final ComponentFactory ui, final String title, final String message,
+                          final Buttons buttonSet) {
         super(ui);
         this.ui = ui;
         this.buttons = new EnumMap<>(Result.class);
-        this.listeners = new ArrayList<>();
         this.dismissResult = buttonSet.dismissResult();
 
         final Label text = ui.label(message).setWrap(true);
@@ -64,7 +61,7 @@ public final class MessageBoxImpl extends CustomComposite<MessageBox> implements
         final StackPanel row = ui.stackPanel(Orientation.HORIZONTAL).setSpacing(4f);
         row.setAlignment(HorizontalAlignment.RIGHT, VerticalAlignment.TOP);
         for (final Result result : buttonSet.results()) {
-            final Button button = ui.button(caption(result)).onAction(() -> this.finish(result));
+            final Button button = ui.button(caption(result)).onEvent(Button.PRESSED, event -> this.answer(result));
             button.setWidth(BUTTON_WIDTH);
             this.buttons.put(result, button);
             row.add(button);
@@ -75,7 +72,10 @@ public final class MessageBoxImpl extends CustomComposite<MessageBox> implements
         this.window = new WindowImpl(ui, title);
         this.window.add(column);
         this.window.setAnchor(Anchor.FILL);
-        this.window.onClose(() -> this.finish(this.dismissResult));
+        // Closing the window from code answers the dismiss result without a request
+        this.window.onEvent(Window.CLOSED, event -> this.finish(this.dismissResult));
+        // The window's close button and Escape answer the dismiss result through the box's request
+        this.window.setUserCloseHook(this::userDismiss);
         this.addChild(this.window);
         this.setAnchor(Anchor.CENTER);
     }
@@ -104,23 +104,41 @@ public final class MessageBoxImpl extends CustomComposite<MessageBox> implements
         return this;
     }
 
-    @Override
-    public MessageBox onResult(final Consumer<Result> listener) {
-        this.listeners.add(Objects.requireNonNull(listener, "listener"));
-        return this;
+    /**
+     * Answers for the user when a button is pressed, through an {@link #ANSWER} request, unless the box has already
+     * answered.
+     */
+    private void answer(final Result result) {
+        if (!this.done) {
+            this.request(ANSWER, result, this::finish);
+        }
     }
 
     /**
-     * Reports a result once, then closes the overlay showing the box.
+     * Answers the dismiss result for the user once the window accepted a close by its close button or Escape,
+     * through an {@link #ANSWER} request, and closes the window if the request was not canceled. A box that has
+     * already answered just closes the window.
+     */
+    private void userDismiss() {
+        if (this.done) {
+            this.window.close();
+            return;
+        }
+        this.request(ANSWER, this.dismissResult, result -> {
+            this.finish(result);
+            this.window.close();
+        });
+    }
+
+    /**
+     * Reports an answer once through {@link #ANSWERED}, then closes the overlay showing the box.
      */
     private void finish(final Result result) {
         if (this.done) {
             return;
         }
         this.done = true;
-        for (final Consumer<Result> listener : List.copyOf(this.listeners)) {
-            listener.accept(result);
-        }
+        this.report(ANSWERED, result, result);
         if (this.isAttached()) {
             this.ui.overlays().of(this).ifPresent(Overlay::close);
         }
@@ -136,5 +154,11 @@ public final class MessageBoxImpl extends CustomComposite<MessageBox> implements
         for (final Component<?> child : this.childList()) {
             context.arrange(child, bounds);
         }
+    }
+
+    @Override
+    protected void onKey(final KeyEvent event) {
+        // With nothing focused, as after a press on the window's background, a dialog's keys come to the box itself
+        this.window.escape(event);
     }
 }

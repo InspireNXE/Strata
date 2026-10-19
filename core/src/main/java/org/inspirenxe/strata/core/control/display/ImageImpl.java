@@ -2,7 +2,6 @@ package org.inspirenxe.strata.core.control.display;
 
 import org.inspirenxe.strata.api.ComponentFactory;
 import org.inspirenxe.strata.api.control.display.Image;
-import org.inspirenxe.strata.api.control.display.ImageBehavior;
 import org.inspirenxe.strata.api.extension.CustomComponent;
 import org.inspirenxe.strata.api.extension.MeasureContext;
 import org.inspirenxe.strata.api.extension.Painter;
@@ -32,10 +31,9 @@ public final class ImageImpl extends CustomComponent<Image> implements Image {
      *
      * @param ui the factory that owns the image
      * @param sprite the sprite to draw
-     * @param behavior the decorator for the image's hooks, or {@code null} for none
      */
-    public ImageImpl(final ComponentFactory ui, final SpriteId sprite, final ImageBehavior behavior) {
-        super(ui, behavior);
+    public ImageImpl(final ComponentFactory ui, final SpriteId sprite) {
+        super(ui);
         this.sprite = Objects.requireNonNull(sprite, "sprite");
         this.tint = 0xFFFFFFFF;
         this.imageWidth = 16f;
@@ -48,10 +46,9 @@ public final class ImageImpl extends CustomComponent<Image> implements Image {
      *
      * @param ui the factory that owns the image
      * @param visual the visual to draw
-     * @param behavior the decorator for the image's hooks, or {@code null} for none
      */
-    public ImageImpl(final ComponentFactory ui, final Visual visual, final ImageBehavior behavior) {
-        super(ui, behavior);
+    public ImageImpl(final ComponentFactory ui, final Visual visual) {
+        super(ui);
         this.visual = Objects.requireNonNull(visual, "visual");
         this.tint = 0xFFFFFFFF;
         this.imageWidth = visual.size().width();

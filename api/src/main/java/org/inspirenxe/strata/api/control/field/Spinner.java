@@ -2,8 +2,9 @@ package org.inspirenxe.strata.api.control.field;
 
 import org.inspirenxe.strata.api.component.Component;
 import org.inspirenxe.strata.api.control.button.Button;
-
-import java.util.function.DoubleConsumer;
+import org.inspirenxe.strata.api.event.EventType;
+import org.inspirenxe.strata.api.event.ValueEvent;
+import org.inspirenxe.strata.api.event.ValueRequestEvent;
 
 /**
  * A number in a text field, with buttons to step it up and down.
@@ -14,6 +15,9 @@ import java.util.function.DoubleConsumer;
  * that is not a number goes back to the current value. Up and Down step by one step while the field has focus, and
  * Page Up and Page Down by ten. The wheel steps while the pointer is over the spinner. The buttons sit at the right
  * edge, {@value #BUTTON_WIDTH} units wide, the upper half stepping up and the lower half down.</p>
+ *
+ * <p>The field is a private part of the spinner: its {@link TextBox} events reach the spinner but nothing above it,
+ * so handlers outside see only {@link #CHANGE} and {@link #CHANGED}.</p>
  *
  * <p>Every value is clamped to the range and rounded to the number of decimals. A new spinner counts whole numbers
  * from 0 to 100 in steps of 1, starting at 0, and asks for {@value #DEFAULT_WIDTH} units of width.</p>
@@ -30,7 +34,8 @@ import java.util.function.DoubleConsumer;
  * </ul>
  *
  * <pre>{@code
- * Spinner amount = factory.spinner().setRange(1, 64).setValue(1).onValueChanged(value -> this.amount = (int) value);
+ * Spinner amount = factory.spinner().setRange(1, 64).setValue(1)
+ *         .onEvent(Spinner.CHANGED, event -> this.amount = event.value().intValue());
  * }</pre>
  *
  * <p>Get one from {@link org.inspirenxe.strata.api.ComponentFactory#spinner()}. Do not implement this
@@ -59,6 +64,23 @@ public interface Spinner extends Component<Spinner> {
     float DEFAULT_WIDTH = 60f;
 
     /**
+     * Fired when the user is about to change the value: the step buttons, the wheel, the Up, Down, Page Up and Page
+     * Down keys, or typed text taken on Enter or when the field loses focus. A step takes any typed text first, so one
+     * step can fire this twice. The value is the new value, already clamped to the range and rounded to the decimals.
+     * Cancel the event to keep the current value, which the field then shows again, or set another value; it is
+     * clamped and rounded again as {@link #setValue} does, and must not be null or NaN. A change that would leave the
+     * value as it is fires nothing. Fires only for the user's actions: {@link #setValue}, {@link #increment} and
+     * {@link #decrement} called from code fire none.
+     */
+    EventType<ValueRequestEvent<Spinner, Double>> CHANGE = EventType.valueRequest("spinner.change");
+    /**
+     * Fired after the value changed: by the user, by {@link #setValue}, {@link #increment} or {@link #decrement}, or
+     * by {@link #setRange} or {@link #setDecimals} moving it. The value is the new value and {@code previous()} the
+     * value before; neither is null. Fires for changes made from code too.
+     */
+    EventType<ValueEvent<Spinner, Double>> CHANGED = EventType.valueReport("spinner.changed");
+
+    /**
      * Returns the value.
      *
      * @return the value, within the range
@@ -67,7 +89,7 @@ public interface Spinner extends Component<Spinner> {
 
     /**
      * Sets the value, clamped to the range and rounded to the number of decimals, and shows it in the field.
-     * Listeners run if the value changed. Works while disabled too.
+     * {@link #CHANGED} fires if the value changed; {@link #CHANGE} does not. Works while disabled too.
      *
      * @param value the new value
      * @return this spinner
@@ -90,7 +112,7 @@ public interface Spinner extends Component<Spinner> {
     double max();
 
     /**
-     * Sets the range. The value is clamped into it, and listeners run if that changed it.
+     * Sets the range. The value is clamped into it, and {@link #CHANGED} fires if that changed it.
      *
      * @param min the lowest value
      * @param max the highest value
@@ -124,8 +146,8 @@ public interface Spinner extends Component<Spinner> {
     int decimals();
 
     /**
-     * Sets how many digits the value keeps after the decimal point. The value is rounded again, and listeners run if
-     * that changed it.
+     * Sets how many digits the value keeps after the decimal point. The value is rounded again, and
+     * {@link #CHANGED} fires if that changed it.
      *
      * @param decimals the number of decimals, from 0 to 9
      * @return this spinner
@@ -134,23 +156,16 @@ public interface Spinner extends Component<Spinner> {
     Spinner setDecimals(int decimals);
 
     /**
-     * Raises the value by one step, as the up button does. Does nothing while disabled.
+     * Raises the value by one step, as the up button does, without firing {@link #CHANGE}. Does nothing while
+     * disabled.
      */
     void increment();
 
     /**
-     * Lowers the value by one step, as the down button does. Does nothing while disabled.
+     * Lowers the value by one step, as the down button does, without firing {@link #CHANGE}. Does nothing while
+     * disabled.
      */
     void decrement();
-
-    /**
-     * Adds a listener told the new value after every change, by input or by code. Listeners run in the order they
-     * were added.
-     *
-     * @param listener receives the new value
-     * @return this spinner
-     */
-    Spinner onValueChanged(DoubleConsumer listener);
 
     /**
      * A spinner's own state in a {@link org.inspirenxe.strata.api.component.ComponentSnapshot}.

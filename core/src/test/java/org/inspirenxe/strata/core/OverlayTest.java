@@ -55,7 +55,7 @@ class OverlayTest {
         @Test
         void aPressOutsideClosesThePopupAndGoesNoFurther() {
             final List<String> clicks = new ArrayList<>();
-            final Button button = OverlayTest.this.ui.button("Under").onAction(() -> clicks.add("button"));
+            final Button button = OverlayTest.this.ui.button("Under").onEvent(Button.PRESSED, event -> clicks.add("button"));
             OverlayTest.this.test.show(OverlayTest.this.ui.absolutePanel().add(button, 100, 100));
             final Overlay popup = OverlayTest.this.ui.overlays().popup(new Box(OverlayTest.this.ui, 20, 20), new Rect(0, 0, 10, 10));
             OverlayTest.this.test.click(110, 105);
@@ -69,8 +69,8 @@ class OverlayTest {
         void escapeClosesTheTopOverlay() {
             OverlayTest.this.test.show(OverlayTest.this.ui.absolutePanel());
             final List<String> closed = new ArrayList<>();
-            OverlayTest.this.ui.overlays().popup(new Box(OverlayTest.this.ui, 20, 20), Rect.ZERO).onClosed(() -> closed.add("first"));
-            OverlayTest.this.ui.overlays().popup(new Box(OverlayTest.this.ui, 20, 20), Rect.ZERO).onClosed(() -> closed.add("second"));
+            OverlayTest.this.ui.overlays().popup(new Box(OverlayTest.this.ui, 20, 20), Rect.ZERO).onEvent(Overlay.CLOSED, event -> closed.add("first"));
+            OverlayTest.this.ui.overlays().popup(new Box(OverlayTest.this.ui, 20, 20), Rect.ZERO).onEvent(Overlay.CLOSED, event -> closed.add("second"));
             assertTrue(OverlayTest.this.test.host().key(Key.ESCAPE, KeyAction.PRESS, Modifiers.NONE));
             assertEquals(List.of("second"), closed);
             assertEquals(1, OverlayTest.this.ui.overlays().open().size());
@@ -193,7 +193,7 @@ class OverlayTest {
     void modifierKeysAreTrackedAndReported() {
         final AbsolutePanel root = this.ui.absolutePanel();
         final List<Boolean> control = new ArrayList<>();
-        root.on(EventTypes.MODIFIERS_CHANGED, event -> control.add(event.modifiers().control()));
+        root.onEvent(EventTypes.MODIFIERS_CHANGED, event -> control.add(event.modifiers().control()));
         this.test.show(root);
         this.test.host().key(Key.LEFT_CONTROL, KeyAction.PRESS, Modifiers.NONE);
         this.test.host().key(Key.LEFT_CONTROL, KeyAction.RELEASE, Modifiers.of(Modifier.CONTROL));

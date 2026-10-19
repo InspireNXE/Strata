@@ -105,7 +105,7 @@ Backgrounds and label text styles can be set per component, outside the theme:
 --8<-- "theming/ThemeExamples.java:local"
 ```
 
-There is no per-component theme or per-subtree theme. To give one button a different face, decorate it with a behavior that paints something else, or write a component that reads its own keys.
+There is no per-component theme or per-subtree theme. To give one button a different face, cancel its `Component.PAINT` and draw something else, or write a component that reads its own keys.
 
 ## Themes by id
 

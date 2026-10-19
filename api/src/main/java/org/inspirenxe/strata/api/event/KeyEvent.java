@@ -13,7 +13,7 @@ import org.inspirenxe.strata.api.input.Modifiers;
  *
  * <p>Only Strata creates events. Do not implement this interface.</p>
  */
-public interface KeyEvent extends Event {
+public interface KeyEvent extends Cancelable {
 
     /**
      * Returns the key.

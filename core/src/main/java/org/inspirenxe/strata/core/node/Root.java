@@ -3,8 +3,11 @@ package org.inspirenxe.strata.core.node;
 import org.inspirenxe.strata.api.component.Component;
 import org.inspirenxe.strata.api.component.CursorKind;
 import org.inspirenxe.strata.api.component.Tooltip;
+import org.inspirenxe.strata.api.event.Event;
+import org.inspirenxe.strata.api.event.EventHandler;
+import org.inspirenxe.strata.api.event.EventType;
 import org.inspirenxe.strata.api.event.EventTypes;
-import org.inspirenxe.strata.api.event.Phase;
+import org.inspirenxe.strata.api.event.Subscription;
 import org.inspirenxe.strata.api.geom.Rect;
 import org.inspirenxe.strata.api.input.Key;
 import org.inspirenxe.strata.api.input.KeyAction;
@@ -18,7 +21,9 @@ import org.inspirenxe.strata.api.theme.Paint;
 import org.inspirenxe.strata.api.theme.Theme;
 import org.inspirenxe.strata.api.theme.ThemeException;
 import org.inspirenxe.strata.core.event.CharEventImpl;
+import org.inspirenxe.strata.core.event.ControlEventImpl;
 import org.inspirenxe.strata.core.event.DragEventImpl;
+import org.inspirenxe.strata.core.event.EventDispatcher;
 import org.inspirenxe.strata.core.event.FocusEventImpl;
 import org.inspirenxe.strata.core.event.KeyEventImpl;
 import org.inspirenxe.strata.core.event.ModifiersEventImpl;
@@ -1039,7 +1044,7 @@ public final class Root {
         final Rect anchor;
         final boolean modal;
         final long expiresAt;
-        final List<Runnable> closedListeners;
+        final EventDispatcher handlers;
         Node previousFocus;
         boolean open;
 
@@ -1048,7 +1053,7 @@ public final class Root {
             this.anchor = anchor;
             this.modal = modal;
             this.expiresAt = expiresAt;
-            this.closedListeners = new ArrayList<>();
+            this.handlers = new EventDispatcher();
             this.open = true;
         }
 
@@ -1119,19 +1124,23 @@ public final class Root {
             if (this.modal && this.previousFocus != null && Root.this.canFocus(this.previousFocus)) {
                 Root.this.changeFocus(this.previousFocus);
             }
-            for (final Runnable listener : List.copyOf(this.closedListeners)) {
-                listener.run();
+            if (this.handlers.hasHandlers(Overlay.CLOSED)) {
+                this.handlers.fire(Overlay.CLOSED, new ControlEventImpl<>(this.node.facade(), this));
             }
-            this.closedListeners.clear();
+            this.handlers.clear();
         }
 
         @Override
-        public Overlay onClosed(final Runnable listener) {
-            Objects.requireNonNull(listener, "listener");
-            if (this.open) {
-                this.closedListeners.add(listener);
-            }
+        public <E extends Event> Overlay onEvent(final EventType<E> type, final int priority,
+                                                 final EventHandler<? super E> handler) {
+            this.subscribe(type, priority, handler);
             return this;
+        }
+
+        @Override
+        public <E extends Event> Subscription subscribe(final EventType<E> type, final int priority,
+                                                        final EventHandler<? super E> handler) {
+            return this.handlers.subscribe(type, priority, handler);
         }
     }
 
@@ -1160,7 +1169,7 @@ public final class Root {
                 throw new IllegalArgumentException("A toast must show for some time: " + millis);
             }
             final Layer layer = Root.this.open(content, null, false, Root.this.platform.clock().millis() + millis);
-            content.on(EventTypes.CLICK, Phase.AFTER, event -> {
+            content.onEvent(EventTypes.CLICK, Integer.MAX_VALUE, event -> {
                 if (!event.isCancelled()) {
                     layer.close();
                 }

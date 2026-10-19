@@ -1,6 +1,6 @@
 # Controls
 
-Strata's built-in controls are interfaces in the subpackages of `org.inspirenxe.strata.api.control`, made by the factory: `display` (`Label`, `Image`, `ProgressBar`, `Separator`), `button` (`Button`, `CheckBox`, `RadioButton`, `RadioGroup`, `ToggleSwitch`), `field` (`TextBox`, `TextArea`, `Spinner`, `Slider`), `collection` (`ListView`, `ComboBox`, `TableView`, `TreeView`, `SlotGrid`), `menu` (`Menu`, `MenuBar`), `pane` (`TabBar`, `Expander`, `SplitPane`) and `window` (`Window`, `MessageBox`). The first six (`Label`, `Image`, `Button`, `CheckBox`, `Slider` and `TextBox`) each have a matching behavior interface for [decorating](extending.md#decorate-a-built-in-with-a-behavior) them. The newer ones (`ListView`, `ComboBox`, `Window`, `MessageBox`, `TabBar`, `ProgressBar`, `Separator`, `RadioButton`, `ToggleSwitch`, `Spinner`, `TextArea`, `TableView`, `TreeView`, `Menu`, `MenuBar`, `Expander`, `SplitPane` and `SlotGrid`) do not have one yet. Their theme keys are listed on each control below and in the [theme key reference](../reference/theme-keys.md). Scrolling is a container, [`ScrollPanel`](layout.md#scrollpanel), and popups, dialogs and tooltips are in [Overlays and tooltips](overlays.md).
+Strata's built-in controls are interfaces in the subpackages of `org.inspirenxe.strata.api.control`, made by the factory: `display` (`Label`, `Image`, `ProgressBar`, `Separator`), `button` (`Button`, `CheckBox`, `RadioButton`, `RadioGroup`, `ToggleSwitch`), `field` (`TextBox`, `TextArea`, `Spinner`, `Slider`), `collection` (`ListView`, `ComboBox`, `TableView`, `TreeView`, `SlotGrid`), `menu` (`Menu`, `MenuBar`), `pane` (`TabBar`, `Expander`, `SplitPane`) and `window` (`Window`, `MessageBox`). Each one declares its [events](events.md) as constants on its interface: a request (Pre) for each change the user can make, which a handler can cancel or rewrite, and a report (Post) for each change from any source. Each section below lists them in an Events table. Their theme keys are listed on each control below and in the [theme key reference](../reference/theme-keys.md). Scrolling is a container, [`ScrollPanel`](layout.md#scrollpanel), and popups, dialogs and tooltips are in [Overlays and tooltips](overlays.md).
 
 ## Label
 
@@ -70,14 +70,13 @@ A canvas draws a placeholder for a visual it did not make. Each adapter document
 A push button with a text caption.
 
 ```java
-Button save = factory.button("Save").onAction(this::save);
+Button save = factory.button("Save").onEvent(Button.PRESSED, event -> this.save());
 ```
 
 | Method | Notes |
 |---|---|
 | `setText(text)` | One line. A new layout runs. |
-| `onAction(Runnable)` | Adds an action. Actions run in the order added. An action may add more; they run from the next press. |
-| `press()` | Runs the actions as if clicked. Does nothing while disabled. Fires no events. |
+| `press()` | Presses it from code: fires `PRESSED` but no `PRESS` request. Does nothing while disabled. |
 | `setTextPadding(Insets)` | Space between the caption and the edges. 8 left and right, 5 top and bottom by default. |
 
 A button presses on a left click, or on a press of Enter, keypad Enter or Space while it has focus. Held keys that repeat do not press it again. It consumes those inputs. A disabled button does neither and draws its disabled face.
@@ -92,7 +91,12 @@ It is focusable and tabbable, shows the hand cursor, and has a minimum size of 2
 | `button.disabled` | Disabled |
 | `button.focus` (optional) | A one-unit ring drawn inside the edge while focused |
 
-To veto a press, cancel its `CLICK` in a `BEFORE` handler. To react to other buttons, such as a right click, handle `CLICK` yourself; see [Clicks](events.md#clicks).
+| Event | Kind | Fires |
+|---|---|---|
+| `Button.PRESS` | Pre | When the user presses it. Cancel to refuse the press. |
+| `Button.PRESSED` | Post | After every press, including `press()` |
+
+To react to other mouse buttons, such as a right click, handle `CLICK` yourself; see [Clicks](events.md#clicks).
 
 ## CheckBox
 
@@ -105,10 +109,9 @@ A box that is checked or not, with a caption to its right.
 | Method | Default | Notes |
 |---|---|---|
 | `setText(text)` | | One line. May be empty for a box alone. |
-| `setChecked(boolean)` | unchecked | Listeners run if the state changed. Works while disabled, so code can keep a disabled box in step with its setting. |
-| `toggle()` | | Flips it as if clicked. Does nothing while disabled. Fires no events. |
+| `setChecked(boolean)` | unchecked | Fires `TOGGLED` if the state changed. Works while disabled, so code can keep a disabled box in step with its setting. |
+| `toggle()` | | Flips it from code: fires `TOGGLED` but no `TOGGLE` request. Does nothing while disabled. |
 | `setBoxSize(size)` | line height plus 8 | The square box's size. `Float.NaN` goes back to the default, which is 17 with a 9-unit line height. |
-| `onCheckedChanged(listener)` | | Told the new state after every change, by input, `toggle()` or `setChecked` |
 
 A left click anywhere on the check box, caption included, toggles it, and so does a press of Enter, keypad Enter or Space while it has focus. It consumes those inputs. It is focusable and tabbable and shows the hand cursor. The caption sits 4 units right of the box, both centered vertically.
 
@@ -121,6 +124,11 @@ A left click anywhere on the check box, caption included, toggles it, and so doe
 | `checkbox.focus` (optional) | A one-unit ring inside the box's edge while focused |
 
 Themes built from images can draw the check mark into the checked faces and leave `checkbox.mark` out. Themes built from colors use `checkbox.mark`.
+
+| Event | Kind | Fires |
+|---|---|---|
+| `CheckBox.TOGGLE` | Pre | When the user flips it, with the state about to be taken. Cancel to refuse, or set another state. |
+| `CheckBox.TOGGLED` | Post | After every change, with the new and previous state |
 
 ## Slider
 
@@ -136,10 +144,14 @@ A horizontal slider that picks a number from a range.
 | `setStep(step)` | 0, continuous | Values snap to `min + k * step`. The maximum is always reachable, even off that grid. |
 | `setValue(value)` | 0 | Clamped and snapped. NaN throws. Works while disabled. |
 | `setLabel(DoubleFunction<String>)` | none | Text drawn centered over the track, recomputed when the value changes. Text wider than the slider is cut off. |
-| `onValueChanged(DoubleConsumer)` | | Told the new value after every change, including each drag move that changes it |
 | `keyStep()` | | The step, or a hundredth of the range without one |
 
-Listeners run only when the value actually changes, so setting the same value twice, or a value that clamps or snaps to the current one, runs nothing.
+| Event | Kind | Fires |
+|---|---|---|
+| `Slider.CHANGE` | Pre | When a press, a drag move or a key would change the value, with the new value already clamped and snapped. Cancel to keep the old value, or set another, which is clamped and snapped again. |
+| `Slider.CHANGED` | Post | After every change, including each drag move and changes from `setValue`, `setRange` and `setStep` |
+
+Both fire only when the value actually changes, so setting the same value twice, or a value that clamps or snaps to the current one, fires nothing.
 
 Whole numbers come from a step of 1:
 
@@ -178,7 +190,7 @@ A single-line text field ported from Wintergreen's.
 ```java
 TextBox name = factory.textBox()
         .setMaxLength(32)
-        .onTextChanged(text -> preview.setText("Hello, " + text));
+        .onEvent(TextBox.EDITED, event -> preview.setText("Hello, " + event.value()));
 name.setAlignment(HorizontalAlignment.STRETCH, VerticalAlignment.TOP);
 ```
 
@@ -186,14 +198,11 @@ name.setAlignment(HorizontalAlignment.STRETCH, VerticalAlignment.TOP);
 
 | Method | Default | Notes |
 |---|---|---|
-| `setText(text)` | empty | Removes line breaks, cuts to the length limit and puts the caret at the end. Listeners run if the text changed. |
-| `setMaxLength(n)` | `Integer.MAX_VALUE` | Counted in code points. Longer text is cut at once, and listeners run. Negative throws. |
+| `setText(text)` | empty | Removes line breaks, cuts to the length limit and puts the caret at the end. Fires `EDITED` if the text changed, but no `EDIT` request. |
+| `setMaxLength(n)` | `Integer.MAX_VALUE` | Counted in code points. Longer text is cut at once, which fires `EDITED`. Negative throws. |
 | `setPassword(boolean)` | off | Draws every code point as the mask character and disables copy and cut. `text()` still returns the real text. |
 | `setMaskCodePoint(cp)` | `'*'` | The mask character |
 | `setTextPadding(Insets)` | 4 left and right, 5 top and bottom | Space between the text and the edges |
-| `onTextChanged(listener)` | | Called with the new text after every change: typing, deleting, cutting, pasting, `setText` and `setMaxLength` cutting. In the order added. |
-| `setFilter(UnaryOperator<String>)` | none | Sees the text each user edit would produce. Return it to accept, another string to replace it, or `null` to reject the edit. `setText` is not filtered. |
-| `onSubmit(listener)` | | Called with the text on Enter or keypad Enter. A box with a submit listener consumes those presses. |
 | `setReadOnly(boolean)` | off | The box still focuses, selects and copies, but does not edit, and shows no caret. Its text uses `textbox.text.readonly`. |
 | `setSelectAllOnFocus(boolean)` | off | Gaining focus selects everything, so typing replaces it. |
 
@@ -241,7 +250,7 @@ The box is focusable and tabbable and shows the text cursor. Focus by Tab or `re
 - asks the engine for text input, which some engines need before they send any characters;
 - consumes every key press that types a character (any printable key without Control or Alt), so engine shortcuts on those keys do not fire while you type;
 - consumes the editing keys and shortcuts in the table above;
-- does not consume Tab, Escape, Up, Down, Page Up or Page Down. Tab moves focus and Escape reaches the engine, which may close the screen. Enter is consumed only when the box has a submit listener; otherwise it bubbles to ancestors.
+- does not consume Tab, Escape, Up, Down, Page Up or Page Down. Tab moves focus and Escape reaches the engine, which may close the screen. Enter is consumed only when a `SUBMIT` or `SUBMITTED` handler is on the box's path; otherwise it bubbles to ancestors.
 
 A disabled box ignores input.
 
@@ -260,13 +269,22 @@ The caret is one unit wide and blinks every half second on the host's clock. It 
 | `textbox.selection` | no | Behind selected text. Falls back to translucent blue. |
 | `textbox.caret` | no | The caret. Falls back to light gray. |
 
+### Events
+
+| Event | Kind | Fires |
+|---|---|---|
+| `TextBox.EDIT` | Pre | When the user's typing, deleting, cutting or pasting would change the text, with the whole text it would produce. Cancel to reject the edit, or set another text, which is cleaned of line breaks and cut to the length limit. |
+| `TextBox.EDITED` | Post | After every change of the text, with the new and previous text, including `setText` and `setMaxLength` cutting |
+| `TextBox.SUBMIT` | Pre | When the user presses Enter or keypad Enter. Cancel to ignore it. |
+| `TextBox.SUBMITTED` | Post | After a submit nobody canceled, with the text |
+
 ### Size
 
 The desired size is 120 units wide and one line plus the text padding tall, with a minimum of 20 by 20. Stretch it or set a width to make it wider.
 
 ### Common recipes
 
-Submit on Enter: `onSubmit`, or a handler on an ancestor:
+Submit on Enter:
 
 ```java
 --8<-- "events/EventExamples.java:submit"
@@ -275,13 +293,13 @@ Submit on Enter: `onSubmit`, or a handler on an ancestor:
 Accept only a whole number up to a limit:
 
 ```java
-amount.setFilter(text -> {
-    String digits = text.replaceAll("[^0-9]", "");
-    return digits.isEmpty() ? "" : Long.toString(Math.min(Long.parseLong(digits), max));
+amount.onEvent(TextBox.EDIT, event -> {
+    String digits = event.value().replaceAll("[^0-9]", "");
+    event.setValue(digits.isEmpty() ? "" : Long.toString(Math.min(Long.parseLong(digits), max)));
 });
 ```
 
-React to each change: `onTextChanged`. React only when the user leaves the field: handle `FOCUS_LOST`.
+React to each change: `TextBox.EDITED`. React only when the user leaves the field: handle `FOCUS_LOST`.
 
 ## ListView
 
@@ -292,8 +310,8 @@ ListView<Listing> listings = factory.<Listing>listView(listing -> factory.label(
         .setRowHeight(24)
         .setKeyFunction(Listing::record)
         .setPlaceholder("No results found.")
-        .onSelectionChanged(selected -> updateButtons())
-        .onActivate(listing -> buy(listing, 1));
+        .onEvent(ListView.SELECTED, event -> updateButtons())
+        .onEvent(ListView.ACTIVATED, event -> buy(listings.items().get(event.value()), 1));
 listings.setItems(fromServer);
 ```
 
@@ -321,6 +339,13 @@ Build each cell fresh from its item, and keep nothing in it that must survive sc
 | `list.placeholder` | no | Placeholder text style |
 | `scroll.*` | | The scroll bar, as for `ScrollPanel` |
 
+| Event | Kind | Fires |
+|---|---|---|
+| `ListView.SELECT` | Pre | When a press or a key would change the selection, with the row index, or -1 to clear. Cancel to keep the selection, or set another row. |
+| `ListView.SELECTED` | Post | After every change of the selected row, including `select`, `selectItem` and `setItems` |
+| `ListView.ACTIVATE` | Pre | When the user activates a row: a double press, Enter, or a click with `setActivateOnClick` |
+| `ListView.ACTIVATED` | Post | After an activation nobody canceled, with the row index |
+
 ## ComboBox
 
 A drop-down that shows the selected option and opens a list of every option.
@@ -328,7 +353,7 @@ A drop-down that shows the selected option and opens a list of every option.
 ```java
 ComboBox<SortType> sort = factory.<SortType>comboBox(SortType::label)
         .setOptions(List.of(SortType.values()))
-        .onSelectionChanged(type -> search());
+        .onEvent(ComboBox.SELECTED, event -> search());
 ```
 
 A click opens the list as a [popup](overlays.md#popups), at least as wide as the box; a click on an option selects it. While closed and focused, Up, Down, Home and End change the selection, and Enter, Space or Alt+Down open it. While open, Up and Down move the highlight, Enter or Space picks it, and Escape closes without changing anything. `setMaxVisibleOptions(n)` (8 by default) caps how many rows show before the list scrolls. A box with options always has one selected.
@@ -341,6 +366,13 @@ A click opens the list as a [popup](overlays.md#popups), at least as wide as the
 | `combobox.disabled` | no | The box when disabled. Falls back to `combobox.normal`. |
 | `combobox.text`, `combobox.text.disabled` | no | The option text |
 
+| Event | Kind | Fires |
+|---|---|---|
+| `ComboBox.OPEN` | Pre | When the user opens the list. A handler can change the options first, or cancel. |
+| `ComboBox.OPENED` | Post | After the list opened, including `open()` |
+| `ComboBox.SELECT` | Pre | When the user picks an option, or Up, Down, Home or End on the closed box would change it, with the option index |
+| `ComboBox.SELECTED` | Post | After every change of the selected index, including `select` and `setOptions` |
+
 ## Window
 
 A framed panel with a title bar and a close button. Children are laid out below the bar as in an `AnchorPanel`, inside 3 units of padding.
@@ -351,7 +383,7 @@ window.setSize(600, 370);
 window.onClose(handle::close);
 ```
 
-Dragging the title bar moves the window, through its [offset](layout.md#offset), kept inside the slot its parent gives it (`setMovable(false)` stops that). The close button and an unconsumed Escape call `close()`, which tells the close listeners and closes the overlay showing the window. A window that is a screen's content does not close itself: close the screen from a listener. Without listeners, it leaves Escape to the engine. `setClosable(false)` hides the button and ignores Escape. A new window is centered in its slot.
+Dragging the title bar moves the window, through its [offset](layout.md#offset), kept inside the slot its parent gives it (`setMovable(false)` stops that). The close button and an Escape the window acts on fire `Window.CLOSE`, which a handler can cancel, then call `close()`, which fires `Window.CLOSED` and closes the overlay showing the window. A window that is a screen's content does not close itself: close the screen from a `CLOSED` handler. With no `CLOSE` or `CLOSED` handler on its path, and outside an overlay, it leaves Escape to the engine. `setClosable(false)` hides the button and ignores Escape. A new window is centered in its slot.
 
 | Key | Required | Used for |
 |---|---|---|
@@ -359,6 +391,11 @@ Dragging the title bar moves the window, through its [offset](layout.md#offset),
 | `window.title` | no | The title bar. Nothing if missing. |
 | `window.title.text` | no | The title |
 | `window.close`, `window.close.hovered` | no | The close button's `x` |
+
+| Event | Kind | Fires |
+|---|---|---|
+| `Window.CLOSE` | Pre | When the close button or an Escape the window acts on asks to close it. Cancel to keep it open. |
+| `Window.CLOSED` | Post | Each time it closes, including `close()` |
 
 ## MessageBox
 
@@ -368,15 +405,20 @@ A window with a message and a row of buttons, opened as a [dialog](overlays.md#d
 --8<-- "overlays/OverlayExamples.java:message-box"
 ```
 
-The buttons come in sets: `OK`, `OK_CANCEL`, `YES_NO`, `YES_NO_CANCEL` and `CLOSE`. The first one is focused when the dialog opens. A button, the close button or Escape reports one `Result` to the listeners and closes the dialog; the close button and Escape report No or Cancel. `setButtonText(result, caption)` translates a caption, and `window()` gives the window for its title or size. The message wraps at 280 units.
+The buttons come in sets: `OK`, `OK_CANCEL`, `YES_NO`, `YES_NO_CANCEL` and `CLOSE`. The first one is focused when the dialog opens. A button, the close button or Escape asks with `MessageBox.ANSWER`, which a handler can cancel to keep the box open or rewrite, then reports the `Result` once with `MessageBox.ANSWERED` and closes the dialog; the close button and Escape answer No or Cancel. `setButtonText(result, caption)` translates a caption, and `window()` gives the window for its title or size. The message wraps at 280 units.
+
+| Event | Kind | Fires |
+|---|---|---|
+| `MessageBox.ANSWER` | Pre | When a button, the close button or Escape answers, with the `Result`. Cancel to keep the box open, or set another result. |
+| `MessageBox.ANSWERED` | Post | Once, when the box answers, before its overlay closes |
 
 ## TabBar
 
-A row of tabs, one of them selected. It only picks a tab; show the matching content from `onTabChanged`.
+A row of tabs, one of them selected. It only picks a tab; show the matching content from `TabBar.SELECTED`.
 
 ```java
 TabBar sides = factory.tabBar().addTab("Buy").addTab("Sell")
-        .onTabChanged(index -> showSide(index));
+        .onEvent(TabBar.SELECTED, event -> showSide(event.value()));
 sides.setTabEnabled(1, false).setTabTooltip(1, Tooltip.text("There are no items for sale."));
 ```
 
@@ -387,6 +429,11 @@ Tabs share the width equally. A click selects an enabled tab, and Left and Right
 | `tab.normal`, `tab.selected` | yes | Unselected and selected tabs |
 | `tab.hovered`, `tab.disabled` | no | Fall back to `tab.normal` |
 | `tab.text`, `tab.text.selected`, `tab.text.disabled` | no | Tab text |
+
+| Event | Kind | Fires |
+|---|---|---|
+| `TabBar.SELECT` | Pre | When a click or Left and Right would select another tab, with its index. A rewritten index that is disabled or out of range is ignored. |
+| `TabBar.SELECTED` | Post | After another tab was selected, including `select` |
 
 ## ProgressBar
 
@@ -411,7 +458,7 @@ RadioGroup<Difficulty> difficulty = factory.radioGroup();
 column.add(difficulty.add("Easy", Difficulty.EASY))
         .add(difficulty.add("Hard", Difficulty.HARD));
 difficulty.select(settings.difficulty())
-        .onSelectionChanged(value -> value.ifPresent(settings::setDifficulty));
+        .onEvent(RadioGroup.SELECTED, event -> settings.setDifficulty(difficulty.selected().orElseThrow()));
 ```
 
 Each button stands for a value, and `group.selected()` returns the value of the selected one. A new group has nothing selected. A click, Enter or Space selects a button. Up and Left move the selection and focus to the previous usable button in the group, Down and Right to the next, wrapping at the ends and skipping disabled, hidden and detached buttons. `button.setSelected(true)` and `group.select(value)` work while disabled too; selecting a value no button stands for throws. A button measures and draws like a [`CheckBox`](#checkbox), with the mark inset by three tenths of the box.
@@ -425,12 +472,18 @@ Each button stands for a value, and `group.selected()` returns the value of the 
 | `radio.focus` | no | A one-unit ring while focused |
 | `radio.text`, `radio.text.disabled` | no | The caption |
 
+| Event | Kind | Fires |
+|---|---|---|
+| `RadioButton.SELECT` | Pre | On the button about to be selected, by a click, Enter, Space or an arrow key. Cancel to keep the selection and focus as they are. |
+| `RadioGroup.SELECTED` | Post | On the group, after the selected button changed from any source, with its index in `buttons()` or -1. Register it on the group: `group.onEvent(RadioGroup.SELECTED, ...)`. |
+
 ## ToggleSwitch
 
 An on and off switch with a sliding knob, for settings that take effect at once.
 
 ```java
-ToggleSwitch pvp = factory.toggleSwitch("PvP").setOn(settings.pvp()).onToggled(settings::setPvp);
+ToggleSwitch pvp = factory.toggleSwitch("PvP").setOn(settings.pvp())
+        .onEvent(ToggleSwitch.TOGGLED, event -> settings.setPvp(event.value()));
 ```
 
 A click, Enter or Space flips it. `setOn` works while disabled; `toggle()` does not. The track is the caption's line height plus 4 tall and twice that wide, the knob a square 2 units in from its edges, and the caption 4 units to its right.
@@ -444,13 +497,18 @@ A click, Enter or Space flips it. `setOn` works while disabled; `toggle()` does 
 | `toggle.focus` | no | A one-unit ring inside the track while focused |
 | `toggle.text`, `toggle.text.disabled` | no | The caption |
 
+| Event | Kind | Fires |
+|---|---|---|
+| `ToggleSwitch.TOGGLE` | Pre | When the user flips it, with the state about to be taken |
+| `ToggleSwitch.TOGGLED` | Post | After every change, including `setOn` and `toggle()` |
+
 ## Spinner
 
 A number in a field with step buttons, such as a quantity.
 
 ```java
 Spinner amount = factory.spinner().setRange(1, 64).setValue(1)
-        .onValueChanged(value -> this.amount = (int) value);
+        .onEvent(Spinner.CHANGED, event -> this.amount = event.value().intValue());
 Spinner price = factory.spinner().setRange(0, 10_000).setDecimals(2).setStep(0.25);
 ```
 
@@ -465,13 +523,18 @@ The field is a [`TextBox`](#textbox) that accepts only digits, one point when de
 
 The field reads the `textbox.*` keys. The buttons read `spinner.button`, `spinner.button.hovered` and `spinner.button.disabled`, which fall back to `button.normal`, `button.hovered` and `button.disabled`, and draw their arrows in the `button.text` color.
 
+| Event | Kind | Fires |
+|---|---|---|
+| `Spinner.CHANGE` | Pre | When the step buttons, the wheel, the keys or typed text (taken on Enter or focus loss) would change the value, already clamped and rounded |
+| `Spinner.CHANGED` | Post | After every change, including `setValue`, `increment` and `decrement` |
+
 ## TextArea
 
 Text over several lines, such as a note or a description.
 
 ```java
 TextArea notes = factory.textArea().setText(item.notes()).setMaxLength(500)
-        .onTextChanged(item::setNotes);
+        .onEvent(TextArea.EDITED, event -> item.setNotes(event.value()));
 ```
 
 It edits like a [`TextBox`](#textbox), with a filter, a length limit, read-only mode and the same clipboard and word shortcuts. The differences:
@@ -490,6 +553,11 @@ It edits like a [`TextBox`](#textbox), with a filter, a length limit, read-only 
 
 The area asks for 160 units of width. Text taller than the view scrolls with the wheel (three lines a notch) and a scroll bar, and follows the caret. It reads the `textbox.*` keys, so it matches the text boxes around it, and the `scroll.*` keys for its bar.
 
+| Event | Kind | Fires |
+|---|---|---|
+| `TextArea.EDIT` | Pre | When an edit of the user's, Enter included, would change the text, with the whole text it would produce. Cancel or set another text. |
+| `TextArea.EDITED` | Post | After every change of the text, including `setText` |
+
 ## TableView
 
 Rows of items under a header of columns, such as offers with a name, a seller and a price.
@@ -498,7 +566,7 @@ Rows of items under a header of columns, such as offers with a name, a seller an
 TableView<Offer> offers = factory.<Offer>tableView()
         .addTextColumn("Item", GridLength.weighted(1), Offer::item)
         .addTextColumn("Seller", GridLength.fixed(70), Offer::seller)
-        .addColumn("", GridLength.fixed(40), offer -> factory.button("Buy").onAction(() -> buy(offer)))
+        .addColumn("", GridLength.fixed(40), offer -> factory.button("Buy").onEvent(Button.PRESSED, event -> buy(offer)))
         .setColumnComparator(1, Comparator.comparing(Offer::seller))
         .setItems(market.offers());
 ```
@@ -515,6 +583,15 @@ A column with a comparator is sortable, and text columns sort by their text, ign
 | `table.grid` | no | One-unit lines between columns. Nothing if missing. |
 | `list.*`, `scroll.*` | | The body, as for `ListView` |
 
+| Event | Kind | Fires |
+|---|---|---|
+| `TableView.SELECT` | Pre | As for a list, with a row of `shownItems()` |
+| `TableView.SELECTED` | Post | After every change of the selected row, including a sort or `setItems` moving it |
+| `TableView.ACTIVATE` | Pre | When the user activates a row |
+| `TableView.ACTIVATED` | Post | After an activation nobody canceled |
+| `TableView.SORT` | Pre | When a click on a sortable title asks to sort, with a `TableView.Sort`. Cancel or set another sort. |
+| `TableView.SORTED` | Post | After the sort column or direction changed, including `sortBy` |
+
 ## TreeView
 
 Items in a hierarchy, such as store categories, each indented under its parent.
@@ -523,7 +600,7 @@ Items in a hierarchy, such as store categories, each indented under its parent.
 TreeView<Category> categories = factory.<Category>treeView(category -> factory.label(category.name()))
         .setChildren(Category::subcategories)
         .setRoots(store.categories())
-        .onSelectionChanged(selected -> selected.ifPresent(this::showCategory));
+        .onEvent(TreeView.SELECTED, event -> categories.selected().ifPresent(this::showCategory));
 ```
 
 The tree asks the children function for an item's children only when it shows them, so a large hierarchy costs what is expanded. Rows are indented 10 units per level (`setIndent`), then a 12-unit arrow column, then the cell. Clicking an arrow expands or collapses its item. Right expands the selected item or moves into it; Left collapses it or moves to its parent. The other keys and the scrolling work as in a list.
@@ -531,6 +608,15 @@ The tree asks the children function for an item's children only when it shows th
 `setExpanded(item, boolean)`, `expandAll()` and `collapseAll()` change what shows, and a selection inside a collapsed item moves up to it. `select(item)` searches the hierarchy, expands the item's ancestors and scrolls to it. Items are told apart by their key, the item itself unless `setKeyFunction` says otherwise, and expanded keys carry over when the roots change. After the children of shown items change, call `refresh()`.
 
 The rows read the `list.*` keys. The arrows read `tree.arrow` (paint, optional), which falls back to a light gray.
+
+| Event | Kind | Fires |
+|---|---|---|
+| `TreeView.SELECT` | Pre | As for a list, with a row of `shownItems()`. Right and Left moving to a child or parent count too. |
+| `TreeView.SELECTED` | Post | After every change of the selected row, including expanding or collapsing moving it |
+| `TreeView.ACTIVATE` | Pre | When the user activates a row |
+| `TreeView.ACTIVATED` | Post | After an activation nobody canceled |
+| `TreeView.EXPAND` | Pre | When a click on an arrow, or Right or Left, would expand or collapse an item, with a `TreeView.Expansion` |
+| `TreeView.EXPANDED` | Post | After each item expanded or collapsed, including `setExpanded`, `expandAll` and `collapseAll` |
 
 ## Menu and MenuBar
 
@@ -572,6 +658,14 @@ A menu bar opens a title's menu below it on a click and closes it on a second. W
 | `menubar.item.hovered` | no | A title under the pointer or with its menu open. Falls back to `menu.item.hovered`. |
 | `menubar.text` | no | Titles. Falls back to `menu.text`. |
 
+| Event | Kind | Fires |
+|---|---|---|
+| `Menu.CHOOSE` | Pre | When the user chooses an item, with its index. Cancel to keep the menu open and the item as it is. |
+| `Menu.CHOSEN` | Post | After the menus closed and the item's action ran |
+| `Menu.CLOSED` | Post | Each time the menu closes, for any reason |
+| `MenuBar.OPEN` | Pre | When a click, a hover while a menu is open, or Left and Right would open a menu, with its title index |
+| `MenuBar.OPENED` | Post | After one of the bar's menus opened from its title |
+
 ## Expander
 
 A titled header that shows or hides a component below it.
@@ -586,6 +680,11 @@ A click on the header, Enter or Space flips it; keys pressed inside the content 
 |---|---|---|
 | `expander.header`, `expander.header.hovered` | no | Behind the header. Nothing if missing. |
 | `expander.text`, `expander.text.disabled` | no | The title and arrow |
+
+| Event | Kind | Fires |
+|---|---|---|
+| `Expander.TOGGLE` | Pre | When the user expands or collapses it, with the state about to be taken |
+| `Expander.TOGGLED` | Post | After every change, including `setExpanded` and `toggle()` |
 
 ## SplitPane
 
@@ -602,6 +701,11 @@ SplitPane split = factory.splitPane(Orientation.HORIZONTAL)
 
 Keys: `split.divider` and `split.divider.hovered` (paints, optional). The divider falls back to `separator`.
 
+| Event | Kind | Fires |
+|---|---|---|
+| `SplitPane.MOVE` | Pre | For each drag step that would move the divider, with the position already kept within the minimum sizes |
+| `SplitPane.MOVED` | Post | After every move, including `setPosition` |
+
 ## SlotGrid
 
 Square slots that each hold an item or nothing, such as an inventory or a hotbar.
@@ -611,16 +715,23 @@ SlotGrid<Item> inventory = factory.<Item>slotGrid(item -> factory.image(item.ico
         .setColumns(9)
         .setTooltips(item -> Tooltip.text(item.name()))
         .setItems(player.inventory())
-        .onSlotClicked(click -> this.take(click.index(), click.button(), click.modifiers()));
+        .onEvent(SlotGrid.CLICKED, event -> this.take(event.value().index(), event.value().button(), event.value().modifiers()));
 ```
 
-There is one slot per item, null items being empty slots, in rows of `setColumns` (9 by default). Slots are 18 units square (`setSlotSize`) with no space between them (`setSpacing`), and a filled slot shows its cell inset by one unit. A click with any button tells the click listeners the slot, its item, the button and the modifiers. `setSelectable(true)` also selects the slot a left click lands on. `setItem(index, item)` rebuilds one slot.
+There is one slot per item, null items being empty slots, in rows of `setColumns` (9 by default). Slots are 18 units square (`setSlotSize`) with no space between them (`setSpacing`), and a filled slot shows its cell inset by one unit. A click with any button fires `SlotGrid.CLICK` and then `SlotGrid.CLICKED` with the slot, its item, the button and the modifiers. `setSelectable(true)` also selects the slot a left click lands on. `setItem(index, item)` rebuilds one slot.
 
 | Key | Required | Used for |
 |---|---|---|
 | `slot.normal` | yes | Each slot, behind its content |
 | `slot.hovered` | no | Over the slot under the pointer. Nothing if missing. |
 | `slot.selected` | no | Over the selected slot. Falls back to `slot.hovered`. |
+
+| Event | Kind | Fires |
+|---|---|---|
+| `SlotGrid.SELECT` | Pre | When a left click on a selectable grid would select another slot |
+| `SlotGrid.SELECTED` | Post | After every change of the selected slot, including `select` and `setItems` |
+| `SlotGrid.CLICK` | Pre | When the user clicks a slot with any button, with a `SlotGrid.Click` |
+| `SlotGrid.CLICKED` | Post | After a click nobody canceled |
 
 ## Controls that do not exist yet
 

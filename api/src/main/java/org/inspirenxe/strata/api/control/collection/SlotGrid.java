@@ -2,12 +2,14 @@ package org.inspirenxe.strata.api.control.collection;
 
 import org.inspirenxe.strata.api.component.Component;
 import org.inspirenxe.strata.api.component.Tooltip;
+import org.inspirenxe.strata.api.event.EventType;
+import org.inspirenxe.strata.api.event.ValueEvent;
+import org.inspirenxe.strata.api.event.ValueRequestEvent;
 import org.inspirenxe.strata.api.input.Modifiers;
 import org.inspirenxe.strata.api.input.MouseButton;
 
 import java.util.List;
 import java.util.Objects;
-import java.util.function.Consumer;
 import java.util.function.Function;
 
 /**
@@ -18,8 +20,9 @@ import java.util.function.Function;
  * the item, inset by one unit, and the tooltip its tooltip function gives. Slots are rebuilt when the items, the
  * cell factory or the tooltip function change.</p>
  *
- * <p>Clicking a slot with any button tells the click listeners, empty slots included, and consumes the click. A
- * selectable grid also selects the slot clicked with the left button. The grid is not focusable. The desired size is
+ * <p>Clicking a slot with any button fires {@link #CLICK} and then {@link #CLICKED}, empty slots included, and
+ * consumes the click. A selectable grid also selects the slot clicked with the left button. The grid is not
+ * focusable. The desired size is
  * the columns and rows of slots with the spacing between them.</p>
  *
  * <h2>Theme keys</h2>
@@ -36,7 +39,7 @@ import java.util.function.Function;
  *         .setColumns(9)
  *         .setTooltips(item -> Tooltip.text(item.name()))
  *         .setItems(player.inventory())
- *         .onSlotClicked(click -> this.take(click.index(), click.button()));
+ *         .onEvent(SlotGrid.CLICKED, e -> this.take(e.value().index(), e.value().button()));
  * }</pre>
  *
  * <p>Get one from {@link org.inspirenxe.strata.api.ComponentFactory#slotGrid}. Do not implement this
@@ -65,6 +68,32 @@ public interface SlotGrid<T> extends Component<SlotGrid<T>> {
      * The number of columns unless {@linkplain #setColumns set} otherwise.
      */
     int DEFAULT_COLUMNS = 9;
+    /**
+     * Asked before the user changes the selection: a left click on a slot other than the selected one, when the
+     * grid is {@linkplain #setSelectable selectable}. The grid has no keyboard selection. The value is the slot about
+     * to be selected. A handler may rewrite it to another slot or to -1, which clears the selection; any other index
+     * outside the slots is ignored. Fires only for the user's actions.
+     */
+    EventType<ValueRequestEvent<SlotGrid<?>, Integer>> SELECT = EventType.valueRequest("slot_grid.select");
+    /**
+     * Told after the selection changed. The value is the selected slot, or -1 when none is selected, and the previous
+     * value is the slot before. Fires for changes made from code too, including {@link #setItems} clearing a
+     * selection whose slot no longer exists.
+     */
+    EventType<ValueEvent<SlotGrid<?>, Integer>> SELECTED = EventType.valueReport("slot_grid.selected");
+    /**
+     * Asked when the user clicks a slot with any button, empty slots included. For a left click that changes the
+     * selection it fires after {@link #SELECT}, whether or not that request was canceled. The value is the slot, its
+     * item, the button and the modifiers. A handler may rewrite it; the grid reports the final click with
+     * {@link #CLICKED} as given, unless its index is not a slot's, which is ignored. Canceling it skips
+     * {@link #CLICKED}. Fires only for the user's actions.
+     */
+    EventType<ValueRequestEvent<SlotGrid<?>, Click<?>>> CLICK = EventType.valueRequest("slot_grid.click");
+    /**
+     * Told after the user clicked a slot. The value is the click as the {@link #CLICK} request ended, and the previous
+     * value is the same click. The grid has no method that clicks a slot from code.
+     */
+    EventType<ValueEvent<SlotGrid<?>, Click<?>>> CLICKED = EventType.valueReport("slot_grid.clicked");
 
     /**
      * Returns the items, one per slot.
@@ -74,7 +103,8 @@ public interface SlotGrid<T> extends Component<SlotGrid<T>> {
     List<T> items();
 
     /**
-     * Replaces the items. The selection is kept if its index still exists, and cleared otherwise.
+     * Replaces the items. The selection is kept if its index still exists, and cleared otherwise, which fires
+     * {@link #SELECTED}.
      *
      * @param items the items, one per slot, copied; null entries are empty slots
      * @return this grid
@@ -194,7 +224,7 @@ public interface SlotGrid<T> extends Component<SlotGrid<T>> {
     int selectedIndex();
 
     /**
-     * Selects a slot, whether or not the grid is selectable. Listeners run if the selection changed.
+     * Selects a slot, whether or not the grid is selectable. {@link #SELECTED} fires if the selection changed.
      *
      * @param index the slot index, or -1 to select none
      * @return this grid
@@ -208,22 +238,6 @@ public interface SlotGrid<T> extends Component<SlotGrid<T>> {
      * @return the slot index, or -1 when the pointer is over no slot
      */
     int hoveredIndex();
-
-    /**
-     * Adds a listener told about every click on a slot.
-     *
-     * @param listener receives the click
-     * @return this grid
-     */
-    SlotGrid<T> onSlotClicked(Consumer<Click<T>> listener);
-
-    /**
-     * Adds a listener told the selected slot after every change.
-     *
-     * @param listener receives the slot index, or -1 when none is selected
-     * @return this grid
-     */
-    SlotGrid<T> onSelectionChanged(Consumer<Integer> listener);
 
     /**
      * A click on a slot.

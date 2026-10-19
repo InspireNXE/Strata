@@ -2,9 +2,10 @@ package org.inspirenxe.strata.api.control.pane;
 
 import org.inspirenxe.strata.api.component.Component;
 import org.inspirenxe.strata.api.control.display.Separator;
+import org.inspirenxe.strata.api.event.EventType;
+import org.inspirenxe.strata.api.event.ValueEvent;
+import org.inspirenxe.strata.api.event.ValueRequestEvent;
 import org.inspirenxe.strata.api.layout.Orientation;
-
-import java.util.function.Consumer;
 
 /**
  * Two components side by side, or one above the other, with a divider between them that the user drags to share
@@ -14,8 +15,9 @@ import java.util.function.Consumer;
  * vertical divider; a {@link Orientation#VERTICAL} one puts the first on top. The divider is {@value #DIVIDER_SIZE}
  * units thick and shows a resize cursor. Its position is the fraction of the space, after the divider, that the
  * first component gets. Dragging moves it, kept so neither side is smaller than its {@linkplain #setMinSizes minimum}
- * when there is room for both. Each side is placed in its part by its own alignment, so give it
- * {@link org.inspirenxe.strata.api.layout.Anchor#FILL} to fill the part.</p>
+ * when there is room for both. Each move by a drag fires {@link #MOVE}, and every change fires {@link #MOVED}. Each
+ * side is placed in its part by its own alignment, so give it {@link org.inspirenxe.strata.api.layout.Anchor#FILL}
+ * to fill the part.</p>
  *
  * <p>The desired size is the two components' desired sizes and the divider along the split, and the larger of the
  * two across it. A missing side counts as empty.</p>
@@ -52,6 +54,20 @@ public interface SplitPane extends Component<SplitPane> {
      * The smallest each side may be dragged to by default, in UI units.
      */
     float DEFAULT_MIN_SIZE = 20f;
+
+    /**
+     * Fired each time a drag with the left button is about to move the divider to a new position, before it moves.
+     * The value is the fraction of the space the first side is about to get, already kept within the minimum sizes.
+     * Not fired while the divider would stay where it is. Canceling it keeps the divider in place. A handler may set
+     * another value, which the pane clamps to 0 to 1 and keeps within the minimum sizes when both fit; NaN and null
+     * are ignored. Fires only for the user's actions.
+     */
+    EventType<ValueRequestEvent<SplitPane, Float>> MOVE = EventType.valueRequest("split_pane.move");
+    /**
+     * Fired after the divider moved. The value is the new position and the previous value the old one, each the
+     * fraction of the space the first side gets. Fires for changes made from code too.
+     */
+    EventType<ValueEvent<SplitPane, Float>> MOVED = EventType.valueReport("split_pane.moved");
 
     /**
      * Returns the direction of the split.
@@ -100,8 +116,8 @@ public interface SplitPane extends Component<SplitPane> {
     float position();
 
     /**
-     * Moves the divider. Listeners run if the position changed. Unlike a drag, it is not limited by the minimum
-     * sizes.
+     * Moves the divider. Fires {@link #MOVED} if the position changed. Unlike a drag, it is not limited by the
+     * minimum sizes.
      *
      * @param position the fraction of the space the first component gets
      * @return this pane
@@ -118,12 +134,4 @@ public interface SplitPane extends Component<SplitPane> {
      * @throws IllegalArgumentException if either is negative or infinite
      */
     SplitPane setMinSizes(float first, float second);
-
-    /**
-     * Adds a listener told the new position after every change, by dragging or by code.
-     *
-     * @param listener receives the new position
-     * @return this pane
-     */
-    SplitPane onPositionChanged(Consumer<Float> listener);
 }

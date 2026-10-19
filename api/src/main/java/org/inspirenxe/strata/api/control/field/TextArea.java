@@ -1,11 +1,12 @@
 package org.inspirenxe.strata.api.control.field;
 
 import org.inspirenxe.strata.api.component.Component;
+import org.inspirenxe.strata.api.event.EventType;
+import org.inspirenxe.strata.api.event.ValueEvent;
+import org.inspirenxe.strata.api.event.ValueRequestEvent;
 import org.inspirenxe.strata.api.geom.Insets;
 
 import java.util.Objects;
-import java.util.function.Consumer;
-import java.util.function.UnaryOperator;
 
 /**
  * Text the user edits over several lines, such as a description or a note.
@@ -30,7 +31,7 @@ import java.util.function.UnaryOperator;
  *
  * <pre>{@code
  * TextArea notes = factory.textArea().setText(item.notes()).setMaxLength(500)
- *         .onTextChanged(item::setNotes);
+ *         .onEvent(TextArea.EDITED, event -> item.setNotes(event.value()));
  * }</pre>
  *
  * <p>Get one from {@link org.inspirenxe.strata.api.ComponentFactory#textArea()}. Do not implement this
@@ -47,6 +48,25 @@ public interface TextArea extends Component<TextArea> {
     int DEFAULT_VISIBLE_LINES = 4;
 
     /**
+     * Fired when the user is about to edit the text by typing, pressing Enter, deleting, cutting or pasting. The
+     * value is the whole text the edit would produce. While handlers run, the area still holds the text and
+     * selection from before the edit. Cancel the event to reject the edit and keep the text and selection as they
+     * were, or set another text to rewrite it; the value must not be set to null. The final text has its
+     * {@code \r\n} and {@code \r} turned into {@code \n} and is cut to {@link #maxLength()} before it applies, and
+     * the caret goes as many characters before its end as the edit left it, with nothing selected. An edit that would
+     * leave the text as it is, such as typing into a full area, fires nothing, and a read-only area fires nothing.
+     * Fires only for the user's actions: {@link #setText} and {@link #setMaxLength} fire none.
+     */
+    EventType<ValueRequestEvent<TextArea, String>> EDIT = EventType.valueRequest("text_area.edit");
+    /**
+     * Fired after the text changed: by an edit of the user's, by {@link #setText}, or by {@link #setMaxLength}
+     * cutting it. The value is the new text and {@code previous()} the text before, both with lines separated by
+     * {@code \n}; neither is null. An edit whose final text equals the old one fires nothing. Fires for changes made
+     * from code too.
+     */
+    EventType<ValueEvent<TextArea, String>> EDITED = EventType.valueReport("text_area.edited");
+
+    /**
      * Returns the text.
      *
      * @return the text, with lines separated by {@code \n}
@@ -54,8 +74,8 @@ public interface TextArea extends Component<TextArea> {
     String text();
 
     /**
-     * Replaces the text, cut to the length limit, puts the caret at its start and scrolls to the top. Listeners run
-     * if the text changed; the filter does not.
+     * Replaces the text, cut to the length limit, puts the caret at its start and scrolls to the top.
+     * {@link #EDITED} fires if the text changed; {@link #EDIT} does not.
      *
      * @param text the new text; {@code \r\n} and {@code \r} become {@code \n}
      * @return this text area
@@ -70,7 +90,7 @@ public interface TextArea extends Component<TextArea> {
     int maxLength();
 
     /**
-     * Sets the length limit, cutting the text if it is longer. Listeners run if the text was cut.
+     * Sets the length limit, cutting the text if it is longer. {@link #EDITED} fires if the text was cut.
      *
      * @param maxLength the most code points the text may hold
      * @return this text area
@@ -153,24 +173,6 @@ public interface TextArea extends Component<TextArea> {
      * @return this text area
      */
     TextArea selectAll();
-
-    /**
-     * Adds a listener told the new text after every change, by input or by code. Listeners run in the order they were
-     * added.
-     *
-     * @param listener receives the new text
-     * @return this text area
-     */
-    TextArea onTextChanged(Consumer<String> listener);
-
-    /**
-     * Sets a filter run on the whole text after each user edit, before listeners. It returns the text to keep, which
-     * may differ from what it was given, or null to undo the edit.
-     *
-     * @param filter the filter, or null for none
-     * @return this text area
-     */
-    TextArea setFilter(UnaryOperator<String> filter);
 
     /**
      * Returns whether the text is read-only.

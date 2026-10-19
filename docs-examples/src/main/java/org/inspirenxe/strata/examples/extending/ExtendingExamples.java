@@ -3,18 +3,14 @@ package org.inspirenxe.strata.examples.extending;
 import org.inspirenxe.strata.api.ComponentFactory;
 import org.inspirenxe.strata.api.component.Component;
 import org.inspirenxe.strata.api.control.button.Button;
-import org.inspirenxe.strata.api.control.button.ButtonBehavior;
 import org.inspirenxe.strata.api.control.display.Label;
-import org.inspirenxe.strata.api.control.display.LabelBehavior;
+import org.inspirenxe.strata.api.control.field.Slider;
 import org.inspirenxe.strata.api.control.field.TextBox;
-import org.inspirenxe.strata.api.control.field.TextBoxBehavior;
-import org.inspirenxe.strata.api.event.CharEvent;
-import org.inspirenxe.strata.api.extension.MeasureContext;
-import org.inspirenxe.strata.api.extension.MeasureNext;
-import org.inspirenxe.strata.api.extension.Next;
-import org.inspirenxe.strata.api.extension.Painter;
+import org.inspirenxe.strata.api.control.window.MessageBox;
+import org.inspirenxe.strata.api.control.window.Window;
+import org.inspirenxe.strata.api.event.EventHandler;
+import org.inspirenxe.strata.api.event.ValueRequestEvent;
 import org.inspirenxe.strata.api.geom.Rect;
-import org.inspirenxe.strata.api.geom.Size;
 import org.inspirenxe.strata.api.layout.Anchor;
 import org.inspirenxe.strata.api.layout.HorizontalAlignment;
 import org.inspirenxe.strata.api.layout.StackPanel;
@@ -36,52 +32,81 @@ public final class ExtendingExamples {
         // --8<-- [start:paint]
         // The normal button, plus a dot in the corner while there is something new
         final boolean[] unread = {true};
-        final Button inbox = factory.button("Inbox", new ButtonBehavior() {
-            @Override
-            public void paint(final Button button, final Painter painter, final Rect bounds, final Next next) {
-                next.proceed();
-                if (unread[0]) {
-                    painter.fill(new Rect(bounds.right() - 6f, bounds.y() + 2f, 4f, 4f), 0xFFE8A33D);
-                }
-            }
-        });
-        inbox.onAction(() -> unread[0] = false);
+        final Button inbox = factory.button("Inbox")
+                .onEvent(Component.PAINTED, event -> {
+                    if (unread[0]) {
+                        final Rect bounds = event.bounds();
+                        event.painter().fill(new Rect(bounds.right() - 6f, bounds.y() + 2f, 4f, 4f), 0xFFE8A33D);
+                    }
+                })
+                .onEvent(Button.PRESSED, event -> unread[0] = false);
         // --8<-- [end:paint]
         return inbox;
     }
 
     static TextBox digitsOnly(final ComponentFactory factory) {
         // --8<-- [start:filter]
-        final TextBox amount = factory.textBox(new TextBoxBehavior() {
-            @Override
-            public void onChar(final TextBox box, final CharEvent event, final Next next) {
-                if (Character.isDigit(event.codePoint())) {
-                    // Run the text box's own handling, which inserts the character
-                    next.proceed();
-                } else {
-                    // Skip it, and keep the character from reaching anything else
-                    event.consume();
-                }
+        // Typing, pasting and deleting all ask first, with the text the edit would produce
+        final TextBox amount = factory.textBox().onEvent(TextBox.EDIT, event -> {
+            if (!event.value().chars().allMatch(Character::isDigit)) {
+                event.cancel();
             }
         });
         // --8<-- [end:filter]
         return amount;
     }
 
+    static Slider cappedVolume(final ComponentFactory factory) {
+        // --8<-- [start:rewrite]
+        // The user cannot drag past the cap, but code can still set any value
+        final double[] cap = {0.8};
+        final Slider volume = factory.slider()
+                .onEvent(Slider.CHANGE, event -> event.setValue(Math.min(event.value(), cap[0])));
+        // --8<-- [end:rewrite]
+        return volume;
+    }
+
+    static Window editor(final ComponentFactory factory, final boolean[] unsaved) {
+        // --8<-- [start:veto]
+        // Ask before closing a window with unsaved changes
+        final Window window = factory.window("Notes");
+        window.onEvent(Window.CLOSE, event -> {
+            if (!unsaved[0]) {
+                return;
+            }
+            event.cancel();
+            factory.overlays().dialog(factory.messageBox("Notes", "Discard your changes?", MessageBox.Buttons.YES_NO)
+                    .onEvent(MessageBox.ANSWERED, answer -> {
+                        if (answer.value() == MessageBox.Result.YES) {
+                            window.close();
+                        }
+                    }));
+        });
+        return window;
+        // --8<-- [end:veto]
+    }
+
     static Label minimumWidth(final ComponentFactory factory) {
         // --8<-- [start:measure]
         // A label that is never narrower than 80 units, whatever its text
-        final Label score = factory.label("0", new LabelBehavior() {
-            @Override
-            public Size measure(final Label label, final MeasureContext context, final float availableWidth,
-                                final float availableHeight, final MeasureNext next) {
-                final Size natural = next.proceed();
-                return new Size(Math.max(80f, natural.width()), natural.height());
-            }
-        });
+        final Label score = factory.label("0")
+                .onEvent(Component.MEASURED, event -> event.setWidth(Math.max(80f, event.width())));
         // --8<-- [end:measure]
         return score;
     }
+
+    // --8<-- [start:reuse]
+    /** Lets through only text made of digits. Shared by every amount field. */
+    static final EventHandler<ValueRequestEvent<TextBox, String>> DIGITS_ONLY = event -> {
+        if (!event.value().chars().allMatch(Character::isDigit)) {
+            event.cancel();
+        }
+    };
+
+    static TextBox amountField(final ComponentFactory factory) {
+        return factory.textBox().setMaxLength(6).onEvent(TextBox.EDIT, DIGITS_ONLY);
+    }
+    // --8<-- [end:reuse]
 
     // --8<-- [start:compose]
     /**
@@ -120,7 +145,7 @@ public final class ExtendingExamples {
             final ToggleSwitch music = new ToggleSwitchImpl(factory, "Music").setOn(true);
             final ToggleSwitch sounds = new ToggleSwitchImpl(factory, "Sound effects");
             final Label summary = factory.label("Music on");
-            music.onChange(on -> summary.setText(on ? "Music on" : "Music off"));
+            music.onEvent(ToggleSwitch.TOGGLED, event -> summary.setText(event.value() ? "Music on" : "Music off"));
 
             final WrapPanel tags = new WrapPanel(factory, 4);
             for (final String tag : new String[] {"survival", "creative", "hardcore", "peaceful", "adventure"}) {

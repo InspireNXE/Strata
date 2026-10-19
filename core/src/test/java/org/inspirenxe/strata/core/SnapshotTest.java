@@ -6,7 +6,6 @@ import org.inspirenxe.strata.api.control.button.Button;
 import org.inspirenxe.strata.api.control.field.TextBox;
 import org.inspirenxe.strata.api.event.Event;
 import org.inspirenxe.strata.api.event.EventTypes;
-import org.inspirenxe.strata.api.event.Phase;
 import org.inspirenxe.strata.api.event.PointerButtonEvent;
 import org.inspirenxe.strata.api.event.Subscription;
 import org.inspirenxe.strata.api.extension.CustomComponent;
@@ -32,20 +31,34 @@ class SnapshotTest {
     private final ComponentFactory ui = this.test.factory();
 
     @Test
-    void eventsTakeNoSnapshotsWithoutAHandlerThatAsks() {
+    void anyHandlerOnThePathTakesSnapshots() {
         final TextBox box = this.ui.textBox().setWidth(100);
         this.test.show(this.ui.absolutePanel().add(box));
         final List<Optional<ComponentSnapshot>> seen = new ArrayList<>();
-        final List<Event> events = new ArrayList<>();
-        box.on(EventTypes.CHAR, event -> {
-            seen.add(event.snapshotOf(box));
-            events.add(event);
-        });
+        box.onEvent(EventTypes.CHAR, event -> seen.add(event.snapshotOf(box)));
         box.requestFocus();
 
         this.test.host().charTyped('a', Modifiers.NONE);
 
-        assertEquals(List.of(Optional.empty()), seen);
+        assertEquals(1, seen.size());
+        assertTrue(seen.getFirst().isPresent());
+    }
+
+    @Test
+    void reportsTakeNoSnapshotsAndCarryThePreviousValue() {
+        final TextBox box = this.ui.textBox().setWidth(100).setText("ab");
+        this.test.show(this.ui.absolutePanel().add(box));
+        final List<Event> events = new ArrayList<>();
+        final List<String> previous = new ArrayList<>();
+        box.onEvent(TextBox.EDITED, event -> {
+            events.add(event);
+            previous.add(event.previous());
+        });
+        box.requestFocus();
+
+        this.test.host().charTyped('c', Modifiers.NONE);
+
+        assertEquals(List.of("ab"), previous);
         assertThrows(IllegalStateException.class, events.getFirst()::snapshot);
     }
 
@@ -56,15 +69,16 @@ class SnapshotTest {
         box.requestFocus();
         final List<TextBox.State> before = new ArrayList<>();
         final List<String> live = new ArrayList<>();
-        box.onWithSnapshot(EventTypes.CHAR, Phase.AFTER, event -> {
+        box.onEvent(TextBox.EDIT, event -> {
             before.add(event.snapshot().state(TextBox.State.class).orElseThrow());
-            live.add(box.text());
+            live.add(event.value());
         });
 
         this.test.host().charTyped('c', Modifiers.NONE);
 
         assertEquals(List.of(new TextBox.State("ab", 2, 2, box.maxLength(), false)), before);
         assertEquals(List.of("abc"), live);
+        assertEquals("abc", box.text());
     }
 
     @Test
@@ -75,12 +89,12 @@ class SnapshotTest {
         this.test.show(outer);
 
         // A handler on the target runs first and changes both components
-        button.on(EventTypes.POINTER_PRESS, event -> {
+        button.onEvent(EventTypes.POINTER_PRESS, event -> {
             button.setId("button-changed");
             outer.setId("outer-changed");
         });
         final List<String> seen = new ArrayList<>();
-        outer.onWithSnapshot(EventTypes.POINTER_PRESS, event -> {
+        outer.onEvent(EventTypes.POINTER_PRESS, event -> {
             seen.add(event.snapshot().id());
             seen.add(event.currentSnapshot().id());
             seen.add(String.valueOf(event.snapshot().pressed()));
@@ -99,7 +113,7 @@ class SnapshotTest {
         final StackPanel panel = this.ui.stackPanel().setOrientation(Orientation.HORIZONTAL).setSpacing(3).add(button);
         this.test.show(this.ui.absolutePanel().add(panel));
         final List<Object> states = new ArrayList<>();
-        panel.onWithSnapshot(EventTypes.POINTER_PRESS, event -> states.add(event.currentSnapshot().state()));
+        panel.onEvent(EventTypes.POINTER_PRESS, event -> states.add(event.currentSnapshot().state()));
 
         this.test.click(5, 5);
 
@@ -107,17 +121,17 @@ class SnapshotTest {
     }
 
     @Test
-    void directEventsDoNotSnapshotForAncestors() {
+    void directEventsDoNotReachOrSnapshotAncestors() {
         final TextBox box = this.ui.textBox().setWidth(100);
         final AbsolutePanel panel = this.ui.absolutePanel().add(box);
         this.test.show(panel);
-        final List<Boolean> seen = new ArrayList<>();
-        panel.onWithSnapshot(EventTypes.FOCUS_GAINED, event -> seen.add(true));
-        box.on(EventTypes.FOCUS_GAINED, event -> seen.add(event.snapshotOf(box).isPresent()));
+        final List<String> seen = new ArrayList<>();
+        panel.onEvent(EventTypes.FOCUS_GAINED, event -> seen.add("panel"));
+        box.onEvent(EventTypes.FOCUS_GAINED, event -> seen.add(String.valueOf(event.snapshotOf(panel).isPresent())));
 
         box.requestFocus();
 
-        assertEquals(List.of(false), seen, "focus does not bubble, so the panel's handler is off the path");
+        assertEquals(List.of("false"), seen, "focus does not bubble, so the panel is off the path");
     }
 
     @Test
@@ -125,10 +139,10 @@ class SnapshotTest {
         final Counter counter = new Counter(this.ui);
         this.test.show(this.ui.absolutePanel().add(counter));
         this.test.click(5, 5);
-        assertEquals(0, counter.snapshots, "no handler asked for snapshots");
+        assertEquals(0, counter.snapshots, "no handler, no snapshots");
 
         final List<Integer> before = new ArrayList<>();
-        final Subscription subscription = counter.onWithSnapshot(EventTypes.CLICK, Phase.AFTER,
+        final Subscription subscription = counter.subscribe(EventTypes.CLICK, 0,
                 event -> before.add(event.snapshot().state(Integer.class).orElseThrow()));
         this.test.click(5, 5);
         this.test.click(5, 5);
@@ -145,7 +159,7 @@ class SnapshotTest {
         final Button button = this.ui.button("Go");
         this.test.show(this.ui.absolutePanel().add(button));
         final List<ComponentSnapshot> kept = new ArrayList<>();
-        button.onWithSnapshot(EventTypes.CLICK, event -> kept.add(event.snapshot()));
+        button.onEvent(EventTypes.CLICK, event -> kept.add(event.snapshot()));
 
         this.test.click(5, 5);
         button.setText("Changed").setEnabled(false);

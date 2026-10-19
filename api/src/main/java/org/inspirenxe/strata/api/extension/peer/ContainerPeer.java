@@ -27,6 +27,14 @@ public interface ContainerPeer extends ComponentPeer {
     void add(Component<?> child);
 
     /**
+     * Adds a child that holds content the composite shows for its user. See
+     * {@code CustomComposite.addContent(Component)}.
+     *
+     * @param child the child to add
+     */
+    void addContent(Component<?> child);
+
+    /**
      * See {@link org.inspirenxe.strata.api.component.Container#remove(Component)}.
      *
      * @param child the child to remove

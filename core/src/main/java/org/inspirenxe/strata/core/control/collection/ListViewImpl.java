@@ -23,7 +23,6 @@ import org.inspirenxe.strata.api.theme.Paint;
 import org.inspirenxe.strata.api.theme.Theme;
 import org.inspirenxe.strata.core.layout.ScrollBar;
 
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -31,8 +30,8 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
-import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.function.IntConsumer;
 
 /**
  * The core {@link ListView}. Rows are built during arrange, once the viewport is known: rows that scrolled out are
@@ -49,8 +48,6 @@ public final class ListViewImpl<T> extends CustomComposite<ListView<T>> implemen
     private static final Set<String> REQUIRED = Set.of(STYLE_ROW_SELECTED, ScrollPanel.STYLE_THUMB);
     private static final float GUTTER = ScrollPanel.BAR_WIDTH + ScrollPanel.BAR_GAP;
 
-    private final List<Consumer<Optional<T>>> selectionListeners;
-    private final List<Consumer<T>> activateListeners;
     private final Map<Integer, Component<?>> rows;
     private final ScrollBar bar;
     private final Runnable drawRows;
@@ -90,6 +87,11 @@ public final class ListViewImpl<T> extends CustomComposite<ListView<T>> implemen
     // Set only while paint runs
     private Painter painter;
 
+    // Set by a control that owns this list and fires the list's events as its own
+    private IntConsumer selectRoute;
+    private IntConsumer activateRoute;
+    private SelectionReport selectedRoute;
+
     /**
      * Creates an empty list.
      *
@@ -99,8 +101,6 @@ public final class ListViewImpl<T> extends CustomComposite<ListView<T>> implemen
     @SuppressWarnings("this-escape")
     public ListViewImpl(final ComponentFactory ui, final Function<? super T, ? extends Component<?>> cellFactory) {
         super(ui);
-        this.selectionListeners = new ArrayList<>();
-        this.activateListeners = new ArrayList<>();
         this.rows = new HashMap<>();
         this.bar = new ScrollBar(true);
         this.drawRows = this::drawRows;
@@ -150,7 +150,7 @@ public final class ListViewImpl<T> extends CustomComposite<ListView<T>> implemen
         this.rowsStale = true;
         this.invalidateLayout();
         if (index != beforeIndex || !this.selected().equals(before)) {
-            this.fireSelection();
+            this.selectionChanged(beforeIndex);
         }
         return this;
     }
@@ -217,9 +217,10 @@ public final class ListViewImpl<T> extends CustomComposite<ListView<T>> implemen
         if (index != -1) {
             Objects.checkIndex(index, this.items.size());
         }
-        if (index != this.selectedIndex) {
+        final int previous = this.selectedIndex;
+        if (index != previous) {
             this.selectedIndex = index;
-            this.fireSelection();
+            this.selectionChanged(previous);
         }
         if (index >= 0) {
             this.scrollToIndex(index);
@@ -280,32 +281,82 @@ public final class ListViewImpl<T> extends CustomComposite<ListView<T>> implemen
         return this;
     }
 
-    @Override
-    public ListView<T> onSelectionChanged(final Consumer<Optional<T>> listener) {
-        this.selectionListeners.add(Objects.requireNonNull(listener, "listener"));
-        return this;
-    }
-
-    @Override
-    public ListView<T> onActivate(final Consumer<T> listener) {
-        this.activateListeners.add(Objects.requireNonNull(listener, "listener"));
-        return this;
-    }
-
-    private void fireSelection() {
-        final Optional<T> selected = this.selected();
-        for (final Consumer<Optional<T>> listener : List.copyOf(this.selectionListeners)) {
-            listener.accept(selected);
+    /**
+     * Reports a change of selection: to the owner if one {@linkplain #route routed} this list, or as
+     * {@link ListView#SELECTED}.
+     */
+    private void selectionChanged(final int previous) {
+        if (this.selectedRoute != null) {
+            this.selectedRoute.selected(this.selectedIndex, previous);
+        } else {
+            this.report(SELECTED, this.selectedIndex, previous);
         }
     }
 
-    private void activate(final int index) {
-        if (index < 0 || index >= this.items.size()) {
-            return;
+    /**
+     * Makes this list a private part of the control that owns it. The list then fires none of its own events: each
+     * selection and activation by the user goes to the owner, which applies a selection with {@link #applySelect},
+     * and every change of selection, from any source, is told to the owner instead of being reported.
+     *
+     * @param select takes a row the user is about to select, or -1
+     * @param activate takes a row the user activated
+     * @param selected told the new and previous index after every change of selection
+     */
+    void route(final IntConsumer select, final IntConsumer activate, final SelectionReport selected) {
+        this.selectRoute = Objects.requireNonNull(select, "select");
+        this.activateRoute = Objects.requireNonNull(activate, "activate");
+        this.selectedRoute = Objects.requireNonNull(selected, "selected");
+    }
+
+    /**
+     * Selects the row a request ended with, as {@link #select} does, or clears the selection for -1. A null or any
+     * other index outside the items is ignored.
+     */
+    void applySelect(final Integer index) {
+        if (index != null && index >= -1 && index < this.items.size()) {
+            this.select(index);
         }
-        final T item = this.items.get(index);
-        for (final Consumer<T> listener : List.copyOf(this.activateListeners)) {
-            listener.accept(item);
+    }
+
+    /**
+     * Reports the row a request ended with as activated. A null or an index outside the items is ignored.
+     */
+    private void applyActivate(final Integer index) {
+        if (index != null && index >= 0 && index < this.items.size()) {
+            this.report(ACTIVATED, index, index);
+        }
+    }
+
+    /**
+     * Runs a selection by the user through the owner's route, or asks with {@link ListView#SELECT}.
+     */
+    private void userSelect(final int index) {
+        if (this.selectRoute != null) {
+            this.selectRoute.accept(index);
+        } else {
+            this.request(SELECT, index, this::applySelect);
+        }
+    }
+
+    /**
+     * Runs an activation by the user through the owner's route, or asks with {@link ListView#ACTIVATE}.
+     */
+    private void userActivate(final int index) {
+        if (this.activateRoute != null) {
+            this.activateRoute.accept(index);
+        } else {
+            this.request(ACTIVATE, index, this::applyActivate);
+        }
+    }
+
+    /**
+     * Selects a row the keys moved to: through a request if the selection changes, or just into view if it does not.
+     */
+    private void keySelect(final int index) {
+        if (index == this.selectedIndex) {
+            this.scrollToIndex(index);
+        } else {
+            this.userSelect(index);
         }
     }
 
@@ -347,6 +398,20 @@ public final class ListViewImpl<T> extends CustomComposite<ListView<T>> implemen
             return -1;
         }
         return index;
+    }
+
+    /**
+     * Told the new and previous selected index of a routed list.
+     */
+    @FunctionalInterface
+    interface SelectionReport {
+        /**
+         * Told after the selection changed.
+         *
+         * @param index the selected index, or -1
+         * @param previous the index before, or -1
+         */
+        void selected(int index, int previous);
     }
 
     // ------------------------------------------------------------------
@@ -433,7 +498,7 @@ public final class ListViewImpl<T> extends CustomComposite<ListView<T>> implemen
             if (cell == null) {
                 cell = this.cellFactory.apply(this.items.get(i));
                 this.rows.put(i, cell);
-                this.addChild(cell);
+                this.addContent(cell);
                 context.measure(cell, this.rowWidth, this.rowHeight);
             }
             context.arrange(cell, new Rect(this.viewport.x(), this.viewport.y() + i * this.step() - offset,
@@ -527,12 +592,12 @@ public final class ListViewImpl<T> extends CustomComposite<ListView<T>> implemen
             return;
         }
         if (this.deselectable && index == this.selectedIndex && event.clicks() == 1) {
-            this.select(-1);
+            this.userSelect(-1);
         } else if (index != this.selectedIndex) {
-            this.select(index);
+            this.userSelect(index);
         }
         if (event.clicks() == 2 && !this.activateOnClick) {
-            this.activate(index);
+            this.userActivate(index);
         }
         event.consume();
     }
@@ -542,7 +607,7 @@ public final class ListViewImpl<T> extends CustomComposite<ListView<T>> implemen
         if (this.activateOnClick && event.button() == MouseButton.LEFT) {
             final int index = this.rowAt(event.y());
             if (index >= 0) {
-                this.activate(index);
+                this.userActivate(index);
                 event.consume();
             }
         }
@@ -591,10 +656,10 @@ public final class ListViewImpl<T> extends CustomComposite<ListView<T>> implemen
             default -> -2;
         };
         if (next >= 0) {
-            this.select(next);
+            this.keySelect(next);
             event.consume();
         } else if (event.key().isEnter() && event.action() == KeyAction.PRESS && current >= 0) {
-            this.activate(current);
+            this.userActivate(current);
             event.consume();
         }
     }

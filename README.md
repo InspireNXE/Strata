@@ -30,7 +30,7 @@ public final class SettingsScreen implements Screen {
     @Override
     public Component<?> build(final ComponentFactory factory) {
         final Label status = factory.label("Ready");
-        final Button save = factory.button("Save").onAction(() -> status.setText("Saved"));
+        final Button save = factory.button("Save").onEvent(Button.PRESSED, e -> status.setText("Saved"));
         final StackPanel column = factory.stackPanel().setSpacing(4).setPadding(8).add(status).add(save);
         return factory.anchorPanel().add(column.setAnchor(Anchor.CENTER)).setAnchor(Anchor.FILL);
     }
@@ -39,7 +39,7 @@ public final class SettingsScreen implements Screen {
 
 You can extend Strata in three ways, from lightest to heaviest:
 
-- Decorate a built-in with a behavior, as in `factory.button("Save", new ButtonBehavior() { ... })`. Each hook gets a `next` handle that runs the built-in behavior, much like calling `super`.
+- Change a built-in through its events, with `onEvent(type, handler)` and an optional priority. Pre events (`TextBox.EDIT`, `Window.CLOSE`) can be canceled or rewritten, Post events (`TextBox.EDITED`) report every change, and drawing and sizing are events too (`Component.PAINTED`, `Component.MEASURED`).
 - Compose built-ins inside a container and expose the group through an interface of your own.
 - Write a new type by extending `CustomComponent<T>`, or `CustomContainer<T>` for a layout. The class can implement an interface of your own, so other code sees it as its own type.
 

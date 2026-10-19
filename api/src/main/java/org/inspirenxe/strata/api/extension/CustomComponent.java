@@ -7,6 +7,7 @@ import org.inspirenxe.strata.api.component.Container;
 import org.inspirenxe.strata.api.component.CursorKind;
 import org.inspirenxe.strata.api.component.Tooltip;
 import org.inspirenxe.strata.api.event.CharEvent;
+import org.inspirenxe.strata.api.event.ControlEvent;
 import org.inspirenxe.strata.api.event.DragEvent;
 import org.inspirenxe.strata.api.event.Event;
 import org.inspirenxe.strata.api.event.EventHandler;
@@ -14,11 +15,13 @@ import org.inspirenxe.strata.api.event.EventType;
 import org.inspirenxe.strata.api.event.EventTypes;
 import org.inspirenxe.strata.api.event.FocusEvent;
 import org.inspirenxe.strata.api.event.KeyEvent;
-import org.inspirenxe.strata.api.event.Phase;
 import org.inspirenxe.strata.api.event.PointerButtonEvent;
 import org.inspirenxe.strata.api.event.PointerEvent;
+import org.inspirenxe.strata.api.event.RequestEvent;
 import org.inspirenxe.strata.api.event.ScrollEvent;
 import org.inspirenxe.strata.api.event.Subscription;
+import org.inspirenxe.strata.api.event.ValueEvent;
+import org.inspirenxe.strata.api.event.ValueRequestEvent;
 import org.inspirenxe.strata.api.extension.peer.ComponentHooks;
 import org.inspirenxe.strata.api.extension.peer.ComponentPeer;
 import org.inspirenxe.strata.api.geom.Insets;
@@ -32,6 +35,7 @@ import org.inspirenxe.strata.api.theme.Theme;
 
 import java.util.Objects;
 import java.util.Set;
+import java.util.function.Consumer;
 
 /**
  * Base class for new kinds of component. Strata's own controls are built on it too.
@@ -103,25 +107,14 @@ public abstract class CustomComponent<T extends Component<T>> implements Compone
      * @param factory the factory of the host that will show this component
      */
     protected CustomComponent(final ComponentFactory factory) {
-        this(factory, null);
-    }
-
-    /**
-     * Creates the component and its peer, decorated by a behavior. Strata's controls use this to accept the
-     * behavior passed to their factory method; offer the same to users of your component if it suits.
-     *
-     * @param factory the factory of the host that will show this component
-     * @param behavior wraps this component's hooks; {@code null} for none
-     */
-    protected CustomComponent(final ComponentFactory factory, final ComponentBehavior<T> behavior) {
-        this(factory, behavior, false);
+        this(factory, false);
     }
 
     @SuppressWarnings("this-escape")
-    CustomComponent(final ComponentFactory factory, final ComponentBehavior<T> behavior, final boolean container) {
+    CustomComponent(final ComponentFactory factory, final boolean container) {
         Objects.requireNonNull(factory, "factory");
         final Hooks hooks = new Hooks();
-        this.peer = container ? factory.createContainerPeer(this, hooks, behavior) : factory.createPeer(this, hooks, behavior);
+        this.peer = container ? factory.createContainerPeer(this, hooks) : factory.createPeer(this, hooks);
     }
 
     /**
@@ -728,21 +721,84 @@ public abstract class CustomComponent<T extends Component<T>> implements Compone
     }
 
     @Override
-    public final <E extends Event> Subscription on(final EventType<E> type, final Phase phase,
-                                                   final EventHandler<? super E> handler, final Object owner) {
-        return this.peer.on(type, phase, handler, owner);
+    public final <E extends Event> T onEvent(final EventType<E> type, final int priority,
+                                             final EventHandler<? super E> handler) {
+        this.peer.subscribe(type, priority, handler);
+        return this.self();
     }
 
     @Override
-    public final <E extends Event> Subscription onWithSnapshot(final EventType<E> type, final Phase phase,
-                                                               final EventHandler<? super E> handler,
-                                                               final Object owner) {
-        return this.peer.onWithSnapshot(type, phase, handler, owner);
+    public final <E extends Event> Subscription subscribe(final EventType<E> type, final int priority,
+                                                          final EventHandler<? super E> handler) {
+        return this.peer.subscribe(type, priority, handler);
     }
 
-    @Override
-    public final void removeHandlers(final Object owner) {
-        this.peer.removeHandlers(owner);
+    /**
+     * Asks whether the user may do something this component is about to do, by firing one of its request events
+     * (a type made with {@link EventType#request}) through its path. Call it only for the user's actions, never for
+     * changes made from code. With no handler for the type on the path, it fires nothing, allocates nothing and
+     * returns true.
+     *
+     * @param type the request type
+     * @return true if the component should go ahead, false if a handler canceled the request
+     * @throws IllegalArgumentException if the type carries a value; use the other {@code request}
+     */
+    protected final boolean request(final EventType<? extends RequestEvent<?>> type) {
+        return this.peer.request(type);
+    }
+
+    /**
+     * Asks whether the user may make a change, and with which value, by firing one of this component's value
+     * requests (a type made with {@link EventType#valueRequest}) through its path, then applies the final value
+     * unless a handler canceled the request. Call it only for the user's actions. With no handler for the type on
+     * the path, it applies the value at once without firing anything.
+     *
+     * @param <V> the value type
+     * @param type the request type
+     * @param value the value the user's action produced
+     * @param apply makes the change with the final value; not called if the request was canceled
+     */
+    protected final <V> void request(final EventType<? extends ValueRequestEvent<?, V>> type, final V value,
+                                     final Consumer<? super V> apply) {
+        this.peer.request(type, value, apply);
+    }
+
+    /**
+     * Reports that something happened, by firing one of this component's report events (a type made with
+     * {@link EventType#report}) through its path. Call it after the fact, whether the user or code caused it. With
+     * no handler for the type on the path, it fires nothing.
+     *
+     * @param type the report type
+     * @throws IllegalArgumentException if the type carries a value; use the other {@code report}
+     */
+    protected final void report(final EventType<? extends ControlEvent<?>> type) {
+        this.peer.report(type);
+    }
+
+    /**
+     * Reports a change of value, by firing one of this component's value reports (a type made with
+     * {@link EventType#valueReport}) through its path. Call it after the change, whether the user or code made it.
+     * With no handler for the type on the path, it fires nothing.
+     *
+     * @param <V> the value type
+     * @param type the report type
+     * @param value the value after the change
+     * @param previous the value before the change
+     */
+    protected final <V> void report(final EventType<? extends ValueEvent<?, V>> type, final V value,
+                                    final V previous) {
+        this.peer.report(type, value, previous);
+    }
+
+    /**
+     * Returns whether a handler for a type is on this component's path: on the component itself or, for a
+     * bubbling type, on any ancestor. Use it to skip work that only an event needs.
+     *
+     * @param type the event type
+     * @return true if firing the type would reach a handler
+     */
+    protected final boolean isHandled(final EventType<?> type) {
+        return this.peer.isHandled(type);
     }
 
     /**

@@ -2,9 +2,9 @@
 
 A snapshot records a component's state at the moment an event fired, before any handler or default behavior ran. A handler can compare it with the live component to see what the event changed: the text before a key press, whether a box was checked before a click, where a component was before a drag.
 
-## Asking for snapshots
+## Getting a snapshot
 
-Register the handler with `onWithSnapshot` instead of `on`. It takes the same arguments:
+There is nothing to ask for. Whenever an event's path has a handler for its type, Strata takes the snapshots before the first handler runs, and any handler on the path can read them:
 
 ```java
 --8<-- "snapshots/SnapshotExamples.java:compare"
@@ -18,14 +18,16 @@ Inside the handler:
 | `event.currentSnapshot()` | The snapshot of the component whose handler is running |
 | `event.snapshotOf(component)` | Any component's snapshot, as an `Optional` |
 
+Snapshots belong to Pre events: input, and a control's requests. A Post event, such as `TextBox.EDITED`, fires after its change, so it carries the value from before the change as `previous()` instead of a snapshot.
+
 ## What is captured, and when
 
-Snapshots are lazy. Before an event is delivered, Strata walks its path: the target and, if the type bubbles, the target's ancestors. If no component on that path has an `onWithSnapshot` handler for this event type, nothing is captured and nothing is allocated. Otherwise Strata snapshots:
+Before an event is delivered, Strata walks its path: the target and, if the type bubbles, the target's ancestors. If no component on that path has a handler for this event type, nothing is captured and nothing is allocated. Otherwise Strata snapshots:
 
 - the target, always; and
-- every component on the path that has an `onWithSnapshot` handler for this type.
+- every component on the path that has a handler for this type.
 
-Nothing else is captured. All snapshots are taken before the first handler runs, so even a handler at the root sees the target as it was before the target's own handlers and default behavior changed it.
+Nothing else is captured. All snapshots are taken before the first handler runs, so even a handler at the root sees the target as it was before the target's own handlers and default behavior changed it. Paint and measure events never take snapshots.
 
 ### What "when the event fired" means
 
@@ -107,16 +109,15 @@ Strata calls it only when the component is captured, before any handler runs. Re
 
 | Situation | `snapshot()` | `currentSnapshot()` | `snapshotOf(c)` |
 |---|---|---|---|
-| No `onWithSnapshot` handler for this type anywhere on the path | throws `IllegalStateException` | throws | empty |
-| Some handler on the path asked, but not the current component's | works (the target is always captured) | throws, unless current is the target | empty for uncaptured components |
-| Your own handler asked | works | works | present for the target and every component that asked |
+| A Post, paint or measure event | throws `IllegalStateException` | throws | empty |
+| A Pre event (every handler on the path triggers capture) | works (the target is always captured) | works | present for the target and every component on the path with a handler for the type |
 
-So a handler registered with plain `on` can still read snapshots when another handler on the same path asked for them, but should not rely on it. Register every handler that reads snapshots with `onWithSnapshot`. A component that joins the path while the event is being delivered, for example because a handler moved the target into another container, has no snapshot.
+A component that joins the path while the event is being delivered, for example because a handler moved the target into another container, has no snapshot.
 
 ## Cost
 
-An event whose path has no `onWithSnapshot` handler costs nothing extra. An event that does have one allocates one snapshot per captured component, plus whatever `snapshotState()` builds. Register this way only the handlers that read snapshots, and prefer narrow event types: an `onWithSnapshot` handler for `POINTER_MOVE` on a root panel snapshots the hovered component on every mouse move.
+An event whose path has no handler for its type costs nothing extra, but then nothing listens anyway. An event that does have one allocates one snapshot per captured component, plus whatever `snapshotState()` builds. Prefer narrow event types: a handler for `POINTER_MOVE` on a root panel snapshots the hovered component on every mouse move.
 
-## Why not always snapshot?
+## Why snapshot whenever something listens?
 
-Taking a snapshot of every component an event reaches, on every event, would allocate on every pointer move. Lazy, shallow snapshots keep the common case free and still give a handler that asks everything it needs about its own component and the target. This is recorded in the [design](../DESIGN.md#8-decisions-and-open-questions).
+Asking for snapshots handler by handler added a second registration method, and forgetting it gave a handler an exception at the worst moment. A snapshot is a small record taken only on the paths that have a listener, never while painting, so taking it for every listener keeps the API to one method at a cost that only input with handlers pays. This is recorded in the [design](../DESIGN.md#8-decisions-and-open-questions).

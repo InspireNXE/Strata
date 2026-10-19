@@ -2,12 +2,14 @@ package org.inspirenxe.strata.api.control.collection;
 
 import org.inspirenxe.strata.api.component.Component;
 import org.inspirenxe.strata.api.control.display.Label;
+import org.inspirenxe.strata.api.event.EventType;
+import org.inspirenxe.strata.api.event.ValueEvent;
+import org.inspirenxe.strata.api.event.ValueRequestEvent;
 import org.inspirenxe.strata.api.layout.GridLength;
 
 import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
-import java.util.function.Consumer;
 import java.util.function.Function;
 
 /**
@@ -27,6 +29,10 @@ import java.util.function.Function;
  * flipping on each click, and the title shows an arrow. Text columns sort by their text, ignoring case, unless
  * given another comparator. Sorting changes only the order the rows are shown in: {@link #items()} keeps the order
  * they were set in, while {@link #shownItems()} and every row index follow the order on screen.</p>
+ *
+ * <p>The table fires its own events. The selection and activation events carry row indexes in the shown order, so
+ * read the item with {@code table.shownItems().get(e.value())}. The body list is private to the table: its
+ * {@link ListView} events never reach anything outside the table.</p>
  *
  * <h2>Theme keys</h2>
  * <p>The body reads the {@link ListView} keys. The header reads these.</p>
@@ -70,6 +76,46 @@ public interface TableView<T> extends Component<TableView<T>> {
      * Style key for the lines between columns (paint, optional).
      */
     String STYLE_GRID = "table.grid";
+    /**
+     * Asked before the user changes the selection: a press on a row, or the Up, Down, Page Up, Page Down, Home and
+     * End keys while focus is in the table. It fires only when the selection would change. The value is the row of
+     * {@link #shownItems()} about to be selected. The user never clears the selection, but a handler may rewrite the
+     * value to -1 to clear it, or to another row; the table then selects as {@link #select} does and ignores any
+     * other index outside the rows. Fires only for the user's actions.
+     */
+    EventType<ValueRequestEvent<TableView<?>, Integer>> SELECT = EventType.valueRequest("table_view.select");
+    /**
+     * Told after the selected row changed. The value is the selected row of {@link #shownItems()}, or -1 when
+     * nothing is selected, and the previous value is the row before. A sort or {@link #setItems} that moves the
+     * selected item to another row fires it too, and so does {@link #setItems} when the item kept selected is no
+     * longer equal to the one before, in which case the value can equal the previous value. Fires for changes made
+     * from code too.
+     */
+    EventType<ValueEvent<TableView<?>, Integer>> SELECTED = EventType.valueReport("table_view.selected");
+    /**
+     * Asked before the user activates a row: a double press on a row, or Enter while focus is in the table and a
+     * row is selected. The value is the row of {@link #shownItems()}. A handler may rewrite it to another row; an
+     * index outside the rows is ignored. Fires only for the user's actions.
+     */
+    EventType<ValueRequestEvent<TableView<?>, Integer>> ACTIVATE = EventType.valueRequest("table_view.activate");
+    /**
+     * Told after the user activated a row. The value is the row of {@link #shownItems()}, and the previous value is
+     * the same row. The table has no method that activates a row from code.
+     */
+    EventType<ValueEvent<TableView<?>, Integer>> ACTIVATED = EventType.valueReport("table_view.activated");
+    /**
+     * Asked before the user sorts the rows: a click on the title of a sortable column. The first click on a column
+     * sorts ascending and each further click flips the direction. The value is the sort about to apply. A handler
+     * may rewrite it to another sort; the table then sorts as {@link #sortBy} does, and ignores a sort whose column
+     * is neither -1 nor a sortable column. Fires only for the user's actions.
+     */
+    EventType<ValueRequestEvent<TableView<?>, Sort>> SORT = EventType.valueRequest("table_view.sort");
+    /**
+     * Told after the sort changed. The value is the new sort and the previous value the sort before. It fires only
+     * when the column or the direction changed, for {@link #sortBy} and for {@link #setColumnComparator} removing
+     * the comparator of the sort column. Fires for changes made from code too.
+     */
+    EventType<ValueEvent<TableView<?>, Sort>> SORTED = EventType.valueReport("table_view.sorted");
 
     /**
      * Adds a column whose cells are components. The rows are built again.
@@ -121,6 +167,7 @@ public interface TableView<T> extends Component<TableView<T>> {
 
     /**
      * Sorts the rows by a column, or shows them in their set order. The selection stays on the same item.
+     * {@link #SORTED} fires if the column or the direction changed.
      *
      * @param column the column index, or -1 for the set order
      * @param ascending true for ascending, false for descending; ignored for -1
@@ -231,19 +278,12 @@ public interface TableView<T> extends Component<TableView<T>> {
     TableView<T> selectItem(T item);
 
     /**
-     * Adds a listener told the selected item after every change.
+     * How the rows of a table are sorted.
      *
-     * @param listener receives the selected item, or empty when nothing is selected
-     * @return this table
+     * @param column the column the rows are sorted by, or -1 for the order the items were set in
+     * @param ascending true for ascending, false for descending; always true for column -1 when the table reports
+     *     it
      */
-    TableView<T> onSelectionChanged(Consumer<Optional<T>> listener);
-
-    /**
-     * Adds a listener told when a row is activated, by a double click or Enter, as {@link ListView#onActivate}
-     * describes.
-     *
-     * @param listener receives the activated item
-     * @return this table
-     */
-    TableView<T> onActivate(Consumer<T> listener);
+    record Sort(int column, boolean ascending) {
+    }
 }

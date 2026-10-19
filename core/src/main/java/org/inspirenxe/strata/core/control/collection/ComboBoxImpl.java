@@ -26,17 +26,17 @@ import org.inspirenxe.strata.api.theme.Paint;
 import org.inspirenxe.strata.api.theme.Theme;
 import org.inspirenxe.strata.core.text.RichText;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
-import java.util.function.Consumer;
 import java.util.function.Function;
 
 /**
  * The core {@link ComboBox}. The open list is a {@link ListView} in a popup, not focusable, whose selection is the
- * highlight; it is built when the list opens and dropped when it closes. Its rows are one line plus 4 units tall,
+ * highlight; it is built when the list opens and dropped when it closes. The box routes the list's input to itself,
+ * so the list fires no events: moving the highlight is silent, and a row picked from it becomes the box's own
+ * {@link ComboBox#SELECT} request. Its rows are one line plus 4 units tall,
  * with the option text 4 units in from the left.
  *
  * <p>The box draws its text {@link #PADDING} units in from the left, cut short with {@code ...} if it does not fit,
@@ -56,7 +56,6 @@ public final class ComboBoxImpl<T> extends CustomComponent<ComboBox<T>> implemen
     private static final Set<String> REQUIRED = Set.of(STYLE_NORMAL, STYLE_POPUP);
 
     private final ComponentFactory ui;
-    private final List<Consumer<T>> listeners;
     private List<T> options;
     private Function<? super T, String> labelFunction;
     private int selectedIndex;
@@ -91,7 +90,6 @@ public final class ComboBoxImpl<T> extends CustomComponent<ComboBox<T>> implemen
     public ComboBoxImpl(final ComponentFactory ui, final Function<? super T, String> labelFunction) {
         super(ui);
         this.ui = ui;
-        this.listeners = new ArrayList<>();
         this.options = List.of();
         this.labelFunction = Objects.requireNonNull(labelFunction, "labelFunction");
         this.selectedIndex = -1;
@@ -120,6 +118,7 @@ public final class ComboBoxImpl<T> extends CustomComponent<ComboBox<T>> implemen
     @Override
     public ComboBox<T> setOptions(final List<? extends T> options) {
         final Optional<T> before = this.selected();
+        final int beforeIndex = this.selectedIndex;
         this.options = List.copyOf(options);
         int index = this.options.isEmpty() ? -1 : 0;
         if (before.isPresent()) {
@@ -130,9 +129,10 @@ public final class ComboBoxImpl<T> extends CustomComponent<ComboBox<T>> implemen
         }
         this.close();
         this.selectedIndex = index;
+        this.shownFor = null;
         this.invalidateLayout();
-        if (!this.selected().equals(before) && index >= 0) {
-            this.fire();
+        if (index != beforeIndex || !this.selected().equals(before)) {
+            this.report(SELECTED, index, beforeIndex);
         }
         return this;
     }
@@ -157,9 +157,11 @@ public final class ComboBoxImpl<T> extends CustomComponent<ComboBox<T>> implemen
     @Override
     public ComboBox<T> select(final int index) {
         Objects.checkIndex(index, this.options.size());
-        if (index != this.selectedIndex) {
+        final int previous = this.selectedIndex;
+        if (index != previous) {
             this.selectedIndex = index;
-            this.fire();
+            this.shownFor = null;
+            this.report(SELECTED, index, previous);
         }
         return this;
     }
@@ -191,11 +193,12 @@ public final class ComboBoxImpl<T> extends CustomComponent<ComboBox<T>> implemen
 
     @Override
     public ComboBox<T> open() {
-        if (this.isOpen() || !this.isAttached() || !this.isEnabled() || this.options.isEmpty()) {
+        if (!this.canOpen()) {
             return this;
         }
         final float rowHeight = this.lineHeight + 4f;
         final ListViewImpl<T> options = new ListViewImpl<>(this.ui, this::cell);
+        options.route(options::applySelect, this::pick, (index, previous) -> { });
         options.setFocusable(false);
         options.setTabbable(false);
         options.setRowHeight(rowHeight);
@@ -207,17 +210,53 @@ public final class ComboBoxImpl<T> extends CustomComponent<ComboBox<T>> implemen
         if (this.selectedIndex >= 0) {
             options.select(this.selectedIndex);
         }
-        options.onActivate(option -> {
-            this.close();
-            this.selectOption(option);
-        });
         this.list = options;
         this.popup = this.ui.overlays().popup(options, this.bounds());
-        this.popup.onClosed(() -> {
+        this.popup.onEvent(Overlay.CLOSED, event -> {
             this.popup = null;
             this.list = null;
         });
+        this.report(OPENED);
         return this;
+    }
+
+    private boolean canOpen() {
+        return !this.isOpen() && this.isAttached() && this.isEnabled() && !this.options.isEmpty();
+    }
+
+    /**
+     * Closes the list after the user picked a row from it, then asks to select that option.
+     */
+    private void pick(final int index) {
+        this.close();
+        this.userSelect(index);
+    }
+
+    /**
+     * Opens the list for the user if {@link ComboBox#OPEN} allows it. Does nothing if the list cannot open.
+     */
+    private void userOpen() {
+        if (this.canOpen() && this.request(OPEN)) {
+            this.open();
+        }
+    }
+
+    /**
+     * Asks to select an option the user chose. Does nothing if the option is already selected.
+     */
+    private void userSelect(final int index) {
+        if (index != this.selectedIndex) {
+            this.request(SELECT, index, this::applySelect);
+        }
+    }
+
+    /**
+     * Selects the option a request ended with. A null or an index outside the options is ignored.
+     */
+    private void applySelect(final Integer index) {
+        if (index != null && index >= 0 && index < this.options.size()) {
+            this.select(index);
+        }
     }
 
     private Label cell(final T option) {
@@ -234,20 +273,6 @@ public final class ComboBoxImpl<T> extends CustomComponent<ComboBox<T>> implemen
             this.popup.close();
         }
         return this;
-    }
-
-    @Override
-    public ComboBox<T> onSelectionChanged(final Consumer<T> listener) {
-        this.listeners.add(Objects.requireNonNull(listener, "listener"));
-        return this;
-    }
-
-    private void fire() {
-        this.shownFor = null;
-        final T option = this.options.get(this.selectedIndex);
-        for (final Consumer<T> listener : List.copyOf(this.listeners)) {
-            listener.accept(option);
-        }
     }
 
     private String label(final int index) {
@@ -335,7 +360,7 @@ public final class ComboBoxImpl<T> extends CustomComponent<ComboBox<T>> implemen
             if (this.isOpen()) {
                 this.close();
             } else {
-                this.open();
+                this.userOpen();
             }
             event.consume();
         }
@@ -359,7 +384,7 @@ public final class ComboBoxImpl<T> extends CustomComponent<ComboBox<T>> implemen
                         final int chosen = current;
                         this.close();
                         if (chosen >= 0) {
-                            this.select(chosen);
+                            this.userSelect(chosen);
                         }
                     } else {
                         return;
@@ -370,7 +395,7 @@ public final class ComboBoxImpl<T> extends CustomComponent<ComboBox<T>> implemen
             return;
         }
         if (press && (key.isEnter() || key == Key.SPACE || key == Key.DOWN && event.modifiers().alt())) {
-            this.open();
+            this.userOpen();
             event.consume();
             return;
         }
@@ -383,7 +408,7 @@ public final class ComboBoxImpl<T> extends CustomComponent<ComboBox<T>> implemen
             default -> -1;
         };
         if (next >= 0) {
-            this.select(next);
+            this.userSelect(next);
             event.consume();
         }
     }

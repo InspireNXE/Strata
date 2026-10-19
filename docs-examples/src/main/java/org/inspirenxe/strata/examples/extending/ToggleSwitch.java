@@ -2,8 +2,9 @@ package org.inspirenxe.strata.examples.extending;
 
 // --8<-- [start:interface]
 import org.inspirenxe.strata.api.component.Component;
-
-import java.util.function.Consumer;
+import org.inspirenxe.strata.api.event.EventType;
+import org.inspirenxe.strata.api.event.ValueEvent;
+import org.inspirenxe.strata.api.event.ValueRequestEvent;
 
 /**
  * An on/off switch with a caption to its right: a track with a knob that sits left when off and right when on.
@@ -18,11 +19,16 @@ public interface ToggleSwitch extends Component<ToggleSwitch> {
     /** Style key for the caption (text style, optional). */
     String STYLE_TEXT = "examplemod.switch.text";
 
+    // --8<-- [start:events]
+    /** Asked when the user flips the switch, with the state it is about to take. */
+    EventType<ValueRequestEvent<ToggleSwitch, Boolean>> TOGGLE = EventType.valueRequest("examplemod.switch.toggle");
+    /** Told after the switch changed, whether the user or code changed it. */
+    EventType<ValueEvent<ToggleSwitch, Boolean>> TOGGLED = EventType.valueReport("examplemod.switch.toggled");
+    // --8<-- [end:events]
+
     boolean isOn();
 
     ToggleSwitch setOn(boolean on);
-
-    ToggleSwitch onChange(Consumer<Boolean> listener);
 
     /**
      * What a snapshot records about a switch.

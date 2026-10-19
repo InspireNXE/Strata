@@ -1,63 +1,97 @@
 # Events
 
-Input reaches components as events. This page covers registering handlers, the order things run in, cancellation and bubbling, and how clicks, drags, hover, scrolling, keys and focus are turned into events. For comparing state before and after an event, see [Event snapshots](snapshots.md).
+Everything a component does reaches your code as an event: input such as clicks and keys, a control's changes such as an edit or a close, and even drawing and sizing. There is one way to listen to all of them, `onEvent`. This page covers registering handlers, the two kinds of event, the order things run in, cancellation and bubbling, and how input becomes events. For comparing state before and after an event, see [Event snapshots](snapshots.md).
 
 ## Registering a handler
 
 ```java
-component.on(EventTypes.CLICK, event -> { ... });                    // BEFORE phase
-component.on(EventTypes.CLICK, Phase.AFTER, event -> { ... });       // AFTER phase
-component.on(EventTypes.CLICK, Phase.BEFORE, event -> { ... }, owner); // tagged with an owner
+component.onEvent(EventTypes.CLICK, event -> { ... });                         // priority 0
+component.onEvent(EventTypes.CLICK, -100, event -> { ... });                   // runs before priority 0
+Subscription drag = component.subscribe(EventTypes.DRAG, 0, event -> { ... }); // removable later
 ```
 
-Event types are typed keys. `EventTypes.CLICK` is an `EventType<PointerButtonEvent>`, so the handler receives a `PointerButtonEvent` without a cast. Strata's types are the constants in `EventTypes`; always use those constants, because types are compared by identity.
+Event types are typed keys. `EventTypes.CLICK` is an `EventType<PointerButtonEvent>`, so the handler receives a `PointerButtonEvent` without a cast. Input types are the constants in `EventTypes`. Each control declares its own as constants on its interface, such as `Button.PRESS` and `TextBox.EDITED`, and every component has `Component.PAINT`, `Component.PAINTED` and `Component.MEASURED`. Always use the constants, because types are compared by identity.
 
-Handlers for the same type and phase on the same component run in the order they were registered. A handler may register or remove handlers while it runs; the change applies from the next event.
+`onEvent` returns the component, so registration chains with the setters:
 
-## What runs, in what order
+```java
+--8<-- "events/EventExamples.java:chain"
+```
 
-For every component an event reaches:
+### Priority
 
-1. The component's `BEFORE` handlers.
-2. The component's default behavior, such as a button pressing or a text box inserting a character, unless the event has been canceled.
-3. The component's `AFTER` handlers. They run even if the event was canceled.
+On one component, handlers for a type run in ascending priority, and handlers with the same priority run in the order they were registered. A handler registered without a priority has priority 0, and the highest number runs last. Use a negative number to see an event before other handlers, for example to veto first, and a positive one to see what everyone before you decided, for example the final value of a request. A handler may register or remove handlers while it runs; the change applies from the next event.
 
-A bubbling event then moves to the parent and repeats, up to the screen's root, unless something stopped it. A direct event stays at its target.
+## Pre and Post
+
+Events come in two kinds.
+
+| Kind | What it says | Can cancel | Fires for | Examples |
+|---|---|---|---|---|
+| Pre | "About to do this" | Yes, and requests with a value can be rewritten with `setValue` | Input, and the user's actions on a control | `KEY`, `CLICK`, `Button.PRESS`, `TextBox.EDIT`, `Window.CLOSE`, `Component.PAINT` |
+| Post | "This happened" | No | Every change, whether the user or code made it | `Button.PRESSED`, `TextBox.EDITED`, `Window.CLOSED`, `Component.PAINTED` |
+
+To stop or change something, handle its Pre event. To react to it, handle its Post event.
 
 ```java
 --8<-- "events/EventExamples.java:veto"
 ```
 
 ```java
---8<-- "events/EventExamples.java:after"
+--8<-- "events/EventExamples.java:rewrite"
 ```
 
-Use `BEFORE` to veto or replace what a component does, and `AFTER` to react to what it did.
+```java
+--8<-- "events/EventExamples.java:react"
+```
+
+Changes made from code, through setters such as `setText` and methods such as `select` or `close`, fire no Pre event: code does not need permission. They still fire Post events, so a label or a binding hears about every change.
+
+## What runs, in what order
+
+For an input event, at every component the event reaches:
+
+1. The component's handlers, in priority order.
+2. The component's default behavior, such as a button pressing or a text box inserting a character, unless the event has been canceled.
+
+A bubbling event then moves to the parent and repeats, up to the screen's root, unless something stopped it. A direct event stays at its target.
+
+A control's request is different. The control fires it through its whole path first, so any handler on the way can refuse it, and acts afterwards with the final value, unless the request was canceled. If it acts, it then fires the matching Post event.
+
+### Handling a whole form
+
+Control events bubble, so one handler on a panel hears the controls inside it:
+
+```java
+--8<-- "events/EventExamples.java:form"
+```
+
+The events of a control's private parts stop at that control. A table is built from an inner list, but a handler on your form never sees that list's `ListView.SELECTED`; it sees the table's own `TableView.SELECTED`.
 
 ## Canceling and stopping
 
-| Call | Effect |
-|---|---|
-| `cancel()` | Skips the default behavior of the current component and of every ancestor the event still reaches. Handlers keep running, and the event keeps bubbling. |
-| `stopPropagation()` | The event goes no further up. The current component's remaining handlers and its default behavior still run. |
-| `consume()` | Both: "handled here". |
+| Call | On | Effect |
+|---|---|---|
+| `cancel()` | Pre events | For input, skips the default behavior of the current component and of every ancestor the event still reaches. For a request, the control does not make the change. Handlers keep running, and the event keeps bubbling. |
+| `stopPropagation()` | All events | The event goes no further up. The current component's remaining handlers and its default behavior still run. |
+| `consume()` | Pre events | Both: "handled here". |
 
-`isCancelled()`, `isPropagationStopped()` and `isHandled()` (either one) report the state. Canceling from the default behavior or from an `AFTER` handler is too late for the current component, so it only affects ancestors.
+`isCancelled()`, `isPropagationStopped()` and `isHandled()` (either one) report the state. Pre events implement `Cancelable`; Post events have no `cancel()`, because what they report already happened.
 
-When an event finishes, the host reports it to the adapter as consumed if it was canceled or stopped, and the adapter keeps that input from the engine. A handler that acts on input should call `consume()`, so ancestors and the engine do not act on it too.
+When an input event finishes, the host reports it to the adapter as consumed if it was canceled or stopped, and the adapter keeps that input from the engine. A handler that acts on input should call `consume()`, so ancestors and the engine do not act on it too.
 
-!!! warning "Built-in controls consume what they act on"
-    A button consumes the clicks and keys that press it, and a text box consumes the keys and characters it edits with. Consuming stops propagation, so those events never reach the control's ancestors. A handler on a panel does not see clicks on the buttons inside it. Put the handler on the button, in `BEFORE` if it must run first.
+!!! warning "Built-in controls consume the input they act on"
+    A button consumes the clicks and keys that press it, and a text box consumes the keys and characters it edits with. Consuming stops propagation, so that input never reaches the control's ancestors, and a handler on a panel does not see clicks on the buttons inside it. To hear about the buttons, handle `Button.PRESSED` on the panel; control events still bubble.
 
 ## Target and current
 
-`target()` is the component the event was fired at. It is fixed for the whole delivery. `current()` is the component whose handlers or default behavior are running now. It starts equal to the target and moves to each ancestor as the event bubbles.
+`target()` is the component the event was fired at. It is fixed for the whole delivery. `current()` is the component whose handlers or default behavior are running now. It starts equal to the target and moves to each ancestor as the event bubbles. Control events also have `control()`, the control that fired them, typed as that control.
 
 `PointerEvent.localX()` and `localY()` are relative to the current component, so they change as the event bubbles. `x()` and `y()` are in host coordinates and do not change.
 
-### Handling events on a container
+### Handling input on a container
 
-One handler on a container can serve all of its children, because events from children bubble up to it. This works for children that do not consume the event, such as labels:
+One handler on a container can serve all of its children, because input from children bubbles up to it. This works for children that do not consume the event, such as labels:
 
 ```java
 --8<-- "events/EventExamples.java:delegate"
@@ -67,15 +101,17 @@ The `target() != palette` check skips clicks on the panel's own padding, where t
 
 ## Event objects are short-lived
 
-An event object is valid only while it is being delivered. Do not keep it to read later: Strata may reuse it, and `current()` changes as it bubbles. To keep the state a component had when the event fired, take a [snapshot](snapshots.md), which stays valid.
+An event object is valid only while it is being delivered. Do not keep it to read later: Strata reuses paint and measure events every frame, and `current()` changes as an event bubbles. To keep the state a component had when the event fired, take a [snapshot](snapshots.md), which stays valid.
 
 ## Removing handlers
+
+`onEvent` handlers stay as long as their component. For one that must go earlier, such as a handler that follows a drag, register it with `subscribe`, which returns a `Subscription`:
 
 ```java
 --8<-- "events/EventExamples.java:remove"
 ```
 
-A `Subscription` is `AutoCloseable`, so it also works in try-with-resources. Closing it twice does nothing. Owners are compared by identity; passing your screen object as the owner lets the screen remove everything it registered with one call per component.
+A `Subscription` is `AutoCloseable`, so it also works in try-with-resources. Closing it twice does nothing.
 
 Removing a component from its tree does not remove its handlers. That rarely matters, because a closed screen's tree is dropped along with them. It matters if you keep a component and reuse it.
 
@@ -165,9 +201,29 @@ A key handler on the root sees every key that nothing focused consumed, which ma
 
 `FOCUS_LOST` and `FOCUS_GAINED` are direct. When focus moves from one component to another, the old one gets `FOCUS_LOST` first, then the new one gets `FOCUS_GAINED`, and both fire after the focus has already changed. `other()` is the component on the other side of the move, or empty when focus came from or went to nothing.
 
-## Custom event types
+## Drawing and sizing
 
-`EventType.bubbling(name, eventClass)` and `EventType.direct(name, eventClass)` create new types, and `CustomComponent.onOtherEvent` is the hook for their default behavior. There is no public way to fire an event yet, though, so custom types are reserved for now. For component-specific notifications, use listeners as the controls do (`onAction`, `onCheckedChanged`, `onValueChanged`, `onTextChanged`), as the [switch example](extending.md#write-a-new-component) does with `onChange`.
+Drawing and sizing are events too, so you can change how any component looks without writing a new one.
+
+| Type | Kind | When |
+|---|---|---|
+| `Component.PAINT` | Pre | Before the component draws its background. Canceling it skips the component's own drawing; its children still draw. |
+| `Component.PAINTED` | Post | After the component and its children have drawn, so what a handler draws lands on top |
+| `Component.MEASURED` | Post | After the component measured its content. `setWidth` and `setHeight` change the size it asks for. |
+
+```java
+--8<-- "events/EventExamples.java:paint"
+```
+
+```java
+--8<-- "events/EventExamples.java:measure"
+```
+
+None of the three bubble, and none take snapshots. A component fires them only when it has a handler for them, and reuses one event object every frame, so a component you do not decorate pays nothing and one you do allocates nothing for the event. Keep paint handlers free of allocation where you can, as in a custom component's `paint`.
+
+## Your own events
+
+A control you write declares its events the way the built-ins do, as constants made with `EventType.request`, `EventType.valueRequest`, `EventType.report` and `EventType.valueReport`, and fires them with `CustomComponent`'s `request` and `report` methods. [Extending Strata](extending.md#events-for-your-own-control) shows a complete example.
 
 ## All event types
 
@@ -185,4 +241,4 @@ A key handler on the root sees every key that nothing focused consumed, which ma
 | `CHAR` | `CharEvent` | yes | The focused component only |
 | `FOCUS_GAINED`, `FOCUS_LOST` | `FocusEvent` | no | The component gaining or losing focus |
 
-The [event type reference](../reference/event-types.md) adds each type's default behavior in the built-in controls.
+The [event type reference](../reference/event-types.md) adds each type's default behavior in the built-in controls. Each control's own events are listed with the control in [Controls](controls.md).
