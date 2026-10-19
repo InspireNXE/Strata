@@ -1,15 +1,13 @@
 package org.inspirenxe.strata.api.control.attribute.text;
 
-import org.inspirenxe.strata.api.event.EventTarget;
-
 /**
- * A control with a title over its content, such as a window or an expander.
+ * A control or entry with a title over its content, such as a window, an expander or a table column.
  *
  * <p>Only Strata implements this interface.</p>
  *
  * @param <S> the control's own type, which the setter returns
  */
-public interface Titled<S extends Titled<S>> extends EventTarget<S> {
+public interface Titled<S extends Titled<S>> {
 
     /**
      * Returns the title.

@@ -1,7 +1,5 @@
 package org.inspirenxe.strata.api.control.attribute.item;
 
-import org.inspirenxe.strata.api.event.EventTarget;
-
 /**
  * A control that shows its entries as scrolling rows of one height, such as a list, a table or a tree.
  *
@@ -9,7 +7,7 @@ import org.inspirenxe.strata.api.event.EventTarget;
  *
  * @param <S> the control's own type, which the setters return
  */
-public interface RowView<S extends RowView<S>> extends EventTarget<S> {
+public interface RowView<S extends RowView<S>> {
     /**
      * The row height of a new control, in UI units.
      */

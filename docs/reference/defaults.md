@@ -57,6 +57,7 @@ Every number Strata picks for you.
 | | Cursor | `HAND` |
 | | Focus ring | one unit, inside the edge, if the theme has `button.focus` |
 | `Image` | Image size and desired size | 16 by 16 |
+| | Made with `image()` | draws nothing until given a sprite or a visual |
 | | Scaling | `STRETCH` |
 | | Tint | `0xFFFFFFFF` |
 | `CheckBox` | Box size | caption line height plus 8 (17 with a 9-unit line height) |
@@ -114,6 +115,7 @@ Every number Strata picks for you.
 | | Auto column width | title plus 8, and 11 more when sortable |
 | | Text cells | 4 in from the column's edges, cut short with `...` |
 | | Sort | the set order; text columns sortable, ignoring case |
+| `TableColumn` | Width, cells, sorting | weighted 1, `String.valueOf(item)` as text, not sortable |
 | `TreeView` | Indent | 10 a level |
 | | Arrow column | 12 |
 | | Children | none: every item is a leaf |

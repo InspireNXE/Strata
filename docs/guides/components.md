@@ -6,10 +6,18 @@ Everything on screen is a `Component`. This page covers what all components shar
 
 There are exactly two ways to get a component:
 
-- From the `ComponentFactory` a screen receives: `anchorPanel()`, `stackPanel()`, `stackPanel(Orientation)`, `gridPanel()`, `absolutePanel()`, `label(text)`, `button(text)` and `textBox()`. To change what a built-in does, handle its [events](events.md).
+- From the `ComponentFactory` a screen receives, such as `anchorPanel()`, `stackPanel()`, `label()`, `button()` and `textBox()`, and the rest of the [controls](controls.md). To change what a built-in does, handle its [events](events.md).
 - By subclassing `CustomComponent` or `CustomContainer`. See [Extending Strata](extending.md).
 
-Each factory call returns a new component with default settings, not attached to anything.
+Each factory call returns a new component with default settings, not attached to anything. Every factory method has a form that takes no arguments, and some have shorthands that take the setting most callers make at once:
+
+```java
+Button save = factory.button().setText("Save");   // no arguments, then setters
+Button same = factory.button("Save");             // the shorthand
+ListView<Offer> offers = factory.<Offer>listView(); // cells show String.valueOf(item) until setCellFactory
+```
+
+The defaults with no arguments are empty text and titles, cells and options shown as `String.valueOf(item)`, `HORIZONTAL` orientation, an image that draws nothing, and a message box with only an OK button. [Defaults](../reference/defaults.md) lists the rest.
 
 !!! danger "Do not implement the component interfaces"
     A class that implements `Component`, `Button` or any other component interface directly has no Strata implementation behind it. Adding it to a container, or returning it from `Screen.build`, throws `IllegalArgumentException`. Subclass `CustomComponent` instead.

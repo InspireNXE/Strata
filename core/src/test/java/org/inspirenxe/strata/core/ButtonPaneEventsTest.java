@@ -461,7 +461,7 @@ class ButtonPaneEventsTest {
             ButtonPaneEventsTest.this.test.click(150, 5);
             assertEquals(2, this.tabs.selectedIndex());
 
-            this.tabs.setTabEnabled(1, false);
+            this.tabs.tabs().get(1).setEnabled(false);
             rewrite[0] = 1;
             ButtonPaneEventsTest.this.test.click(50, 5);
             rewrite[0] = 7;

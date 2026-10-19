@@ -19,6 +19,7 @@ import org.inspirenxe.strata.api.control.collection.TableView;
 import org.inspirenxe.strata.api.control.display.ProgressBar;
 import org.inspirenxe.strata.api.control.menu.Menu;
 import org.inspirenxe.strata.api.control.menu.MenuBar;
+import org.inspirenxe.strata.api.control.pane.Tab;
 import org.inspirenxe.strata.api.control.pane.TabBar;
 import org.inspirenxe.strata.api.event.ValueEvent;
 import org.inspirenxe.strata.api.layout.AbsolutePanel;
@@ -193,14 +194,15 @@ class AttributesTest {
     }
 
     @Test
-    void aTabBarSelectsByText() {
+    void aTabBarSelectsItsTabs() {
         final TabBar tabs = this.ui.tabBar()
                 .addTab("Buy")
                 .addTab("Sell");
         tabs.onEvent(SingleSelection.SELECTED, e -> this.heard.add(change(e)));
-        tabs.selectItem("Sell");
-        assertEquals(Optional.of("Sell"), tabs.selected());
-        tabs.selectItem("Trade");
+        final Tab sell = tabs.tabs().get(1);
+        tabs.selectItem(sell);
+        assertEquals(Optional.of(sell), tabs.selected());
+        tabs.selectItem(AttributesTest.this.ui.tab("Trade"));
         assertEquals(-1, tabs.selectedIndex());
         assertEquals(List.of("0->1", "1->-1"), this.heard);
     }

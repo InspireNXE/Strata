@@ -1,0 +1,138 @@
+package org.inspirenxe.strata.core.control.collection;
+
+import org.inspirenxe.strata.api.ComponentFactory;
+import org.inspirenxe.strata.api.component.Component;
+import org.inspirenxe.strata.api.control.collection.TableColumn;
+import org.inspirenxe.strata.api.control.display.Label;
+import org.inspirenxe.strata.api.geom.Insets;
+import org.inspirenxe.strata.api.layout.Anchor;
+import org.inspirenxe.strata.api.layout.GridLength;
+import org.inspirenxe.strata.api.text.TextOverflow;
+
+import java.util.Comparator;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.function.Function;
+
+/**
+ * The core {@link TableColumn}: weighted 1, showing {@link String#valueOf(Object)} of each item as text, not
+ * sortable. A table that holds it is told of every change.
+ *
+ * @param <T> the type of the table's items
+ */
+public final class TableColumnImpl<T> implements TableColumn<T> {
+    private final ComponentFactory ui;
+    private String title;
+    private GridLength width;
+    private Function<? super T, ? extends Component<?>> cellFactory;
+    private Comparator<? super T> comparator;
+    private TableViewImpl<T> table;
+
+    /**
+     * Creates a column.
+     *
+     * @param ui the factory that makes text cells
+     * @param title the header title
+     */
+    public TableColumnImpl(final ComponentFactory ui, final String title) {
+        this.ui = Objects.requireNonNull(ui, "ui");
+        this.title = Objects.requireNonNull(title, "title");
+        this.width = GridLength.weighted(1f);
+        this.cellFactory = this.textCells(String::valueOf);
+    }
+
+    @Override
+    public String title() {
+        return this.title;
+    }
+
+    @Override
+    public TableColumn<T> setTitle(final String title) {
+        this.title = Objects.requireNonNull(title, "title");
+        this.layoutChanged();
+        return this;
+    }
+
+    @Override
+    public GridLength width() {
+        return this.width;
+    }
+
+    @Override
+    public TableColumn<T> setWidth(final GridLength width) {
+        this.width = Objects.requireNonNull(width, "width");
+        this.layoutChanged();
+        return this;
+    }
+
+    @Override
+    public TableColumn<T> setCellText(final Function<? super T, String> text) {
+        Objects.requireNonNull(text, "text");
+        this.setCellFactory(this.textCells(text));
+        return this.setComparator(Comparator.comparing(text, String.CASE_INSENSITIVE_ORDER));
+    }
+
+    private Function<T, Component<?>> textCells(final Function<? super T, String> text) {
+        return item -> {
+            final Label label = this.ui.label(text.apply(item));
+            label.setOverflow(TextOverflow.ELLIPSIS);
+            label.setMargin(Insets.of(TableViewImpl.CELL_PADDING, 0f));
+            label.setAnchor(Anchor.MIDDLE_LEFT);
+            return label;
+        };
+    }
+
+    @Override
+    public TableColumn<T> setCellFactory(final Function<? super T, ? extends Component<?>> cellFactory) {
+        this.cellFactory = Objects.requireNonNull(cellFactory, "cellFactory");
+        if (this.table != null) {
+            this.table.cellsChanged();
+        }
+        return this;
+    }
+
+    Function<? super T, ? extends Component<?>> cellFactory() {
+        return this.cellFactory;
+    }
+
+    @Override
+    public Optional<Comparator<? super T>> comparator() {
+        return Optional.ofNullable(this.comparator);
+    }
+
+    @Override
+    public TableColumn<T> setComparator(final Comparator<? super T> comparator) {
+        this.comparator = comparator;
+        if (this.table != null) {
+            this.table.comparatorChanged(this);
+        }
+        return this;
+    }
+
+    TableViewImpl<T> table() {
+        return this.table;
+    }
+
+    /**
+     * Gives the column to a table, or takes it back with null.
+     *
+     * @throws IllegalArgumentException if the column is given while a table already has it
+     */
+    void setTable(final TableViewImpl<T> table) {
+        if (table != null && this.table != null) {
+            throw new IllegalArgumentException(this + " is already in a table");
+        }
+        this.table = table;
+    }
+
+    private void layoutChanged() {
+        if (this.table != null) {
+            this.table.columnLaidOutChanged();
+        }
+    }
+
+    @Override
+    public String toString() {
+        return "TableColumn[" + this.title + "]";
+    }
+}

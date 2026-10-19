@@ -1,5 +1,6 @@
 package org.inspirenxe.strata.api.control.attribute.text;
 
+import org.inspirenxe.strata.api.event.EventTarget;
 import org.inspirenxe.strata.api.event.EventType;
 import org.inspirenxe.strata.api.event.ValueEvent;
 import org.inspirenxe.strata.api.event.ValueRequestEvent;
@@ -18,7 +19,7 @@ import org.inspirenxe.strata.api.geom.Insets;
  *
  * @param <S> the control's own type, which the setters return
  */
-public interface TextInput<S extends TextInput<S>> extends HasText<S> {
+public interface TextInput<S extends TextInput<S>> extends HasText<S>, EventTarget<S> {
     /**
      * Asked before the user edits the text by typing, deleting, cutting or pasting. The value is the whole text the
      * edit would produce. While handlers run, the control still holds the text and selection from before the edit.

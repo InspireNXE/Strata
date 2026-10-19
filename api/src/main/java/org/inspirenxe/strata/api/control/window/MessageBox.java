@@ -1,6 +1,7 @@
 package org.inspirenxe.strata.api.control.window;
 
 import org.inspirenxe.strata.api.component.Component;
+import org.inspirenxe.strata.api.control.attribute.text.Titled;
 import org.inspirenxe.strata.api.control.button.Button;
 import org.inspirenxe.strata.api.control.display.Label;
 import org.inspirenxe.strata.api.event.EventType;
@@ -35,7 +36,7 @@ import java.util.List;
  * <p>Get one from {@link org.inspirenxe.strata.api.ComponentFactory#messageBox}. Do not implement this
  * interface.</p>
  */
-public interface MessageBox extends Component<MessageBox> {
+public interface MessageBox extends Component<MessageBox>, Titled<MessageBox> {
     /**
      * The width the message wraps at, in UI units.
      */
@@ -59,11 +60,59 @@ public interface MessageBox extends Component<MessageBox> {
     EventType<ValueEvent<MessageBox, Result>> ANSWERED = EventType.valueReport("message_box.answered");
 
     /**
-     * Returns the window the box is built on, to change its title or size.
+     * Returns the window the box is built on, to change its size.
      *
      * @return the window
      */
     Window window();
+
+    /**
+     * Returns the window's title.
+     *
+     * @return the title, never null
+     */
+    @Override
+    String title();
+
+    /**
+     * Replaces the window's title.
+     *
+     * @param title the title, or an empty string for none
+     * @return this box
+     */
+    @Override
+    MessageBox setTitle(String title);
+
+    /**
+     * Returns the message.
+     *
+     * @return the message, never null
+     */
+    String message();
+
+    /**
+     * Replaces the message. It wraps at {@value #MESSAGE_WIDTH} units, and {@code \n} starts a new line.
+     *
+     * @param message the message
+     * @return this box
+     */
+    MessageBox setMessage(String message);
+
+    /**
+     * Returns which buttons the box has.
+     *
+     * @return the button set; {@link Buttons#OK} for a box made without one
+     */
+    Buttons buttons();
+
+    /**
+     * Replaces the buttons. Captions set with {@link #setButtonText} are kept for the results that still have a
+     * button, and closing the box answers the new set's {@link Buttons#dismissResult()}.
+     *
+     * @param buttons which buttons the box has
+     * @return this box
+     */
+    MessageBox setButtons(Buttons buttons);
 
     /**
      * Replaces a button's caption, such as to translate it. The default captions are {@code OK}, {@code Cancel},

@@ -3,6 +3,7 @@ package org.inspirenxe.strata.api.control.menu;
 import org.inspirenxe.strata.api.component.Component;
 import org.inspirenxe.strata.api.control.attribute.item.SingleSelection;
 
+import java.util.List;
 import java.util.Optional;
 
 /**
@@ -64,7 +65,43 @@ public interface MenuBar extends Component<MenuBar>, SingleSelection<Menu, MenuB
     String STYLE_TEXT = "menubar.text";
 
     /**
-     * Adds a title at the right end.
+     * Returns the titles, left to right.
+     *
+     * @return an unmodifiable copy of the titles
+     */
+    List<SubmenuItem> menus();
+
+    /**
+     * Adds a title at the right end. Its menu starts opening from this bar.
+     *
+     * @param entry the title and the menu it opens
+     * @return this bar
+     * @throws IllegalArgumentException if the entry is already in a menu or bar, or its menu already opens from
+     *     somewhere else
+     */
+    MenuBar addMenu(SubmenuItem entry);
+
+    /**
+     * Adds a title at an index, moving the titles from there to the right.
+     *
+     * @param index where the title goes, from 0 to the number of titles
+     * @param entry the title and the menu it opens
+     * @return this bar
+     * @throws IndexOutOfBoundsException if the index is outside 0 to the number of titles
+     * @throws IllegalArgumentException for the reasons {@link #addMenu(SubmenuItem)} gives
+     */
+    MenuBar addMenu(int index, SubmenuItem entry);
+
+    /**
+     * Removes a title, closing its menu if it is open. Does nothing if the title is not in this bar.
+     *
+     * @param entry the title
+     * @return this bar
+     */
+    MenuBar removeMenu(SubmenuItem entry);
+
+    /**
+     * Adds a title at the right end, as {@code addMenu(factory.submenuItem(title).setMenu(menu))} would.
      *
      * @param title the title
      * @param menu the menu it opens; it must not belong to another bar or be a submenu
@@ -72,22 +109,6 @@ public interface MenuBar extends Component<MenuBar>, SingleSelection<Menu, MenuB
      * @throws IllegalArgumentException if {@code menu} already belongs to a bar or is a submenu
      */
     MenuBar addMenu(String title, Menu menu);
-
-    /**
-     * Returns how many titles there are.
-     *
-     * @return the number of menus
-     */
-    int menuCount();
-
-    /**
-     * Returns the menu under a title.
-     *
-     * @param index the title index
-     * @return the menu
-     * @throws IndexOutOfBoundsException if there is no such title
-     */
-    Menu menu(int index);
 
     /**
      * Returns the index of the title whose menu is open.
@@ -108,7 +129,7 @@ public interface MenuBar extends Component<MenuBar>, SingleSelection<Menu, MenuB
     /**
      * Opens the menu under a title, closing the one open before, or closes the open menu for -1. Fires
      * {@link SingleSelection#SELECTED} if that changed which menu is open, and never {@link SingleSelection#SELECT}.
-     * A menu with no items, or a bar that is not attached, stays closed.
+     * A menu with no items, a disabled title, or a bar that is not attached, stays closed.
      *
      * @param index the title index, or -1
      * @return this bar

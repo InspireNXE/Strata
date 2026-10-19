@@ -5,8 +5,11 @@ import org.inspirenxe.strata.api.component.Component;
 import org.inspirenxe.strata.api.control.attribute.item.SingleSelection;
 import org.inspirenxe.strata.api.control.attribute.popup.Closable;
 import org.inspirenxe.strata.api.control.button.Button;
+import org.inspirenxe.strata.api.control.menu.CheckMenuItem;
 import org.inspirenxe.strata.api.control.menu.Menu;
 import org.inspirenxe.strata.api.control.menu.MenuBar;
+import org.inspirenxe.strata.api.control.menu.MenuEntry;
+import org.inspirenxe.strata.api.control.menu.MenuItem;
 import org.inspirenxe.strata.api.control.window.MessageBox;
 import org.inspirenxe.strata.api.control.window.Window;
 import org.inspirenxe.strata.api.event.Subscription;
@@ -22,7 +25,6 @@ import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -68,10 +70,18 @@ class MenuWindowEventsTest {
                     .addItem("Two", () -> outer.heard.add("two"))
                     .addCheckItem("Check", false, checked -> outer.heard.add("check " + checked))
                     .addSubmenu("More", this.more)
-                    .addItem("Off", () -> outer.heard.add("off"))
-                    .setItemEnabled(5, false);
+                    .addItem("Off", () -> outer.heard.add("off"));
+            ((MenuItem) this.menu.items().get(5)).setEnabled(false);
             this.menu.openAt(10, 10);
             outer.test.host().layout();
+        }
+
+        private int index(final MenuEntry entry) {
+            return this.menu.items().indexOf(entry);
+        }
+
+        private CheckMenuItem check() {
+            return (CheckMenuItem) this.menu.items().get(3);
         }
 
         private void clickTwo() {
@@ -82,9 +92,9 @@ class MenuWindowEventsTest {
         void acceptingAChoiceClosesRunsTheActionAndReports() {
             this.show();
             final List<String> heard = MenuWindowEventsTest.this.heard;
-            this.menu.onEvent(Menu.CHOOSE, e -> heard.add("choose " + e.value()))
+            this.menu.onEvent(Menu.CHOOSE, e -> heard.add("choose " + this.index(e.value())))
                     .onEvent(Closable.CLOSED, e -> heard.add("closed"))
-                    .onEvent(Menu.CHOSEN, e -> heard.add("chosen " + e.previous() + " " + e.value()));
+                    .onEvent(Menu.CHOSEN, e -> heard.add("chosen " + this.index(e.previous()) + " " + this.index(e.value())));
             this.clickTwo();
             assertEquals(List.of("choose 2", "closed", "two", "chosen 2 2"), heard);
             assertFalse(this.menu.isOpen());
@@ -94,13 +104,13 @@ class MenuWindowEventsTest {
         void acceptingAKeyFlipsACheckItem() {
             this.show();
             final List<Integer> chosen = new ArrayList<>();
-            this.menu.onEvent(Menu.CHOSEN, e -> chosen.add(e.value()));
+            this.menu.onEvent(Menu.CHOSEN, e -> chosen.add(this.index(e.value())));
             MenuWindowEventsTest.this.key(Key.UP);
             MenuWindowEventsTest.this.key(Key.UP);
             MenuWindowEventsTest.this.key(Key.SPACE);
             assertEquals(List.of("check true"), MenuWindowEventsTest.this.heard);
             assertEquals(List.of(3), chosen);
-            assertTrue(this.menu.isItemChecked(3));
+            assertTrue(this.check().isSelected());
             assertFalse(this.menu.isOpen());
         }
 
@@ -110,9 +120,9 @@ class MenuWindowEventsTest {
             final List<Integer> requested = new ArrayList<>();
             final List<Integer> chosen = new ArrayList<>();
             this.menu.onEvent(Menu.CHOOSE, e -> {
-                requested.add(e.value());
+                requested.add(this.index(e.value()));
                 e.cancel();
-            }).onEvent(Menu.CHOSEN, e -> chosen.add(e.value()));
+            }).onEvent(Menu.CHOSEN, e -> chosen.add(this.index(e.value())));
             MenuWindowEventsTest.this.key(Key.UP);
             MenuWindowEventsTest.this.key(Key.UP);
             assertTrue(MenuWindowEventsTest.this.key(Key.ENTER));
@@ -120,15 +130,16 @@ class MenuWindowEventsTest {
             assertEquals(List.of(3, 0), requested);
             assertEquals(List.of(), chosen);
             assertEquals(List.of(), MenuWindowEventsTest.this.heard);
-            assertFalse(this.menu.isItemChecked(3));
+            assertFalse(this.check().isSelected());
             assertTrue(this.menu.isOpen());
         }
 
         @Test
-        void aRewrittenIndexRunsThatItem() {
+        void aRewrittenEntryRunsThatItem() {
             this.show();
             final List<Integer> chosen = new ArrayList<>();
-            this.menu.onEvent(Menu.CHOOSE, e -> e.setValue(0)).onEvent(Menu.CHOSEN, e -> chosen.add(e.value()));
+            this.menu.onEvent(Menu.CHOOSE, e -> e.setValue(this.menu.items().getFirst()))
+                    .onEvent(Menu.CHOSEN, e -> chosen.add(this.index(e.value())));
             this.clickTwo();
             assertEquals(List.of("one"), MenuWindowEventsTest.this.heard);
             assertEquals(List.of(0), chosen);
@@ -136,14 +147,17 @@ class MenuWindowEventsTest {
         }
 
         @Test
-        void aRewrittenIndexThatCannotBeChosenIsIgnored() {
+        void aRewrittenEntryThatCannotBeChosenIsIgnored() {
             this.show();
-            final int[] rewrite = {0};
+            final MenuEntry[] rewrite = {null};
             final List<Integer> chosen = new ArrayList<>();
-            this.menu.onEvent(Menu.CHOOSE, e -> e.setValue(rewrite[0])).onEvent(Menu.CHOSEN, e -> chosen.add(e.value()));
-            // Out of range, a separator, a submenu item and a disabled item
-            for (final int index : new int[] {-1, 99, 1, 4, 5}) {
-                rewrite[0] = index;
+            this.menu.onEvent(Menu.CHOOSE, e -> e.setValue(rewrite[0]))
+                    .onEvent(Menu.CHOSEN, e -> chosen.add(this.index(e.value())));
+            // Null, another menu's item, a separator, a submenu item and a disabled item
+            final List<MenuEntry> items = this.menu.items();
+            for (final MenuEntry entry : java.util.Arrays.asList(null, this.more.items().getFirst(), items.get(1), items.get(4),
+                    items.get(5))) {
+                rewrite[0] = entry;
                 this.clickTwo();
             }
             assertEquals(List.of(), MenuWindowEventsTest.this.heard);
@@ -156,9 +170,9 @@ class MenuWindowEventsTest {
         void aSubmenuItemOpensWithoutARequestAndTheSubmenuFiresItsOwn() {
             this.show();
             final List<String> heard = MenuWindowEventsTest.this.heard;
-            this.menu.onEvent(Menu.CHOOSE, e -> heard.add("menu " + e.value()));
-            this.more.onEvent(Menu.CHOOSE, e -> heard.add("more " + e.value()))
-                    .onEvent(Menu.CHOSEN, e -> heard.add("more chosen " + e.value()));
+            this.menu.onEvent(Menu.CHOOSE, e -> heard.add("menu " + this.index(e.value())));
+            this.more.onEvent(Menu.CHOOSE, e -> heard.add("more " + this.more.items().indexOf(e.value())))
+                    .onEvent(Menu.CHOSEN, e -> heard.add("more chosen " + this.more.items().indexOf(e.value())));
             MenuWindowEventsTest.this.key(Key.UP);
             MenuWindowEventsTest.this.key(Key.ENTER);
             assertTrue(this.more.isOpen());
@@ -174,7 +188,7 @@ class MenuWindowEventsTest {
             this.menu.onEvent(Menu.CHOOSE, e -> heard.add("choose"))
                     .onEvent(Menu.CHOSEN, e -> heard.add("chosen"))
                     .onEvent(Closable.CLOSED, e -> heard.add("closed"));
-            this.menu.setItemChecked(3, true);
+            this.check().setSelected(true);
             this.menu.close();
             this.menu.close();
             assertEquals(List.of("closed"), heard);

@@ -30,7 +30,7 @@ public interface Image extends Component<Image> {
     /**
      * Returns the sprite.
      *
-     * @return the sprite drawn, or {@code null} while the image shows a visual
+     * @return the sprite drawn, or {@code null} while the image shows a visual or nothing
      */
     SpriteId sprite();
 
@@ -45,7 +45,7 @@ public interface Image extends Component<Image> {
     /**
      * Returns the visual.
      *
-     * @return the visual drawn, or {@code null} while the image shows a sprite
+     * @return the visual drawn, or {@code null} while the image shows a sprite or nothing
      */
     Visual visual();
 
@@ -141,13 +141,13 @@ public interface Image extends Component<Image> {
     record State(SpriteId sprite, Visual visual, int tint, float imageWidth, float imageHeight, Scaling scaling) {
 
         /**
-         * Checks that exactly one of the sprite and the visual is set, and the scaling.
+         * Checks that at most one of the sprite and the visual is set, and the scaling.
          *
-         * @throws IllegalArgumentException if both or neither of the sprite and the visual are set
+         * @throws IllegalArgumentException if both the sprite and the visual are set
          */
         public State {
-            if ((sprite == null) == (visual == null)) {
-                throw new IllegalArgumentException("Exactly one of sprite and visual must be set");
+            if (sprite != null && visual != null) {
+                throw new IllegalArgumentException("At most one of sprite and visual may be set");
             }
             Objects.requireNonNull(scaling, "scaling");
         }

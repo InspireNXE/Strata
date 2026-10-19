@@ -17,7 +17,9 @@
  *
  * <p>An attribute owns the events of its capability. {@code Toggle.TOGGLED} fires for a check box, a switch and a radio
  * button alike, so one handler on a container hears all of them. Each attribute takes the control's own type as
- * {@code S}, so its setters return that type and chains keep going.</p>
+ * {@code S}, so its setters return that type and chains keep going. Attributes with events extend
+ * {@link org.inspirenxe.strata.api.event.EventTarget}; those without do not, so entries that are not event targets,
+ * such as a menu item or a table column, can have them too.</p>
  *
  * <p>Only Strata implements these interfaces. Code may hold controls by them and call them.</p>
  */

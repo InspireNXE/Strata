@@ -318,8 +318,9 @@ class ControlsTest {
 
         @Test
         void aDisabledTabCannotBeChosenButStillShowsItsTooltip() {
-            final TabBar tabs = ControlsTest.this.ui.tabBar().addTab("Buy").addTab("Sell").setTabEnabled(1, false)
-                    .setTabTooltip(1, Tooltip.text("Empty"));
+            final TabBar tabs = ControlsTest.this.ui.tabBar()
+                    .addTab("Buy")
+                    .addTab(ControlsTest.this.ui.tab("Sell").setEnabled(false).setTooltip(Tooltip.text("Empty")));
             tabs.setWidth(200);
             ControlsTest.this.test.show(ControlsTest.this.ui.absolutePanel().add(tabs, 0, 0));
             ControlsTest.this.test.click(150, 5);

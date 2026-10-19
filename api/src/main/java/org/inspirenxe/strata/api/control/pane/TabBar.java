@@ -1,14 +1,15 @@
 package org.inspirenxe.strata.api.control.pane;
 
 import org.inspirenxe.strata.api.component.Component;
-import org.inspirenxe.strata.api.component.Tooltip;
 import org.inspirenxe.strata.api.control.attribute.item.SingleSelection;
 
+import java.util.List;
 import java.util.Optional;
 
 /**
  * A row of tabs, one of them selected. The bar only picks a tab; show the matching content yourself when
- * {@link SingleSelection#SELECTED} fires. The entries of its selection are the tabs' texts.
+ * {@link SingleSelection#SELECTED} fires. Each tab is a {@link Tab}, which holds its text, whether it is enabled and
+ * its tooltip.
  *
  * <p>Tabs share the bar's width equally, with {@linkplain #setSpacing the spacing} between them, and are one line
  * plus 7 units tall. A click on an enabled tab selects it. While the bar has focus, Left and Right select the
@@ -45,14 +46,16 @@ import java.util.Optional;
  * </ul>
  *
  * <pre>{@code
- * TabBar sides = factory.tabBar().addTab("Buy").addTab("Sell")
+ * TabBar sides = factory.tabBar()
+ *         .addTab("Buy")
+ *         .addTab("Sell")
  *         .onEvent(SingleSelection.SELECTED, event -> showSide(event.value() == 0 ? Side.BUY : Side.SELL));
  * }</pre>
  *
  * <p>Get one from {@link org.inspirenxe.strata.api.ComponentFactory#tabBar()}. Do not implement this
  * interface.</p>
  */
-public interface TabBar extends Component<TabBar>, SingleSelection<String, TabBar> {
+public interface TabBar extends Component<TabBar>, SingleSelection<Tab, TabBar> {
     /**
      * Style key for an unselected tab (paint, required).
      */
@@ -83,67 +86,50 @@ public interface TabBar extends Component<TabBar>, SingleSelection<String, TabBa
     String STYLE_TEXT_DISABLED = "tab.text.disabled";
 
     /**
-     * Adds a tab at the end. The first tab added is selected.
+     * Returns the tabs, left to right.
+     *
+     * @return an unmodifiable copy of the tabs
+     */
+    List<Tab> tabs();
+
+    /**
+     * Adds a tab at the end. The first tab added to an empty bar is selected, without an event.
+     *
+     * @param tab the tab
+     * @return this bar
+     * @throws IllegalArgumentException if the tab is already in a bar
+     */
+    TabBar addTab(Tab tab);
+
+    /**
+     * Adds a tab at an index, moving the tabs from there to the right. The selection stays on the same tab, and
+     * {@link SingleSelection#SELECTED} fires if its index moved.
+     *
+     * @param index where the tab goes, from 0 to the number of tabs
+     * @param tab the tab
+     * @return this bar
+     * @throws IndexOutOfBoundsException if the index is outside 0 to the number of tabs
+     * @throws IllegalArgumentException if the tab is already in a bar
+     */
+    TabBar addTab(int index, Tab tab);
+
+    /**
+     * Removes a tab. Removing the selected tab selects the one that takes its place, or the last one, or none when
+     * no tab is left. {@link SingleSelection#SELECTED} fires if the selected tab or its index changed. Does nothing
+     * if the tab is not in this bar.
+     *
+     * @param tab the tab
+     * @return this bar
+     */
+    TabBar removeTab(Tab tab);
+
+    /**
+     * Adds a tab with a text at the end, as {@code addTab(factory.tab(text))} would.
      *
      * @param text the tab's text
      * @return this bar
      */
     TabBar addTab(String text);
-
-    /**
-     * Returns how many tabs there are.
-     *
-     * @return the number of tabs
-     */
-    int tabCount();
-
-    /**
-     * Returns a tab's text.
-     *
-     * @param index the tab's index
-     * @return the text
-     * @throws IndexOutOfBoundsException if there is no such tab
-     */
-    String tabText(int index);
-
-    /**
-     * Replaces a tab's text.
-     *
-     * @param index the tab's index
-     * @param text the text
-     * @return this bar
-     * @throws IndexOutOfBoundsException if there is no such tab
-     */
-    TabBar setTabText(int index, String text);
-
-    /**
-     * Returns whether a tab can be selected.
-     *
-     * @param index the tab's index
-     * @return true by default
-     * @throws IndexOutOfBoundsException if there is no such tab
-     */
-    boolean isTabEnabled(int index);
-
-    /**
-     * Sets whether a tab can be selected by input. Disabling the selected tab keeps it selected.
-     *
-     * @param index the tab's index
-     * @param enabled false to keep clicks and keys from selecting it
-     * @return this bar
-     * @throws IndexOutOfBoundsException if there is no such tab
-     */
-    TabBar setTabEnabled(int index, boolean enabled);
-
-    /**
-     * Sets a tab's tooltip.
-     *
-     * @param index the tab's index
-     * @param tooltip the tooltip, or {@code null} for none
-     * @return this bar
-     * @throws IndexOutOfBoundsException if there is no such tab
-     */
-    TabBar setTabTooltip(int index, Tooltip tooltip);
 
     /**
      * Returns the selected tab.
@@ -154,12 +140,12 @@ public interface TabBar extends Component<TabBar>, SingleSelection<String, TabBa
     int selectedIndex();
 
     /**
-     * Returns the selected tab's text.
+     * Returns the selected tab.
      *
-     * @return the text, or empty when no tab is selected
+     * @return the tab, or empty when no tab is selected
      */
     @Override
-    Optional<String> selected();
+    Optional<Tab> selected();
 
     /**
      * Selects a tab, enabled or not, or none for -1. Fires {@link SingleSelection#SELECTED} if the selection changed.
@@ -172,13 +158,13 @@ public interface TabBar extends Component<TabBar>, SingleSelection<String, TabBa
     TabBar select(int index);
 
     /**
-     * Selects the first tab with a text, or none if no tab has it.
+     * Selects a tab, or none if the tab is not in this bar.
      *
-     * @param text the tab's text
+     * @param tab the tab
      * @return this bar
      */
     @Override
-    TabBar selectItem(String text);
+    TabBar selectItem(Tab tab);
 
     /**
      * Returns the space between tabs.

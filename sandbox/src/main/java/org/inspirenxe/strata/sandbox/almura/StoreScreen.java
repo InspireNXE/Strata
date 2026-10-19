@@ -393,9 +393,10 @@ public final class StoreScreen implements Screen {
     private void refresh(final boolean createControls) {
         for (int side = 0; side < 2; side++) {
             final boolean empty = this.data.side(side == 0).isEmpty();
-            this.tabs.setTabEnabled(side, !empty);
-            this.tabs.setTabTooltip(side, empty ? Tooltip.text(side == 0 ? "There are no items for sale."
-                    : "There are no items available for purchase.") : null);
+            this.tabs.tabs().get(side)
+                    .setEnabled(!empty)
+                    .setTooltip(empty ? Tooltip.text(side == 0 ? "There are no items for sale."
+                            : "There are no items available for purchase.") : null);
         }
         final Sort order = this.sort.selected().orElse(Sort.NAME_ASC);
         this.items.setItems(this.data.search(this.buySide(), this.search.text(), order));

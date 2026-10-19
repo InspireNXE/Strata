@@ -6,8 +6,9 @@ import org.inspirenxe.strata.api.control.button.CheckBox;
 import org.inspirenxe.strata.api.control.button.RadioGroup;
 import org.inspirenxe.strata.api.control.button.ToggleSwitch;
 import org.inspirenxe.strata.api.control.collection.ComboBox;
-import org.inspirenxe.strata.api.control.collection.ListView;
 import org.inspirenxe.strata.api.control.collection.GridView;
+import org.inspirenxe.strata.api.control.collection.ListView;
+import org.inspirenxe.strata.api.control.collection.TableColumn;
 import org.inspirenxe.strata.api.control.collection.TableView;
 import org.inspirenxe.strata.api.control.collection.TreeView;
 import org.inspirenxe.strata.api.control.display.Image;
@@ -18,10 +19,15 @@ import org.inspirenxe.strata.api.control.field.Slider;
 import org.inspirenxe.strata.api.control.field.Spinner;
 import org.inspirenxe.strata.api.control.field.TextArea;
 import org.inspirenxe.strata.api.control.field.TextBox;
+import org.inspirenxe.strata.api.control.menu.CheckMenuItem;
 import org.inspirenxe.strata.api.control.menu.Menu;
 import org.inspirenxe.strata.api.control.menu.MenuBar;
+import org.inspirenxe.strata.api.control.menu.MenuItem;
+import org.inspirenxe.strata.api.control.menu.MenuSeparator;
+import org.inspirenxe.strata.api.control.menu.SubmenuItem;
 import org.inspirenxe.strata.api.control.pane.Expander;
 import org.inspirenxe.strata.api.control.pane.SplitPane;
+import org.inspirenxe.strata.api.control.pane.Tab;
 import org.inspirenxe.strata.api.control.pane.TabBar;
 import org.inspirenxe.strata.api.control.window.MessageBox;
 import org.inspirenxe.strata.api.control.window.Window;
@@ -116,12 +122,29 @@ public interface ComponentFactory {
     ScrollPanel scrollPanel();
 
     /**
+     * Makes a {@link Label} with no text, as {@code label("")} does.
+     *
+     * @return a new label
+     */
+    default Label label() {
+        return this.label("");
+    }
+
+    /**
      * Makes a {@link Label}.
      *
      * @param text the text; {@code \n} starts a new line
      * @return a new label
      */
     Label label(String text);
+
+    /**
+     * Makes an {@link Image} that draws nothing until it is given a {@linkplain Image#setSprite sprite} or a
+     * {@linkplain Image#setVisual visual}, 16 by 16 units until {@linkplain Image#setImageSize resized}.
+     *
+     * @return a new image
+     */
+    Image image();
 
     /**
      * Makes an {@link Image}, 16 by 16 units until {@linkplain Image#setImageSize resized}.
@@ -140,12 +163,30 @@ public interface ComponentFactory {
     Image image(Visual visual);
 
     /**
+     * Makes a {@link Button} with no caption, as {@code button("")} does.
+     *
+     * @return a new button
+     */
+    default Button button() {
+        return this.button("");
+    }
+
+    /**
      * Makes a {@link Button}.
      *
      * @param text the caption
      * @return a new button
      */
     Button button(String text);
+
+    /**
+     * Makes an unchecked {@link CheckBox} with no caption, as {@code checkBox("")} does.
+     *
+     * @return a new check box
+     */
+    default CheckBox checkBox() {
+        return this.checkBox("");
+    }
 
     /**
      * Makes an unchecked {@link CheckBox}.
@@ -170,6 +211,17 @@ public interface ComponentFactory {
     TextBox textBox();
 
     /**
+     * Makes an empty {@link ListView} whose cells are labels showing {@link String#valueOf(Object)} of each item. Set
+     * other cells with {@code setCellFactory}.
+     *
+     * @param <T> the type of the items
+     * @return a new list
+     */
+    default <T> ListView<T> listView() {
+        return this.listView(item -> this.label(String.valueOf(item)));
+    }
+
+    /**
      * Makes an empty {@link ListView}.
      *
      * @param <T> the type of the items
@@ -177,6 +229,16 @@ public interface ComponentFactory {
      * @return a new list
      */
     <T> ListView<T> listView(Function<? super T, ? extends Component<?>> cellFactory);
+
+    /**
+     * Makes a {@link ComboBox} with no options that shows each option as {@link String#valueOf(Object)}.
+     *
+     * @param <T> the type of the options
+     * @return a new combo box
+     */
+    default <T> ComboBox<T> comboBox() {
+        return this.comboBox(String::valueOf);
+    }
 
     /**
      * Makes a {@link ComboBox} with no options.
@@ -188,12 +250,31 @@ public interface ComponentFactory {
     <T> ComboBox<T> comboBox(Function<? super T, String> labelFunction);
 
     /**
+     * Makes an empty {@link Window} with no title, as {@code window("")} does.
+     *
+     * @return a new window
+     */
+    default Window window() {
+        return this.window("");
+    }
+
+    /**
      * Makes an empty {@link Window}.
      *
      * @param title the title
      * @return a new window
      */
     Window window(String title);
+
+    /**
+     * Makes a {@link MessageBox} with no title, no message and an OK button, as
+     * {@code messageBox("", "", MessageBox.Buttons.OK)} does. Show it with {@link Overlays#dialog}.
+     *
+     * @return a new message box
+     */
+    default MessageBox messageBox() {
+        return this.messageBox("", "", MessageBox.Buttons.OK);
+    }
 
     /**
      * Makes a {@link MessageBox}. Show it with {@link Overlays#dialog}.
@@ -213,11 +294,37 @@ public interface ComponentFactory {
     TabBar tabBar();
 
     /**
+     * Makes an enabled {@link Tab} with no text, as {@code tab("")} does.
+     *
+     * @return a new tab
+     */
+    default Tab tab() {
+        return this.tab("");
+    }
+
+    /**
+     * Makes an enabled {@link Tab} with no tooltip.
+     *
+     * @param text the tab's text
+     * @return a new tab
+     */
+    Tab tab(String text);
+
+    /**
      * Makes an empty {@link ProgressBar}.
      *
      * @return a new progress bar
      */
     ProgressBar progressBar();
+
+    /**
+     * Makes a horizontal {@link Separator}, as {@code separator(Orientation.HORIZONTAL)} does.
+     *
+     * @return a new separator
+     */
+    default Separator separator() {
+        return this.separator(Orientation.HORIZONTAL);
+    }
 
     /**
      * Makes a {@link Separator}.
@@ -235,6 +342,15 @@ public interface ComponentFactory {
      * @return a new group
      */
     <T> RadioGroup<T> radioGroup();
+
+    /**
+     * Makes a {@link ToggleSwitch}, off, with no caption, as {@code toggleSwitch("")} does.
+     *
+     * @return a new switch
+     */
+    default ToggleSwitch toggleSwitch() {
+        return this.toggleSwitch("");
+    }
 
     /**
      * Makes a {@link ToggleSwitch} that is off.
@@ -267,6 +383,37 @@ public interface ComponentFactory {
     <T> TableView<T> tableView();
 
     /**
+     * Makes a {@link TableColumn} with no title, as {@code tableColumn("")} does.
+     *
+     * @param <T> the type of the table's items
+     * @return a new column
+     */
+    default <T> TableColumn<T> tableColumn() {
+        return this.tableColumn("");
+    }
+
+    /**
+     * Makes a {@link TableColumn}, weighted 1, that shows {@link String#valueOf(Object)} of each item as text and is
+     * not sortable.
+     *
+     * @param <T> the type of the table's items
+     * @param title the header title
+     * @return a new column
+     */
+    <T> TableColumn<T> tableColumn(String title);
+
+    /**
+     * Makes a {@link TreeView} with no roots and no children function, whose cells are labels showing
+     * {@link String#valueOf(Object)} of each item. Set other cells with {@code setCellFactory}.
+     *
+     * @param <T> the type of the items
+     * @return a new tree
+     */
+    default <T> TreeView<T> treeView() {
+        return this.treeView(item -> this.label(String.valueOf(item)));
+    }
+
+    /**
      * Makes a {@link TreeView} with no roots, in which every item is a leaf until
      * {@linkplain TreeView#setChildren told} otherwise.
      *
@@ -291,12 +438,89 @@ public interface ComponentFactory {
     MenuBar menuBar();
 
     /**
+     * Makes an enabled {@link MenuItem} with no text and an action that does nothing, as {@code menuItem("")} does.
+     *
+     * @return a new item
+     */
+    default MenuItem menuItem() {
+        return this.menuItem("");
+    }
+
+    /**
+     * Makes an enabled {@link MenuItem} with an action that does nothing.
+     *
+     * @param text the item's text
+     * @return a new item
+     */
+    MenuItem menuItem(String text);
+
+    /**
+     * Makes an enabled, unchecked {@link CheckMenuItem} with no text and an action that does nothing, as
+     * {@code checkMenuItem("")} does.
+     *
+     * @return a new item
+     */
+    default CheckMenuItem checkMenuItem() {
+        return this.checkMenuItem("");
+    }
+
+    /**
+     * Makes an enabled, unchecked {@link CheckMenuItem} with an action that does nothing.
+     *
+     * @param text the item's text
+     * @return a new item
+     */
+    CheckMenuItem checkMenuItem(String text);
+
+    /**
+     * Makes an enabled {@link SubmenuItem} with no text and no menu, as {@code submenuItem("")} does.
+     *
+     * @return a new item
+     */
+    default SubmenuItem submenuItem() {
+        return this.submenuItem("");
+    }
+
+    /**
+     * Makes an enabled {@link SubmenuItem} with no menu.
+     *
+     * @param text the item's text, or a menu bar's title
+     * @return a new item
+     */
+    SubmenuItem submenuItem(String text);
+
+    /**
+     * Makes a {@link MenuSeparator}.
+     *
+     * @return a new separator
+     */
+    MenuSeparator menuSeparator();
+
+    /**
+     * Makes a collapsed {@link Expander} with no title and no content, as {@code expander("")} does.
+     *
+     * @return a new expander
+     */
+    default Expander expander() {
+        return this.expander("");
+    }
+
+    /**
      * Makes a collapsed {@link Expander} with no content.
      *
      * @param title the header's title
      * @return a new expander
      */
     Expander expander(String title);
+
+    /**
+     * Makes an empty, side by side {@link SplitPane}, as {@code splitPane(Orientation.HORIZONTAL)} does.
+     *
+     * @return a new split pane
+     */
+    default SplitPane splitPane() {
+        return this.splitPane(Orientation.HORIZONTAL);
+    }
 
     /**
      * Makes an empty {@link SplitPane} with the divider in the middle.
@@ -306,6 +530,17 @@ public interface ComponentFactory {
      * @return a new split pane
      */
     SplitPane splitPane(Orientation orientation);
+
+    /**
+     * Makes a {@link GridView} with no items, whose cells are labels showing {@link String#valueOf(Object)} of each
+     * item. Set other cells with {@code setCellFactory}.
+     *
+     * @param <T> the type of the items
+     * @return a new grid
+     */
+    default <T> GridView<T> gridView() {
+        return this.gridView(item -> this.label(String.valueOf(item)));
+    }
 
     /**
      * Makes a {@link GridView} with no cells, {@value GridView#DEFAULT_COLUMNS} columns wide.

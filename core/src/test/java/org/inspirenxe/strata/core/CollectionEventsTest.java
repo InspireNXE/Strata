@@ -8,6 +8,7 @@ import org.inspirenxe.strata.api.control.attribute.popup.Openable;
 import org.inspirenxe.strata.api.control.collection.ComboBox;
 import org.inspirenxe.strata.api.control.collection.GridView;
 import org.inspirenxe.strata.api.control.collection.ListView;
+import org.inspirenxe.strata.api.control.collection.TableColumn;
 import org.inspirenxe.strata.api.control.collection.TableView;
 import org.inspirenxe.strata.api.control.collection.TreeView;
 import org.inspirenxe.strata.api.event.ValueEvent;
@@ -352,6 +353,10 @@ class CollectionEventsTest {
             CollectionEventsTest.this.show(this.table, 0, 0);
         }
 
+        private TableColumn<Offer> name() {
+            return this.table.columns().getFirst();
+        }
+
         @Test
         void aPressAsksWithTheShownIndex() {
             this.show();
@@ -365,7 +370,7 @@ class CollectionEventsTest {
                     e.setValue(rewrite[0]);
                 }
             });
-            this.table.sortBy(0, true);
+            this.table.sortBy(this.name(), true);
             CollectionEventsTest.this.test.click(10, 30);
             assertEquals(Optional.of(this.apple), this.table.selected());
             refuse[0] = true;
@@ -389,8 +394,8 @@ class CollectionEventsTest {
             this.table.select(1);
             this.table.selectItem(this.banana);
             // Sorting by name moves banana to the middle, where the descending sort keeps it
-            this.table.sortBy(0, true);
-            this.table.sortBy(0, false);
+            this.table.sortBy(this.name(), true);
+            this.table.sortBy(this.name(), false);
             assertEquals(List.of(), this.asked);
             assertEquals(List.of("-1->1", "1->2", "2->1"), this.heard);
             assertEquals(Optional.of(this.banana), this.table.selected());
@@ -425,16 +430,16 @@ class CollectionEventsTest {
                 }
             });
             CollectionEventsTest.this.test.click(10, 10);
-            assertEquals(-1, this.table.sortColumn());
+            assertEquals(Optional.empty(), this.table.sortColumn());
             assertEquals(List.of(this.apple, this.cherry, this.banana), this.table.shownItems());
             refuse[0] = false;
             CollectionEventsTest.this.test.click(10, 10);
             CollectionEventsTest.this.test.click(10, 10);
-            assertEquals(List.of(new TableView.Sort(0, true), new TableView.Sort(0, true), new TableView.Sort(0, false)),
+            assertEquals(List.of(new TableView.Sort(this.name(), true), new TableView.Sort(this.name(), true), new TableView.Sort(this.name(), false)),
                     this.asked);
             assertEquals(List.of(this.cherry, this.banana, this.apple), this.table.shownItems());
-            assertEquals(List.of("Sort[column=-1, ascending=true]->Sort[column=0, ascending=true]",
-                    "Sort[column=0, ascending=true]->Sort[column=0, ascending=false]"), sorted);
+            assertEquals(List.of("Sort[column=null, ascending=true]->Sort[column=TableColumn[Name], ascending=true]",
+                    "Sort[column=TableColumn[Name], ascending=true]->Sort[column=TableColumn[Name], ascending=false]"), sorted);
         }
 
         @Test
@@ -442,13 +447,13 @@ class CollectionEventsTest {
             this.show();
             final List<TableView.Sort> sorted = new ArrayList<>();
             this.table.onEvent(TableView.SORTED, e -> sorted.add(e.value()));
-            final TableView.Sort[] rewrite = {new TableView.Sort(0, false)};
+            final TableView.Sort[] rewrite = {new TableView.Sort(this.name(), false)};
             this.table.onEvent(TableView.SORT, e -> e.setValue(rewrite[0]));
             CollectionEventsTest.this.test.click(10, 10);
             assertFalse(this.table.isSortAscending());
-            rewrite[0] = new TableView.Sort(4, true);
+            rewrite[0] = new TableView.Sort(CollectionEventsTest.this.ui.<Offer>tableColumn("Elsewhere"), true);
             CollectionEventsTest.this.test.click(10, 10);
-            assertEquals(List.of(new TableView.Sort(0, false)), sorted);
+            assertEquals(List.of(new TableView.Sort(this.name(), false)), sorted);
         }
 
         @Test
@@ -457,11 +462,11 @@ class CollectionEventsTest {
             final List<TableView.Sort> sorted = new ArrayList<>();
             this.table.onEvent(TableView.SORTED, e -> sorted.add(e.value()));
             this.table.onEvent(TableView.SORT, e -> this.asked.add(e.value()));
-            this.table.sortBy(0, true);
-            this.table.sortBy(0, true);
-            this.table.setColumnComparator(0, null);
+            this.table.sortBy(this.name(), true);
+            this.table.sortBy(this.name(), true);
+            this.name().setComparator(null);
             assertEquals(List.of(), this.asked);
-            assertEquals(List.of(new TableView.Sort(0, true), new TableView.Sort(-1, true)), sorted);
+            assertEquals(List.of(new TableView.Sort(this.name(), true), new TableView.Sort(null, true)), sorted);
         }
 
         @Test

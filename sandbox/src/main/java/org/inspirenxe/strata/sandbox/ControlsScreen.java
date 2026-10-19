@@ -7,6 +7,7 @@ import org.inspirenxe.strata.api.control.button.RadioButton;
 import org.inspirenxe.strata.api.control.button.RadioGroup;
 import org.inspirenxe.strata.api.control.button.ToggleSwitch;
 import org.inspirenxe.strata.api.control.collection.GridView;
+import org.inspirenxe.strata.api.control.collection.TableColumn;
 import org.inspirenxe.strata.api.control.collection.TableView;
 import org.inspirenxe.strata.api.control.collection.TreeView;
 import org.inspirenxe.strata.api.control.display.Label;
@@ -79,8 +80,7 @@ public final class ControlsScreen implements Screen {
                 .addItem("Close", () -> this.handle.close());
         final Menu view = ui.menu()
                 .addItem("Zoom in", () -> { })
-                .addItem("Zoom out", () -> { })
-                .setItemEnabled(1, false);
+                .addItem(ui.menuItem("Zoom out").setEnabled(false));
         this.menuBar = ui.menuBar()
                 .addMenu("File", file)
                 .addMenu("View", view)
@@ -192,13 +192,16 @@ public final class ControlsScreen implements Screen {
     }
 
     private Component<?> offers(final ComponentFactory ui) {
+        final TableColumn<Offer> price = ui.<Offer>tableColumn("Price")
+                .setWidth(GridLength.fixed(60))
+                .setCellText(offer -> String.format("%.2f", offer.price()))
+                .setComparator(Comparator.comparingDouble(Offer::price));
         this.table = ui.<Offer>tableView()
                 .addTextColumn("Item", GridLength.weighted(1), Offer::item)
                 .addTextColumn("Seller", GridLength.fixed(70), Offer::seller)
-                .addTextColumn("Price", GridLength.fixed(60), offer -> String.format("%.2f", offer.price()))
-                .setColumnComparator(2, Comparator.comparingDouble(Offer::price))
+                .addColumn(price)
                 .setItems(Offer.SAMPLE)
-                .sortBy(2, true)
+                .sortBy(price, true)
                 .select(1)
                 .setHeight(84)
                 .setAlignment(HorizontalAlignment.STRETCH, VerticalAlignment.TOP);

@@ -4,6 +4,7 @@ import org.inspirenxe.strata.api.ComponentFactory;
 import org.inspirenxe.strata.api.component.Component;
 import org.inspirenxe.strata.api.control.display.Separator;
 import org.inspirenxe.strata.api.control.menu.Menu;
+import org.inspirenxe.strata.api.control.menu.MenuEntry;
 import org.inspirenxe.strata.api.event.KeyEvent;
 import org.inspirenxe.strata.api.event.PointerButtonEvent;
 import org.inspirenxe.strata.api.event.PointerEvent;
@@ -32,7 +33,7 @@ import java.util.Set;
 import java.util.function.Consumer;
 
 /**
- * The core {@link Menu}. It draws its items itself rather than holding a component per item, and opens as a popup
+ * The core {@link Menu}. It draws its entries itself rather than holding a component per entry, and opens as a popup
  * of its host's overlays. A submenu opens with its top-left corner at the right edge of its item.
  *
  * <p>Opening a menu lays out its host's overlays at once, so its bounds and items are known before the next frame.
@@ -64,7 +65,7 @@ public final class MenuImpl extends CustomComponent<Menu> implements Menu {
     private static final Set<String> REQUIRED = Set.of(STYLE_BACKGROUND, STYLE_ITEM_HOVERED);
 
     private final ComponentFactory ui;
-    private final List<Item> items;
+    private final List<MenuEntryImpl> items;
     private MenuImpl parent;
     private MenuBarImpl bar;
     private Overlay popup;
@@ -107,110 +108,142 @@ public final class MenuImpl extends CustomComponent<Menu> implements Menu {
     }
 
     // ------------------------------------------------------------------
-    // Items
+    // Entries
     // ------------------------------------------------------------------
 
     @Override
-    public Menu addItem(final String text, final Runnable action) {
-        return this.add(new Item(Objects.requireNonNull(text, "text"), "", Objects.requireNonNull(action, "action"), null, null));
+    public List<MenuEntry> items() {
+        return this.items.stream().map(MenuEntryImpl::entry).toList();
     }
 
     @Override
-    public Menu addItem(final String text, final String shortcut, final Runnable action) {
-        return this.add(new Item(Objects.requireNonNull(text, "text"), Objects.requireNonNull(shortcut, "shortcut"),
-                Objects.requireNonNull(action, "action"), null, null));
+    public Menu addItem(final MenuEntry entry) {
+        return this.addItem(this.items.size(), entry);
     }
 
     @Override
-    public Menu addCheckItem(final String text, final boolean checked, final Consumer<Boolean> action) {
-        final Item item = new Item(Objects.requireNonNull(text, "text"), "", null, Objects.requireNonNull(action, "action"), null);
-        item.checked = checked;
-        return this.add(item);
-    }
-
-    @Override
-    public Menu addSubmenu(final String text, final Menu submenu) {
-        Objects.requireNonNull(text, "text");
-        if (!(submenu instanceof MenuImpl menu)) {
-            throw new IllegalArgumentException(submenu + " is not a Strata menu");
+    public Menu addItem(final int index, final MenuEntry entry) {
+        final MenuEntryImpl impl = MenuEntryImpl.of(entry);
+        Objects.checkIndex(index, this.items.size() + 1);
+        if (impl.owner() != null) {
+            throw new IllegalArgumentException(entry + " is already in a menu or a menu bar");
         }
-        for (MenuImpl up = this; up != null; up = up.parent) {
-            if (up == menu) {
-                throw new IllegalArgumentException("A menu cannot open itself or a menu it opens from");
-            }
+        if (impl instanceof SubmenuItemImpl item) {
+            item.check(item.submenu(), this);
         }
-        if (menu.parent != null || menu.bar != null) {
-            throw new IllegalArgumentException(submenu + " is already a submenu or in a menu bar");
+        impl.setOwner(this);
+        if (impl instanceof SubmenuItemImpl item) {
+            item.link(this);
         }
-        menu.parent = this;
-        return this.add(new Item(text, "", null, null, menu));
-    }
-
-    @Override
-    public Menu addSeparator() {
-        final Item item = new Item("", "", null, null, null);
-        item.separator = true;
-        item.enabled = false;
-        return this.add(item);
-    }
-
-    private Menu add(final Item item) {
-        this.items.add(item);
+        this.items.add(index, impl);
+        if (this.highlighted >= index) {
+            this.highlighted++;
+        }
         this.invalidateLayout();
         return this;
     }
 
     @Override
+    public Menu removeItem(final MenuEntry entry) {
+        final int index = this.items.indexOf(MenuEntryImpl.of(entry));
+        if (index < 0) {
+            return this;
+        }
+        final MenuEntryImpl impl = this.items.remove(index);
+        if (impl instanceof SubmenuItemImpl item) {
+            if (this.openSubmenu == item.submenu()) {
+                this.openSubmenu = null;
+            }
+            item.unlink();
+        }
+        impl.setOwner(null);
+        if (this.highlighted == index) {
+            this.highlighted = -1;
+        } else if (this.highlighted > index) {
+            this.highlighted--;
+        }
+        this.invalidateLayout();
+        return this;
+    }
+
+    @Override
+    public Menu addItem(final String text, final Runnable action) {
+        return this.addItem(new MenuItemImpl(text).setAction(action));
+    }
+
+    @Override
+    public Menu addItem(final String text, final String shortcut, final Runnable action) {
+        return this.addItem(new MenuItemImpl(text).setShortcut(shortcut).setAction(action));
+    }
+
+    @Override
+    public Menu addCheckItem(final String text, final boolean checked, final Consumer<Boolean> action) {
+        return this.addItem(new CheckMenuItemImpl(text).setSelected(checked).setAction(action));
+    }
+
+    @Override
+    public Menu addSubmenu(final String text, final Menu submenu) {
+        return this.addItem(new SubmenuItemImpl(text).setMenu(submenu));
+    }
+
+    @Override
+    public Menu addSeparator() {
+        return this.addItem(new MenuSeparatorImpl());
+    }
+
+    @Override
     public Menu clearItems() {
         this.close();
-        for (final Item item : this.items) {
-            if (item.submenu != null) {
-                item.submenu.parent = null;
+        for (final MenuEntryImpl entry : this.items) {
+            if (entry instanceof SubmenuItemImpl item) {
+                item.unlink();
             }
+            entry.setOwner(null);
         }
         this.items.clear();
         this.invalidateLayout();
         return this;
     }
 
-    @Override
-    public int itemCount() {
-        return this.items.size();
-    }
-
-    @Override
-    public String itemText(final int index) {
-        return this.items.get(index).text;
-    }
-
-    @Override
-    public boolean isItemEnabled(final int index) {
-        return this.items.get(index).enabled;
-    }
-
-    @Override
-    public Menu setItemEnabled(final int index, final boolean enabled) {
-        final Item item = this.items.get(index);
-        item.enabled = enabled && !item.separator;
-        if (!item.enabled && this.highlighted == index) {
+    /**
+     * Called by an entry of this menu when it changed: lays out again, and drops the highlight from an entry that
+     * can no longer be chosen.
+     */
+    void entryChanged(final MenuEntryImpl entry) {
+        final int index = this.items.indexOf(entry);
+        if (index >= 0 && index == this.highlighted && !entry.usable()) {
             this.highlight(-1);
         }
-        return this;
+        this.invalidateLayout();
     }
 
-    @Override
-    public boolean isItemChecked(final int index) {
-        return this.items.get(index).checked;
-    }
-
-    @Override
-    public Menu setItemChecked(final int index, final boolean checked) {
-        final Item item = this.items.get(index);
-        if (item.checkAction == null) {
-            throw new IllegalArgumentException("Item " + index + " is not a check item");
+    /**
+     * Checks that a menu is not this one or one this menu opens from.
+     *
+     * @throws IllegalArgumentException if it is
+     */
+    void checkNotAbove(final MenuImpl menu) {
+        for (MenuImpl up = this; up != null; up = up.parent) {
+            if (up == menu) {
+                throw new IllegalArgumentException("A menu cannot open itself or a menu it opens from");
+            }
         }
-        item.checked = checked;
-        return this;
+    }
+
+    void setParent(final MenuImpl parent) {
+        this.parent = parent;
+    }
+
+    /**
+     * Casts an API menu to its core class.
+     *
+     * @throws IllegalArgumentException if the menu was not made by Strata
+     */
+    static MenuImpl of(final Menu menu) {
+        if (!(menu instanceof MenuImpl impl)) {
+            throw new IllegalArgumentException(menu + " is not a Strata menu");
+        }
+        return impl;
     }
 
     // ------------------------------------------------------------------
@@ -321,7 +354,7 @@ public final class MenuImpl extends CustomComponent<Menu> implements Menu {
             return;
         }
         this.highlighted = index;
-        if (this.openSubmenu != null && (index < 0 || this.items.get(index).submenu != this.openSubmenu)) {
+        if (this.openSubmenu != null && (index < 0 || this.items.get(index).submenu() != this.openSubmenu)) {
             this.openSubmenu.close();
         }
     }
@@ -330,7 +363,7 @@ public final class MenuImpl extends CustomComponent<Menu> implements Menu {
         final int count = this.items.size();
         for (int step = 1; step <= count; step++) {
             final int index = Math.floorMod(from + step * direction, count);
-            if (this.items.get(index).enabled) {
+            if (this.items.get(index).usable()) {
                 return index;
             }
         }
@@ -338,7 +371,7 @@ public final class MenuImpl extends CustomComponent<Menu> implements Menu {
     }
 
     private void openSubmenu(final int index, final boolean fromKeyboard) {
-        final MenuImpl submenu = this.items.get(index).submenu;
+        final MenuImpl submenu = this.items.get(index).submenu();
         if (submenu == null || submenu.isOpen()) {
             return;
         }
@@ -356,38 +389,41 @@ public final class MenuImpl extends CustomComponent<Menu> implements Menu {
         if (index < 0) {
             return;
         }
-        final Item item = this.items.get(index);
-        if (!item.enabled) {
+        final MenuEntryImpl entry = this.items.get(index);
+        if (!entry.usable()) {
             return;
         }
-        if (item.submenu != null) {
+        if (entry.submenu() != null || entry instanceof SubmenuItemImpl) {
             this.openSubmenu(index, true);
             return;
         }
-        this.request(CHOOSE, index, this::run);
+        this.request(CHOOSE, entry.entry(), this::run);
     }
 
     /**
-     * Closes the chain, flips a check item, runs the item's action and reports {@link #CHOSEN}: what an accepted
-     * {@link #CHOOSE} request does. Ignores an index that is out of range or names a disabled item, a separator or a
+     * Closes the chain, flips a check item, runs the entry's action and reports {@link #CHOSEN}: what an accepted
+     * {@link #CHOOSE} request does. Ignores an entry that is not this menu's, is disabled, or is a separator or a
      * submenu item, as a handler may have rewritten it.
      */
-    private void run(final int index) {
-        if (index < 0 || index >= this.items.size()) {
+    private void run(final MenuEntry chosen) {
+        if (!(chosen instanceof MenuEntryImpl entry) || entry.owner() != this || !entry.usable()) {
             return;
         }
-        final Item item = this.items.get(index);
-        if (!item.enabled || item.submenu != null) {
-            return;
+        switch (chosen) {
+            case MenuItemImpl item -> {
+                this.top().close();
+                item.action().run();
+            }
+            case CheckMenuItemImpl item -> {
+                this.top().close();
+                item.setSelected(!item.isSelected());
+                item.action().accept(item.isSelected());
+            }
+            default -> {
+                return;
+            }
         }
-        this.top().close();
-        if (item.checkAction != null) {
-            item.checked = !item.checked;
-            item.checkAction.accept(item.checked);
-        } else {
-            item.action.run();
-        }
-        this.report(CHOSEN, index, index);
+        this.report(CHOSEN, chosen, chosen);
     }
 
     // ------------------------------------------------------------------
@@ -421,17 +457,17 @@ public final class MenuImpl extends CustomComponent<Menu> implements Menu {
         float shortcutWidth = 0f;
         float y = EDGE;
         for (int i = 0; i < this.items.size(); i++) {
-            final Item item = this.items.get(i);
+            final MenuEntryImpl item = this.items.get(i);
             this.itemTop[i] = y;
-            if (item.separator) {
+            if (item.separator()) {
                 y += SEPARATOR_HEIGHT;
                 continue;
             }
-            item.span = new TextSpan(item.text, this.textStyle);
-            item.disabledSpan = new TextSpan(item.text, this.disabledTextStyle);
-            item.shortcutSpan = new TextSpan(item.shortcut, this.shortcutStyle);
+            item.span = new TextSpan(item.label(), this.textStyle);
+            item.disabledSpan = new TextSpan(item.label(), this.disabledTextStyle);
+            item.shortcutSpan = new TextSpan(item.hint(), this.shortcutStyle);
             textWidth = Math.max(textWidth, Math.max(metrics.width(item.span), metrics.width(item.disabledSpan)));
-            item.shortcutWidth = item.shortcut.isEmpty() ? 0f : metrics.width(item.shortcutSpan);
+            item.shortcutWidth = item.hint().isEmpty() ? 0f : metrics.width(item.shortcutSpan);
             shortcutWidth = Math.max(shortcutWidth, item.shortcutWidth);
             y += this.itemHeight;
         }
@@ -445,9 +481,9 @@ public final class MenuImpl extends CustomComponent<Menu> implements Menu {
         final float left = bounds.x() + EDGE;
         final float width = bounds.width() - EDGE * 2f;
         for (int i = 0; i < this.items.size(); i++) {
-            final Item item = this.items.get(i);
+            final MenuEntryImpl item = this.items.get(i);
             final float top = bounds.y() + this.itemTop[i];
-            if (item.separator) {
+            if (item.separator()) {
                 this.separator.paint(painter, new Rect(left + 1f, top + (SEPARATOR_HEIGHT - 1f) * 0.5f, width - 2f, 1f));
                 continue;
             }
@@ -455,16 +491,16 @@ public final class MenuImpl extends CustomComponent<Menu> implements Menu {
                 this.itemHovered.paint(painter, new Rect(left, top, width, this.itemHeight));
             }
             final float textY = top + (this.itemHeight - this.lineHeight) * 0.5f;
-            painter.text(item.enabled ? item.span : item.disabledSpan, left + GUTTER, textY);
-            final int color = (item.enabled ? this.textStyle : this.disabledTextStyle).color();
-            if (item.checked) {
+            painter.text(item.usable() ? item.span : item.disabledSpan, left + GUTTER, textY);
+            final int color = (item.usable() ? this.textStyle : this.disabledTextStyle).color();
+            if (item.checked()) {
                 painter.fill(new Rect(left + (GUTTER - CHECK_SIZE) * 0.5f, top + (this.itemHeight - CHECK_SIZE) * 0.5f,
                         CHECK_SIZE, CHECK_SIZE), color);
             }
-            if (!item.shortcut.isEmpty()) {
+            if (!item.hint().isEmpty()) {
                 painter.text(item.shortcutSpan, left + width - GUTTER - item.shortcutWidth, textY);
             }
-            if (item.submenu != null) {
+            if (item instanceof SubmenuItemImpl) {
                 Rings.right(painter, color, left + width - (GUTTER + Rings.ARROW_SHORT) * 0.5f,
                         top + (this.itemHeight - Rings.ARROW_LONG) * 0.5f);
             }
@@ -479,7 +515,7 @@ public final class MenuImpl extends CustomComponent<Menu> implements Menu {
         final float local = y - this.bounds().y();
         for (int i = this.items.size() - 1; i >= 0; i--) {
             if (local >= this.itemTop[i]) {
-                final float height = this.items.get(i).separator ? SEPARATOR_HEIGHT : this.itemHeight;
+                final float height = this.items.get(i).separator() ? SEPARATOR_HEIGHT : this.itemHeight;
                 return local < this.itemTop[i] + height ? i : -1;
             }
         }
@@ -489,11 +525,11 @@ public final class MenuImpl extends CustomComponent<Menu> implements Menu {
     @Override
     protected void onPointerMove(final PointerEvent event) {
         final int index = this.itemAt(event.y());
-        if (index < 0 || !this.items.get(index).enabled) {
+        if (index < 0 || !this.items.get(index).usable()) {
             return;
         }
         this.highlight(index);
-        if (this.items.get(index).submenu != null) {
+        if (this.items.get(index).submenu() != null) {
             this.openSubmenu(index, false);
         }
     }
@@ -504,7 +540,7 @@ public final class MenuImpl extends CustomComponent<Menu> implements Menu {
             return;
         }
         final int index = this.itemAt(event.y());
-        if (index >= 0 && this.items.get(index).enabled) {
+        if (index >= 0 && this.items.get(index).usable()) {
             this.highlight(index);
             this.choose(index);
         }
@@ -522,7 +558,7 @@ public final class MenuImpl extends CustomComponent<Menu> implements Menu {
             case UP -> this.highlight(this.nextUsable(this.highlighted < 0 ? 0 : this.highlighted, -1));
             case DOWN -> this.highlight(this.nextUsable(this.highlighted, 1));
             case RIGHT -> {
-                if (this.highlighted >= 0 && this.items.get(this.highlighted).submenu != null) {
+                if (this.highlighted >= 0 && this.items.get(this.highlighted).submenu() != null) {
                     this.openSubmenu(this.highlighted, true);
                 } else if (this.top().bar != null) {
                     this.top().bar.step(1);
@@ -556,36 +592,5 @@ public final class MenuImpl extends CustomComponent<Menu> implements Menu {
             }
         }
         event.consume();
-    }
-
-    /**
-     * One item. A separator has neither action; a submenu item has only its submenu.
-     */
-    private static final class Item {
-        final String text;
-        final String shortcut;
-        final Runnable action;
-        final Consumer<Boolean> checkAction;
-        final MenuImpl submenu;
-        boolean separator;
-        boolean enabled;
-        boolean checked;
-        TextSpan span;
-        TextSpan disabledSpan;
-        TextSpan shortcutSpan;
-        float shortcutWidth;
-
-        Item(final String text, final String shortcut, final Runnable action, final Consumer<Boolean> checkAction,
-             final MenuImpl submenu) {
-            this.text = text;
-            this.shortcut = shortcut;
-            this.action = action;
-            this.checkAction = checkAction;
-            this.submenu = submenu;
-            this.enabled = true;
-            this.span = TextSpan.of(text);
-            this.disabledSpan = this.span;
-            this.shortcutSpan = TextSpan.of(shortcut);
-        }
     }
 }

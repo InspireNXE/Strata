@@ -27,7 +27,7 @@ import java.util.Objects;
  * the drag. Each side is arranged in its whole part, where its own alignment places it.
  */
 public final class SplitPaneImpl extends CustomComposite<SplitPane> implements SplitPane {
-    private final Orientation orientation;
+    private Orientation orientation;
     private final Divider divider;
     private Component<?> first;
     private Component<?> second;
@@ -61,6 +61,14 @@ public final class SplitPaneImpl extends CustomComposite<SplitPane> implements S
     @Override
     public Orientation orientation() {
         return this.orientation;
+    }
+
+    @Override
+    public SplitPane setOrientation(final Orientation orientation) {
+        this.orientation = Objects.requireNonNull(orientation, "orientation");
+        this.divider.setCursor(this.horizontal() ? CursorKind.RESIZE_HORIZONTAL : CursorKind.RESIZE_VERTICAL);
+        this.invalidateLayout();
+        return this;
     }
 
     @Override

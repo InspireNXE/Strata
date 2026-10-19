@@ -26,9 +26,18 @@ public interface Separator extends Component<Separator> {
     /**
      * Returns which way the line runs.
      *
-     * @return the orientation given when it was made
+     * @return the orientation; {@link Orientation#HORIZONTAL} unless given otherwise
      */
     Orientation orientation();
+
+    /**
+     * Sets which way the line runs, and aligns the separator to stretch along it: across and at the top for
+     * {@link Orientation#HORIZONTAL}, down and at the left for {@link Orientation#VERTICAL}. A new layout runs.
+     *
+     * @param orientation the orientation
+     * @return this separator
+     */
+    Separator setOrientation(Orientation orientation);
 
     /**
      * Returns the thickness.

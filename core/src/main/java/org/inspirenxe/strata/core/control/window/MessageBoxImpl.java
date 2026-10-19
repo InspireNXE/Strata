@@ -2,6 +2,7 @@ package org.inspirenxe.strata.core.control.window;
 
 import org.inspirenxe.strata.api.ComponentFactory;
 import org.inspirenxe.strata.api.component.Component;
+import org.inspirenxe.strata.api.control.attribute.popup.Closable;
 import org.inspirenxe.strata.api.control.button.Button;
 import org.inspirenxe.strata.api.control.display.Label;
 import org.inspirenxe.strata.api.control.window.MessageBox;
@@ -37,7 +38,10 @@ public final class MessageBoxImpl extends CustomComposite<MessageBox> implements
     private final ComponentFactory ui;
     private final WindowImpl window;
     private final Map<Result, Button> buttons;
-    private final Result dismissResult;
+    private final Map<Result, String> captions;
+    private final Label text;
+    private final StackPanel row;
+    private Buttons buttonSet;
     private boolean done;
 
     /**
@@ -54,26 +58,21 @@ public final class MessageBoxImpl extends CustomComposite<MessageBox> implements
         super(ui);
         this.ui = ui;
         this.buttons = new EnumMap<>(Result.class);
-        this.dismissResult = buttonSet.dismissResult();
+        this.captions = new EnumMap<>(Result.class);
 
-        final Label text = ui.label(message).setWrap(true);
-        text.setMaxSize(MESSAGE_WIDTH, Float.POSITIVE_INFINITY);
-        final StackPanel row = ui.stackPanel(Orientation.HORIZONTAL).setSpacing(4f);
-        row.setAlignment(HorizontalAlignment.RIGHT, VerticalAlignment.TOP);
-        for (final Result result : buttonSet.results()) {
-            final Button button = ui.button(caption(result)).onEvent(Button.PRESSED, event -> this.answer(result));
-            button.setWidth(BUTTON_WIDTH);
-            this.buttons.put(result, button);
-            row.add(button);
-        }
-        final StackPanel column = ui.stackPanel().setSpacing(8f).setPadding(4f).add(text).add(row);
+        this.text = ui.label(message).setWrap(true);
+        this.text.setMaxSize(MESSAGE_WIDTH, Float.POSITIVE_INFINITY);
+        this.row = ui.stackPanel(Orientation.HORIZONTAL).setSpacing(4f);
+        this.row.setAlignment(HorizontalAlignment.RIGHT, VerticalAlignment.TOP);
+        this.setButtons(buttonSet);
+        final StackPanel column = ui.stackPanel().setSpacing(8f).setPadding(4f).add(this.text).add(this.row);
         column.setAlignment(HorizontalAlignment.STRETCH, VerticalAlignment.TOP);
 
         this.window = new WindowImpl(ui, title);
         this.window.add(column);
         this.window.setAnchor(Anchor.FILL);
         // Closing the window from code answers the dismiss result without a request
-        this.window.onEvent(Window.CLOSED, event -> this.finish(this.dismissResult));
+        this.window.onEvent(Closable.CLOSED, event -> this.finish(this.buttonSet.dismissResult()));
         // The window's close button and Escape answer the dismiss result through the box's request
         this.window.setUserCloseHook(this::userDismiss);
         this.addChild(this.window);
@@ -96,8 +95,51 @@ public final class MessageBoxImpl extends CustomComposite<MessageBox> implements
     }
 
     @Override
+    public String title() {
+        return this.window.title();
+    }
+
+    @Override
+    public MessageBox setTitle(final String title) {
+        this.window.setTitle(title);
+        return this;
+    }
+
+    @Override
+    public String message() {
+        return this.text.text();
+    }
+
+    @Override
+    public MessageBox setMessage(final String message) {
+        this.text.setText(message);
+        return this;
+    }
+
+    @Override
+    public Buttons buttons() {
+        return this.buttonSet;
+    }
+
+    @Override
+    public MessageBox setButtons(final Buttons buttons) {
+        this.buttonSet = Objects.requireNonNull(buttons, "buttons");
+        this.row.clear();
+        this.buttons.clear();
+        for (final Result result : buttons.results()) {
+            final Button button = this.ui.button(this.captions.getOrDefault(result, caption(result)))
+                    .onEvent(Button.PRESSED, event -> this.answer(result));
+            button.setWidth(BUTTON_WIDTH);
+            this.buttons.put(result, button);
+            this.row.add(button);
+        }
+        return this;
+    }
+
+    @Override
     public MessageBox setButtonText(final Result result, final String caption) {
-        final Button button = this.buttons.get(Objects.requireNonNull(result, "result"));
+        this.captions.put(Objects.requireNonNull(result, "result"), Objects.requireNonNull(caption, "caption"));
+        final Button button = this.buttons.get(result);
         if (button != null) {
             button.setText(caption);
         }
@@ -124,7 +166,7 @@ public final class MessageBoxImpl extends CustomComposite<MessageBox> implements
             this.window.close();
             return;
         }
-        this.request(ANSWER, this.dismissResult, result -> {
+        this.request(ANSWER, this.buttonSet.dismissResult(), result -> {
             this.finish(result);
             this.window.close();
         });

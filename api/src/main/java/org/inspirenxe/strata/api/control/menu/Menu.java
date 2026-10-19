@@ -9,13 +9,16 @@ import org.inspirenxe.strata.api.event.ValueEvent;
 import org.inspirenxe.strata.api.event.ValueRequestEvent;
 import org.inspirenxe.strata.api.geom.Rect;
 
+import java.util.List;
 import java.util.function.Consumer;
 
 /**
  * A list of commands that opens in a popup, such as a right-click menu or a menu in a {@link MenuBar}.
  *
- * <p>Items are plain commands, check items that flip a setting, submenus, and separators. A shortcut is text drawn at
- * the right of an item; it is only a hint and binds no key. Item indexes count separators.</p>
+ * <p>Its entries are {@link MenuEntry}s: {@link MenuItem} commands, {@link CheckMenuItem}s that flip a setting,
+ * {@link SubmenuItem}s that open another menu, and {@link MenuSeparator}s. Add them with {@link #addItem(MenuEntry)},
+ * or let the shorthands such as {@link #addItem(String, Runnable)} make them. A shortcut is text drawn at the right of
+ * an item; it is only a hint and binds no key.</p>
  *
  * <p>An open menu takes focus. Hovering an item highlights it, and hovering a submenu item opens the submenu beside
  * it. Up and Down move the highlight past separators and disabled items, wrapping at the ends; Right and Left open
@@ -58,7 +61,7 @@ import java.util.function.Consumer;
  *         .addItem("Copy", "Ctrl+C", this::copy)
  *         .addSeparator()
  *         .addCheckItem("Show prices", settings.prices(), settings::setPrices);
- * slot.on(EventTypes.CLICK, event -> {
+ * cell.onEvent(EventTypes.CLICK, event -> {
  *     if (event.button() == MouseButton.RIGHT) {
  *         menu.openAt(event.x(), event.y());
  *     }
@@ -94,23 +97,59 @@ public interface Menu extends Component<Menu>, Openable<Menu> {
     String STYLE_SEPARATOR = "menu.separator";
 
     /**
-     * Requested when the user chooses an item: a click on it, or Enter, keypad Enter or Space while it is
-     * highlighted. The value is the item index. Unless a handler cancels the request, the menu closes its whole chain,
-     * flips a check item and runs the item's action. A rewritten index that is out of range or names a disabled
-     * item, a separator or a submenu item is ignored, which leaves the menu open. Items that open a submenu do not
-     * fire this event, and a choice in a submenu fires the submenu's event, not this menu's. Fires only for the
-     * user's actions.
+     * Requested when the user chooses an entry: a click on it, or Enter, keypad Enter or Space while it is
+     * highlighted. The value is the {@link MenuItem} or {@link CheckMenuItem} chosen. Unless a handler cancels the
+     * request, the menu closes its whole chain, flips a check item and runs the entry's action. A rewritten value
+     * that is not one of this menu's items, is disabled, or is a separator or a submenu item is ignored, which leaves
+     * the menu open. Submenu items do not fire this event, and a choice in a submenu fires the submenu's event, not
+     * this menu's. Fires only for the user's actions.
      */
-    EventType<ValueRequestEvent<Menu, Integer>> CHOOSE = EventType.valueRequest("menu.choose");
+    EventType<ValueRequestEvent<Menu, MenuEntry>> CHOOSE = EventType.valueRequest("menu.choose");
     /**
-     * Reported after the user chose an item, once the menus have closed and the item's action has run. The value is
-     * the item index, and {@link ValueEvent#previous()} is the same index. Code cannot choose an item, so only the
+     * Reported after the user chose an entry, once the menus have closed and the entry's action has run. The value
+     * is the entry, and {@link ValueEvent#previous()} is the same entry. Code cannot choose an entry, so only the
      * user's choices report it.
      */
-    EventType<ValueEvent<Menu, Integer>> CHOSEN = EventType.valueReport("menu.chosen");
+    EventType<ValueEvent<Menu, MenuEntry>> CHOSEN = EventType.valueReport("menu.chosen");
 
     /**
-     * Adds a command.
+     * Returns the entries, separators included, in the order they show.
+     *
+     * @return an unmodifiable copy of the entries
+     */
+    List<MenuEntry> items();
+
+    /**
+     * Adds an entry at the end.
+     *
+     * @param entry the entry; a submenu item's menu starts opening from this menu
+     * @return this menu
+     * @throws IllegalArgumentException if the entry is already in a menu or bar, or is a submenu item whose menu
+     *     already opens from somewhere else, is this menu, or is one this menu opens from
+     */
+    Menu addItem(MenuEntry entry);
+
+    /**
+     * Adds an entry at an index, moving the entries from there down.
+     *
+     * @param index where the entry goes, from 0 to the number of entries
+     * @param entry the entry
+     * @return this menu
+     * @throws IndexOutOfBoundsException if the index is outside 0 to the number of entries
+     * @throws IllegalArgumentException for the reasons {@link #addItem(MenuEntry)} gives
+     */
+    Menu addItem(int index, MenuEntry entry);
+
+    /**
+     * Removes an entry, closing its submenu if it is open. Does nothing if the entry is not in this menu.
+     *
+     * @param entry the entry
+     * @return this menu
+     */
+    Menu removeItem(MenuEntry entry);
+
+    /**
+     * Adds a command, as {@code addItem(factory.menuItem(text).setAction(action))} would.
      *
      * @param text the item's text
      * @param action run when the item is chosen, after the menus close
@@ -129,7 +168,7 @@ public interface Menu extends Component<Menu>, Openable<Menu> {
     Menu addItem(String text, String shortcut, Runnable action);
 
     /**
-     * Adds an item with a check mark that flips each time it is chosen.
+     * Adds a {@link CheckMenuItem}, an item with a check mark that flips each time it is chosen.
      *
      * @param text the item's text
      * @param checked whether it starts checked
@@ -139,7 +178,7 @@ public interface Menu extends Component<Menu>, Openable<Menu> {
     Menu addCheckItem(String text, boolean checked, Consumer<Boolean> action);
 
     /**
-     * Adds an item that opens another menu beside this one.
+     * Adds a {@link SubmenuItem}, an item that opens another menu beside this one.
      *
      * @param text the item's text
      * @param submenu the menu to open beside this one
@@ -150,73 +189,18 @@ public interface Menu extends Component<Menu>, Openable<Menu> {
     Menu addSubmenu(String text, Menu submenu);
 
     /**
-     * Adds a separator line.
+     * Adds a {@link MenuSeparator}.
      *
      * @return this menu
      */
     Menu addSeparator();
 
     /**
-     * Removes every item, closing the menu first if it is open.
+     * Removes every entry, closing the menu first if it is open.
      *
      * @return this menu
      */
     Menu clearItems();
-
-    /**
-     * Returns how many items there are, separators included.
-     *
-     * @return the number of items
-     */
-    int itemCount();
-
-    /**
-     * Returns an item's text.
-     *
-     * @param index the item index
-     * @return the text, or an empty string for a separator
-     * @throws IndexOutOfBoundsException if there is no such item
-     */
-    String itemText(int index);
-
-    /**
-     * Returns whether an item can be chosen.
-     *
-     * @param index the item index
-     * @return true if enabled; false for a separator
-     * @throws IndexOutOfBoundsException if there is no such item
-     */
-    boolean isItemEnabled(int index);
-
-    /**
-     * Enables or disables an item. A disabled item draws dimmed and cannot be highlighted or chosen.
-     *
-     * @param index the item index
-     * @param enabled true to enable it
-     * @return this menu
-     * @throws IndexOutOfBoundsException if there is no such item
-     */
-    Menu setItemEnabled(int index, boolean enabled);
-
-    /**
-     * Returns whether a check item is checked.
-     *
-     * @param index the item index
-     * @return true if it is a checked check item
-     * @throws IndexOutOfBoundsException if there is no such item
-     */
-    boolean isItemChecked(int index);
-
-    /**
-     * Checks or unchecks a check item without running its action.
-     *
-     * @param index the item index
-     * @param checked true to check it
-     * @return this menu
-     * @throws IndexOutOfBoundsException if there is no such item
-     * @throws IllegalArgumentException if the item is not a check item
-     */
-    Menu setItemChecked(int index, boolean checked);
 
     /**
      * Returns whether the menu is open.

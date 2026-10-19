@@ -5,13 +5,11 @@ import org.inspirenxe.strata.api.control.attribute.item.Activatable;
 import org.inspirenxe.strata.api.control.attribute.item.ItemSource;
 import org.inspirenxe.strata.api.control.attribute.item.RowView;
 import org.inspirenxe.strata.api.control.attribute.item.SingleSelection;
-import org.inspirenxe.strata.api.control.display.Label;
 import org.inspirenxe.strata.api.event.EventType;
 import org.inspirenxe.strata.api.event.ValueEvent;
 import org.inspirenxe.strata.api.event.ValueRequestEvent;
 import org.inspirenxe.strata.api.layout.GridLength;
 
-import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
 import java.util.function.Function;
@@ -74,7 +72,7 @@ import java.util.function.Function;
  * TableView<Offer> offers = factory.<Offer>tableView()
  *         .addTextColumn("Item", GridLength.weighted(1), Offer::name)
  *         .addTextColumn("Price", GridLength.fixed(60), offer -> format(offer.price()))
- *         .setColumnComparator(1, Comparator.comparingDouble(Offer::price))
+ *         .addColumn(factory.<Offer>tableColumn("Seller").setCellText(Offer::seller))
  *         .setItems(market.offers());
  * }</pre>
  *
@@ -105,18 +103,55 @@ public interface TableView<T> extends Component<TableView<T>>, ItemSource<T, Tab
      * Asked before the user sorts the rows: a click on the title of a sortable column. The first click on a column
      * sorts ascending and each further click flips the direction. The value is the sort about to apply. A handler
      * may rewrite it to another sort; the table then sorts as {@link #sortBy} does, and ignores a sort whose column
-     * is neither -1 nor a sortable column. Fires only for the user's actions.
+     * is neither null nor a sortable column of this table. Fires only for the user's actions.
      */
     EventType<ValueRequestEvent<TableView<?>, Sort>> SORT = EventType.valueRequest("table_view.sort");
     /**
-     * Told after the sort changed. The value is the new sort and the previous value the sort before. It fires only
-     * when the column or the direction changed, for {@link #sortBy} and for {@link #setColumnComparator} removing
-     * the comparator of the sort column. Fires for changes made from code too.
+     * Told after the sort changed. The value is the new sort and the previous value the sort before. It fires only when
+     * the column or the direction changed, for {@link #sortBy}, for {@link TableColumn#setComparator} removing the
+     * comparator of the sort column, and for {@link #removeColumn} removing it. Fires for changes made from code too.
      */
     EventType<ValueEvent<TableView<?>, Sort>> SORTED = EventType.valueReport("table_view.sorted");
 
     /**
-     * Adds a column whose cells are components. The rows are built again.
+     * Returns the columns, left to right.
+     *
+     * @return an unmodifiable copy of the columns
+     */
+    List<TableColumn<T>> columns();
+
+    /**
+     * Adds a column at the right. The rows are built again.
+     *
+     * @param column the column
+     * @return this table
+     * @throws IllegalArgumentException if the column is already in a table
+     */
+    TableView<T> addColumn(TableColumn<T> column);
+
+    /**
+     * Adds a column at an index, moving the columns from there to the right. The rows are built again.
+     *
+     * @param index where the column goes, from 0 to the number of columns
+     * @param column the column
+     * @return this table
+     * @throws IndexOutOfBoundsException if the index is outside 0 to the number of columns
+     * @throws IllegalArgumentException if the column is already in a table
+     */
+    TableView<T> addColumn(int index, TableColumn<T> column);
+
+    /**
+     * Removes a column. If the rows are sorted by it, they go back to their set order and {@link #SORTED} fires. The
+     * rows are built again. Does nothing if the column is not in this table.
+     *
+     * @param column the column
+     * @return this table
+     */
+    TableView<T> removeColumn(TableColumn<T> column);
+
+    /**
+     * Adds a column whose cells are components, as
+     * {@code addColumn(factory.tableColumn(title).setWidth(width).setCellFactory(cellFactory))} would.
      *
      * @param title the header title
      * @param width how wide the column is
@@ -126,8 +161,8 @@ public interface TableView<T> extends Component<TableView<T>>, ItemSource<T, Tab
     TableView<T> addColumn(String title, GridLength width, Function<? super T, ? extends Component<?>> cellFactory);
 
     /**
-     * Adds a column of text, sortable by that text ignoring case. Each cell is a one-line {@link Label} 4 units in
-     * from the column's edges, cut short with {@code ...} when too long. The rows are built again.
+     * Adds a column of text, sortable by that text ignoring case, as
+     * {@code addColumn(factory.tableColumn(title).setWidth(width).setCellText(text))} would.
      *
      * @param title the header title
      * @param width how wide the column is
@@ -137,50 +172,22 @@ public interface TableView<T> extends Component<TableView<T>>, ItemSource<T, Tab
     TableView<T> addTextColumn(String title, GridLength width, Function<? super T, String> text);
 
     /**
-     * Returns how many columns there are.
-     *
-     * @return the number of columns
-     */
-    int columnCount();
-
-    /**
-     * Returns a column's title.
-     *
-     * @param column the column index
-     * @return the title
-     * @throws IndexOutOfBoundsException if there is no such column
-     */
-    String columnTitle(int column);
-
-    /**
-     * Makes a column sortable by a comparator, or not sortable. If the rows are sorted by that column they are sorted
-     * again, or shown in their set order when the comparator is null.
-     *
-     * @param column the column index
-     * @param comparator orders the items ascending, or null to make the column not sortable
-     * @return this table
-     * @throws IndexOutOfBoundsException if there is no such column
-     */
-    TableView<T> setColumnComparator(int column, Comparator<? super T> comparator);
-
-    /**
      * Sorts the rows by a column, or shows them in their set order. The selection stays on the same item.
      * {@link #SORTED} fires if the column or the direction changed.
      *
-     * @param column the column index, or -1 for the set order
-     * @param ascending true for ascending, false for descending; ignored for -1
+     * @param column the column, or {@code null} for the set order
+     * @param ascending true for ascending, false for descending; ignored for the set order
      * @return this table
-     * @throws IndexOutOfBoundsException if {@code column} is neither -1 nor a column index
-     * @throws IllegalArgumentException if the column is not sortable
+     * @throws IllegalArgumentException if the column is not in this table or not sortable
      */
-    TableView<T> sortBy(int column, boolean ascending);
+    TableView<T> sortBy(TableColumn<T> column, boolean ascending);
 
     /**
      * Returns the column the rows are sorted by.
      *
-     * @return the column index, or -1 when the rows are in their set order
+     * @return the column, or empty when the rows are in their set order
      */
-    int sortColumn();
+    Optional<TableColumn<T>> sortColumn();
 
     /**
      * Returns whether the sort is ascending.
@@ -278,10 +285,10 @@ public interface TableView<T> extends Component<TableView<T>>, ItemSource<T, Tab
     /**
      * How the rows of a table are sorted.
      *
-     * @param column the column the rows are sorted by, or -1 for the order the items were set in
-     * @param ascending true for ascending, false for descending; always true for column -1 when the table reports
-     *     it
+     * @param column the column the rows are sorted by, or {@code null} for the order the items were set in
+     * @param ascending true for ascending, false for descending; always true for the set order when the table
+     *     reports it
      */
-    record Sort(int column, boolean ascending) {
+    record Sort(TableColumn<?> column, boolean ascending) {
     }
 }

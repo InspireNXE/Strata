@@ -7,8 +7,9 @@ import org.inspirenxe.strata.api.control.button.CheckBox;
 import org.inspirenxe.strata.api.control.button.RadioGroup;
 import org.inspirenxe.strata.api.control.button.ToggleSwitch;
 import org.inspirenxe.strata.api.control.collection.ComboBox;
-import org.inspirenxe.strata.api.control.collection.ListView;
 import org.inspirenxe.strata.api.control.collection.GridView;
+import org.inspirenxe.strata.api.control.collection.ListView;
+import org.inspirenxe.strata.api.control.collection.TableColumn;
 import org.inspirenxe.strata.api.control.collection.TableView;
 import org.inspirenxe.strata.api.control.collection.TreeView;
 import org.inspirenxe.strata.api.control.display.Image;
@@ -19,10 +20,15 @@ import org.inspirenxe.strata.api.control.field.Slider;
 import org.inspirenxe.strata.api.control.field.Spinner;
 import org.inspirenxe.strata.api.control.field.TextArea;
 import org.inspirenxe.strata.api.control.field.TextBox;
+import org.inspirenxe.strata.api.control.menu.CheckMenuItem;
 import org.inspirenxe.strata.api.control.menu.Menu;
 import org.inspirenxe.strata.api.control.menu.MenuBar;
+import org.inspirenxe.strata.api.control.menu.MenuItem;
+import org.inspirenxe.strata.api.control.menu.MenuSeparator;
+import org.inspirenxe.strata.api.control.menu.SubmenuItem;
 import org.inspirenxe.strata.api.control.pane.Expander;
 import org.inspirenxe.strata.api.control.pane.SplitPane;
+import org.inspirenxe.strata.api.control.pane.Tab;
 import org.inspirenxe.strata.api.control.pane.TabBar;
 import org.inspirenxe.strata.api.control.window.MessageBox;
 import org.inspirenxe.strata.api.control.window.Window;
@@ -46,8 +52,9 @@ import org.inspirenxe.strata.core.control.button.CheckBoxImpl;
 import org.inspirenxe.strata.core.control.button.RadioGroupImpl;
 import org.inspirenxe.strata.core.control.button.ToggleSwitchImpl;
 import org.inspirenxe.strata.core.control.collection.ComboBoxImpl;
-import org.inspirenxe.strata.core.control.collection.ListViewImpl;
 import org.inspirenxe.strata.core.control.collection.GridViewImpl;
+import org.inspirenxe.strata.core.control.collection.ListViewImpl;
+import org.inspirenxe.strata.core.control.collection.TableColumnImpl;
 import org.inspirenxe.strata.core.control.collection.TableViewImpl;
 import org.inspirenxe.strata.core.control.collection.TreeViewImpl;
 import org.inspirenxe.strata.core.control.display.ImageImpl;
@@ -58,11 +65,16 @@ import org.inspirenxe.strata.core.control.field.SliderImpl;
 import org.inspirenxe.strata.core.control.field.SpinnerImpl;
 import org.inspirenxe.strata.core.control.field.TextAreaImpl;
 import org.inspirenxe.strata.core.control.field.TextBoxImpl;
+import org.inspirenxe.strata.core.control.menu.CheckMenuItemImpl;
 import org.inspirenxe.strata.core.control.menu.MenuBarImpl;
 import org.inspirenxe.strata.core.control.menu.MenuImpl;
+import org.inspirenxe.strata.core.control.menu.MenuItemImpl;
+import org.inspirenxe.strata.core.control.menu.MenuSeparatorImpl;
+import org.inspirenxe.strata.core.control.menu.SubmenuItemImpl;
 import org.inspirenxe.strata.core.control.pane.ExpanderImpl;
 import org.inspirenxe.strata.core.control.pane.SplitPaneImpl;
 import org.inspirenxe.strata.core.control.pane.TabBarImpl;
+import org.inspirenxe.strata.core.control.pane.TabImpl;
 import org.inspirenxe.strata.core.control.window.MessageBoxImpl;
 import org.inspirenxe.strata.core.control.window.WindowImpl;
 import org.inspirenxe.strata.core.layout.AbsolutePanelImpl;
@@ -177,6 +189,11 @@ public final class ComponentFactoryImpl implements ComponentFactory {
     }
 
     @Override
+    public Image image() {
+        return new ImageImpl(this);
+    }
+
+    @Override
     public Image image(final SpriteId sprite) {
         return new ImageImpl(this, sprite);
     }
@@ -233,6 +250,11 @@ public final class ComponentFactoryImpl implements ComponentFactory {
     }
 
     @Override
+    public Tab tab(final String text) {
+        return new TabImpl(text);
+    }
+
+    @Override
     public ProgressBar progressBar() {
         return new ProgressBarImpl(this);
     }
@@ -268,6 +290,11 @@ public final class ComponentFactoryImpl implements ComponentFactory {
     }
 
     @Override
+    public <T> TableColumn<T> tableColumn(final String title) {
+        return new TableColumnImpl<>(this, title);
+    }
+
+    @Override
     public <T> TreeView<T> treeView(final Function<? super T, ? extends Component<?>> cellFactory) {
         return new TreeViewImpl<>(this, cellFactory);
     }
@@ -280,6 +307,26 @@ public final class ComponentFactoryImpl implements ComponentFactory {
     @Override
     public MenuBar menuBar() {
         return new MenuBarImpl(this);
+    }
+
+    @Override
+    public MenuItem menuItem(final String text) {
+        return new MenuItemImpl(text);
+    }
+
+    @Override
+    public CheckMenuItem checkMenuItem(final String text) {
+        return new CheckMenuItemImpl(text);
+    }
+
+    @Override
+    public SubmenuItem submenuItem(final String text) {
+        return new SubmenuItemImpl(text);
+    }
+
+    @Override
+    public MenuSeparator menuSeparator() {
+        return new MenuSeparatorImpl();
     }
 
     @Override

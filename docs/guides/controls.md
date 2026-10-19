@@ -447,13 +447,19 @@ The buttons come in sets: `OK`, `OK_CANCEL`, `YES_NO`, `YES_NO_CANCEL` and `CLOS
 
 ## TabBar
 
-A row of tabs, one of them selected. It only picks a tab; show the matching content from `SingleSelection.SELECTED`. Its `selected()` is the selected tab's text, and `selectItem(text)` selects a tab by its text.
+A row of tabs, one of them selected. It only picks a tab; show the matching content from `SingleSelection.SELECTED`. Each tab is a `Tab`, made with `factory.tab(text)` or by the `addTab(text)` shorthand, which holds its text, whether it is enabled, and its tooltip. `tabs()` lists them, `addTab(tab)`, `addTab(index, tab)` and `removeTab(tab)` change them, `selected()` is the selected `Tab` and `selectItem(tab)` selects one.
 
 ```java
-TabBar sides = factory.tabBar().addTab("Buy").addTab("Sell")
+Tab sell = factory.tab("Sell")
+        .setEnabled(false)
+        .setTooltip(Tooltip.text("There are no items for sale."));
+TabBar sides = factory.tabBar()
+        .addTab("Buy")
+        .addTab(sell)
         .onEvent(SingleSelection.SELECTED, event -> showSide(event.value()));
-sides.setTabEnabled(1, false).setTabTooltip(1, Tooltip.text("There are no items for sale."));
 ```
+
+A change to a tab shows in its bar at once, and a tab belongs to one bar at a time.
 
 Tabs share the width equally. A click selects an enabled tab, and Left and Right do while the bar has focus. A disabled tab still shows its tooltip.
 
@@ -604,13 +610,22 @@ TableView<Offer> offers = factory.<Offer>tableView()
         .addTextColumn("Item", GridLength.weighted(1), Offer::item)
         .addTextColumn("Seller", GridLength.fixed(70), Offer::seller)
         .addColumn("", GridLength.fixed(40), offer -> factory.button("Buy").onEvent(Button.PRESSED, event -> buy(offer)))
-        .setColumnComparator(1, Comparator.comparing(Offer::seller))
         .setItems(market.offers());
+```
+
+Each column is a `TableColumn`, made with `factory.tableColumn(title)` or by the `addColumn` and `addTextColumn` shorthands. It holds its title, its width (a `GridLength`, weighted 1 by default), its cell factory and its comparator. `setCellText(text)` gives it text cells and sorts it by that text. `columns()` lists them, and `addColumn(column)`, `addColumn(index, column)` and `removeColumn(column)` change them.
+
+```java
+TableColumn<Offer> price = factory.<Offer>tableColumn("Price")
+        .setWidth(GridLength.fixed(60))
+        .setCellText(offer -> format(offer.price()))
+        .setComparator(Comparator.comparingDouble(Offer::price));
+offers.addColumn(price).sortBy(price, true);
 ```
 
 The body is a [`ListView`](#listview): it builds only the rows in view, scrolls, selects and activates the same way, and keeps the selection on an item's key. Fixed columns take their width, auto columns their title's width plus padding, and weighted columns share the rest. The header lines up with the cells even while the scroll bar shows.
 
-A column with a comparator is sortable, and text columns sort by their text, ignoring case, unless given another. Clicking a sortable title sorts by it, ascending first and then flipping, and the title shows an arrow. `sortBy(column, ascending)` does the same from code, and -1 goes back to the set order. Sorting only changes the order on screen: `items()` keeps the set order, while `shownItems()` and every row index follow the screen.
+A column with a comparator is sortable, and text columns sort by their text, ignoring case, unless given another. Clicking a sortable title sorts by it, ascending first and then flipping, and the title shows an arrow. `sortBy(column, ascending)` does the same from code, and `sortBy(null, true)` goes back to the set order; `sortColumn()` returns the column, or empty. Sorting only changes the order on screen: `items()` keeps the set order, while `shownItems()` and every row index follow the screen.
 
 | Key | Required | Used for |
 |---|---|---|
@@ -626,8 +641,8 @@ A column with a comparator is sortable, and text columns sort by their text, ign
 | `SingleSelection.SELECTED` | Post | After every change of the selected row, including a sort or `setItems` moving it |
 | `Activatable.ACTIVATE` | Pre | When the user activates a row |
 | `Activatable.ACTIVATED` | Post | After an activation nobody canceled |
-| `TableView.SORT` | Pre | When a click on a sortable title asks to sort, with a `TableView.Sort`. Cancel or set another sort. |
-| `TableView.SORTED` | Post | After the sort column or direction changed, including `sortBy` |
+| `TableView.SORT` | Pre | When a click on a sortable title asks to sort, with a `TableView.Sort` naming the column. Cancel or set another sort. |
+| `TableView.SORTED` | Post | After the sort column or direction changed, including `sortBy`, a column losing its comparator and the sort column being removed |
 
 ## TreeView
 
@@ -672,7 +687,15 @@ cell.onEvent(EventTypes.CLICK, event -> {
 });
 ```
 
-Items are commands, check items, submenus and separators; a shortcut is only drawn as a hint. `setItemEnabled`, `setItemChecked` and `clearItems` change them, and item indexes count separators. `open(rect)` opens the menu below a rectangle as a [popup](overlays.md#popups), and `openAt(x, y)` with its corner at a point.
+Its entries are `MenuEntry`s: a `MenuItem` runs a command, a `CheckMenuItem` flips a setting, a `SubmenuItem` opens another menu, and a `MenuSeparator` draws a line. The shorthands above make them; `factory.menuItem(text)` and its siblings make them for you to keep, change and add with `addItem(entry)`. A shortcut is only drawn as a hint. `items()` lists the entries, and `addItem(index, entry)`, `removeItem(entry)` and `clearItems()` change them.
+
+```java
+MenuItem paste = factory.menuItem("Paste")
+        .setShortcut("Ctrl+V")
+        .setAction(this::paste);
+menu.addItem(paste);
+paste.setEnabled(clipboard.hasText());
+``` `open(rect)` opens the menu below a rectangle as a [popup](overlays.md#popups), and `openAt(x, y)` with its corner at a point.
 
 An open menu takes focus. Hovering an item highlights it and opens its submenu. Up and Down move the highlight past separators and disabled items; Right opens a submenu and Left closes it; Enter or Space chooses; Escape closes the menu it is pressed in. Choosing closes the whole chain of menus and then runs the action, and focus goes back to where it was before the first menu opened. A click outside closes them all.
 
@@ -682,7 +705,7 @@ MenuBar bar = factory.menuBar()
         .addMenu("View", viewMenu);
 ```
 
-A menu bar opens a title's menu below it on a click and closes it on a second. While one of its menus is open, moving the pointer onto another title switches to that menu, and Left and Right in a menu with no submenu open move along the bar. A menu belongs to at most one bar or parent menu. The bar's selection is its open menu: `selectedIndex()` is the open title or -1, `select(index)` opens a menu from code and `clearSelection()` closes it.
+A menu bar's titles are `SubmenuItem`s: `menus()` lists them, `addMenu(entry)` and `removeMenu(entry)` change them, and a disabled title opens nothing. A menu bar opens a title's menu below it on a click and closes it on a second. While one of its menus is open, moving the pointer onto another title switches to that menu, and Left and Right in a menu with no submenu open move along the bar. A menu belongs to at most one bar or parent menu. The bar's selection is its open menu: `selectedIndex()` is the open title or -1, `select(index)` opens a menu from code and `clearSelection()` closes it.
 
 | Key | Required | Used for |
 |---|---|---|
@@ -697,8 +720,8 @@ A menu bar opens a title's menu below it on a click and closes it on a second. W
 
 | Event | Kind | Fires |
 |---|---|---|
-| `Menu.CHOOSE` | Pre | When the user chooses an item, with its index. Cancel to keep the menu open and the item as it is. |
-| `Menu.CHOSEN` | Post | After the menus closed and the item's action ran |
+| `Menu.CHOOSE` | Pre | When the user chooses an item, with the `MenuEntry`. Cancel to keep the menu open and the item as it is, or set another entry. |
+| `Menu.CHOSEN` | Post | After the menus closed and the item's action ran, with the entry |
 | `Openable.OPENED` | Post | Each time the menu opens, from code or from its bar. A menu never fires `Openable.OPEN`. |
 | `Closable.CLOSED` | Post | Each time the menu closes, for any reason |
 | `SingleSelection.SELECT` | Pre | On the bar, when a click, a hover while a menu is open, or Left and Right would open a menu, with its title index |

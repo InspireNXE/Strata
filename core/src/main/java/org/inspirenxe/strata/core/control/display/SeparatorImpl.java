@@ -22,7 +22,7 @@ import java.util.Set;
 public final class SeparatorImpl extends CustomComponent<Separator> implements Separator {
     private static final Set<String> REQUIRED = Set.of(STYLE_LINE);
 
-    private final Orientation orientation;
+    private Orientation orientation;
     private float thickness;
     private Paint line;
 
@@ -35,19 +35,26 @@ public final class SeparatorImpl extends CustomComponent<Separator> implements S
     @SuppressWarnings("this-escape")
     public SeparatorImpl(final ComponentFactory ui, final Orientation orientation) {
         super(ui);
-        this.orientation = Objects.requireNonNull(orientation, "orientation");
         this.thickness = 1f;
         this.line = Paint.NONE;
-        if (orientation == Orientation.HORIZONTAL) {
-            this.setAlignment(HorizontalAlignment.STRETCH, VerticalAlignment.TOP);
-        } else {
-            this.setAlignment(HorizontalAlignment.LEFT, VerticalAlignment.STRETCH);
-        }
+        this.setOrientation(orientation);
     }
 
     @Override
     public Orientation orientation() {
         return this.orientation;
+    }
+
+    @Override
+    public Separator setOrientation(final Orientation orientation) {
+        this.orientation = Objects.requireNonNull(orientation, "orientation");
+        if (orientation == Orientation.HORIZONTAL) {
+            this.setAlignment(HorizontalAlignment.STRETCH, VerticalAlignment.TOP);
+        } else {
+            this.setAlignment(HorizontalAlignment.LEFT, VerticalAlignment.STRETCH);
+        }
+        this.invalidateLayout();
+        return this;
     }
 
     @Override

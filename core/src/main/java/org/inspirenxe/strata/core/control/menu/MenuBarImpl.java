@@ -3,6 +3,7 @@ package org.inspirenxe.strata.core.control.menu;
 import org.inspirenxe.strata.api.ComponentFactory;
 import org.inspirenxe.strata.api.control.menu.Menu;
 import org.inspirenxe.strata.api.control.menu.MenuBar;
+import org.inspirenxe.strata.api.control.menu.SubmenuItem;
 import org.inspirenxe.strata.api.event.PointerButtonEvent;
 import org.inspirenxe.strata.api.event.PointerEvent;
 import org.inspirenxe.strata.api.extension.CustomComponent;
@@ -24,7 +25,8 @@ import java.util.Optional;
 
 /**
  * The core {@link MenuBar}. It draws its titles itself, left to right from its left edge, and opens each menu as a
- * popup anchored to its title.
+ * popup anchored to its title. Its titles are {@link SubmenuItemImpl}s; a disabled title, or one without a menu,
+ * draws in the menu's disabled text style and opens nothing.
  */
 public final class MenuBarImpl extends CustomComponent<MenuBar> implements MenuBar {
     /**
@@ -32,8 +34,7 @@ public final class MenuBarImpl extends CustomComponent<MenuBar> implements MenuB
      */
     public static final float TITLE_PADDING = 8f;
 
-    private final List<String> titles;
-    private final List<MenuImpl> menus;
+    private final List<SubmenuItemImpl> entries;
     private int openIndex;
     private boolean switching;
     private float pointerX;
@@ -42,6 +43,7 @@ public final class MenuBarImpl extends CustomComponent<MenuBar> implements MenuB
     private Paint background;
     private Paint hovered;
     private TextStyle textStyle;
+    private TextStyle disabledTextStyle;
 
     // Computed during measure
     private float[] titleX;
@@ -56,41 +58,84 @@ public final class MenuBarImpl extends CustomComponent<MenuBar> implements MenuB
      */
     public MenuBarImpl(final ComponentFactory ui) {
         super(ui);
-        this.titles = new ArrayList<>();
-        this.menus = new ArrayList<>();
+        this.entries = new ArrayList<>();
         this.openIndex = -1;
         this.background = Paint.NONE;
         this.hovered = Paint.NONE;
         this.textStyle = TextStyle.DEFAULT;
+        this.disabledTextStyle = TextStyle.DEFAULT;
         this.titleX = new float[0];
         this.titleWidth = new float[0];
         this.spans = new TextSpan[0];
     }
 
     @Override
-    public MenuBar addMenu(final String title, final Menu menu) {
-        Objects.requireNonNull(title, "title");
-        if (!(menu instanceof MenuImpl impl)) {
-            throw new IllegalArgumentException(menu + " is not a Strata menu");
+    public List<SubmenuItem> menus() {
+        return List.copyOf(this.entries);
+    }
+
+    @Override
+    public MenuBar addMenu(final SubmenuItem entry) {
+        return this.addMenu(this.entries.size(), entry);
+    }
+
+    @Override
+    public MenuBar addMenu(final int index, final SubmenuItem entry) {
+        if (!(entry instanceof SubmenuItemImpl impl)) {
+            throw new IllegalArgumentException(entry + " is not a Strata menu entry");
         }
-        if (!impl.isFree()) {
-            throw new IllegalArgumentException(menu + " is already a submenu or in a menu bar");
+        Objects.checkIndex(index, this.entries.size() + 1);
+        if (impl.owner() != null) {
+            throw new IllegalArgumentException(entry + " is already in a menu or a menu bar");
         }
-        impl.setBar(this);
-        this.titles.add(title);
-        this.menus.add(impl);
+        impl.check(impl.submenu(), this);
+        impl.setOwner(this);
+        impl.link(this);
+        this.entries.add(index, impl);
+        if (this.openIndex >= index) {
+            this.openIndex++;
+        }
         this.invalidateLayout();
         return this;
     }
 
     @Override
-    public int menuCount() {
-        return this.menus.size();
+    public MenuBar removeMenu(final SubmenuItem entry) {
+        final int index = this.entries.indexOf(entry);
+        if (index < 0) {
+            return this;
+        }
+        if (index == this.openIndex) {
+            this.select(-1);
+        }
+        final SubmenuItemImpl impl = this.entries.remove(index);
+        impl.unlink();
+        impl.setOwner(null);
+        if (this.openIndex > index) {
+            this.openIndex--;
+        }
+        this.invalidateLayout();
+        return this;
     }
 
     @Override
-    public Menu menu(final int index) {
-        return this.menus.get(index);
+    public MenuBar addMenu(final String title, final Menu menu) {
+        return this.addMenu(new SubmenuItemImpl(title).setMenu(menu));
+    }
+
+    /**
+     * Called by a title when it changed: lays out again, and closes its menu if it can no longer open.
+     */
+    void entryChanged(final MenuEntryImpl entry) {
+        final int index = this.entries.indexOf(entry);
+        if (index >= 0 && index == this.openIndex && (!entry.usable() || entry.submenu() == null)) {
+            this.select(-1);
+        }
+        this.invalidateLayout();
+    }
+
+    private MenuImpl menuAt(final int index) {
+        return this.entries.get(index).submenu();
     }
 
     @Override
@@ -100,18 +145,18 @@ public final class MenuBarImpl extends CustomComponent<MenuBar> implements MenuB
 
     @Override
     public Optional<Menu> selected() {
-        return this.openIndex < 0 ? Optional.empty() : Optional.of(this.menus.get(this.openIndex));
+        return this.openIndex < 0 ? Optional.empty() : Optional.ofNullable(this.menuAt(this.openIndex));
     }
 
     @Override
     public MenuBar select(final int index) {
         if (index == -1) {
             if (this.openIndex >= 0) {
-                this.menus.get(this.openIndex).close();
+                this.menuAt(this.openIndex).close();
             }
             return this;
         }
-        Objects.checkIndex(index, this.menus.size());
+        Objects.checkIndex(index, this.entries.size());
         if (this.isAttached()) {
             this.openMenu(index, false);
         }
@@ -120,7 +165,12 @@ public final class MenuBarImpl extends CustomComponent<MenuBar> implements MenuB
 
     @Override
     public MenuBar selectItem(final Menu menu) {
-        return this.select(this.menus.indexOf(menu));
+        for (int i = 0; i < this.entries.size(); i++) {
+            if (this.menuAt(i) == menu) {
+                return this.select(i);
+            }
+        }
+        return this.select(-1);
     }
 
     /**
@@ -128,7 +178,7 @@ public final class MenuBarImpl extends CustomComponent<MenuBar> implements MenuB
      * unless the bar closed the menu to open another.
      */
     void menuClosed(final MenuImpl menu) {
-        if (this.openIndex >= 0 && this.menus.get(this.openIndex) == menu) {
+        if (this.openIndex >= 0 && this.menuAt(this.openIndex) == menu) {
             final int previous = this.openIndex;
             this.openIndex = -1;
             if (!this.switching) {
@@ -150,23 +200,25 @@ public final class MenuBarImpl extends CustomComponent<MenuBar> implements MenuB
 
     /**
      * Closes the open menu and opens another, then reports {@code SELECTED} once for the change. Ignores an index
-     * that is out of range or names the menu already open, as a handler may have rewritten it.
+     * that is out of range, names the menu already open, or names a disabled title or one without a menu, as a
+     * handler may have rewritten it.
      */
     private void openMenu(final int index, final boolean fromKeyboard) {
-        if (index < 0 || index >= this.titleX.length || index == this.openIndex) {
+        if (index < 0 || index >= this.titleX.length || index >= this.entries.size() || index == this.openIndex
+                || !this.entries.get(index).usable() || this.menuAt(index) == null) {
             return;
         }
         final int previous = this.openIndex;
         if (previous >= 0) {
             this.switching = true;
             try {
-                this.menus.get(previous).close();
+                this.menuAt(previous).close();
             } finally {
                 this.switching = false;
             }
         }
         final Rect bounds = this.bounds();
-        final MenuImpl menu = this.menus.get(index);
+        final MenuImpl menu = this.menuAt(index);
         menu.open(new Rect(bounds.x() + this.titleX[index], bounds.y(), this.titleWidth[index], bounds.height()));
         if (menu.isOpen()) {
             this.openIndex = index;
@@ -183,10 +235,17 @@ public final class MenuBarImpl extends CustomComponent<MenuBar> implements MenuB
      * Moves from the open menu to its neighbor, wrapping at the ends; called by a menu on Left or Right.
      */
     void step(final int direction) {
-        if (this.openIndex < 0 || this.menus.size() < 2) {
+        final int count = this.entries.size();
+        if (this.openIndex < 0 || count < 2) {
             return;
         }
-        this.userOpen(Math.floorMod(this.openIndex + direction, this.menus.size()), true);
+        for (int step = 1; step < count; step++) {
+            final int index = Math.floorMod(this.openIndex + step * direction, count);
+            if (this.entries.get(index).usable() && this.menuAt(index) != null) {
+                this.userOpen(index, true);
+                return;
+            }
+        }
     }
 
     @Override
@@ -194,12 +253,13 @@ public final class MenuBarImpl extends CustomComponent<MenuBar> implements MenuB
         this.background = theme.paintOr(STYLE_BACKGROUND, Paint.NONE);
         this.hovered = theme.paintOr(STYLE_ITEM_HOVERED, theme.paintOr(Menu.STYLE_ITEM_HOVERED, Paint.NONE));
         this.textStyle = theme.textStyleOr(STYLE_TEXT, theme.textStyleOr(Menu.STYLE_TEXT, TextStyle.DEFAULT));
+        this.disabledTextStyle = theme.textStyleOr(Menu.STYLE_TEXT_DISABLED, this.textStyle);
     }
 
     @Override
     protected Size measure(final MeasureContext context, final float availableWidth, final float availableHeight) {
         final TextMetrics metrics = context.text();
-        final int count = this.titles.size();
+        final int count = this.entries.size();
         if (this.titleX.length != count) {
             this.titleX = new float[count];
             this.titleWidth = new float[count];
@@ -207,7 +267,8 @@ public final class MenuBarImpl extends CustomComponent<MenuBar> implements MenuB
         }
         float x = 0f;
         for (int i = 0; i < count; i++) {
-            this.spans[i] = new TextSpan(this.titles.get(i), this.textStyle);
+            final SubmenuItemImpl entry = this.entries.get(i);
+            this.spans[i] = new TextSpan(entry.text(), entry.usable() ? this.textStyle : this.disabledTextStyle);
             this.titleX[i] = x;
             this.titleWidth[i] = metrics.width(this.spans[i]) + TITLE_PADDING * 2f;
             x += this.titleWidth[i];
@@ -244,7 +305,7 @@ public final class MenuBarImpl extends CustomComponent<MenuBar> implements MenuB
         this.pointerX = event.x();
         if (this.openIndex >= 0) {
             final int index = this.titleAt(event.x());
-            if (index >= 0 && index != this.openIndex) {
+            if (index >= 0 && index != this.openIndex && this.entries.get(index).usable() && this.menuAt(index) != null) {
                 this.userOpen(index, false);
             }
         }
@@ -260,8 +321,8 @@ public final class MenuBarImpl extends CustomComponent<MenuBar> implements MenuB
             return;
         }
         if (index == this.openIndex) {
-            this.menus.get(index).close();
-        } else {
+            this.menuAt(index).close();
+        } else if (this.entries.get(index).usable() && this.menuAt(index) != null) {
             this.userOpen(index, false);
         }
         event.consume();

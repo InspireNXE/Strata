@@ -27,6 +27,19 @@ public final class ImageImpl extends CustomComponent<Image> implements Image {
     private Scaling scaling;
 
     /**
+     * Creates an image that draws nothing, 16 by 16 units.
+     *
+     * @param ui the factory that owns the image
+     */
+    public ImageImpl(final ComponentFactory ui) {
+        super(ui);
+        this.tint = 0xFFFFFFFF;
+        this.imageWidth = 16f;
+        this.imageHeight = 16f;
+        this.scaling = Scaling.STRETCH;
+    }
+
+    /**
      * Creates an image.
      *
      * @param ui the factory that owns the image
@@ -147,7 +160,7 @@ public final class ImageImpl extends CustomComponent<Image> implements Image {
     private void draw(final Painter painter, final Rect rect) {
         if (this.visual != null) {
             painter.visual(this.visual, rect, this.tint);
-        } else {
+        } else if (this.sprite != null) {
             painter.sprite(this.sprite, rect, this.tint);
         }
     }

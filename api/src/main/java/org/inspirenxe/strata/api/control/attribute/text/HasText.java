@@ -1,15 +1,14 @@
 package org.inspirenxe.strata.api.control.attribute.text;
 
-import org.inspirenxe.strata.api.event.EventTarget;
-
 /**
- * A control that shows one string of text as its caption, such as a button, a check box or a label.
+ * A control or entry that shows one string of text as its caption, such as a button, a check box, a label, a tab or a
+ * menu item.
  *
  * <p>Only Strata implements this interface.</p>
  *
  * @param <S> the control's own type, which the setter returns
  */
-public interface HasText<S extends HasText<S>> extends EventTarget<S> {
+public interface HasText<S extends HasText<S>> {
 
     /**
      * Returns the text.

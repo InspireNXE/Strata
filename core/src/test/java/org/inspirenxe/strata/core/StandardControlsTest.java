@@ -16,8 +16,10 @@ import org.inspirenxe.strata.api.control.collection.TreeView;
 import org.inspirenxe.strata.api.control.field.Spinner;
 import org.inspirenxe.strata.api.control.field.TextArea;
 import org.inspirenxe.strata.api.control.field.TextBox;
+import org.inspirenxe.strata.api.control.menu.CheckMenuItem;
 import org.inspirenxe.strata.api.control.menu.Menu;
 import org.inspirenxe.strata.api.control.menu.MenuBar;
+import org.inspirenxe.strata.api.control.menu.MenuItem;
 import org.inspirenxe.strata.api.control.pane.Expander;
 import org.inspirenxe.strata.api.control.pane.SplitPane;
 import org.inspirenxe.strata.api.geom.Rect;
@@ -315,8 +317,10 @@ class StandardControlsTest {
         private void show() {
             this.table = StandardControlsTest.this.topLeft(StandardControlsTest.this.ui.<Offer>tableView())
                     .addTextColumn("Name", GridLength.weighted(1), Offer::name)
-                    .addTextColumn("Price", GridLength.fixed(60), offer -> Double.toString(offer.price()))
-                    .setColumnComparator(1, java.util.Comparator.comparingDouble(Offer::price))
+                    .addColumn(StandardControlsTest.this.ui.<Offer>tableColumn("Price")
+                            .setWidth(GridLength.fixed(60))
+                            .setCellText(offer -> Double.toString(offer.price()))
+                            .setComparator(java.util.Comparator.comparingDouble(Offer::price)))
                     .setItems(List.of(this.apple, this.cherry, this.banana));
             this.table.setSize(200, 120);
             StandardControlsTest.this.test.show(this.table);
@@ -337,7 +341,7 @@ class StandardControlsTest {
             this.show();
             // Name is weighted and takes 140 of 200, so Price starts at 140
             StandardControlsTest.this.test.click(150, 10);
-            assertEquals(1, this.table.sortColumn());
+            assertEquals(Optional.of(this.table.columns().get(1)), this.table.sortColumn());
             assertEquals(List.of(this.cherry, this.banana, this.apple), this.table.shownItems());
         }
 
@@ -345,7 +349,7 @@ class StandardControlsTest {
         void theSelectionFollowsItsItemThroughASort() {
             this.show();
             this.table.select(0);
-            this.table.sortBy(0, false);
+            this.table.sortBy(this.table.columns().getFirst(), false);
             assertEquals(Optional.of(this.apple), this.table.selected());
             assertEquals(2, this.table.selectedIndex());
         }
@@ -353,8 +357,8 @@ class StandardControlsTest {
         @Test
         void sortingByAColumnWithoutAComparatorThrows() {
             this.show();
-            this.table.setColumnComparator(0, null);
-            assertThrows(IllegalArgumentException.class, () -> this.table.sortBy(0, true));
+            this.table.columns().getFirst().setComparator(null);
+            assertThrows(IllegalArgumentException.class, () -> this.table.sortBy(this.table.columns().getFirst(), true));
         }
 
         @Test
@@ -486,7 +490,7 @@ class StandardControlsTest {
             StandardControlsTest.this.key(Key.UP);
             StandardControlsTest.this.key(Key.SPACE);
             assertEquals(List.of("check true"), this.heard);
-            assertTrue(this.menu.isItemChecked(3));
+            assertTrue(((CheckMenuItem) this.menu.items().get(3)).isSelected());
         }
 
         @Test
@@ -506,7 +510,8 @@ class StandardControlsTest {
         @Test
         void aClickChoosesAndDisabledItemsDoNothing() {
             this.show();
-            this.menu.setItemEnabled(0, false).openAt(10, 10);
+            ((MenuItem) this.menu.items().getFirst()).setEnabled(false);
+            this.menu.openAt(10, 10);
             StandardControlsTest.this.test.host().layout();
             // Items start 2 units in; each is 15 tall
             StandardControlsTest.this.test.click(30, 10 + 2 + 7);

@@ -77,6 +77,15 @@ public interface SplitPane extends Component<SplitPane> {
     Orientation orientation();
 
     /**
+     * Sets the direction of the split. The position is kept. A new layout runs.
+     *
+     * @param orientation {@link Orientation#HORIZONTAL} for side by side, {@link Orientation#VERTICAL} for one
+     *                    above the other
+     * @return this pane
+     */
+    SplitPane setOrientation(Orientation orientation);
+
+    /**
      * Returns the left or top component.
      *
      * @return the first component, or null if none was set

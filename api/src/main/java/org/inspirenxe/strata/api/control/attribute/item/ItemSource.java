@@ -1,7 +1,5 @@
 package org.inspirenxe.strata.api.control.attribute.item;
 
-import org.inspirenxe.strata.api.event.EventTarget;
-
 import java.util.List;
 import java.util.function.Function;
 
@@ -16,7 +14,7 @@ import java.util.function.Function;
  * @param <T> the type of the items
  * @param <S> the control's own type, which the setters return
  */
-public interface ItemSource<T, S extends ItemSource<T, S>> extends EventTarget<S> {
+public interface ItemSource<T, S extends ItemSource<T, S>> {
 
     /**
      * Returns the items. For a tree these are its roots.

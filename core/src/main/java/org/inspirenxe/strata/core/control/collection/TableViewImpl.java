@@ -1,9 +1,11 @@
 package org.inspirenxe.strata.core.control.collection;
 
+import java.util.Optional;
 import org.inspirenxe.strata.api.ComponentFactory;
 import org.inspirenxe.strata.api.component.Component;
 import org.inspirenxe.strata.api.component.CursorKind;
 import org.inspirenxe.strata.api.control.collection.ListView;
+import org.inspirenxe.strata.api.control.collection.TableColumn;
 import org.inspirenxe.strata.api.control.collection.TableView;
 import org.inspirenxe.strata.api.event.PointerButtonEvent;
 import org.inspirenxe.strata.api.event.PointerEvent;
@@ -12,14 +14,12 @@ import org.inspirenxe.strata.api.extension.CustomComponent;
 import org.inspirenxe.strata.api.extension.CustomComposite;
 import org.inspirenxe.strata.api.extension.MeasureContext;
 import org.inspirenxe.strata.api.extension.Painter;
-import org.inspirenxe.strata.api.geom.Insets;
 import org.inspirenxe.strata.api.geom.Rect;
 import org.inspirenxe.strata.api.geom.Size;
 import org.inspirenxe.strata.api.input.MouseButton;
 import org.inspirenxe.strata.api.layout.Anchor;
 import org.inspirenxe.strata.api.layout.GridLength;
 import org.inspirenxe.strata.api.text.TextMetrics;
-import org.inspirenxe.strata.api.text.TextOverflow;
 import org.inspirenxe.strata.api.text.TextSpan;
 import org.inspirenxe.strata.api.text.TextStyle;
 import org.inspirenxe.strata.api.theme.Paint;
@@ -55,12 +55,12 @@ public final class TableViewImpl<T> extends CustomComposite<TableView<T>> implem
     private static final Set<String> REQUIRED = Set.of(STYLE_HEADER);
 
     private final ComponentFactory ui;
-    private final List<Column<T>> columns;
+    private final List<TableColumnImpl<T>> columns;
     private final ListViewImpl<T> list;
     private final Header header;
     private List<T> items;
     private List<T> shown;
-    private int sortColumn;
+    private TableColumnImpl<T> sortColumn;
     private boolean ascending;
 
     // Column offsets and widths, relative to the start of a row
@@ -87,7 +87,6 @@ public final class TableViewImpl<T> extends CustomComposite<TableView<T>> implem
         this.columns = new ArrayList<>();
         this.items = List.of();
         this.shown = List.of();
-        this.sortColumn = -1;
         this.ascending = true;
         this.columnX = new float[0];
         this.columnWidth = new float[0];
@@ -109,26 +108,55 @@ public final class TableViewImpl<T> extends CustomComposite<TableView<T>> implem
     // ------------------------------------------------------------------
 
     @Override
-    public TableView<T> addColumn(final String title, final GridLength width,
-                                  final Function<? super T, ? extends Component<?>> cellFactory) {
-        this.columns.add(new Column<>(Objects.requireNonNull(title, "title"), Objects.requireNonNull(width, "width"),
-                Objects.requireNonNull(cellFactory, "cellFactory"), null));
+    public List<TableColumn<T>> columns() {
+        return List.copyOf(this.columns);
+    }
+
+    @Override
+    public TableView<T> addColumn(final TableColumn<T> column) {
+        return this.addColumn(this.columns.size(), column);
+    }
+
+    @Override
+    public TableView<T> addColumn(final int index, final TableColumn<T> column) {
+        final TableColumnImpl<T> impl = this.impl(column);
+        Objects.checkIndex(index, this.columns.size() + 1);
+        impl.setTable(this);
+        this.columns.add(index, impl);
         return this.columnsChanged();
     }
 
     @Override
-    public TableView<T> addTextColumn(final String title, final GridLength width, final Function<? super T, String> text) {
-        Objects.requireNonNull(text, "text");
-        final Function<T, Component<?>> cell = item -> {
-            final var label = this.ui.label(text.apply(item));
-            label.setOverflow(TextOverflow.ELLIPSIS);
-            label.setMargin(Insets.of(CELL_PADDING, 0f));
-            label.setAnchor(Anchor.MIDDLE_LEFT);
-            return label;
-        };
-        this.columns.add(new Column<>(Objects.requireNonNull(title, "title"), Objects.requireNonNull(width, "width"), cell,
-                Comparator.comparing(text, String.CASE_INSENSITIVE_ORDER)));
+    public TableView<T> removeColumn(final TableColumn<T> column) {
+        final int index = this.columns.indexOf(column);
+        if (index < 0) {
+            return this;
+        }
+        final TableColumnImpl<T> impl = this.columns.remove(index);
+        impl.setTable(null);
+        if (impl == this.sortColumn) {
+            this.clearSort(impl);
+        }
         return this.columnsChanged();
+    }
+
+    @Override
+    public TableView<T> addColumn(final String title, final GridLength width,
+                                  final Function<? super T, ? extends Component<?>> cellFactory) {
+        return this.addColumn(new TableColumnImpl<T>(this.ui, title).setWidth(width).setCellFactory(cellFactory));
+    }
+
+    @Override
+    public TableView<T> addTextColumn(final String title, final GridLength width, final Function<? super T, String> text) {
+        return this.addColumn(new TableColumnImpl<T>(this.ui, title).setWidth(width).setCellText(text));
+    }
+
+    @SuppressWarnings("unchecked")
+    private TableColumnImpl<T> impl(final TableColumn<T> column) {
+        if (!(column instanceof TableColumnImpl<?> impl)) {
+            throw new IllegalArgumentException(column + " is not a Strata table column");
+        }
+        return (TableColumnImpl<T>) impl;
     }
 
     private TableView<T> columnsChanged() {
@@ -137,56 +165,66 @@ public final class TableViewImpl<T> extends CustomComposite<TableView<T>> implem
         return this;
     }
 
-    @Override
-    public int columnCount() {
-        return this.columns.size();
+    /**
+     * Called by a column when its title or width changed.
+     */
+    void columnLaidOutChanged() {
+        this.invalidateLayout();
     }
 
-    @Override
-    public String columnTitle(final int column) {
-        return this.columns.get(column).title;
+    /**
+     * Called by a column when its cell factory changed.
+     */
+    void cellsChanged() {
+        this.list.refresh();
     }
 
-    @Override
-    public TableView<T> setColumnComparator(final int column, final Comparator<? super T> comparator) {
-        this.columns.get(column).comparator = comparator;
+    /**
+     * Called by a column when its comparator changed: sorts again if the rows are sorted by it, or goes back to the
+     * set order if it is no longer sortable.
+     */
+    void comparatorChanged(final TableColumnImpl<T> column) {
         if (column == this.sortColumn) {
-            final boolean wasAscending = this.ascending;
-            if (comparator == null) {
-                this.sortColumn = -1;
-                this.ascending = true;
-            }
-            this.resort();
-            if (comparator == null) {
-                this.report(SORTED, new Sort(-1, true), new Sort(column, wasAscending));
+            if (column.comparator().isEmpty()) {
+                this.clearSort(column);
+            } else {
+                this.resort();
             }
         }
         this.invalidateLayout();
-        return this;
     }
 
-    @Override
-    public TableView<T> sortBy(final int column, final boolean ascending) {
-        if (column != -1) {
-            Objects.checkIndex(column, this.columns.size());
-            if (this.columns.get(column).comparator == null) {
-                throw new IllegalArgumentException("Column " + column + " is not sortable");
-            }
-        }
-        final int previousColumn = this.sortColumn;
-        final boolean previousAscending = this.ascending;
-        this.sortColumn = column;
-        this.ascending = column == -1 || ascending;
+    /**
+     * Goes back to the set order after the sort column stopped being one, and reports it.
+     */
+    private void clearSort(final TableColumnImpl<T> previous) {
+        final boolean wasAscending = this.ascending;
+        this.sortColumn = null;
+        this.ascending = true;
         this.resort();
-        if (column != previousColumn || this.ascending != previousAscending) {
-            this.report(SORTED, new Sort(column, this.ascending), new Sort(previousColumn, previousAscending));
+        this.report(SORTED, new Sort(null, true), new Sort(previous, wasAscending));
+    }
+
+    @Override
+    public TableView<T> sortBy(final TableColumn<T> column, final boolean ascending) {
+        if (column != null && (!this.columns.contains(column) || !column.isSortable())) {
+            throw new IllegalArgumentException(column + " is not a sortable column of this table");
+        }
+        final TableColumnImpl<T> next = column == null ? null : this.impl(column);
+        final TableColumnImpl<T> previousColumn = this.sortColumn;
+        final boolean previousAscending = this.ascending;
+        this.sortColumn = next;
+        this.ascending = next == null || ascending;
+        this.resort();
+        if (next != previousColumn || this.ascending != previousAscending) {
+            this.report(SORTED, new Sort(next, this.ascending), new Sort(previousColumn, previousAscending));
         }
         return this;
     }
 
     @Override
-    public int sortColumn() {
-        return this.sortColumn;
+    public Optional<TableColumn<T>> sortColumn() {
+        return Optional.ofNullable(this.sortColumn);
     }
 
     @Override
@@ -196,10 +234,10 @@ public final class TableViewImpl<T> extends CustomComposite<TableView<T>> implem
 
     @SuppressWarnings("unchecked")
     private void resort() {
-        if (this.sortColumn < 0) {
+        if (this.sortColumn == null) {
             this.shown = this.items;
         } else {
-            final Comparator<T> comparator = (Comparator<T>) this.columns.get(this.sortColumn).comparator;
+            final Comparator<T> comparator = (Comparator<T>) this.sortColumn.comparator().orElseThrow();
             final List<T> sorted = new ArrayList<>(this.items);
             sorted.sort(this.ascending ? comparator : comparator.reversed());
             this.shown = List.copyOf(sorted);
@@ -210,8 +248,9 @@ public final class TableViewImpl<T> extends CustomComposite<TableView<T>> implem
     /**
      * Asks to sort by a column after a click on its title: ascending first, then flipping.
      */
-    void titleClicked(final int column) {
-        if (this.columns.get(column).comparator == null) {
+    void titleClicked(final int index) {
+        final TableColumnImpl<T> column = this.columns.get(index);
+        if (!column.isSortable()) {
             return;
         }
         final boolean ascending = column != this.sortColumn || !this.ascending;
@@ -219,16 +258,19 @@ public final class TableViewImpl<T> extends CustomComposite<TableView<T>> implem
     }
 
     /**
-     * Sorts as a request ended, unless the sort is null or names neither -1 nor a sortable column, which a handler
-     * can cause by rewriting the sort or removing the comparator.
+     * Sorts as a request ended, unless the sort is null or names neither null nor a sortable column of this table,
+     * which a handler can cause by rewriting the sort or removing the comparator.
      */
+    @SuppressWarnings("unchecked")
     private void applySort(final Sort sort) {
         if (sort == null) {
             return;
         }
-        final int column = sort.column();
-        if (column == -1 || column >= 0 && column < this.columns.size() && this.isSortable(column)) {
-            this.sortBy(column, sort.ascending());
+        final TableColumn<?> column = sort.column();
+        if (column == null) {
+            this.sortBy(null, true);
+        } else if (this.columns.contains(column) && column.isSortable()) {
+            this.sortBy((TableColumn<T>) column, sort.ascending());
         }
     }
 
@@ -256,7 +298,7 @@ public final class TableViewImpl<T> extends CustomComposite<TableView<T>> implem
     }
 
     boolean isSortable(final int column) {
-        return this.columns.get(column).comparator != null;
+        return this.columns.get(column).isSortable();
     }
 
     // ------------------------------------------------------------------
@@ -394,16 +436,16 @@ public final class TableViewImpl<T> extends CustomComposite<TableView<T>> implem
     }
 
     private float autoWidth(final TextMetrics metrics, final int column) {
-        final Column<T> definition = this.columns.get(column);
-        return metrics.width(new TextSpan(definition.title, this.headerText)) + CELL_PADDING * 2f
-                + (definition.comparator != null ? ARROW_ROOM : 0f);
+        final TableColumnImpl<T> definition = this.columns.get(column);
+        return metrics.width(new TextSpan(definition.title(), this.headerText)) + CELL_PADDING * 2f
+                + (definition.isSortable() ? ARROW_ROOM : 0f);
     }
 
     @Override
     protected Size measure(final MeasureContext context, final float availableWidth, final float availableHeight) {
         float columnsWidth = 0f;
         for (int i = 0; i < this.columns.size(); i++) {
-            final GridLength width = this.columns.get(i).width;
+            final GridLength width = this.columns.get(i).width();
             if (width instanceof GridLength.Fixed fixed) {
                 columnsWidth += fixed.size();
             } else {
@@ -436,7 +478,7 @@ public final class TableViewImpl<T> extends CustomComposite<TableView<T>> implem
         float used = 0f;
         float weights = 0f;
         for (int i = 0; i < count; i++) {
-            final GridLength length = this.columns.get(i).width;
+            final GridLength length = this.columns.get(i).width();
             if (length instanceof GridLength.Fixed fixed) {
                 this.columnWidth[i] = fixed.size();
             } else if (length instanceof GridLength.Weighted weighted) {
@@ -450,13 +492,13 @@ public final class TableViewImpl<T> extends CustomComposite<TableView<T>> implem
         final float left = Math.max(0f, width - used);
         float x = 0f;
         for (int i = 0; i < count; i++) {
-            if (this.columns.get(i).width instanceof GridLength.Weighted weighted && weights > 0f) {
+            if (this.columns.get(i).width() instanceof GridLength.Weighted weighted && weights > 0f) {
                 this.columnWidth[i] = left * weighted.weight() / weights;
             }
             this.columnX[i] = x;
             x += this.columnWidth[i];
             final float room = this.columnWidth[i] - CELL_PADDING * 2f - (this.isSortable(i) ? ARROW_ROOM : 0f);
-            final List<TextSpan> title = RichText.ellipsize(List.of(new TextSpan(this.columns.get(i).title, this.headerText)),
+            final List<TextSpan> title = RichText.ellipsize(List.of(new TextSpan(this.columns.get(i).title(), this.headerText)),
                     room, metrics);
             this.titles[i] = title.isEmpty() ? new TextSpan("", this.headerText) : title.getFirst();
         }
@@ -469,24 +511,6 @@ public final class TableViewImpl<T> extends CustomComposite<TableView<T>> implem
         }
         for (int i = 1; i < this.columns.size(); i++) {
             this.grid.paint(painter, new Rect(this.rowsX + this.columnX[i] - 1f, bounds.y(), 1f, bounds.height()));
-        }
-    }
-
-    /**
-     * One column's definition.
-     */
-    private static final class Column<T> {
-        final String title;
-        final GridLength width;
-        final Function<? super T, ? extends Component<?>> cellFactory;
-        Comparator<? super T> comparator;
-
-        Column(final String title, final GridLength width, final Function<? super T, ? extends Component<?>> cellFactory,
-               final Comparator<? super T> comparator) {
-            this.title = title;
-            this.width = width;
-            this.cellFactory = cellFactory;
-            this.comparator = comparator;
         }
     }
 
@@ -531,7 +555,7 @@ public final class TableViewImpl<T> extends CustomComposite<TableView<T>> implem
                     this.table.headerHovered.paint(painter, cell);
                 }
                 painter.text(this.table.titles[i], cell.x() + CELL_PADDING, textY);
-                if (i == this.table.sortColumn) {
+                if (this.table.sortColumn != null && this.table.columns.get(i) == this.table.sortColumn) {
                     final float arrowX = cell.right() - CELL_PADDING - Rings.ARROW_LONG;
                     final float arrowY = cell.y() + (cell.height() - Rings.ARROW_SHORT) * 0.5f;
                     if (this.table.ascending) {
@@ -575,8 +599,8 @@ public final class TableViewImpl<T> extends CustomComposite<TableView<T>> implem
             super(ui);
             this.table = table;
             this.cells = new ArrayList<>();
-            for (final Column<T> column : table.columns) {
-                final Component<?> cell = column.cellFactory.apply(item);
+            for (final TableColumnImpl<T> column : table.columns) {
+                final Component<?> cell = column.cellFactory().apply(item);
                 this.cells.add(cell);
                 this.addContent(cell);
             }
