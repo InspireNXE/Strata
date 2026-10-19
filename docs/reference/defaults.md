@@ -7,7 +7,7 @@ Every number Strata picks for you.
 | Setting | Default |
 |---|---|
 | Visible, enabled | yes |
-| Focusable, tabbable | no, except buttons, check boxes, sliders, text boxes, lists, combo boxes and tab bars |
+| Focusable, tabbable | no, except buttons, check boxes, radio buttons, toggle switches, sliders, text boxes, text areas, lists (also inside tables and trees), combo boxes, tab bars and expanders. Menus are focusable but not tabbable. |
 | Tab index | 0 |
 | Cursor | none (inherits; `ARROW` at the root) |
 | Margin | `Insets.NONE` |
@@ -95,6 +95,39 @@ Every number Strata picks for you.
 | `ProgressBar` | Desired size | 100 wide, one line plus 4 |
 | | Value | 0 |
 | `Separator` | Thickness | 1 |
+| `RadioButton` | Box, gap and cursor | as `CheckBox` |
+| | Mark inset | three tenths of the box size on each side |
+| `ToggleSwitch` | Track | caption line height plus 4 tall, twice that wide |
+| | Knob | a square 2 in from the track's edges |
+| | Gap between track and caption | 4 |
+| `Spinner` | Desired width | 60, of which the buttons take 12 |
+| | Range, step, decimals, value | 0 to 100, 1, 0, 0 |
+| | Page Up and Page Down | 10 steps |
+| `TextArea` | Desired size | 160 wide, 4 lines plus padding tall |
+| | Text padding | 4 on each side |
+| | Wrapping | on |
+| | Wheel | 3 lines a notch |
+| | Caret after `setText` | at the start, scrolled to the top |
+| `TableView` | Header height | 20 |
+| | Auto column width | title plus 8, and 11 more when sortable |
+| | Text cells | 4 in from the column's edges, cut short with `...` |
+| | Sort | the set order; text columns sortable, ignoring case |
+| `TreeView` | Indent | 10 a level |
+| | Arrow column | 12 |
+| | Children | none: every item is a leaf |
+| `Menu` | Item height | one line plus 6 |
+| | Gutters | 14 at each side of an item, 2 around the items |
+| | Separator height | 5 |
+| | Smallest width | 60 |
+| `MenuBar` | Title size | text plus 8 on each side; one line plus 6 |
+| `Expander` | Header | one line plus 6 tall |
+| | Expanded | no |
+| `SplitPane` | Divider | 4 thick |
+| | Position | 0.5 |
+| | Minimum side when dragging | 20 |
+| `SlotGrid` | Columns, slot size, spacing | 9, 18, 0 |
+| | Content inset | 1 |
+| | Selectable | no |
 
 ## Input
 
@@ -109,6 +142,9 @@ Every number Strata picks for you.
 | Keys the host repeats itself | Left, Right, Up, Down, Backspace, Delete, Home, End, Page Up, Page Down |
 | Tooltip position | 12 right of and 12 above the pointer, flipped left at the right edge, kept inside the host |
 | Tooltip padding | 4, with 1 between lines |
+| Toast time | 3000 ms for text toasts |
+| Toast position | 4 in from the top and right edges, stacked 4 apart |
+| Toast padding | 6; text wraps at a third of the host's width |
 
 The host synthesizes repeats only for engines whose platform reports `sendsKeyRepeat == false`. Swing sends its own.
 

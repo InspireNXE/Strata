@@ -35,6 +35,19 @@ A [`MessageBox`](widgets.md#messagebox) is a ready-made dialog for confirmations
 --8<-- "widgets/OverlayExamples.java:message-box"
 ```
 
+## Toasts
+
+A toast is a short notice that closes itself, such as "Listing created".
+
+```java
+factory.overlays().toast("Listing created");
+factory.overlays().toast(myNoticePanel, 5000);
+```
+
+Toasts stack down the top-right corner, 4 units in from the edges and 4 apart. A text toast shows for 3 seconds and wraps at a third of the host's width; a component toast shows for the time given and draws its own background. The time runs on the platform's clock, and a toast closes on the first frame after it runs out. A click on a toast that nothing in it consumed closes it early. Presses elsewhere and Escape leave toasts alone, and they take no focus.
+
+A text toast draws on `toast.background` with `toast.text`, falling back to the tooltip keys.
+
 ## Working with open overlays
 
 | Call | Does |
@@ -43,7 +56,7 @@ A [`MessageBox`](widgets.md#messagebox) is a ready-made dialog for confirmations
 | `overlay.onClosed(listener)` | Runs once it has closed, however that happened |
 | `overlays.of(component)` | Finds the overlay a component is shown in, for a button inside a dialog that closes it |
 | `overlays.open()` | Every open overlay, bottom first |
-| `overlays.closeAll()` | Closes them all, top first |
+| `overlays.closeAll()` | Closes them all, top first, toasts included |
 
 Content must be new: a component already in a tree is refused. Closing or rebuilding the screen closes every overlay.
 

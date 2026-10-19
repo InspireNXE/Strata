@@ -20,19 +20,30 @@ import org.inspirenxe.strata.api.widget.ButtonBehavior;
 import org.inspirenxe.strata.api.widget.CheckBox;
 import org.inspirenxe.strata.api.widget.CheckBoxBehavior;
 import org.inspirenxe.strata.api.widget.ComboBox;
+import org.inspirenxe.strata.api.widget.Expander;
 import org.inspirenxe.strata.api.widget.Image;
 import org.inspirenxe.strata.api.widget.ImageBehavior;
 import org.inspirenxe.strata.api.widget.Label;
 import org.inspirenxe.strata.api.widget.LabelBehavior;
 import org.inspirenxe.strata.api.widget.ListView;
+import org.inspirenxe.strata.api.widget.Menu;
+import org.inspirenxe.strata.api.widget.MenuBar;
 import org.inspirenxe.strata.api.widget.MessageBox;
 import org.inspirenxe.strata.api.widget.ProgressBar;
+import org.inspirenxe.strata.api.widget.RadioGroup;
 import org.inspirenxe.strata.api.widget.Separator;
 import org.inspirenxe.strata.api.widget.Slider;
 import org.inspirenxe.strata.api.widget.SliderBehavior;
+import org.inspirenxe.strata.api.widget.SlotGrid;
+import org.inspirenxe.strata.api.widget.Spinner;
+import org.inspirenxe.strata.api.widget.SplitPane;
 import org.inspirenxe.strata.api.widget.TabBar;
+import org.inspirenxe.strata.api.widget.TableView;
+import org.inspirenxe.strata.api.widget.TextArea;
 import org.inspirenxe.strata.api.widget.TextBox;
 import org.inspirenxe.strata.api.widget.TextBoxBehavior;
+import org.inspirenxe.strata.api.widget.ToggleSwitch;
+import org.inspirenxe.strata.api.widget.TreeView;
 import org.inspirenxe.strata.api.widget.Window;
 import org.inspirenxe.strata.api.visual.Visual;
 
@@ -275,6 +286,94 @@ public interface ComponentFactory {
      * @return a new separator
      */
     Separator separator(Orientation orientation);
+
+    /**
+     * Makes an empty {@link RadioGroup}. Make its buttons with {@link RadioGroup#add}.
+     *
+     * @param <T> the type of the values the buttons stand for
+     * @return a new group
+     */
+    <T> RadioGroup<T> radioGroup();
+
+    /**
+     * Makes a {@link ToggleSwitch} that is off.
+     *
+     * @param text the caption
+     * @return a new switch
+     */
+    ToggleSwitch toggleSwitch(String text);
+
+    /**
+     * Makes a {@link Spinner} counting whole numbers from 0 to 100, at 0.
+     *
+     * @return a new spinner
+     */
+    Spinner spinner();
+
+    /**
+     * Makes an empty {@link TextArea} that wraps long lines.
+     *
+     * @return a new text area
+     */
+    TextArea textArea();
+
+    /**
+     * Makes a {@link TableView} with no columns and no items.
+     *
+     * @param <T> the type of the items
+     * @return a new table
+     */
+    <T> TableView<T> tableView();
+
+    /**
+     * Makes a {@link TreeView} with no roots, in which every item is a leaf until
+     * {@linkplain TreeView#setChildren told} otherwise.
+     *
+     * @param <T> the type of the items
+     * @param cellFactory makes the component for an item's row
+     * @return a new tree
+     */
+    <T> TreeView<T> treeView(Function<? super T, ? extends Component<?>> cellFactory);
+
+    /**
+     * Makes an empty, closed {@link Menu}.
+     *
+     * @return a new menu
+     */
+    Menu menu();
+
+    /**
+     * Makes a {@link MenuBar} with no menus.
+     *
+     * @return a new menu bar
+     */
+    MenuBar menuBar();
+
+    /**
+     * Makes a collapsed {@link Expander} with no content.
+     *
+     * @param title the header's title
+     * @return a new expander
+     */
+    Expander expander(String title);
+
+    /**
+     * Makes an empty {@link SplitPane} with the divider in the middle.
+     *
+     * @param orientation {@link Orientation#HORIZONTAL} for side by side, {@link Orientation#VERTICAL} for one
+     *                    above the other
+     * @return a new split pane
+     */
+    SplitPane splitPane(Orientation orientation);
+
+    /**
+     * Makes a {@link SlotGrid} with no slots, {@value SlotGrid#DEFAULT_COLUMNS} columns wide.
+     *
+     * @param <T> the type of the items
+     * @param cellFactory makes the component shown in a filled slot
+     * @return a new slot grid
+     */
+    <T> SlotGrid<T> slotGrid(Function<? super T, ? extends Component<?>> cellFactory);
 
     /**
      * Creates the peer of a new leaf component. Called by {@link CustomComponent}'s constructor; do not call it

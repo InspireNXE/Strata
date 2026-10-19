@@ -61,7 +61,7 @@ The class is not a `Component`, so you add `field.component()` rather than `fiel
 
 ## Write a new component
 
-Subclass `CustomComponent<T>`. To let other code see your component as a type of its own, declare an interface that extends `Component<YourInterface>` and implement it:
+Subclass `CustomComponent<T>`. To let other code see your component as a type of its own, declare an interface that extends `Component<YourInterface>` and implement it. This example builds a small switch; Strata's own [`ToggleSwitch`](widgets.md#toggleswitch) is written the same way in core.
 
 ```java
 --8<-- "extending/ToggleSwitch.java:interface"

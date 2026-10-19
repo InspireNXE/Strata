@@ -12,7 +12,7 @@ This repository has the Java2D/Swing adapter. The Minecraft adapter lives in the
 
 | Module | What it is |
 |---|---|
-| `api` | What developers compile against: interfaces, value records, the `ComponentFactory`, the widgets (`Label`, `Image`, `Button`, `CheckBox`, `Slider`, `TextBox`, `ListView`, `ComboBox`, `Window`, `MessageBox`, `TabBar`, `ProgressBar`, `Separator`), the containers (including `ScrollPanel`), overlays and tooltips, and the extension points (`CustomComponent`, `CustomComposite`, `CustomContainer`, `ComponentBehavior`, `Painter`, `Environment`). |
+| `api` | What developers compile against: interfaces, value records, the `ComponentFactory`, the widgets (`Label`, `Image`, `Button`, `CheckBox`, `Slider`, `TextBox`, `ListView`, `ComboBox`, `Window`, `MessageBox`, `TabBar`, `ProgressBar`, `Separator`, `RadioButton`, `ToggleSwitch`, `Spinner`, `TextArea`, `TableView`, `TreeView`, `Menu`, `MenuBar`, `Expander`, `SplitPane`, `SlotGrid`), the containers (including `ScrollPanel`), overlays and tooltips, and the extension points (`CustomComponent`, `CustomComposite`, `CustomContainer`, `ComponentBehavior`, `Painter`, `Environment`). |
 | `spi` | What engine adapters implement (`Canvas`, `Platform`) and drive (`ScreenHost`, `ScreenStack`), plus contract tests for adapters. |
 | `core` | The implementation behind both. Only adapters use it directly. |
 | `canvas-swing` | The Java2D/Swing adapter: `StrataPanel` and `SwingSnapshot`. |

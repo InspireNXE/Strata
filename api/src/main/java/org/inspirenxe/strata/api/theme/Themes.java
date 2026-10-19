@@ -7,13 +7,22 @@ import org.inspirenxe.strata.api.text.TextStyle;
 import org.inspirenxe.strata.api.widget.Button;
 import org.inspirenxe.strata.api.widget.CheckBox;
 import org.inspirenxe.strata.api.widget.ComboBox;
+import org.inspirenxe.strata.api.widget.Expander;
 import org.inspirenxe.strata.api.widget.Label;
 import org.inspirenxe.strata.api.widget.ListView;
+import org.inspirenxe.strata.api.widget.Menu;
+import org.inspirenxe.strata.api.widget.MenuBar;
 import org.inspirenxe.strata.api.widget.ProgressBar;
+import org.inspirenxe.strata.api.widget.RadioButton;
 import org.inspirenxe.strata.api.widget.Separator;
 import org.inspirenxe.strata.api.widget.Slider;
+import org.inspirenxe.strata.api.widget.SlotGrid;
+import org.inspirenxe.strata.api.widget.SplitPane;
 import org.inspirenxe.strata.api.widget.TabBar;
+import org.inspirenxe.strata.api.widget.TableView;
 import org.inspirenxe.strata.api.widget.TextBox;
+import org.inspirenxe.strata.api.widget.ToggleSwitch;
+import org.inspirenxe.strata.api.widget.TreeView;
 import org.inspirenxe.strata.api.widget.Window;
 
 /**
@@ -101,6 +110,51 @@ public final class Themes {
                 .paint(ProgressBar.STYLE_FILL, Paint.solid(0xFF2E7D32))
                 .textStyle(ProgressBar.STYLE_TEXT, TextStyle.DEFAULT.withColor(0xFFF0F0F0))
                 .paint(Separator.STYLE_LINE, Paint.solid(0xFF3C3F44))
+                .paint(RadioButton.STYLE_NORMAL, Paint.solid(0xFF1B1C1F))
+                .paint(RadioButton.STYLE_HOVERED, Paint.solid(0xFF2E3136))
+                .paint(RadioButton.STYLE_SELECTED, Paint.solid(0xFF1B1C1F))
+                .paint(RadioButton.STYLE_SELECTED_HOVERED, Paint.solid(0xFF2E3136))
+                .paint(RadioButton.STYLE_DISABLED, Paint.solid(0xFF2A2A2A))
+                .paint(RadioButton.STYLE_SELECTED_DISABLED, Paint.solid(0xFF2A2A2A))
+                .paint(RadioButton.STYLE_MARK, Paint.solid(0xFF6A9FFF))
+                .paint(RadioButton.STYLE_MARK_DISABLED, Paint.solid(0xFF505050))
+                .paint(RadioButton.STYLE_FOCUS, Paint.solid(0xFF6A9FFF))
+                .textStyle(RadioButton.STYLE_TEXT, TextStyle.DEFAULT.withColor(0xFFE0E0E0))
+                .textStyle(RadioButton.STYLE_TEXT_DISABLED, TextStyle.DEFAULT.withColor(0xFF707070))
+                .paint(ToggleSwitch.STYLE_TRACK, Paint.solid(0xFF3C3F44))
+                .paint(ToggleSwitch.STYLE_TRACK_ON, Paint.solid(0xFF3A4D6E))
+                .paint(ToggleSwitch.STYLE_TRACK_DISABLED, Paint.solid(0xFF2A2A2A))
+                .paint(ToggleSwitch.STYLE_KNOB, Paint.solid(0xFF8A8F98))
+                .paint(ToggleSwitch.STYLE_KNOB_HOVERED, Paint.solid(0xFFE0E0E0))
+                .paint(ToggleSwitch.STYLE_KNOB_DISABLED, Paint.solid(0xFF505050))
+                .paint(ToggleSwitch.STYLE_FOCUS, Paint.solid(0xFF6A9FFF))
+                .textStyle(ToggleSwitch.STYLE_TEXT, TextStyle.DEFAULT.withColor(0xFFE0E0E0))
+                .textStyle(ToggleSwitch.STYLE_TEXT_DISABLED, TextStyle.DEFAULT.withColor(0xFF707070))
+                .paint(TableView.STYLE_HEADER, Paint.solid(0xFF2B2D31))
+                .paint(TableView.STYLE_HEADER_HOVERED, Paint.solid(0xFF3C3F44))
+                .textStyle(TableView.STYLE_HEADER_TEXT, TextStyle.DEFAULT.withColor(0xFFC8C8C8))
+                .paint(TableView.STYLE_GRID, Paint.solid(0xFF2E3136))
+                .paint(TreeView.STYLE_ARROW, Paint.solid(0xFFA0A0A0))
+                .paint(Menu.STYLE_BACKGROUND, Paint.solid(0xFF16171A))
+                .paint(Menu.STYLE_ITEM_HOVERED, Paint.solid(0xFF3A4D6E))
+                .textStyle(Menu.STYLE_TEXT, TextStyle.DEFAULT.withColor(0xFFE0E0E0))
+                .textStyle(Menu.STYLE_TEXT_DISABLED, TextStyle.DEFAULT.withColor(0xFF707070))
+                .textStyle(Menu.STYLE_SHORTCUT, TextStyle.DEFAULT.withColor(0xFF909090))
+                .paint(Menu.STYLE_SEPARATOR, Paint.solid(0xFF3C3F44))
+                .paint(MenuBar.STYLE_BACKGROUND, Paint.solid(0xFF24262A))
+                .paint(MenuBar.STYLE_ITEM_HOVERED, Paint.solid(0xFF3C3F44))
+                .textStyle(MenuBar.STYLE_TEXT, TextStyle.DEFAULT.withColor(0xFFE0E0E0))
+                .paint(Expander.STYLE_HEADER, Paint.solid(0xFF24262A))
+                .paint(Expander.STYLE_HEADER_HOVERED, Paint.solid(0xFF2E3136))
+                .textStyle(Expander.STYLE_TEXT, TextStyle.DEFAULT.withColor(0xFFE0E0E0))
+                .textStyle(Expander.STYLE_TEXT_DISABLED, TextStyle.DEFAULT.withColor(0xFF707070))
+                .paint(SplitPane.STYLE_DIVIDER, Paint.solid(0xFF2B2D31))
+                .paint(SplitPane.STYLE_DIVIDER_HOVERED, Paint.solid(0xFF6A9FFF))
+                .paint(SlotGrid.STYLE_SLOT, Paint.solid(0xFF1B1C1F))
+                .paint(SlotGrid.STYLE_SLOT_HOVERED, Paint.solid(0x40FFFFFF))
+                .paint(SlotGrid.STYLE_SLOT_SELECTED, Paint.solid(0x606A9FFF))
+                .paint(Overlays.STYLE_TOAST, Paint.solid(0xF02B2D31))
+                .textStyle(Overlays.STYLE_TOAST_TEXT, TextStyle.DEFAULT.withColor(0xFFF0F0F0))
                 .paint(Overlays.STYLE_BACKDROP, Paint.solid(0x60000000))
                 .textStyle(Tooltip.STYLE_TEXT, TextStyle.DEFAULT.withColor(0xFFF0F0F0))
                 .build();

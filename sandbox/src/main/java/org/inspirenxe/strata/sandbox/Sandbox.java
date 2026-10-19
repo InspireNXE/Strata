@@ -15,7 +15,8 @@ import javax.swing.SwingUtilities;
 
 /**
  * Opens the demo screen in a window. {@code --snapshot <file.png>} renders one frame to a PNG instead, without a
- * display, and {@code --mocks <directory>} renders the Almura mock-ups in several states.
+ * display, {@code --mocks <directory>} renders the Almura mock-ups in several states, and {@code --controls
+ * <directory>} renders the standard controls screen.
  */
 public final class Sandbox {
     private static final float SCALE = 2f;
@@ -28,6 +29,10 @@ public final class Sandbox {
             final File out = new File(args[1]);
             ImageIO.write(SwingSnapshot.render(new DemoScreen(), Themes.flat(), 960, 600, SCALE), "png", out);
             System.out.println("Wrote " + out.getAbsolutePath());
+            return;
+        }
+        if (args.length == 2 && args[0].equals("--controls")) {
+            ControlsScreen.snapshots(new File(args[1]), Themes.flat());
             return;
         }
         if (args.length == 2 && args[0].equals("--mocks")) {

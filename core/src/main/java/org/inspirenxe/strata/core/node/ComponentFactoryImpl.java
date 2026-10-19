@@ -22,19 +22,30 @@ import org.inspirenxe.strata.api.widget.ButtonBehavior;
 import org.inspirenxe.strata.api.widget.CheckBox;
 import org.inspirenxe.strata.api.widget.CheckBoxBehavior;
 import org.inspirenxe.strata.api.widget.ComboBox;
+import org.inspirenxe.strata.api.widget.Expander;
 import org.inspirenxe.strata.api.widget.Image;
 import org.inspirenxe.strata.api.widget.ImageBehavior;
 import org.inspirenxe.strata.api.widget.Label;
 import org.inspirenxe.strata.api.widget.LabelBehavior;
 import org.inspirenxe.strata.api.widget.ListView;
+import org.inspirenxe.strata.api.widget.Menu;
+import org.inspirenxe.strata.api.widget.MenuBar;
 import org.inspirenxe.strata.api.widget.MessageBox;
 import org.inspirenxe.strata.api.widget.ProgressBar;
+import org.inspirenxe.strata.api.widget.RadioGroup;
 import org.inspirenxe.strata.api.widget.Separator;
 import org.inspirenxe.strata.api.widget.Slider;
 import org.inspirenxe.strata.api.widget.SliderBehavior;
+import org.inspirenxe.strata.api.widget.SlotGrid;
+import org.inspirenxe.strata.api.widget.Spinner;
+import org.inspirenxe.strata.api.widget.SplitPane;
 import org.inspirenxe.strata.api.widget.TabBar;
+import org.inspirenxe.strata.api.widget.TableView;
+import org.inspirenxe.strata.api.widget.TextArea;
 import org.inspirenxe.strata.api.widget.TextBox;
 import org.inspirenxe.strata.api.widget.TextBoxBehavior;
+import org.inspirenxe.strata.api.widget.ToggleSwitch;
+import org.inspirenxe.strata.api.widget.TreeView;
 import org.inspirenxe.strata.api.widget.Window;
 import org.inspirenxe.strata.api.visual.Visual;
 import org.inspirenxe.strata.core.layout.AbsolutePanelImpl;
@@ -45,15 +56,26 @@ import org.inspirenxe.strata.core.layout.StackPanelImpl;
 import org.inspirenxe.strata.core.widget.ButtonImpl;
 import org.inspirenxe.strata.core.widget.CheckBoxImpl;
 import org.inspirenxe.strata.core.widget.ComboBoxImpl;
+import org.inspirenxe.strata.core.widget.ExpanderImpl;
 import org.inspirenxe.strata.core.widget.ImageImpl;
 import org.inspirenxe.strata.core.widget.LabelImpl;
 import org.inspirenxe.strata.core.widget.ListViewImpl;
+import org.inspirenxe.strata.core.widget.MenuBarImpl;
+import org.inspirenxe.strata.core.widget.MenuImpl;
 import org.inspirenxe.strata.core.widget.MessageBoxImpl;
 import org.inspirenxe.strata.core.widget.ProgressBarImpl;
+import org.inspirenxe.strata.core.widget.RadioGroupImpl;
 import org.inspirenxe.strata.core.widget.SeparatorImpl;
 import org.inspirenxe.strata.core.widget.SliderImpl;
+import org.inspirenxe.strata.core.widget.SlotGridImpl;
+import org.inspirenxe.strata.core.widget.SpinnerImpl;
+import org.inspirenxe.strata.core.widget.SplitPaneImpl;
 import org.inspirenxe.strata.core.widget.TabBarImpl;
+import org.inspirenxe.strata.core.widget.TableViewImpl;
+import org.inspirenxe.strata.core.widget.TextAreaImpl;
 import org.inspirenxe.strata.core.widget.TextBoxImpl;
+import org.inspirenxe.strata.core.widget.ToggleSwitchImpl;
+import org.inspirenxe.strata.core.widget.TreeViewImpl;
 import org.inspirenxe.strata.core.widget.WindowImpl;
 import org.inspirenxe.strata.spi.Platform;
 
@@ -255,6 +277,61 @@ public final class ComponentFactoryImpl implements ComponentFactory {
     @Override
     public Separator separator(final Orientation orientation) {
         return new SeparatorImpl(this, orientation);
+    }
+
+    @Override
+    public <T> RadioGroup<T> radioGroup() {
+        return new RadioGroupImpl<>(this);
+    }
+
+    @Override
+    public ToggleSwitch toggleSwitch(final String text) {
+        return new ToggleSwitchImpl(this, text);
+    }
+
+    @Override
+    public Spinner spinner() {
+        return new SpinnerImpl(this);
+    }
+
+    @Override
+    public TextArea textArea() {
+        return new TextAreaImpl(this);
+    }
+
+    @Override
+    public <T> TableView<T> tableView() {
+        return new TableViewImpl<>(this);
+    }
+
+    @Override
+    public <T> TreeView<T> treeView(final Function<? super T, ? extends Component<?>> cellFactory) {
+        return new TreeViewImpl<>(this, cellFactory);
+    }
+
+    @Override
+    public Menu menu() {
+        return new MenuImpl(this);
+    }
+
+    @Override
+    public MenuBar menuBar() {
+        return new MenuBarImpl(this);
+    }
+
+    @Override
+    public Expander expander(final String title) {
+        return new ExpanderImpl(this, title);
+    }
+
+    @Override
+    public SplitPane splitPane(final Orientation orientation) {
+        return new SplitPaneImpl(this, orientation);
+    }
+
+    @Override
+    public <T> SlotGrid<T> slotGrid(final Function<? super T, ? extends Component<?>> cellFactory) {
+        return new SlotGridImpl<>(this, cellFactory);
     }
 
     @Override

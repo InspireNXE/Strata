@@ -4,6 +4,7 @@ import org.inspirenxe.strata.api.component.Component;
 import org.inspirenxe.strata.api.component.CursorKind;
 import org.inspirenxe.strata.api.component.Tooltip;
 import org.inspirenxe.strata.api.event.EventTypes;
+import org.inspirenxe.strata.api.event.Phase;
 import org.inspirenxe.strata.api.geom.Rect;
 import org.inspirenxe.strata.api.input.Key;
 import org.inspirenxe.strata.api.input.KeyAction;
@@ -64,6 +65,9 @@ import java.util.function.Consumer;
  * backwards with Shift, among the nodes of the top dialog or, with no dialog, of the content. Typed characters go
  * only to the focused node. When the platform does not send key repeats, the root makes them with a
  * {@link KeyRepeater}; each repeat goes to whatever has focus when it fires.</p>
+ *
+ * <p>Toasts are overlays placed down the top-right corner. Presses elsewhere and Escape leave them open; each closes
+ * on a click that nothing in it consumed, or on the first frame rendered after its time runs out.</p>
  *
  * <p>Tooltips: the hovered node's tooltip, or its nearest ancestor's, shows {@link #TOOLTIP_OFFSET} units right of
  * and above the pointer, flipped left of it when it would leave the host on the right, kept inside the host. It
@@ -377,8 +381,13 @@ public final class Root {
             this.content.measure(this.layoutPass, this.width, this.height);
             this.content.arrange(this.layoutPass, area);
         }
+        float toastY = Overlays.TOAST_MARGIN;
         for (final Layer layer : List.copyOf(this.layers)) {
-            layer.layout(area);
+            if (layer.isToast()) {
+                toastY = layer.layoutToast(area, toastY);
+            } else {
+                layer.layout(area);
+            }
         }
         if (this.tooltipNode != null) {
             this.layoutTooltip();
@@ -418,6 +427,7 @@ public final class Root {
      */
     public void render(final Canvas canvas) {
         this.pumpKeyRepeat();
+        this.expireToasts();
         this.layout();
         final CanvasPainter frame = this.painter.begin(canvas);
         if (this.content != null) {
@@ -439,6 +449,18 @@ public final class Root {
             this.tooltipNode.paint(frame);
         }
         this.requestHoverCursor(canvas);
+    }
+
+    private void expireToasts() {
+        if (this.layers.isEmpty()) {
+            return;
+        }
+        final long now = this.platform.clock().millis();
+        for (final Layer layer : List.copyOf(this.layers)) {
+            if (layer.isToast() && now >= layer.expiresAt) {
+                layer.close();
+            }
+        }
     }
 
     private void requestHoverCursor(final Canvas canvas) {
@@ -538,6 +560,9 @@ public final class Root {
             final Layer layer = this.layers.get(i);
             if (layer.modal) {
                 break;
+            }
+            if (layer.isToast()) {
+                continue;
             }
             layer.close();
             dismissed = true;
@@ -789,9 +814,13 @@ public final class Root {
         if (target.fire(EventTypes.KEY, new KeyEventImpl(target.facade(), key, action, modifiers)).isHandled()) {
             return true;
         }
-        if (key == Key.ESCAPE && action == KeyAction.PRESS && !this.layers.isEmpty()) {
-            this.layers.getLast().close();
-            return true;
+        if (key == Key.ESCAPE && action == KeyAction.PRESS) {
+            for (int i = this.layers.size() - 1; i >= 0; i--) {
+                if (!this.layers.get(i).isToast()) {
+                    this.layers.get(i).close();
+                    return true;
+                }
+            }
         }
         if (key == Key.TAB && action.isDown() && !modifiers.control() && !modifiers.alt()) {
             return this.moveFocus(modifiers.shift());
@@ -979,11 +1008,15 @@ public final class Root {
     // ------------------------------------------------------------------
 
     private Layer open(final Component<?> content, final Rect anchor, final boolean modal) {
+        return this.open(content, anchor, modal, -1L);
+    }
+
+    private Layer open(final Component<?> content, final Rect anchor, final boolean modal, final long expiresAt) {
         final Node node = this.ui.nodeOf(content);
         if (node.parentNode() != null || node.root() != null) {
             throw new IllegalArgumentException(content + " is already part of a tree");
         }
-        final Layer layer = new Layer(node, anchor, modal);
+        final Layer layer = new Layer(node, anchor, modal, expiresAt);
         // Remember focus before the dialog makes it unfocusable
         layer.previousFocus = modal ? this.focused : null;
         this.attachTree(node);
@@ -1005,14 +1038,16 @@ public final class Root {
         final Node node;
         final Rect anchor;
         final boolean modal;
+        final long expiresAt;
         final List<Runnable> closedListeners;
         Node previousFocus;
         boolean open;
 
-        Layer(final Node node, final Rect anchor, final boolean modal) {
+        Layer(final Node node, final Rect anchor, final boolean modal, final long expiresAt) {
             this.node = node;
             this.anchor = anchor;
             this.modal = modal;
+            this.expiresAt = expiresAt;
             this.closedListeners = new ArrayList<>();
             this.open = true;
         }
@@ -1036,6 +1071,25 @@ public final class Root {
                 y = Math.max(0f, this.anchor.y() - popupHeight);
             }
             this.node.arrange(pass, new Rect(x, y, popupWidth, popupHeight));
+        }
+
+        boolean isToast() {
+            return this.expiresAt >= 0L;
+        }
+
+        /**
+         * Places a toast at its desired size against the right edge, with its top at {@code y}.
+         *
+         * @return where the next toast's top goes
+         */
+        float layoutToast(final Rect area, final float y) {
+            final LayoutPass pass = Root.this.layoutPass;
+            this.node.measure(pass, area.width(), area.height());
+            final float toastWidth = this.node.outerWidth();
+            final float toastHeight = this.node.outerHeight();
+            final float x = Math.max(0f, area.width() - Overlays.TOAST_MARGIN - toastWidth);
+            this.node.arrange(pass, new Rect(x, y, toastWidth, toastHeight));
+            return y + toastHeight + Overlays.TOAST_MARGIN;
         }
 
         @Override
@@ -1093,6 +1147,25 @@ public final class Root {
         @Override
         public Overlay dialog(final Component<?> content) {
             return Root.this.open(content, null, true);
+        }
+
+        @Override
+        public Overlay toast(final String message) {
+            return this.toast(new ToastView(Root.this.ui, Objects.requireNonNull(message, "message")), DEFAULT_TOAST_MILLIS);
+        }
+
+        @Override
+        public Overlay toast(final Component<?> content, final long millis) {
+            if (millis <= 0L) {
+                throw new IllegalArgumentException("A toast must show for some time: " + millis);
+            }
+            final Layer layer = Root.this.open(content, null, false, Root.this.platform.clock().millis() + millis);
+            content.on(EventTypes.CLICK, Phase.AFTER, event -> {
+                if (!event.isCancelled()) {
+                    layer.close();
+                }
+            });
+            return layer;
         }
 
         @Override

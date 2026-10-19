@@ -1,6 +1,6 @@
 # Widgets
 
-Strata's built-in widgets are interfaces in `org.inspirenxe.strata.api.widget`, made by the factory. The first six (`Label`, `Image`, `Button`, `CheckBox`, `Slider` and `TextBox`) each have a matching behavior interface for [decorating](extending.md#decorate-a-built-in-with-a-behavior) them. The newer ones (`ListView`, `ComboBox`, `Window`, `MessageBox`, `TabBar`, `ProgressBar` and `Separator`) do not have one yet. Their theme keys are listed on each widget below and in the [theme key reference](../reference/theme-keys.md). Scrolling is a container, [`ScrollPanel`](layout.md#scrollpanel), and popups, dialogs and tooltips are in [Overlays and tooltips](overlays.md).
+Strata's built-in widgets are interfaces in `org.inspirenxe.strata.api.widget`, made by the factory. The first six (`Label`, `Image`, `Button`, `CheckBox`, `Slider` and `TextBox`) each have a matching behavior interface for [decorating](extending.md#decorate-a-built-in-with-a-behavior) them. The newer ones (`ListView`, `ComboBox`, `Window`, `MessageBox`, `TabBar`, `ProgressBar`, `Separator`, `RadioButton`, `ToggleSwitch`, `Spinner`, `TextArea`, `TableView`, `TreeView`, `Menu`, `MenuBar`, `Expander`, `SplitPane` and `SlotGrid`) do not have one yet. Their theme keys are listed on each widget below and in the [theme key reference](../reference/theme-keys.md). Scrolling is a container, [`ScrollPanel`](layout.md#scrollpanel), and popups, dialogs and tooltips are in [Overlays and tooltips](overlays.md).
 
 ## Label
 
@@ -402,6 +402,226 @@ ProgressBar slots = factory.progressBar().setValue(used / (float) limit).setText
 
 A thin line across or down a panel: `factory.separator(Orientation.HORIZONTAL)` stretches across its slot and is one unit tall, `setThickness` changes that. Key: `separator` (paint, required).
 
+## RadioButton and RadioGroup
+
+A set of choices of which at most one is picked. The group is not a component: it makes the buttons, and you place them in any layout.
+
+```java
+RadioGroup<Difficulty> difficulty = factory.radioGroup();
+column.add(difficulty.add("Easy", Difficulty.EASY))
+        .add(difficulty.add("Hard", Difficulty.HARD));
+difficulty.select(settings.difficulty())
+        .onSelectionChanged(value -> value.ifPresent(settings::setDifficulty));
+```
+
+Each button stands for a value, and `group.selected()` returns the value of the selected one. A new group has nothing selected. A click, Enter or Space selects a button. Up and Left move the selection and focus to the previous usable button in the group, Down and Right to the next, wrapping at the ends and skipping disabled, hidden and detached buttons. `button.setSelected(true)` and `group.select(value)` work while disabled too; selecting a value no button stands for throws. A button measures and draws like a [`CheckBox`](#checkbox), with the mark inset by three tenths of the box.
+
+| Key | Required | Used for |
+|---|---|---|
+| `radio.normal`, `radio.hovered` | yes | The box when not selected, plain and hovered or focused |
+| `radio.selected`, `radio.selected.hovered` | yes | The box when selected |
+| `radio.disabled`, `radio.selected.disabled` | no | Disabled boxes. Fall back to `radio.normal` and `radio.selected`. |
+| `radio.mark`, `radio.mark.disabled` | no | Drawn over a selected box |
+| `radio.focus` | no | A one-unit ring while focused |
+| `radio.text`, `radio.text.disabled` | no | The caption |
+
+## ToggleSwitch
+
+An on and off switch with a sliding knob, for settings that take effect at once.
+
+```java
+ToggleSwitch pvp = factory.toggleSwitch("PvP").setOn(settings.pvp()).onToggled(settings::setPvp);
+```
+
+A click, Enter or Space flips it. `setOn` works while disabled; `toggle()` does not. The track is the caption's line height plus 4 tall and twice that wide, the knob a square 2 units in from its edges, and the caption 4 units to its right.
+
+| Key | Required | Used for |
+|---|---|---|
+| `toggle.track`, `toggle.track.on` | yes | The track when off and on |
+| `toggle.knob` | yes | The knob |
+| `toggle.track.disabled` | no | Falls back to `toggle.track` |
+| `toggle.knob.hovered`, `toggle.knob.disabled` | no | Fall back to `toggle.knob` |
+| `toggle.focus` | no | A one-unit ring inside the track while focused |
+| `toggle.text`, `toggle.text.disabled` | no | The caption |
+
+## Spinner
+
+A number in a field with step buttons, such as a quantity.
+
+```java
+Spinner amount = factory.spinner().setRange(1, 64).setValue(1)
+        .onValueChanged(value -> this.amount = (int) value);
+Spinner price = factory.spinner().setRange(0, 10_000).setDecimals(2).setStep(0.25);
+```
+
+| Method | Default | Notes |
+|---|---|---|
+| `setRange(min, max)` | 0 to 100 | The value is clamped into it |
+| `setStep(step)` | 1 | How far a button, arrow key or wheel notch moves it. Page Up and Page Down move ten steps. |
+| `setDecimals(n)` | 0 | Digits kept after the point, 0 to 9. Values are rounded half up. |
+| `increment()`, `decrement()` | | One step, as the buttons do. Nothing while disabled. |
+
+The field is a [`TextBox`](#textbox) that accepts only digits, one point when decimals are allowed, and a leading minus when the minimum is negative. Typed text becomes the value on Enter and when the field loses focus; text that is not a number goes back to the value. The spinner asks for 60 units of width, and the buttons take the right 12, the upper half stepping up. A button whose step would leave the range draws disabled.
+
+The field reads the `textbox.*` keys. The buttons read `spinner.button`, `spinner.button.hovered` and `spinner.button.disabled`, which fall back to `button.normal`, `button.hovered` and `button.disabled`, and draw their arrows in the `button.text` color.
+
+## TextArea
+
+Text over several lines, such as a note or a description.
+
+```java
+TextArea notes = factory.textArea().setText(item.notes()).setMaxLength(500)
+        .onTextChanged(item::setNotes);
+```
+
+It edits like a [`TextBox`](#textbox), with a filter, a length limit, read-only mode and the same clipboard and word shortcuts. The differences:
+
+- Enter inserts a line break. Tab still moves focus.
+- Up and Down move a row and keep the caret's column across short rows. Page Up and Page Down move a page.
+- Home and End go to the ends of the row; with Ctrl, to the ends of the text.
+- A triple click selects the line. Pasted text keeps its line breaks.
+- `setText` puts the caret at the start and scrolls to the top.
+
+| Method | Default | Notes |
+|---|---|---|
+| `setWrap(boolean)` | on | Long lines break after the last space that fits. Off, rows are lines and the view scrolls sideways. |
+| `setVisibleLines(n)` | 4 | How many lines the desired height holds |
+| `setTextPadding(insets)` | 4 on each side | Space between the edge and the text |
+
+The area asks for 160 units of width. Text taller than the view scrolls with the wheel (three lines a notch) and a scroll bar, and follows the caret. It reads the `textbox.*` keys, so it matches the text boxes around it, and the `scroll.*` keys for its bar.
+
+## TableView
+
+Rows of items under a header of columns, such as offers with a name, a seller and a price.
+
+```java
+TableView<Offer> offers = factory.<Offer>tableView()
+        .addTextColumn("Item", GridLength.weighted(1), Offer::item)
+        .addTextColumn("Seller", GridLength.fixed(70), Offer::seller)
+        .addColumn("", GridLength.fixed(40), offer -> factory.button("Buy").onAction(() -> buy(offer)))
+        .setColumnComparator(1, Comparator.comparing(Offer::seller))
+        .setItems(market.offers());
+```
+
+The body is a [`ListView`](#listview): it builds only the rows in view, scrolls, selects and activates the same way, and keeps the selection on an item's key. Fixed columns take their width, auto columns their title's width plus padding, and weighted columns share the rest. The header lines up with the cells even while the scroll bar shows.
+
+A column with a comparator is sortable, and text columns sort by their text, ignoring case, unless given another. Clicking a sortable title sorts by it, ascending first and then flipping, and the title shows an arrow. `sortBy(column, ascending)` does the same from code, and -1 goes back to the set order. Sorting only changes the order on screen: `items()` keeps the set order, while `shownItems()` and every row index follow the screen.
+
+| Key | Required | Used for |
+|---|---|---|
+| `table.header` | yes | Behind each title |
+| `table.header.hovered` | no | A sortable title under the pointer. Falls back to `table.header`. |
+| `table.header.text` | no | The titles and sort arrows |
+| `table.grid` | no | One-unit lines between columns. Nothing if missing. |
+| `list.*`, `scroll.*` | | The body, as for `ListView` |
+
+## TreeView
+
+Items in a hierarchy, such as store categories, each indented under its parent.
+
+```java
+TreeView<Category> categories = factory.<Category>treeView(category -> factory.label(category.name()))
+        .setChildren(Category::subcategories)
+        .setRoots(store.categories())
+        .onSelectionChanged(selected -> selected.ifPresent(this::showCategory));
+```
+
+The tree asks the children function for an item's children only when it shows them, so a large hierarchy costs what is expanded. Rows are indented 10 units per level (`setIndent`), then a 12-unit arrow column, then the cell. Clicking an arrow expands or collapses its item. Right expands the selected item or moves into it; Left collapses it or moves to its parent. The other keys and the scrolling work as in a list.
+
+`setExpanded(item, boolean)`, `expandAll()` and `collapseAll()` change what shows, and a selection inside a collapsed item moves up to it. `select(item)` searches the hierarchy, expands the item's ancestors and scrolls to it. Items are told apart by their key, the item itself unless `setKeyFunction` says otherwise, and expanded keys carry over when the roots change. After the children of shown items change, call `refresh()`.
+
+The rows read the `list.*` keys. The arrows read `tree.arrow` (paint, optional), which falls back to a light gray.
+
+## Menu and MenuBar
+
+A list of commands in a popup, opened from a right click, a button or a menu bar.
+
+```java
+Menu menu = factory.menu()
+        .addItem("Copy", "Ctrl+C", this::copy)
+        .addSubmenu("Send to", sendMenu)
+        .addSeparator()
+        .addCheckItem("Show prices", settings.prices(), settings::setPrices);
+slot.on(EventTypes.CLICK, event -> {
+    if (event.button() == MouseButton.RIGHT) {
+        menu.openAt(event.x(), event.y());
+    }
+});
+```
+
+Items are commands, check items, submenus and separators; a shortcut is only drawn as a hint. `setItemEnabled`, `setItemChecked` and `clearItems` change them, and item indexes count separators. `open(rect)` opens the menu below a rectangle as a [popup](overlays.md#popups), and `openAt(x, y)` with its corner at a point.
+
+An open menu takes focus. Hovering an item highlights it and opens its submenu. Up and Down move the highlight past separators and disabled items; Right opens a submenu and Left closes it; Enter or Space chooses; Escape closes the menu it is pressed in. Choosing closes the whole chain of menus and then runs the action, and focus goes back to where it was before the first menu opened. A click outside closes them all.
+
+```java
+MenuBar bar = factory.menuBar()
+        .addMenu("File", factory.menu().addItem("Close", handle::close))
+        .addMenu("View", viewMenu);
+```
+
+A menu bar opens a title's menu below it on a click and closes it on a second. While one of its menus is open, moving the pointer onto another title switches to that menu, and Left and Right in a menu with no submenu open move along the bar. A menu belongs to at most one bar or parent menu.
+
+| Key | Required | Used for |
+|---|---|---|
+| `menu.background` | yes | Behind the menu |
+| `menu.item.hovered` | yes | The highlighted item |
+| `menu.text`, `menu.text.disabled` | no | Item text, check marks and arrows |
+| `menu.shortcut` | no | Shortcut hints. Falls back to `menu.text.disabled`. |
+| `menu.separator` | no | Separator lines. Falls back to `separator`. |
+| `menubar.background` | no | Behind the bar. Nothing if missing. |
+| `menubar.item.hovered` | no | A title under the pointer or with its menu open. Falls back to `menu.item.hovered`. |
+| `menubar.text` | no | Titles. Falls back to `menu.text`. |
+
+## Expander
+
+A titled header that shows or hides a component below it.
+
+```java
+Expander filters = factory.expander("Filters").setContent(filterPanel).setExpanded(true);
+```
+
+A click on the header, Enter or Space flips it; keys pressed inside the content do not. While collapsed, the content is out of the tree: it takes no space and no input, and loses focus. The header is one line plus 6 units tall, with an arrow and the title. The content goes below it, across the expander's width, placed by its own alignment.
+
+| Key | Required | Used for |
+|---|---|---|
+| `expander.header`, `expander.header.hovered` | no | Behind the header. Nothing if missing. |
+| `expander.text`, `expander.text.disabled` | no | The title and arrow |
+
+## SplitPane
+
+Two components with a divider between them that the user drags.
+
+```java
+SplitPane split = factory.splitPane(Orientation.HORIZONTAL)
+        .setFirst(categories.setAnchor(Anchor.FILL))
+        .setSecond(offers.setAnchor(Anchor.FILL))
+        .setPosition(0.3f);
+```
+
+`HORIZONTAL` puts the first component on the left, `VERTICAL` on top. The position is the fraction of the space, after the 4-unit divider, that the first side gets. A drag keeps each side at least its minimum (20 units each by default, `setMinSizes`) when both fit; `setPosition` is not limited. Each side is placed in its part by its own alignment, so give it `Anchor.FILL` to fill it.
+
+Keys: `split.divider` and `split.divider.hovered` (paints, optional). The divider falls back to `separator`.
+
+## SlotGrid
+
+Square slots that each hold an item or nothing, such as an inventory or a hotbar.
+
+```java
+SlotGrid<Item> inventory = factory.<Item>slotGrid(item -> factory.image(item.icon()))
+        .setColumns(9)
+        .setTooltips(item -> Tooltip.text(item.name()))
+        .setItems(player.inventory())
+        .onSlotClicked(click -> this.take(click.index(), click.button(), click.modifiers()));
+```
+
+There is one slot per item, null items being empty slots, in rows of `setColumns` (9 by default). Slots are 18 units square (`setSlotSize`) with no space between them (`setSpacing`), and a filled slot shows its cell inset by one unit. A click with any button tells the click listeners the slot, its item, the button and the modifiers. `setSelectable(true)` also selects the slot a left click lands on. `setItem(index, item)` rebuilds one slot.
+
+| Key | Required | Used for |
+|---|---|---|
+| `slot.normal` | yes | Each slot, behind its content |
+| `slot.hovered` | no | Over the slot under the pointer. Nothing if missing. |
+| `slot.selected` | no | Over the selected slot. Falls back to `slot.hovered`. |
+
 ## Widgets that do not exist yet
 
-There is no multi-line text area, vertical slider or tree yet. You can build them on `CustomComponent`, or on `CustomComposite` for one made of other components; the [extending guide](extending.md) builds a switch. [Status and limitations](../help/status.md) lists what is planned.
+There is no vertical slider, multiple selection in lists, tables and trees, or editable table cell. You can build them on `CustomComponent`, or on `CustomComposite` for one made of other components; the [extending guide](extending.md) builds a switch. [Status and limitations](../help/status.md) lists what is planned.

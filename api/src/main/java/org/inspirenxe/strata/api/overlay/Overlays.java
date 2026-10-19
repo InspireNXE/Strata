@@ -18,8 +18,12 @@ import java.util.Optional;
  *     popups above it.</li>
  *     <li>A dialog is modal: nothing below it gets pointer input, focus, or Tab, and keys go to it when nothing in it
  *     has focus.</li>
- *     <li>An Escape press that nothing consumed closes the topmost overlay.</li>
+ *     <li>An Escape press that nothing consumed closes the topmost overlay that is not a toast.</li>
  * </ul>
+ *
+ * <p>Toasts are short notices that close themselves. They stack down the top-right corner, {@value #TOAST_MARGIN}
+ * units in from the edges and {@value #TOAST_MARGIN} apart, in the order they opened, above the overlays opened
+ * before them. A press elsewhere does not close them, and a click on one closes it. They take no focus.</p>
  *
  * <p>Opening a dialog moves focus to the first tabbable component in it, and closing it puts focus back where it
  * was if that component can still take it. Closing the screen closes every overlay.</p>
@@ -32,6 +36,23 @@ public interface Overlays {
      * is missing.
      */
     String STYLE_BACKDROP = "overlay.backdrop";
+    /**
+     * Style key for behind a text toast (paint, optional). Without it a text toast draws on the tooltip
+     * background.
+     */
+    String STYLE_TOAST = "toast.background";
+    /**
+     * Style key for a text toast's text (text style, optional). Falls back to the tooltip text style.
+     */
+    String STYLE_TOAST_TEXT = "toast.text";
+    /**
+     * How long a toast shows unless told otherwise, in milliseconds.
+     */
+    long DEFAULT_TOAST_MILLIS = 3000L;
+    /**
+     * The space around toasts, in UI units.
+     */
+    float TOAST_MARGIN = 4f;
 
     /**
      * Opens a popup next to an area, usually the bounds of the component that opened it. The popup takes its
@@ -54,6 +75,28 @@ public interface Overlays {
      * @throws IllegalArgumentException if the content is already in a tree or was made by another factory
      */
     Overlay dialog(Component<?> content);
+
+    /**
+     * Shows a line of text as a toast for {@value #DEFAULT_TOAST_MILLIS} milliseconds. The text wraps at a third of
+     * the host's width and sits 6 units in from the toast's edges; {@code 
+} starts a new line.
+     *
+     * @param message the text
+     * @return the open toast
+     */
+    Overlay toast(String message);
+
+    /**
+     * Shows a component as a toast for a time. The content takes its desired size and draws its own background.
+     * The time is measured by the platform's clock, and the toast closes on the first frame drawn after it runs out.
+     *
+     * @param content what to show; it must not be in a tree already
+     * @param millis how long it shows, in milliseconds
+     * @return the open toast
+     * @throws IllegalArgumentException if the content is already in a tree or was made by another factory, or
+     *     {@code millis} is not greater than 0
+     */
+    Overlay toast(Component<?> content, long millis);
 
     /**
      * Finds the overlay a component is shown in.

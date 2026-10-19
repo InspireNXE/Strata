@@ -120,6 +120,7 @@ public final class DemoScreen implements Screen {
         if (this.open != null) {
             column.add(ui.label("Almura mock-ups"));
             column.add(AlmuraMocks.buttons(ui, this.open));
+            column.add(ui.button("Standard controls").onAction(() -> this.open.accept(new ControlsScreen())));
             column.setWidth(400);
         }
         column.setBackground(Paint.solid(0xFF2B2D31));

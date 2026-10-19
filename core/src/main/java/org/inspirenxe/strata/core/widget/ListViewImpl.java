@@ -328,6 +328,15 @@ public final class ListViewImpl<T> extends CustomComposite<ListView<T>> implemen
         return count == 0 ? 0f : count * this.rowHeight + (count - 1) * this.rowSpacing;
     }
 
+    /**
+     * The width rows get when the list is arranged in a rectangle: the inside of the border, less the scroll bar's
+     * gutter when the rows overflow. A table lays its header out with this before the list is arranged.
+     */
+    float rowWidthFor(final Rect bounds) {
+        final Rect inner = bounds.shrink(this.border().widths());
+        return Math.max(0f, inner.width() - (this.totalHeight() > inner.height() ? GUTTER : 0f));
+    }
+
     private int rowAt(final float y) {
         if (!this.viewport.contains(this.viewport.x(), y)) {
             return -1;

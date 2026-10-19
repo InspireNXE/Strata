@@ -19,7 +19,7 @@ public interface Overlay {
     /**
      * Returns whether the overlay is a modal dialog.
      *
-     * @return true for a dialog, false for a popup
+     * @return true for a dialog, false for a popup or a toast
      */
     boolean isModal();
 
