@@ -15,8 +15,10 @@
  */
 /**
  * Controls that edit a value: text or a number: {@link org.inspirenxe.strata.api.control.field.TextBox},
- * {@link org.inspirenxe.strata.api.control.field.TextArea}, {@link org.inspirenxe.strata.api.control.field.Spinner}
- * and {@link org.inspirenxe.strata.api.control.field.Slider}.
+ * {@link org.inspirenxe.strata.api.control.field.PasswordTextBox},
+ * {@link org.inspirenxe.strata.api.control.field.TextArea}, {@link org.inspirenxe.strata.api.control.field.Spinner},
+ * {@link org.inspirenxe.strata.api.control.field.Slider} and
+ * {@link org.inspirenxe.strata.api.control.field.ColorPicker}.
  *
  * <p>Make them with a {@link org.inspirenxe.strata.api.ComponentFactory}. Each control lists the theme style
  * keys it reads as {@code STYLE_*} constants and says which are required, and its events as constants too:

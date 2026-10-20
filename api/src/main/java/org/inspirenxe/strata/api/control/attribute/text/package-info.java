@@ -17,7 +17,9 @@
  * Attributes of controls that show or take text.
  *
  * <p>This package holds {@link org.inspirenxe.strata.api.control.attribute.text.HasText},
- * {@link org.inspirenxe.strata.api.control.attribute.text.Titled} and
- * {@link org.inspirenxe.strata.api.control.attribute.text.TextInput}.</p>
+ * {@link org.inspirenxe.strata.api.control.attribute.text.Titled},
+ * {@link org.inspirenxe.strata.api.control.attribute.text.TextEntry}, which every field the user types into has,
+ * and {@link org.inspirenxe.strata.api.control.attribute.text.TextInput}, which adds the text itself for the fields
+ * whose text code may read.</p>
  */
 package org.inspirenxe.strata.api.control.attribute.text;

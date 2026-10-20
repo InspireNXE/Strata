@@ -12,7 +12,7 @@ This repository holds the library alone. Adapters live in their own repositories
 
 | Module | What it is |
 |---|---|
-| `api` | What developers compile against: interfaces, value records, the `ComponentFactory`, the controls (`Label`, `Image`, `Button`, `CheckBox`, `Slider`, `TextBox`, `ListView`, `ComboBox`, `Window`, `MessageBox`, `TabBar`, `ProgressBar`, `Separator`, `RadioButton`, `ToggleSwitch`, `Spinner`, `TextArea`, `TableView`, `TreeView`, `Menu`, `MenuBar`, `Expander`, `SplitPane`, `GridView`) and the attributes they share (`Toggle`, `SingleSelection`, `TextInput` and others), the containers (including `ScrollPanel`), overlays and tooltips, and the extension points (`CustomComponent`, `CustomComposite`, `CustomContainer`, `Painter`, `Environment`). |
+| `api` | What developers compile against: interfaces, value records, the `ComponentFactory`, the controls (`Label`, `Image`, `Button`, `CheckBox`, `Slider`, `TextBox`, `PasswordTextBox`, `ListView`, `ComboBox`, `Window`, `MessageBox`, `TabBar`, `ProgressBar`, `Separator`, `RadioButton`, `ToggleSwitch`, `Spinner`, `TextArea`, `TableView`, `TreeView`, `Menu`, `MenuBar`, `Expander`, `SplitPane`, `GridView`) and the attributes they share (`Toggle`, `SingleSelection`, `TextInput` and others), the containers (including `ScrollPanel`), overlays and tooltips, and the extension points (`CustomComponent`, `CustomComposite`, `CustomContainer`, `Painter`, `Environment`). |
 | `spi` | What engine adapters implement (`Canvas`, `Platform`) and drive (`ScreenHost`, `ScreenStack`), plus contract tests for adapters. |
 | `core` | The implementation behind both. Only adapters use it directly. |
 

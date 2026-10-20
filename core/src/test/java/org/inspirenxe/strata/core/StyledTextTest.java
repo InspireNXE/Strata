@@ -16,6 +16,7 @@
 package org.inspirenxe.strata.core;
 
 import org.inspirenxe.strata.api.component.CursorKind;
+import org.inspirenxe.strata.api.control.field.PasswordTextBox;
 import org.inspirenxe.strata.api.control.field.TextArea;
 import org.inspirenxe.strata.api.control.field.TextBox;
 import org.inspirenxe.strata.api.geometry.Insets;
@@ -125,10 +126,10 @@ class StyledTextTest {
     }
 
     @Test
-    void disabledAndPasswordFieldsIgnoreRuns() {
+    void disabledFieldsIgnoreRunsAndPasswordBoxesDrawTheirMask() {
         final TestHost test = new TestHost(300, 100);
         final TextBox disabled = test.factory().textBox().setText("if").setHighlighter(KEYWORDS).setEnabled(false);
-        final TextBox password = test.factory().textBox().setText("if").setHighlighter(KEYWORDS).setPassword(true);
+        final PasswordTextBox password = test.factory().passwordTextBox().setPassword("if".toCharArray());
         test.show(test.factory().stackPanel().add(disabled).add(password));
 
         final TextCanvas canvas = new TextCanvas();

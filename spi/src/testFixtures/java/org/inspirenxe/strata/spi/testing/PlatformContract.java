@@ -16,14 +16,18 @@
 package org.inspirenxe.strata.spi.testing;
 
 import org.inspirenxe.strata.api.geometry.Rect;
+import org.inspirenxe.strata.api.input.TextInputKind;
 import org.inspirenxe.strata.api.text.TextSpan;
 import org.inspirenxe.strata.api.text.TextStyle;
 import org.inspirenxe.strata.spi.Capabilities;
 import org.inspirenxe.strata.spi.Clipboard;
 import org.inspirenxe.strata.spi.Clock;
 import org.inspirenxe.strata.spi.Platform;
+import org.inspirenxe.strata.spi.TextInputSink;
 import org.junit.jupiter.api.Test;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
@@ -152,5 +156,36 @@ public abstract class PlatformContract {
             platform.textInput().stop();
             platform.textInput().stop();
         });
+    }
+
+    @Test
+    void textInputAcceptsEveryKindInAnyOrder() {
+        final Platform platform = this.platform();
+        assertDoesNotThrow(() -> {
+            platform.textInput().start(new Rect(0, 0, 100, 20), TextInputKind.SECRET);
+            platform.textInput().start(new Rect(0, 30, 100, 20), TextInputKind.TEXT);
+            platform.textInput().start(new Rect(0, 60, 100, 20), TextInputKind.SECRET);
+            platform.textInput().stop();
+            platform.textInput().start(new Rect(0, 0, 100, 20), TextInputKind.TEXT);
+            platform.textInput().stop();
+        });
+    }
+
+    @Test
+    void theDefaultStartWithAKindForwardsToStart() {
+        final List<Rect> started = new ArrayList<>();
+        final TextInputSink sink = new TextInputSink() {
+            @Override
+            public void start(final Rect caretArea) {
+                started.add(caretArea);
+            }
+
+            @Override
+            public void stop() {
+            }
+        };
+        sink.start(new Rect(1, 2, 3, 4), TextInputKind.SECRET);
+        sink.start(new Rect(5, 6, 7, 8), TextInputKind.TEXT);
+        assertEquals(List.of(new Rect(1, 2, 3, 4), new Rect(5, 6, 7, 8)), started);
     }
 }

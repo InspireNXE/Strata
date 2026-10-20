@@ -38,6 +38,7 @@ import org.inspirenxe.strata.api.extension.peer.ComponentPeer;
 import org.inspirenxe.strata.api.geometry.Insets;
 import org.inspirenxe.strata.api.geometry.Rect;
 import org.inspirenxe.strata.api.geometry.Size;
+import org.inspirenxe.strata.api.input.TextInputKind;
 import org.inspirenxe.strata.api.layout.HorizontalAlignment;
 import org.inspirenxe.strata.api.layout.VerticalAlignment;
 import org.inspirenxe.strata.api.theme.Border;
@@ -694,6 +695,16 @@ public class Node implements ComponentPeer {
         return this.hooks.acceptsTextInput();
     }
 
+    /**
+     * Returns the kind of text the component takes, which the root passes to the engine when it starts text input.
+     * Meaningful only while {@link #acceptsTextInput()} is true.
+     *
+     * @return the kind of text
+     */
+    public final TextInputKind textInputKind() {
+        return this.hooks.textInputKind();
+    }
+
     // ------------------------------------------------------------------
     // Root-maintained state
     // ------------------------------------------------------------------
@@ -758,6 +769,9 @@ public class Node implements ComponentPeer {
         if (this.enabled != enabled) {
             this.enabled = enabled;
             this.treeChanged();
+            if (!enabled && this.facade instanceof SecretHolder holder) {
+                holder.disabled();
+            }
         }
     }
 

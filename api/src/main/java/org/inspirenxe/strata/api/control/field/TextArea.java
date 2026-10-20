@@ -19,6 +19,7 @@ import org.inspirenxe.strata.api.component.Component;
 import org.inspirenxe.strata.api.component.Focusable;
 import org.inspirenxe.strata.api.component.HasCursor;
 import org.inspirenxe.strata.api.component.HasTooltip;
+import org.inspirenxe.strata.api.control.attribute.text.TextEntry;
 import org.inspirenxe.strata.api.control.attribute.text.TextInput;
 import org.inspirenxe.strata.api.geometry.Insets;
 
@@ -45,8 +46,12 @@ import java.util.Objects;
  *
  * <h2>Events</h2>
  * <ul>
+ *     <li>{@link TextEntry#MODIFY}: Fired when the user is about to edit the text by typing, pressing Enter, deleting,
+ *     cutting or pasting, before {@link TextInput#EDIT}. It carries no value. Cancel it to reject the edit and keep
+ *     the text and selection as they were; {@code EDIT} then does not fire. It fires for the same edits as
+ *     {@code EDIT}.</li>
  *     <li>{@link TextInput#EDIT}: Fired when the user is about to edit the text by typing, pressing Enter, deleting,
- *     cutting or pasting. The value is the whole text the edit would produce. While handlers run, the area still holds
+ *     cutting or pasting, unless {@code MODIFY} was canceled. The value is the whole text the edit would produce. While handlers run, the area still holds
  *     the text and selection from before the edit. Cancel the event to reject the edit and keep the text and selection
  *     as they were, or set another text to rewrite it; the value must not be set to null. The final text has its
  *     {@code \r\n} and {@code \r} turned into {@code \n} and is cut to {@link #maxLength()} before it applies, and the
@@ -57,6 +62,8 @@ import java.util.Objects;
  *     {@link #setMaxLength} cutting it. The value is the new text and {@code previous()} the text before, both with
  *     lines separated by {@code \n}; neither is null. An edit whose final text equals the old one fires nothing. Fires
  *     for changes made from code too.</li>
+ *     <li>{@link TextEntry#MODIFIED}: Fired after every change that fires {@code EDITED}, after it, with the new and
+ *     previous lengths in code points, line breaks included.</li>
  * </ul>
  *
  * <h2>Theme keys</h2>

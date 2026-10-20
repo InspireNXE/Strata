@@ -26,6 +26,7 @@ import org.inspirenxe.strata.api.event.input.FocusEvent;
 import org.inspirenxe.strata.api.event.input.KeyEvent;
 import org.inspirenxe.strata.api.event.input.PointerButtonEvent;
 import org.inspirenxe.strata.api.extension.CustomComponent;
+import org.inspirenxe.strata.api.extension.Environment;
 import org.inspirenxe.strata.api.extension.MeasureContext;
 import org.inspirenxe.strata.api.extension.Painter;
 import org.inspirenxe.strata.api.geometry.Insets;
@@ -61,15 +62,18 @@ import java.util.function.UnaryOperator;
  * <p>The box is focusable and tabbable, shows a text cursor, accepts text input and is at least 20 by 20 units. It
  * asks for {@link #DEFAULT_WIDTH} units of width, so give it a fixed width or stretch it to change that. Text sits
  * 4 units in from the left and right edges and 5 from the top and bottom unless the padding is changed. Text wider
- * than the box scrolls sideways to keep the caret in view.</p>
+ * than the box scrolls sideways to keep the caret in view. The caret, the selection, the scroll and the key and
+ * pointer handling are a {@code LineEditor} over a {@code PlainBuffer}, which the password box shares.</p>
  *
- * <p>Every user edit that would change the text fires {@link TextBox#EDIT} when a handler is on its path. While the
- * handlers run the box still holds the text and selection from before the edit. The final text then has its line
- * breaks dropped, is cut to the length limit and goes through the internal filter, and the caret goes as many
- * characters from its end as the edit left it, with nothing selected. With no handler on the path the edit applies
- * directly, without putting the old text back first. Enter fires {@link TextBox#SUBMIT} on every press, but is
- * consumed only when a handler for {@link TextBox#SUBMIT} or {@link TextBox#SUBMITTED} is on the path, so an
- * ancestor's key handler still sees Enter from a box nobody submits.</p>
+ * <p>Every user edit that would change the text fires {@link TextBox#MODIFY} and then {@link TextBox#EDIT} when a
+ * handler for either is on its path. While the handlers run the box still holds the text and selection from before
+ * the edit; a canceled {@code MODIFY} ends the edit there. The final text then has its line breaks dropped, is cut to
+ * the length limit and goes through the internal filter, and the caret goes as many characters from its end as the
+ * edit left it, with nothing selected. With neither handler on the path the edit applies directly, without putting
+ * the old text back first. Every change reports {@link TextBox#EDITED} and then {@link TextBox#MODIFIED}. Enter fires
+ * {@link TextBox#SUBMIT} on every press, but is consumed only when a handler for {@link TextBox#SUBMIT} or
+ * {@link TextBox#SUBMITTED} is on the path, so an ancestor's key handler still sees Enter from a box nobody
+ * submits.</p>
  *
  * <p>The suggestion list is a {@link ListViewImpl} in a popup, not focusable, built when it first opens and dropped
  * when it closes. The box routes the list's input to itself, so the list fires no events. Its rows are one line of
@@ -91,7 +95,7 @@ public final class TextBoxImpl extends CustomComponent<TextBox> implements TextB
      * How long, in milliseconds, the caret stays shown and then hidden. Each edit or caret move restarts the cycle
      * with the caret shown.
      */
-    public static final long BLINK_MILLIS = 500L;
+    public static final long BLINK_MILLIS = LineEditor.BLINK_MILLIS;
     /**
      * The width, in UI units, the box asks for when measured.
      */
@@ -101,16 +105,14 @@ public final class TextBoxImpl extends CustomComponent<TextBox> implements TextB
      * and bottom.
      */
     public static final Insets DEFAULT_PADDING = Insets.of(4f, 5f);
-    private static final Set<String> REQUIRED = Set.of(STYLE_NORMAL, STYLE_FOCUSED, STYLE_DISABLED);
-    private static final Paint DEFAULT_SELECTION = Paint.solid(0x806A9FFF);
-    private static final Paint DEFAULT_CARET = Paint.solid(0xFFE0E0E0);
+    static final Set<String> REQUIRED = Set.of(STYLE_NORMAL, STYLE_FOCUSED, STYLE_DISABLED);
+    static final Paint DEFAULT_SELECTION = Paint.solid(0x806A9FFF);
+    static final Paint DEFAULT_CARET = Paint.solid(0xFFE0E0E0);
 
     private final ComponentFactory ui;
-    private final StringBuilder buffer;
-    private final Runnable drawContent;
+    private final PlainBuffer buffer;
+    private final LineEditor editor;
     private int maxLength;
-    private boolean password;
-    private int maskCodePoint;
     // The padding in use: the one set, else the theme's
     private Insets textPadding;
     private Insets setPadding;
@@ -118,11 +120,6 @@ public final class TextBoxImpl extends CustomComponent<TextBox> implements TextB
     private UnaryOperator<String> filter;
     private boolean readOnly;
     private boolean selectAllOnFocus;
-    // Set when a press gives focus to a box that selects all on focus, so that press keeps everything selected
-    private boolean pressSelectsAll;
-    // Set while a press keeps everything selected; a drag from it selects from where the press landed instead
-    private boolean allFromPress;
-    private int pressIndex;
 
     // Suggestions
     private SuggestionProvider suggestionProvider;
@@ -142,16 +139,6 @@ public final class TextBoxImpl extends CustomComponent<TextBox> implements TextB
     private int beforeCaret;
     private int beforeAnchor;
 
-    private int caret;
-    private int anchor;
-    private float scrollX;
-    private long blinkStart;
-
-    // Double-click drags select whole words around the word first clicked
-    private boolean wordDrag;
-    private int dragWordStart;
-    private int dragWordEnd;
-
     // Theme
     private Paint normal;
     private Paint focusedPaint;
@@ -167,26 +154,16 @@ public final class TextBoxImpl extends CustomComponent<TextBox> implements TextB
     private TextStyle placeholderStyle;
     // Made during measure
     private TextLine placeholderLine;
+    private float lineHeight;
 
-    // Derived from text and caret, recomputed only after a change
-    private boolean visualsDirty;
     // The text as drawn: one span per styled segment, and where each starts
     private final StyledText styled;
     private TextHighlighter highlighter;
     private TextSpan[] displaySpans;
     private float[] displayX;
-    private float textWidth;
-    private float caretX;
-    private float selectionStartX;
-    private float selectionEndX;
-    private float lineHeight;
-    private Rect contentBox;
-    private float textY;
-    // Set only while paint runs, for drawContent
-    private Painter painter;
 
     /**
-     * Creates an empty box with no length limit and password mode off.
+     * Creates an empty box with no length limit.
      *
      * @param ui the factory that owns the box
      */
@@ -194,10 +171,9 @@ public final class TextBoxImpl extends CustomComponent<TextBox> implements TextB
     public TextBoxImpl(final ComponentFactory ui) {
         super(ui);
         this.ui = ui;
-        this.buffer = new StringBuilder();
-        this.drawContent = this::drawContent;
+        this.buffer = new PlainBuffer();
+        this.editor = new LineEditor(this.buffer, new TextBoundaries(this.buffer, false), new Editing());
         this.maxLength = Integer.MAX_VALUE;
-        this.maskCodePoint = '*';
         this.textPadding = DEFAULT_PADDING;
         this.themePadding = DEFAULT_PADDING;
         this.maxVisibleSuggestions = DEFAULT_MAX_VISIBLE_SUGGESTIONS;
@@ -219,8 +195,6 @@ public final class TextBoxImpl extends CustomComponent<TextBox> implements TextB
         this.highlighter = TextHighlighter.NONE;
         this.displaySpans = new TextSpan[0];
         this.displayX = new float[0];
-        this.contentBox = Rect.ZERO;
-        this.visualsDirty = true;
         this.setCursor(CursorKind.TEXT);
         this.setMinSize(20f, 20f);
     }
@@ -237,16 +211,29 @@ public final class TextBoxImpl extends CustomComponent<TextBox> implements TextB
     @Override
     public TextBox setText(final String text) {
         final String clean = truncate(sanitize(Objects.requireNonNull(text, "text")), this.maxLength);
-        if (!clean.contentEquals(this.buffer)) {
+        if (!this.buffer.contentEquals(clean)) {
             final String previous = this.buffer.toString();
-            this.buffer.setLength(0);
-            this.buffer.append(clean);
-            this.caret = this.buffer.length();
-            this.anchor = this.caret;
+            this.buffer.set(clean);
+            this.editor.place(this.buffer.length());
             this.hideSuggestions();
             this.changed(previous);
         }
         return this;
+    }
+
+    @Override
+    public int length() {
+        return this.codePoints();
+    }
+
+    @Override
+    public boolean isEmpty() {
+        return this.buffer.isEmpty();
+    }
+
+    @Override
+    public TextBox clear() {
+        return this.setText("");
     }
 
     @Override
@@ -262,17 +249,11 @@ public final class TextBoxImpl extends CustomComponent<TextBox> implements TextB
         this.maxLength = maxLength;
         if (this.codePoints() > maxLength) {
             final String previous = this.buffer.toString();
-            this.buffer.setLength(this.buffer.offsetByCodePoints(0, maxLength));
-            this.caret = Math.min(this.caret, this.buffer.length());
-            this.anchor = Math.min(this.anchor, this.buffer.length());
+            this.buffer.truncate(this.buffer.offsetByCodePoints(0, maxLength));
+            this.editor.clamp();
             this.changed(previous);
         }
         return this;
-    }
-
-    @Override
-    public boolean isPassword() {
-        return this.password;
     }
 
     @Override
@@ -288,26 +269,6 @@ public final class TextBoxImpl extends CustomComponent<TextBox> implements TextB
     }
 
     @Override
-    public TextBox setPassword(final boolean password) {
-        this.password = password;
-        this.visualsDirty = true;
-        if (password) {
-            this.hideSuggestions();
-        }
-        return this;
-    }
-
-    @Override
-    public TextBox setMaskCodePoint(final int codePoint) {
-        if (!Character.isValidCodePoint(codePoint)) {
-            throw new IllegalArgumentException("Not a code point: " + codePoint);
-        }
-        this.maskCodePoint = codePoint;
-        this.visualsDirty = true;
-        return this;
-    }
-
-    @Override
     public TextBox setTextPadding(final Insets padding) {
         this.setPadding = padding;
         this.textPadding = padding != null ? padding : this.themePadding;
@@ -317,17 +278,17 @@ public final class TextBoxImpl extends CustomComponent<TextBox> implements TextB
 
     @Override
     public int caret() {
-        return this.caret;
+        return this.editor.caret();
     }
 
     @Override
     public int selectionStart() {
-        return Math.min(this.anchor, this.caret);
+        return this.editor.selectionStart();
     }
 
     @Override
     public int selectionEnd() {
-        return Math.max(this.anchor, this.caret);
+        return this.editor.selectionEnd();
     }
 
     @Override
@@ -337,17 +298,13 @@ public final class TextBoxImpl extends CustomComponent<TextBox> implements TextB
 
     @Override
     public TextBox select(final int anchor, final int caret) {
-        this.anchor = this.snap(anchor);
-        this.caret = this.snap(caret);
-        this.moved();
+        this.editor.select(anchor, caret);
         return this;
     }
 
     @Override
     public TextBox selectAll() {
-        this.anchor = 0;
-        this.caret = this.buffer.length();
-        this.moved();
+        this.editor.selectAll();
         return this;
     }
 
@@ -377,14 +334,14 @@ public final class TextBoxImpl extends CustomComponent<TextBox> implements TextB
     @Override
     public TextBox setHighlighter(final TextHighlighter highlighter) {
         this.highlighter = Objects.requireNonNull(highlighter, "highlighter");
-        this.visualsDirty = true;
+        this.editor.invalidate();
         return this;
     }
 
     @Override
     public TextBox setReadOnly(final boolean readOnly) {
         this.readOnly = readOnly;
-        this.visualsDirty = true;
+        this.editor.invalidate();
         if (readOnly) {
             this.hideSuggestions();
         }
@@ -428,10 +385,10 @@ public final class TextBoxImpl extends CustomComponent<TextBox> implements TextB
 
     @Override
     public TextBox showSuggestions() {
-        if (this.suggestionProvider == null || this.readOnly || this.password || !this.isEnabled() || !this.isAttached()) {
+        if (this.suggestionProvider == null || this.readOnly || !this.isEnabled() || !this.isAttached()) {
             return this;
         }
-        final List<Suggestion> found = List.copyOf(this.suggestionProvider.suggest(this.buffer.toString(), this.caret));
+        final List<Suggestion> found = List.copyOf(this.suggestionProvider.suggest(this.buffer.toString(), this.caret()));
         if (found.isEmpty()) {
             return this.hideSuggestions();
         }
@@ -541,8 +498,7 @@ public final class TextBoxImpl extends CustomComponent<TextBox> implements TextB
         final int kept = this.codePoints() - this.buffer.codePointCount(start, end);
         final String fitted = truncate(sanitize(suggestion.text()), this.maxLength - kept);
         this.buffer.replace(start, end, fitted);
-        this.caret = start + fitted.length();
-        this.anchor = this.caret;
+        this.editor.place(start + fitted.length());
         this.editApplied = false;
         this.completing = true;
         try {
@@ -631,7 +587,7 @@ public final class TextBoxImpl extends CustomComponent<TextBox> implements TextB
         if (this.suggestionList != null) {
             ((ComponentFactoryImpl) this.ui).nodeOf(this.suggestionList).setBackground(this.suggestionsPaint);
         }
-        this.visualsDirty = true;
+        this.editor.invalidate();
     }
 
     @Override
@@ -653,79 +609,10 @@ public final class TextBoxImpl extends CustomComponent<TextBox> implements TextB
         }
         face.paint(painter, bounds);
 
-        this.contentBox = bounds.shrink(this.textPadding);
-        this.textY = this.contentBox.y() + (this.contentBox.height() - this.lineHeight) * 0.5f;
-        this.updateVisuals(this.environment().text());
-        this.revealCaret();
-
-        this.painter = painter;
-        try {
-            painter.clipped(this.contentBox, this.drawContent);
-        } finally {
-            this.painter = null;
-        }
-
-        if (this.isFocused() && this.isEnabled() && !this.readOnly && this.caretShown()) {
-            final float x = Math.max(this.contentBox.x(),
-                    Math.min(this.contentBox.right() - 1f, this.contentBox.x() + this.caretX - this.scrollX));
-            this.caretPaint.paint(painter, new Rect(x, this.textY, 1f, this.lineHeight));
-        }
-    }
-
-    /**
-     * Runs inside the content clip during {@link #paint}; a field-held method reference, so painting allocates no
-     * lambda per frame.
-     */
-    private void drawContent() {
-        final float originX = this.contentBox.x() - this.scrollX;
-        if (this.hasSelection()) {
-            this.selectionPaint.paint(this.painter, new Rect(originX + this.selectionStartX, this.textY,
-                    this.selectionEndX - this.selectionStartX, this.lineHeight));
-        }
-        if (this.buffer.isEmpty() && !this.placeholderLine.isEmpty()) {
-            this.placeholderLine.draw(this.painter, this.contentBox.x(), this.textY);
-        } else {
-            for (int i = 0; i < this.displaySpans.length; i++) {
-                this.painter.text(this.displaySpans[i], originX + this.displayX[i], this.textY);
-            }
-        }
-    }
-
-    private boolean caretShown() {
-        return ((this.environment().millis() - this.blinkStart) / BLINK_MILLIS) % 2 == 0;
-    }
-
-    /**
-     * Scrolls just enough to keep the caret inside the content box, and never past the text's end.
-     */
-    private void revealCaret() {
-        final float view = this.contentBox.width();
-        if (this.caretX - this.scrollX > view - 1f) {
-            this.scrollX = this.caretX - view + 1f;
-        }
-        if (this.caretX - this.scrollX < 0f) {
-            this.scrollX = this.caretX;
-        }
-        this.scrollX = Math.max(0f, Math.min(this.scrollX, Math.max(0f, this.textWidth + 1f - view)));
-    }
-
-    private void updateVisuals(final TextMetrics metrics) {
-        if (!this.visualsDirty) {
-            return;
-        }
-        this.visualsDirty = false;
-        if (this.password) {
-            // A password box draws the mask in its own style and never shows runs
-            this.displaySpans = new TextSpan[] {new TextSpan(this.displayPrefix(this.buffer.length()), this.style())};
-        } else {
-            this.syncStyled();
-            this.displaySpans = this.styled.spans(0, this.buffer.length());
-        }
-        this.displayX = StyledText.offsets(metrics, this.displaySpans);
-        this.textWidth = StyledText.extent(metrics, this.displaySpans, this.displayX);
-        this.caretX = this.xForIndex(metrics, this.caret);
-        this.selectionStartX = this.xForIndex(metrics, this.selectionStart());
-        this.selectionEndX = this.xForIndex(metrics, this.selectionEnd());
+        final Rect contentBox = bounds.shrink(this.textPadding);
+        final float textY = contentBox.y() + (contentBox.height() - this.lineHeight) * 0.5f;
+        this.editor.paint(painter, contentBox, textY, this.lineHeight, this.selectionPaint, this.caretPaint,
+                this.isFocused() && this.isEnabled() && !this.readOnly);
     }
 
     private TextStyle style() {
@@ -735,60 +622,11 @@ public final class TextBoxImpl extends CustomComponent<TextBox> implements TextB
         return this.readOnly ? this.readOnlyTextStyle : this.textStyle;
     }
 
-    private String displayPrefix(final int index) {
-        if (this.password) {
-            return Character.toString(this.maskCodePoint).repeat(this.buffer.codePointCount(0, index));
-        }
-        return this.buffer.substring(0, index);
-    }
-
     /**
      * Brings the styled segments up to the current text, style and highlighter; cheap when nothing changed.
      */
     private void syncStyled() {
         this.styled.update(this.buffer.toString(), this.style(), this.highlighter, this.isEnabled());
-    }
-
-    private float xForIndex(final TextMetrics metrics, final int index) {
-        if (index == 0) {
-            return 0f;
-        }
-        if (this.password) {
-            return metrics.width(new TextSpan(this.displayPrefix(index), this.style()));
-        }
-        return this.styled.width(metrics, 0, index);
-    }
-
-    /**
-     * The code point boundary nearest to {@code x}, measured from the start of the text.
-     */
-    private int indexForX(final TextMetrics metrics, final float x) {
-        if (x <= 0f) {
-            return 0;
-        }
-        if (!this.password) {
-            this.syncStyled();
-        }
-        int previous = 0;
-        float previousX = 0f;
-        int index = 0;
-        while (index < this.buffer.length()) {
-            index = this.nextCodePoint(index);
-            final float indexX = this.xForIndex(metrics, index);
-            if (indexX >= x) {
-                return x - previousX < indexX - x ? previous : index;
-            }
-            previous = index;
-            previousX = indexX;
-        }
-        return this.buffer.length();
-    }
-
-    /**
-     * The index under a point given relative to the component's left edge.
-     */
-    private int indexAt(final float localX) {
-        return this.indexForX(this.environment().text(), localX - this.textPadding.left() + this.scrollX);
     }
 
     // ------------------------------------------------------------------
@@ -800,38 +638,7 @@ public final class TextBoxImpl extends CustomComponent<TextBox> implements TextB
         if (event.button() != MouseButton.LEFT || !this.isEnabled()) {
             return;
         }
-        final int index = this.indexAt(event.localX());
-        this.wordDrag = false;
-        this.allFromPress = this.pressSelectsAll && event.clicks() == 1 && !event.modifiers().shift();
-        this.pressSelectsAll = false;
-        this.pressIndex = index;
-        switch (event.clicks()) {
-            case 1 -> {
-                if (this.allFromPress) {
-                    this.anchor = 0;
-                    this.caret = this.buffer.length();
-                } else {
-                    this.caret = index;
-                    if (!event.modifiers().shift()) {
-                        this.anchor = index;
-                    }
-                }
-            }
-            case 2 -> {
-                final int[] word = this.wordAround(index);
-                this.anchor = word[0];
-                this.caret = word[1];
-                this.wordDrag = true;
-                this.dragWordStart = word[0];
-                this.dragWordEnd = word[1];
-            }
-            default -> {
-                this.anchor = 0;
-                this.caret = this.buffer.length();
-            }
-        }
-        this.moved();
-        event.consume();
+        this.editor.press(event, event.localX() - this.textPadding.left());
     }
 
     @Override
@@ -848,25 +655,7 @@ public final class TextBoxImpl extends CustomComponent<TextBox> implements TextB
         if (event.button() != MouseButton.LEFT || !this.isEnabled() || event.clicks() >= 3) {
             return;
         }
-        final int index = this.indexAt(event.localX());
-        if (this.wordDrag) {
-            final int[] word = this.wordAround(index);
-            if (word[0] < this.dragWordStart) {
-                this.anchor = this.dragWordEnd;
-                this.caret = word[0];
-            } else {
-                this.anchor = this.dragWordStart;
-                this.caret = Math.max(word[1], this.dragWordEnd);
-            }
-        } else {
-            if (this.allFromPress) {
-                this.allFromPress = false;
-                this.anchor = this.pressIndex;
-            }
-            this.caret = index;
-        }
-        this.moved();
-        event.consume();
+        this.editor.drag(event, event.localX() - this.textPadding.left());
     }
 
     // ------------------------------------------------------------------
@@ -876,22 +665,16 @@ public final class TextBoxImpl extends CustomComponent<TextBox> implements TextB
     @Override
     protected void onFocusGained(final FocusEvent event) {
         if (this.refocusing) {
-            this.moved();
+            this.editor.moved();
             return;
         }
-        // A press that gave focus places the caret right after this, unless the box selects all on focus;
-        // keyboard focus starts at the end
-        this.pressSelectsAll = this.selectAllOnFocus
-                && ((ComponentFactoryImpl) this.ui).nodeOf(this).root().isFocusFromPress();
-        this.anchor = this.selectAllOnFocus ? 0 : this.buffer.length();
-        this.caret = this.buffer.length();
-        this.moved();
+        this.editor.focusGained(this.selectAllOnFocus,
+                ((ComponentFactoryImpl) this.ui).nodeOf(this).root().isFocusFromPress());
     }
 
     @Override
     protected void onFocusLost(final FocusEvent event) {
-        this.pressSelectsAll = false;
-        this.allFromPress = false;
+        this.editor.focusLost();
         // A press on the list takes focus first; keep the list open for it
         if (this.suggestionList == null
                 || !((ComponentFactoryImpl) this.ui).nodeOf(this.suggestionList).isHoverWithin()) {
@@ -928,87 +711,11 @@ public final class TextBoxImpl extends CustomComponent<TextBox> implements TextB
             }
             return;
         }
-        final boolean shift = modifiers.shift();
-        final boolean handled;
-        if (modifiers.control() && !modifiers.alt()) {
-            handled = this.controlKey(key, shift);
-        } else {
-            handled = this.plainKey(key, shift);
-        }
+        final boolean handled = this.editor.key(key, modifiers);
         // Typing keys arrive as characters too; keep the engine from also reading them as shortcuts
         if (handled || (!modifiers.control() && !modifiers.alt() && key.isPrintable())) {
             event.consume();
         }
-    }
-
-    private boolean controlKey(final Key key, final boolean shift) {
-        switch (key) {
-            case A -> this.selectAll();
-            case C -> this.copy();
-            case X -> this.cut();
-            case V -> this.paste();
-            case LEFT -> this.moveTo(this.previousWordStart(this.caret), shift);
-            case RIGHT -> this.moveTo(this.nextWordEnd(this.caret), shift);
-            case HOME -> this.moveTo(0, shift);
-            case END -> this.moveTo(this.buffer.length(), shift);
-            case BACKSPACE -> {
-                if (this.hasSelection()) {
-                    this.deleteSelection();
-                } else {
-                    this.deleteRange(this.previousWordStart(this.caret), this.caret);
-                }
-            }
-            case DELETE -> {
-                if (this.hasSelection()) {
-                    this.deleteSelection();
-                } else {
-                    this.deleteRange(this.caret, this.nextWordEnd(this.caret));
-                }
-            }
-            default -> {
-                return false;
-            }
-        }
-        return true;
-    }
-
-    private boolean plainKey(final Key key, final boolean shift) {
-        switch (key) {
-            case LEFT -> {
-                if (this.hasSelection() && !shift) {
-                    this.moveTo(this.selectionStart(), false);
-                } else {
-                    this.moveTo(this.previousCodePoint(this.caret), shift);
-                }
-            }
-            case RIGHT -> {
-                if (this.hasSelection() && !shift) {
-                    this.moveTo(this.selectionEnd(), false);
-                } else {
-                    this.moveTo(this.nextCodePoint(this.caret), shift);
-                }
-            }
-            case HOME -> this.moveTo(0, shift);
-            case END -> this.moveTo(this.buffer.length(), shift);
-            case BACKSPACE -> {
-                if (this.hasSelection()) {
-                    this.deleteSelection();
-                } else {
-                    this.deleteRange(this.previousCodePoint(this.caret), this.caret);
-                }
-            }
-            case DELETE -> {
-                if (this.hasSelection()) {
-                    this.deleteSelection();
-                } else {
-                    this.deleteRange(this.caret, this.nextCodePoint(this.caret));
-                }
-            }
-            default -> {
-                return false;
-            }
-        }
-        return true;
     }
 
     @Override
@@ -1025,7 +732,7 @@ public final class TextBoxImpl extends CustomComponent<TextBox> implements TextB
             event.consume();
             return;
         }
-        this.insert(Character.toString(codePoint));
+        this.editor.type(codePoint);
         event.consume();
     }
 
@@ -1033,61 +740,20 @@ public final class TextBoxImpl extends CustomComponent<TextBox> implements TextB
     // Editing
     // ------------------------------------------------------------------
 
-    private void insert(final String text) {
+    /**
+     * Replaces a range with text as an edit by the user: the text is cut to the room the length limit leaves, and
+     * the caret goes after it.
+     */
+    private void edit(final int start, final int end, final String text) {
         if (!this.beginEdit()) {
-            return;
-        }
-        if (this.hasSelection()) {
-            this.removeSelection();
-        }
-        final String fitted = truncate(text, this.maxLength - this.codePoints());
-        if (!fitted.isEmpty()) {
-            this.buffer.insert(this.caret, fitted);
-            this.caret += fitted.length();
-        }
-        this.anchor = this.caret;
-        this.edited();
-    }
-
-    private void copy() {
-        if (this.hasSelection() && !this.password) {
-            this.environment().setClipboardText(this.selectedText());
-        }
-    }
-
-    private void cut() {
-        if (this.hasSelection() && !this.password && !this.readOnly) {
-            this.copy();
-            this.deleteSelection();
-        }
-    }
-
-    private void paste() {
-        this.environment().clipboardText().map(TextBoxImpl::sanitize).ifPresent(this::insert);
-    }
-
-    private void deleteSelection() {
-        if (!this.beginEdit()) {
-            return;
-        }
-        this.removeSelection();
-        this.edited();
-    }
-
-    private void removeSelection() {
-        final int start = this.selectionStart();
-        this.buffer.delete(start, this.selectionEnd());
-        this.caret = start;
-        this.anchor = start;
-    }
-
-    private void deleteRange(final int start, final int end) {
-        if (start >= end || !this.beginEdit()) {
             return;
         }
         this.buffer.delete(start, end);
-        this.caret = start;
-        this.anchor = start;
+        final String fitted = truncate(text, this.maxLength - this.codePoints());
+        if (!fitted.isEmpty()) {
+            this.buffer.insert(start, fitted);
+        }
+        this.editor.place(start + fitted.length());
         this.edited();
     }
 
@@ -1101,19 +767,19 @@ public final class TextBoxImpl extends CustomComponent<TextBox> implements TextB
             return false;
         }
         this.beforeText = this.buffer.toString();
-        this.beforeCaret = this.caret;
-        this.beforeAnchor = this.anchor;
+        this.beforeCaret = this.editor.caret();
+        this.beforeAnchor = this.editor.anchor();
         return true;
     }
 
     /**
-     * Ends a user edit. With no {@link TextBox#EDIT} handler on the path, or when the edit left the text as it was,
-     * this applies the edit at once. Otherwise it puts the text and selection back as they were before the edit and
-     * fires the request with the edited text, which applies the final text through {@code proceedEdit} unless a
-     * handler cancels it.
+     * Ends a user edit. With no {@link TextBox#MODIFY} or {@link TextBox#EDIT} handler on the path, or when the edit
+     * left the text as it was, this applies the edit at once. Otherwise it puts the text and selection back as they
+     * were before the edit and asks {@code MODIFY}; unless that was canceled, it fires {@code EDIT} with the edited
+     * text, which applies the final text through {@code proceedEdit} unless a handler cancels it.
      */
     private void edited() {
-        if (!this.isHandled(EDIT)) {
+        if (!this.isHandled(MODIFY) && !this.isHandled(EDIT)) {
             this.applyEdit();
             return;
         }
@@ -1122,12 +788,13 @@ public final class TextBoxImpl extends CustomComponent<TextBox> implements TextB
             this.applyEdit();
             return;
         }
-        final int fromEnd = candidate.length() - this.caret;
-        this.buffer.setLength(0);
-        this.buffer.append(this.beforeText);
-        this.caret = this.beforeCaret;
-        this.anchor = this.beforeAnchor;
-        this.moved();
+        final int fromEnd = candidate.length() - this.editor.caret();
+        this.buffer.set(this.beforeText);
+        this.editor.restore(this.beforeAnchor, this.beforeCaret);
+        this.editor.moved();
+        if (!this.request(MODIFY)) {
+            return;
+        }
         this.request(EDIT, candidate, text -> this.proceedEdit(text, fromEnd));
     }
 
@@ -1139,40 +806,34 @@ public final class TextBoxImpl extends CustomComponent<TextBox> implements TextB
      */
     private void proceedEdit(final String text, final int fromEnd) {
         final String fitted = truncate(sanitize(Objects.requireNonNull(text, "text")), this.maxLength);
-        this.buffer.setLength(0);
-        this.buffer.append(fitted);
-        this.caret = this.snap(this.buffer.length() - fromEnd);
-        this.anchor = this.caret;
+        this.buffer.set(fitted);
+        this.editor.place(this.snap(this.buffer.length() - fromEnd));
         this.applyEdit();
     }
 
     /**
-     * Applies the edit the buffer holds: runs the internal filter, then reports {@link TextBox#EDITED} if the text
-     * changed.
+     * Applies the edit the buffer holds: runs the internal filter, then reports {@link TextBox#EDITED} and
+     * {@link TextBox#MODIFIED} if the text changed.
      */
     private void applyEdit() {
         if (this.filter != null) {
             final String candidate = this.buffer.toString();
             final String result = this.filter.apply(candidate);
             if (result == null || result.equals(this.beforeText)) {
-                this.buffer.setLength(0);
-                this.buffer.append(this.beforeText);
-                this.caret = this.beforeCaret;
-                this.anchor = this.beforeAnchor;
-                this.moved();
+                this.buffer.set(this.beforeText);
+                this.editor.restore(this.beforeAnchor, this.beforeCaret);
+                this.editor.moved();
                 return;
             }
             if (!result.equals(candidate)) {
-                final int fromEnd = this.buffer.length() - this.caret;
-                this.buffer.setLength(0);
-                this.buffer.append(truncate(sanitize(result), this.maxLength));
-                this.caret = this.snap(this.buffer.length() - fromEnd);
-                this.anchor = this.caret;
+                final int fromEnd = this.buffer.length() - this.editor.caret();
+                this.buffer.set(truncate(sanitize(result), this.maxLength));
+                this.editor.place(this.snap(this.buffer.length() - fromEnd));
             }
         }
         this.editApplied = true;
-        if (this.buffer.toString().equals(this.beforeText)) {
-            this.moved();
+        if (this.buffer.contentEquals(this.beforeText)) {
+            this.editor.moved();
             return;
         }
         this.changed(this.beforeText);
@@ -1181,32 +842,20 @@ public final class TextBoxImpl extends CustomComponent<TextBox> implements TextB
         }
     }
 
-    private void moveTo(final int index, final boolean extend) {
-        this.hideSuggestions();
-        this.caret = this.snap(index);
-        if (!extend) {
-            this.anchor = this.caret;
-        }
-        this.moved();
-    }
-
-    private void moved() {
-        this.visualsDirty = true;
-        this.blinkStart = this.environment().millis();
-    }
-
+    /**
+     * Reports a change of the text, from any source: {@link TextBox#EDITED}, then {@link TextBox#MODIFIED}.
+     */
     private void changed(final String previous) {
-        this.moved();
+        this.editor.moved();
         this.report(EDITED, this.buffer.toString(), previous);
+        if (this.isHandled(MODIFIED)) {
+            this.report(MODIFIED, this.codePoints(), previous.codePointCount(0, previous.length()));
+        }
     }
 
     // ------------------------------------------------------------------
     // Text helpers
     // ------------------------------------------------------------------
-
-    private boolean hasSelection() {
-        return this.anchor != this.caret;
-    }
 
     private int codePoints() {
         return this.buffer.codePointCount(0, this.buffer.length());
@@ -1225,71 +874,14 @@ public final class TextBoxImpl extends CustomComponent<TextBox> implements TextB
         return clamped;
     }
 
-    private int previousCodePoint(final int index) {
-        return index <= 0 ? 0 : index - Character.charCount(this.buffer.codePointBefore(index));
-    }
-
-    private int nextCodePoint(final int index) {
-        return index >= this.buffer.length() ? this.buffer.length() : index + Character.charCount(this.buffer.codePointAt(index));
-    }
-
-    /**
-     * For Ctrl+Left and Ctrl+Backspace: skip whitespace leftwards, then the word before it.
-     */
-    private int previousWordStart(final int index) {
-        int i = index;
-        while (i > 0 && Character.isWhitespace(this.buffer.codePointBefore(i))) {
-            i = this.previousCodePoint(i);
-        }
-        while (i > 0 && !Character.isWhitespace(this.buffer.codePointBefore(i))) {
-            i = this.previousCodePoint(i);
-        }
-        return i;
-    }
-
-    /**
-     * For Ctrl+Right and Ctrl+Delete: skip whitespace rightwards, then the word after it.
-     */
-    private int nextWordEnd(final int index) {
-        int i = index;
-        while (i < this.buffer.length() && Character.isWhitespace(this.buffer.codePointAt(i))) {
-            i = this.nextCodePoint(i);
-        }
-        while (i < this.buffer.length() && !Character.isWhitespace(this.buffer.codePointAt(i))) {
-            i = this.nextCodePoint(i);
-        }
-        return i;
-    }
-
-    /**
-     * The run of word or whitespace characters around an index, as {start, end}. At the very end of the text, the
-     * run before it.
-     */
-    private int[] wordAround(final int index) {
-        if (this.buffer.isEmpty()) {
-            return new int[] {0, 0};
-        }
-        final int at = index >= this.buffer.length() ? this.previousCodePoint(index) : index;
-        final boolean whitespace = Character.isWhitespace(this.buffer.codePointAt(at));
-        int start = at;
-        while (start > 0 && Character.isWhitespace(this.buffer.codePointBefore(start)) == whitespace) {
-            start = this.previousCodePoint(start);
-        }
-        int end = at;
-        while (end < this.buffer.length() && Character.isWhitespace(this.buffer.codePointAt(end)) == whitespace) {
-            end = this.nextCodePoint(end);
-        }
-        return new int[] {start, end};
-    }
-
     /**
      * Single line only: newlines are dropped, as Wintergreen did for pasted text.
      */
-    private static String sanitize(final String text) {
+    static String sanitize(final String text) {
         return text.replace("\r", "").replace("\n", "");
     }
 
-    private static String truncate(final String text, final int codePoints) {
+    static String truncate(final String text, final int codePoints) {
         if (codePoints <= 0) {
             return "";
         }
@@ -1301,6 +893,103 @@ public final class TextBoxImpl extends CustomComponent<TextBox> implements TextB
 
     @Override
     protected Object snapshotState() {
-        return new TextBox.State(this.buffer.toString(), this.caret, this.anchor, this.maxLength, this.password);
+        return new TextBox.State(this.buffer.toString(), this.editor.caret(), this.editor.anchor(), this.maxLength);
+    }
+
+    /**
+     * What the box tells its {@link LineEditor}: how to measure and draw its styled text, and how the user's edits
+     * apply.
+     */
+    private final class Editing implements LineEditor.Owner {
+        @Override
+        public Environment environment() {
+            return TextBoxImpl.this.environment();
+        }
+
+        @Override
+        public boolean isReadOnly() {
+            return TextBoxImpl.this.readOnly;
+        }
+
+        @Override
+        public boolean allowsCopy() {
+            return true;
+        }
+
+        @Override
+        public float layoutText(final TextMetrics metrics) {
+            final TextBoxImpl box = TextBoxImpl.this;
+            box.syncStyled();
+            box.displaySpans = box.styled.spans(0, box.buffer.length());
+            box.displayX = StyledText.offsets(metrics, box.displaySpans);
+            return StyledText.extent(metrics, box.displaySpans, box.displayX);
+        }
+
+        @Override
+        public float xForIndex(final TextMetrics metrics, final int index) {
+            return index == 0 ? 0f : TextBoxImpl.this.styled.width(metrics, 0, index);
+        }
+
+        @Override
+        public int indexForX(final TextMetrics metrics, final float x) {
+            final TextBoxImpl box = TextBoxImpl.this;
+            int previous = 0;
+            float previousX = 0f;
+            int index = 0;
+            while (index < box.buffer.length()) {
+                index += Character.charCount(box.buffer.codePointAt(index));
+                final float indexX = this.xForIndex(metrics, index);
+                if (indexX >= x) {
+                    return x - previousX < indexX - x ? previous : index;
+                }
+                previous = index;
+                previousX = indexX;
+            }
+            return box.buffer.length();
+        }
+
+        @Override
+        public void drawText(final Painter painter, final float originX, final float left, final float y) {
+            final TextBoxImpl box = TextBoxImpl.this;
+            if (box.buffer.isEmpty() && !box.placeholderLine.isEmpty()) {
+                box.placeholderLine.draw(painter, left, y);
+                return;
+            }
+            for (int i = 0; i < box.displaySpans.length; i++) {
+                painter.text(box.displaySpans[i], originX + box.displayX[i], y);
+            }
+        }
+
+        @Override
+        public void selectAll() {
+            TextBoxImpl.this.selectAll();
+        }
+
+        @Override
+        public void type(final int start, final int end, final int codePoint) {
+            TextBoxImpl.this.edit(start, end, Character.toString(codePoint));
+        }
+
+        @Override
+        public void delete(final int start, final int end) {
+            TextBoxImpl.this.edit(start, end, "");
+        }
+
+        @Override
+        public void paste(final int start, final int end) {
+            TextBoxImpl.this.environment().clipboardText()
+                    .map(TextBoxImpl::sanitize)
+                    .ifPresent(text -> TextBoxImpl.this.edit(start, end, text));
+        }
+
+        @Override
+        public void copy(final int start, final int end) {
+            TextBoxImpl.this.environment().setClipboardText(TextBoxImpl.this.buffer.substring(start, end));
+        }
+
+        @Override
+        public void beforeMove() {
+            TextBoxImpl.this.hideSuggestions();
+        }
     }
 }

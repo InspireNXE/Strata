@@ -23,6 +23,7 @@ import org.inspirenxe.strata.api.extension.MeasureContext;
 import org.inspirenxe.strata.api.extension.Painter;
 import org.inspirenxe.strata.api.geometry.Rect;
 import org.inspirenxe.strata.api.geometry.Size;
+import org.inspirenxe.strata.api.input.TextInputKind;
 import org.inspirenxe.strata.api.theme.Theme;
 
 import java.util.Set;
@@ -80,6 +81,13 @@ public interface ComponentHooks {
      * @return true if the component takes typed text
      */
     boolean acceptsTextInput();
+
+    /**
+     * Forwards to {@code CustomComponent.textInputKind}.
+     *
+     * @return the kind of text the component takes
+     */
+    TextInputKind textInputKind();
 
     /**
      * Runs the component's default behavior for an event, by calling the matching {@code on...} hook.

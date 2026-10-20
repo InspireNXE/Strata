@@ -210,11 +210,8 @@ class InputControlsTest {
         }
 
         @Test
-        void readOnlyAndPasswordBoxesShowNone() {
-            this.box.setText("a").setPassword(true);
-            this.box.showSuggestions();
-            assertEquals(List.of(), this.shown());
-            this.box.setPassword(false).setReadOnly(true);
+        void readOnlyBoxesShowNone() {
+            this.box.setText("a").setReadOnly(true);
             this.box.showSuggestions();
             assertEquals(List.of(), this.shown());
         }

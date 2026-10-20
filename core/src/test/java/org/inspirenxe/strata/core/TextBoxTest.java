@@ -215,20 +215,6 @@ class TextBoxTest {
     }
 
     @Test
-    void passwordModeMasksAndBlocksCopyAndCut() {
-        this.box.setPassword(true);
-        this.focusWith("secret");
-        this.test.platform().clipboard().set("untouched");
-
-        this.press(Key.A, CONTROL);
-        this.press(Key.C, CONTROL);
-        this.press(Key.X, CONTROL);
-
-        assertEquals("untouched", this.test.platform().clipboard().get().orElseThrow());
-        assertEquals("secret", this.box.text());
-    }
-
-    @Test
     void maxLengthLimitsTypingPastingAndSetText() {
         this.box.setMaxLength(5);
         this.focusWith("abc");

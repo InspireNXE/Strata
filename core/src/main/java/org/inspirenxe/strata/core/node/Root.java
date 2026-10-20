@@ -244,7 +244,8 @@ public final class Root {
     /**
      * Replaces the tree, closing every overlay and the tooltip first. The theme is checked against every node of the
      * new tree before anything changes, so a theme that lacks a required key fails first. The old tree is detached,
-     * which clears its hover, press and focus state.
+     * which clears its hover, press and focus state, and then every {@link SecretHolder} in it that the new tree did
+     * not take is wiped.
      *
      * @param content the new top node, or {@code null} to empty the root
      * @throws IllegalArgumentException if {@code content} is already in a container or another root
@@ -263,9 +264,13 @@ public final class Root {
         if (this.content != null) {
             this.detachTree(this.content);
         }
+        final Node previous = this.content;
         this.content = content;
         if (content != null) {
             this.attachTree(content);
+        }
+        if (previous != null) {
+            wipeSecrets(previous);
         }
         this.requestLayout();
     }
@@ -358,6 +363,17 @@ public final class Root {
         if (!missing.isEmpty()) {
             throw new ThemeException(theme, missing);
         }
+    }
+
+    /**
+     * Wipes every {@link SecretHolder} in a tree this root let go of, skipping any that is attached again.
+     */
+    private static void wipeSecrets(final Node subtree) {
+        visit(subtree, node -> {
+            if (node.root() == null && node.facade() instanceof SecretHolder holder) {
+                holder.wipe();
+            }
+        });
     }
 
     private static void visit(final Node node, final Consumer<Node> action) {
@@ -1106,7 +1122,7 @@ public final class Root {
         if (next != null) {
             next.setFocused(true);
             if (next.acceptsTextInput()) {
-                this.platform.textInput().start(next.bounds());
+                this.platform.textInput().start(next.bounds(), next.textInputKind());
             }
             next.fire(Focusable.FOCUS_GAINED, new FocusEventImpl(next.facade(),
                     previous == null ? null : previous.facade()));
@@ -1228,6 +1244,7 @@ public final class Root {
             this.open = false;
             Root.this.layers.remove(this);
             Root.this.detachTree(this.node);
+            wipeSecrets(this.node);
             Root.this.requestLayout();
             if (this.modal && this.previousFocus != null && Root.this.canFocus(this.previousFocus)) {
                 Root.this.changeFocus(this.previousFocus);

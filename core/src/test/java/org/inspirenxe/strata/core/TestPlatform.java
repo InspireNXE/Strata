@@ -16,6 +16,7 @@
 package org.inspirenxe.strata.core;
 
 import org.inspirenxe.strata.api.geometry.Rect;
+import org.inspirenxe.strata.api.input.TextInputKind;
 import org.inspirenxe.strata.api.text.TextMetrics;
 import org.inspirenxe.strata.api.text.TextSpan;
 import org.inspirenxe.strata.api.text.TextStyle;
@@ -41,6 +42,7 @@ public final class TestPlatform implements Platform {
     private long nanos;
     private String clipboard;
     private Rect textInputArea;
+    private TextInputKind textInputKind;
     private ThemeSource themes = ThemeSource.NONE;
 
     public TestPlatform() {
@@ -60,6 +62,13 @@ public final class TestPlatform implements Platform {
      */
     public Rect textInputArea() {
         return this.textInputArea;
+    }
+
+    /**
+     * The kind passed to the last text input start, or {@code null} while text input is stopped.
+     */
+    public TextInputKind textInputKind() {
+        return this.textInputKind;
     }
 
     @Override
@@ -103,12 +112,19 @@ public final class TestPlatform implements Platform {
         return new TextInputSink() {
             @Override
             public void start(final Rect caretArea) {
+                this.start(caretArea, TextInputKind.TEXT);
+            }
+
+            @Override
+            public void start(final Rect caretArea, final TextInputKind kind) {
                 TestPlatform.this.textInputArea = caretArea;
+                TestPlatform.this.textInputKind = kind;
             }
 
             @Override
             public void stop() {
                 TestPlatform.this.textInputArea = null;
+                TestPlatform.this.textInputKind = null;
             }
         };
     }

@@ -94,7 +94,7 @@ class SnapshotTest {
 
         this.test.host().charTyped('c', Modifiers.NONE);
 
-        assertEquals(List.of(new TextBox.State("ab", 2, 2, box.maxLength(), false)), before);
+        assertEquals(List.of(new TextBox.State("ab", 2, 2, box.maxLength())), before);
         assertEquals(List.of("abc"), live);
         assertEquals("abc", box.text());
     }

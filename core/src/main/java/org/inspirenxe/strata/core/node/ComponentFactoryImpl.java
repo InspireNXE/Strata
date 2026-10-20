@@ -37,6 +37,7 @@ import org.inspirenxe.strata.api.control.display.Separator;
 import org.inspirenxe.strata.api.control.field.ColorPicker;
 import org.inspirenxe.strata.api.control.field.Slider;
 import org.inspirenxe.strata.api.control.field.Spinner;
+import org.inspirenxe.strata.api.control.field.PasswordTextBox;
 import org.inspirenxe.strata.api.control.field.TextArea;
 import org.inspirenxe.strata.api.control.field.TextBox;
 import org.inspirenxe.strata.api.control.menu.CheckMenuItem;
@@ -92,6 +93,7 @@ import org.inspirenxe.strata.core.control.display.SeparatorImpl;
 import org.inspirenxe.strata.core.control.field.ColorPickerImpl;
 import org.inspirenxe.strata.core.control.field.SliderImpl;
 import org.inspirenxe.strata.core.control.field.SpinnerImpl;
+import org.inspirenxe.strata.core.control.field.PasswordTextBoxImpl;
 import org.inspirenxe.strata.core.control.field.TextAreaImpl;
 import org.inspirenxe.strata.core.control.field.TextBoxImpl;
 import org.inspirenxe.strata.core.control.menu.CheckMenuItemImpl;
@@ -305,6 +307,11 @@ public final class ComponentFactoryImpl implements ComponentFactory {
     @Override
     public TextBox textBox() {
         return new TextBoxImpl(this);
+    }
+
+    @Override
+    public PasswordTextBox passwordTextBox() {
+        return new PasswordTextBoxImpl(this);
     }
 
     @Override

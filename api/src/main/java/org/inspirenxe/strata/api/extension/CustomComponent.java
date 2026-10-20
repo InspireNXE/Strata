@@ -45,6 +45,7 @@ import org.inspirenxe.strata.api.extension.peer.ComponentPeer;
 import org.inspirenxe.strata.api.geometry.Insets;
 import org.inspirenxe.strata.api.geometry.Rect;
 import org.inspirenxe.strata.api.geometry.Size;
+import org.inspirenxe.strata.api.input.TextInputKind;
 import org.inspirenxe.strata.api.layout.HorizontalAlignment;
 import org.inspirenxe.strata.api.layout.VerticalAlignment;
 import org.inspirenxe.strata.api.theme.Border;
@@ -229,6 +230,17 @@ public abstract class CustomComponent<T extends Component<T>> implements Compone
      */
     protected boolean acceptsTextInput() {
         return false;
+    }
+
+    /**
+     * Returns what kind of text this component takes, which Strata passes to the engine when the component gains
+     * focus, so the engine can turn off input methods, prediction and suggestions for secrets. Read only while
+     * {@link #acceptsTextInput()} is true. The default is {@link TextInputKind#TEXT}.
+     *
+     * @return the kind of text
+     */
+    protected TextInputKind textInputKind() {
+        return TextInputKind.TEXT;
     }
 
     /**
@@ -453,6 +465,11 @@ public abstract class CustomComponent<T extends Component<T>> implements Compone
         @Override
         public boolean acceptsTextInput() {
             return CustomComponent.this.acceptsTextInput();
+        }
+
+        @Override
+        public TextInputKind textInputKind() {
+            return CustomComponent.this.textInputKind();
         }
 
         @Override

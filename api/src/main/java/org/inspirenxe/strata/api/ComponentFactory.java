@@ -36,6 +36,7 @@ import org.inspirenxe.strata.api.control.display.Separator;
 import org.inspirenxe.strata.api.control.field.ColorPicker;
 import org.inspirenxe.strata.api.control.field.Slider;
 import org.inspirenxe.strata.api.control.field.Spinner;
+import org.inspirenxe.strata.api.control.field.PasswordTextBox;
 import org.inspirenxe.strata.api.control.field.TextArea;
 import org.inspirenxe.strata.api.control.field.TextBox;
 import org.inspirenxe.strata.api.control.menu.CheckMenuItem;
@@ -341,6 +342,14 @@ public interface ComponentFactory {
      * @return a new text box
      */
     TextBox textBox();
+
+    /**
+     * Makes an empty {@link PasswordTextBox} that the user may reveal, with no length limit and {@code *} as its
+     * mask.
+     *
+     * @return a new password box
+     */
+    PasswordTextBox passwordTextBox();
 
     /**
      * Makes an empty {@link ListView} whose rows show each item's {@linkplain #cell(Object) appearance}. Set other

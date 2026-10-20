@@ -39,7 +39,9 @@ public final class Translations {
             "strata.button.cancel", "Cancel",
             "strata.button.yes", "Yes",
             "strata.button.no", "No",
-            "strata.button.close", "Close");
+            "strata.button.close", "Close",
+            "strata.password.show", "Show password",
+            "strata.password.hide", "Hide password");
 
     private static final System.Logger LOGGER = System.getLogger(Translations.class.getName());
     private static final Set<String> MISSING = ConcurrentHashMap.newKeySet();

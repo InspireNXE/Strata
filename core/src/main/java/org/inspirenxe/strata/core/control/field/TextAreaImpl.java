@@ -62,11 +62,15 @@ import java.util.Set;
  * horizontal one along the bottom when its widest row does not fit; a horizontal wheel turn scrolls it by three
  * lines' height.</p>
  *
- * <p>Every user edit that would change the text fires {@link TextArea#EDIT} when a handler is on its path. While
- * the handlers run the area still holds the text and selection from before the edit. The final text then has its
- * line breaks turned into {@code \n} and is cut to the length limit, and the caret goes as many characters from its
- * end as the edit left it, with nothing selected. With no handler on the path the edit applies directly, without
- * putting the old text back first.</p>
+ * <p>Every user edit that would change the text fires {@link TextArea#MODIFY} and then {@link TextArea#EDIT} when a
+ * handler for either is on its path. While the handlers run the area still holds the text and selection from before
+ * the edit; a canceled {@code MODIFY} ends the edit there. The final text then has its line breaks turned into
+ * {@code \n} and is cut to the length limit, and the caret goes as many characters from its end as the edit left it,
+ * with nothing selected. With neither handler on the path the edit applies directly, without putting the old text
+ * back first. Every change reports {@link TextArea#EDITED} and then {@link TextArea#MODIFIED}.</p>
+ *
+ * <p>The text is a {@code PlainBuffer}, and code point and word boundaries come from {@code TextBoundaries}, which
+ * the text box and the password box share; the rows are the area's own.</p>
  */
 public final class TextAreaImpl extends CustomComponent<TextArea> implements TextArea {
     /**
@@ -85,7 +89,8 @@ public final class TextAreaImpl extends CustomComponent<TextArea> implements Tex
      */
     public static final Insets DEFAULT_PADDING = Insets.of(4f);
 
-    private final StringBuilder buffer;
+    private final PlainBuffer buffer;
+    private final TextBoundaries boundaries;
     private final ScrollTrack bar;
     private final ScrollTrack horizontalBar;
     private final Runnable drawContent;
@@ -173,7 +178,8 @@ public final class TextAreaImpl extends CustomComponent<TextArea> implements Tex
     @SuppressWarnings("this-escape")
     public TextAreaImpl(final ComponentFactory ui) {
         super(ui);
-        this.buffer = new StringBuilder();
+        this.buffer = new PlainBuffer();
+        this.boundaries = new TextBoundaries(this.buffer, false);
         this.bar = new ScrollTrack(true);
         this.horizontalBar = new ScrollTrack(false);
         this.drawContent = this::drawContent;
@@ -223,10 +229,9 @@ public final class TextAreaImpl extends CustomComponent<TextArea> implements Tex
     @Override
     public TextArea setText(final String text) {
         final String clean = truncate(normalize(Objects.requireNonNull(text, "text")), this.maxLength);
-        if (!clean.contentEquals(this.buffer)) {
+        if (!this.buffer.contentEquals(clean)) {
             final String previous = this.buffer.toString();
-            this.buffer.setLength(0);
-            this.buffer.append(clean);
+            this.buffer.set(clean);
             this.caret = 0;
             this.anchor = 0;
             this.scrollX = 0f;
@@ -234,6 +239,21 @@ public final class TextAreaImpl extends CustomComponent<TextArea> implements Tex
             this.changed(previous);
         }
         return this;
+    }
+
+    @Override
+    public int length() {
+        return this.codePoints();
+    }
+
+    @Override
+    public boolean isEmpty() {
+        return this.buffer.isEmpty();
+    }
+
+    @Override
+    public TextArea clear() {
+        return this.setText("");
     }
 
     @Override
@@ -249,7 +269,7 @@ public final class TextAreaImpl extends CustomComponent<TextArea> implements Tex
         this.maxLength = maxLength;
         if (this.codePoints() > maxLength) {
             final String previous = this.buffer.toString();
-            this.buffer.setLength(this.buffer.offsetByCodePoints(0, maxLength));
+            this.buffer.truncate(this.buffer.offsetByCodePoints(0, maxLength));
             this.caret = Math.min(this.caret, this.buffer.length());
             this.anchor = Math.min(this.anchor, this.buffer.length());
             this.changed(previous);
@@ -1084,14 +1104,14 @@ public final class TextAreaImpl extends CustomComponent<TextArea> implements Tex
     }
 
     /**
-     * Ends a user edit. With no {@link TextArea#EDIT} handler on the path, or when the edit left the text as it was,
-     * this applies the edit at once. Otherwise it puts the text and selection back as they were before the edit and
-     * fires the request with the edited text, which applies the final text through {@code proceedEdit} unless a
-     * handler cancels it.
+     * Ends a user edit. With no {@link TextArea#MODIFY} or {@link TextArea#EDIT} handler on the path, or when the edit
+     * left the text as it was, this applies the edit at once. Otherwise it puts the text and selection back as they
+     * were before the edit and asks {@code MODIFY}; unless that was canceled, it fires {@code EDIT} with the edited
+     * text, which applies the final text through {@code proceedEdit} unless a handler cancels it.
      */
     private void edited() {
         this.goalX = Float.NaN;
-        if (!this.isHandled(EDIT)) {
+        if (!this.isHandled(MODIFY) && !this.isHandled(EDIT)) {
             this.applyEdit();
             return;
         }
@@ -1101,11 +1121,13 @@ public final class TextAreaImpl extends CustomComponent<TextArea> implements Tex
             return;
         }
         final int fromEnd = candidate.length() - this.caret;
-        this.buffer.setLength(0);
-        this.buffer.append(this.beforeText);
+        this.buffer.set(this.beforeText);
         this.caret = this.beforeCaret;
         this.anchor = this.beforeAnchor;
         this.moved();
+        if (!this.request(MODIFY)) {
+            return;
+        }
         this.request(EDIT, candidate, text -> this.proceedEdit(text, fromEnd));
     }
 
@@ -1117,8 +1139,7 @@ public final class TextAreaImpl extends CustomComponent<TextArea> implements Tex
      */
     private void proceedEdit(final String text, final int fromEnd) {
         final String fitted = truncate(normalize(Objects.requireNonNull(text, "text")), this.maxLength);
-        this.buffer.setLength(0);
-        this.buffer.append(fitted);
+        this.buffer.set(fitted);
         this.caret = this.snap(this.buffer.length() - fromEnd);
         this.anchor = this.caret;
         this.goalX = Float.NaN;
@@ -1126,10 +1147,11 @@ public final class TextAreaImpl extends CustomComponent<TextArea> implements Tex
     }
 
     /**
-     * Applies the edit the buffer holds, reporting {@link TextArea#EDITED} if the text changed.
+     * Applies the edit the buffer holds, reporting {@link TextArea#EDITED} and {@link TextArea#MODIFIED} if the text
+     * changed.
      */
     private void applyEdit() {
-        if (this.buffer.toString().equals(this.beforeText)) {
+        if (this.buffer.contentEquals(this.beforeText)) {
             this.moved();
             return;
         }
@@ -1155,6 +1177,9 @@ public final class TextAreaImpl extends CustomComponent<TextArea> implements Tex
         this.rowsDirty = true;
         this.moved();
         this.report(EDITED, this.buffer.toString(), previous);
+        if (this.isHandled(MODIFIED)) {
+            this.report(MODIFIED, this.codePoints(), previous.codePointCount(0, previous.length()));
+        }
     }
 
     // ------------------------------------------------------------------
@@ -1170,21 +1195,15 @@ public final class TextAreaImpl extends CustomComponent<TextArea> implements Tex
     }
 
     private int snap(final int index) {
-        final int clamped = Math.max(0, Math.min(this.buffer.length(), index));
-        if (clamped > 0 && clamped < this.buffer.length()
-                && Character.isLowSurrogate(this.buffer.charAt(clamped))
-                && Character.isHighSurrogate(this.buffer.charAt(clamped - 1))) {
-            return clamped - 1;
-        }
-        return clamped;
+        return this.boundaries.snap(index);
     }
 
     private int previousCodePoint(final int index) {
-        return index <= 0 ? 0 : index - Character.charCount(this.buffer.codePointBefore(index));
+        return this.boundaries.previousCodePoint(index);
     }
 
     private int nextCodePoint(final int index) {
-        return index >= this.buffer.length() ? this.buffer.length() : index + Character.charCount(this.buffer.codePointAt(index));
+        return this.boundaries.nextCodePoint(index);
     }
 
     private int lineStart(final int index) {
@@ -1198,44 +1217,15 @@ public final class TextAreaImpl extends CustomComponent<TextArea> implements Tex
     }
 
     private int previousWordStart(final int index) {
-        int i = index;
-        while (i > 0 && Character.isWhitespace(this.buffer.codePointBefore(i))) {
-            i = this.previousCodePoint(i);
-        }
-        while (i > 0 && !Character.isWhitespace(this.buffer.codePointBefore(i))) {
-            i = this.previousCodePoint(i);
-        }
-        return i;
+        return this.boundaries.previousWordStart(index);
     }
 
     private int nextWordEnd(final int index) {
-        int i = index;
-        while (i < this.buffer.length() && Character.isWhitespace(this.buffer.codePointAt(i))) {
-            i = this.nextCodePoint(i);
-        }
-        while (i < this.buffer.length() && !Character.isWhitespace(this.buffer.codePointAt(i))) {
-            i = this.nextCodePoint(i);
-        }
-        return i;
+        return this.boundaries.nextWordEnd(index);
     }
 
     private int[] wordAround(final int index) {
-        if (this.buffer.isEmpty()) {
-            return new int[] {0, 0};
-        }
-        final int at = index >= this.buffer.length() ? this.previousCodePoint(index) : index;
-        final boolean whitespace = Character.isWhitespace(this.buffer.codePointAt(at));
-        int start = at;
-        while (start > 0 && Character.isWhitespace(this.buffer.codePointBefore(start)) == whitespace
-                && this.buffer.charAt(start - 1) != '\n') {
-            start = this.previousCodePoint(start);
-        }
-        int end = at;
-        while (end < this.buffer.length() && Character.isWhitespace(this.buffer.codePointAt(end)) == whitespace
-                && this.buffer.charAt(end) != '\n') {
-            end = this.nextCodePoint(end);
-        }
-        return new int[] {start, end};
+        return this.boundaries.wordAround(index);
     }
 
     private static String normalize(final String text) {

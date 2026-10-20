@@ -16,17 +16,25 @@
 package org.inspirenxe.strata.spi;
 
 import org.inspirenxe.strata.api.geometry.Rect;
+import org.inspirenxe.strata.api.input.TextInputKind;
 
 /**
  * Where a host tells the engine that a text field gained or lost focus. Some engines deliver no typed characters
  * until told (SDL-based engines among them), and some show an on-screen keyboard or input method
  * window at the given area.
  *
+ * <p>Core calls {@link #start(Rect, TextInputKind)}, which says what kind of field took focus. Its default forwards to
+ * {@link #start(Rect)}, so a sink that ignores the kind implements only that.</p>
+ *
  * <h2>Requirements for implementors</h2>
  * <ul>
  *     <li>{@link #start} and {@link #stop} may arrive repeatedly; treat a second start as moving the input
- *     area.</li>
+ *     area, and as changing the kind when focus moves from one field to another.</li>
  *     <li>After {@link #start}, the adapter must forward typed characters to {@link InputSink#charTyped}.</li>
+ *     <li>For {@link TextInputKind#SECRET}, turn off input method composition, prediction and on-screen keyboard
+ *     suggestions where the engine allows, and turn them back on for the next {@link TextInputKind#TEXT} start or
+ *     {@link #stop}.</li>
+ *     <li>Never log typed characters or drawn text.</li>
  * </ul>
  */
 public interface TextInputSink {
@@ -49,6 +57,17 @@ public interface TextInputSink {
      * @param caretArea where the text field is, in UI units, for placing input method windows
      */
     void start(Rect caretArea);
+
+    /**
+     * Called when a component that accepts text input gains focus, with the kind of text it takes. The default
+     * forwards to {@link #start(Rect)}; override it to treat secrets differently.
+     *
+     * @param caretArea where the text field is, in UI units, for placing input method windows
+     * @param kind the kind of text the field takes
+     */
+    default void start(final Rect caretArea, final TextInputKind kind) {
+        this.start(caretArea);
+    }
 
     /**
      * Called when focus leaves the last component that accepts text input.

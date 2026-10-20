@@ -19,6 +19,7 @@ import org.inspirenxe.strata.api.component.Component;
 import org.inspirenxe.strata.api.component.Focusable;
 import org.inspirenxe.strata.api.component.HasCursor;
 import org.inspirenxe.strata.api.component.HasTooltip;
+import org.inspirenxe.strata.api.control.attribute.text.TextEntry;
 import org.inspirenxe.strata.api.control.attribute.text.TextInput;
 import org.inspirenxe.strata.api.event.EventType;
 import org.inspirenxe.strata.api.event.control.RequestEvent;
@@ -69,7 +70,7 @@ import java.util.Objects;
  * </ul>
  * <p>Accepting replaces the suggestion's range of the text with its text, puts the caret after it and closes the
  * list. The change is an edit by the user, so it goes through {@link #EDIT} like typing, and the list does not open
- * again until the next edit. A read-only or disabled box and one in password mode show no suggestions.</p>
+ * again until the next edit. A read-only or disabled box shows no suggestions.</p>
  *
  * <pre>{@code
  * TextBox name = factory.textBox()
@@ -90,22 +91,27 @@ import java.util.Objects;
  * <h2>Text and indexes</h2>
  * <p>Caret and selection indexes count UTF-16 chars, like {@link String} indexes, but never fall inside a surrogate
  * pair: editing works on whole code points. {@link #maxLength()} counts code points. The box holds one line; line
- * breaks given to {@link #setText} or pasted are removed. In password mode every code point is drawn as the mask
- * character, and copy and cut do nothing.</p>
+ * breaks given to {@link #setText} or pasted are removed. For a password, use a {@link PasswordTextBox}, which keeps
+ * its text out of events, snapshots and the clipboard.</p>
  *
  * <h2>Events</h2>
  * <ul>
+ *     <li>{@link TextEntry#MODIFY}: Fired when the user is about to edit the text by typing, deleting, cutting or
+ *     pasting, before {@link TextInput#EDIT}. It carries no value. Cancel it to reject the edit and keep the text and
+ *     selection as they were; {@code EDIT} then does not fire. It fires for the same edits as {@code EDIT}.</li>
  *     <li>{@link TextInput#EDIT}: Fired when the user is about to edit the text by typing, deleting, cutting or
- *     pasting. The value is the whole text the edit would produce. While handlers run, the box still holds the text and
- *     selection from before the edit. Cancel the event to reject the edit and keep the text and selection as they were,
- *     or set another text to rewrite it; the value must not be set to null. The final text has its line breaks removed
- *     and is cut to {@link #maxLength()} before it applies, and the caret goes as many characters before its end as the
- *     edit left it, with nothing selected. An edit that would leave the text as it is, such as typing into a full box,
- *     fires nothing, and a read-only box fires nothing. Fires only for the user's actions: {@link #setText} and
- *     {@link #setMaxLength} fire none.</li>
+ *     pasting, unless {@code MODIFY} was canceled. The value is the whole text the edit would produce. While handlers
+ *     run, the box still holds the text and selection from before the edit. Cancel the event to reject the edit and
+ *     keep the text and selection as they were, or set another text to rewrite it; the value must not be set to null.
+ *     The final text has its line breaks removed and is cut to {@link #maxLength()} before it applies, and the caret
+ *     goes as many characters before its end as the edit left it, with nothing selected. An edit that would leave the
+ *     text as it is, such as typing into a full box, fires nothing, and a read-only box fires nothing. Fires only for
+ *     the user's actions: {@link #setText} and {@link #setMaxLength} fire none.</li>
  *     <li>{@link TextInput#EDITED}: Fired after the text changed: by an edit of the user's, by {@link #setText}, or by
  *     {@link #setMaxLength} cutting it. The value is the new text and {@code previous()} the text before; neither is
  *     null. An edit whose final text equals the old one fires nothing. Fires for changes made from code too.</li>
+ *     <li>{@link TextEntry#MODIFIED}: Fired after every change that fires {@code EDITED}, after it, with the new and
+ *     previous lengths in code points.</li>
  *     <li>{@link #COMPLETE}: Fired when the user accepts a suggestion, before the text changes. The value is the
  *     suggestion. Cancel it to keep the text as it is, or set another suggestion to apply that one instead.</li>
  *     <li>{@link #COMPLETED}: Fired after an accepted suggestion was applied, with the suggestion.</li>
@@ -280,7 +286,7 @@ public interface TextBox extends Component<TextBox>, Focusable<TextBox>, HasCurs
     /**
      * Sets the hint drawn in the {@value #STYLE_PLACEHOLDER} style while the box is empty, such as
      * {@code "Search items"}. It shows whether or not the box has focus, goes away as soon as there is text, and is
-     * never part of {@link #text()}. Password mode does not mask it.
+     * never part of {@link #text()}.
      *
      * @param placeholder the hint, or {@code null} or empty for none
      * @return this box
@@ -296,31 +302,6 @@ public interface TextBox extends Component<TextBox>, Focusable<TextBox>, HasCurs
     default TextBox setPlaceholder(final String placeholder) {
         return this.setPlaceholder(placeholder == null ? null : Text.of(placeholder));
     }
-
-    /**
-     * Returns whether the text is masked.
-     *
-     * @return true in password mode
-     */
-    boolean isPassword();
-
-    /**
-     * Turns password mode on or off. In password mode each code point is drawn as the mask character, and Ctrl+C
-     * and Ctrl+X do nothing. {@link #text()} and {@link #selectedText()} still return the real text.
-     *
-     * @param password true to mask the text
-     * @return this box
-     */
-    TextBox setPassword(boolean password);
-
-    /**
-     * Sets the character drawn for each code point in password mode.
-     *
-     * @param codePoint the mask character; {@code '*'} by default
-     * @return this box
-     * @throws IllegalArgumentException if {@code codePoint} is not a valid code point
-     */
-    TextBox setMaskCodePoint(int codePoint);
 
     /**
      * Sets the space between the text and the box's edges.
@@ -411,7 +392,7 @@ public interface TextBox extends Component<TextBox>, Focusable<TextBox>, HasCurs
     /**
      * Sets what offers suggestions as the user types, and closes the suggestion list if it is open. The box asks
      * the provider after each edit by the user that changes the text, and on Ctrl+Space, as the class description
-     * says. It never asks while read-only, disabled or in password mode.
+     * says. It never asks while read-only or disabled.
      *
      * @param provider returns the suggestions for a text and caret, or {@code null} for none; none by default
      * @return this box
@@ -437,8 +418,8 @@ public interface TextBox extends Component<TextBox>, Focusable<TextBox>, HasCurs
 
     /**
      * Asks the provider for suggestions for the current text and caret, as Ctrl+Space does, and shows them, or closes
-     * the list if there are none. Does nothing without a provider, while read-only, disabled or in password mode, or
-     * while the box is not in a shown tree.
+     * the list if there are none. Does nothing without a provider, while read-only or disabled, or while the box is
+     * not in a shown tree.
      *
      * @return this box
      */
@@ -501,7 +482,7 @@ public interface TextBox extends Component<TextBox>, Focusable<TextBox>, HasCurs
          * Returns the suggestions for a text and caret, in the order the list shows them. Called on the UI thread
          * each time the box asks, so it should be quick.
          *
-         * @param text the box's whole text, unmasked
+         * @param text the box's whole text
          * @param caret the caret, a char index from 0 to {@code text.length()}
          * @return the suggestions, or an empty list for none; never null
          */
@@ -547,14 +528,13 @@ public interface TextBox extends Component<TextBox>, Focusable<TextBox>, HasCurs
      * A text box's own state in a {@link org.inspirenxe.strata.api.component.ComponentSnapshot}. Indexes follow
      * the rules in the class description.
      *
-     * @param text the text, unmasked even in password mode; never null
+     * @param text the text; never null
      * @param caret the {@linkplain #caret() caret} index
      * @param anchor the end of the selection that stays put while the caret moves; equal to {@code caret} when
      *               nothing is selected
      * @param maxLength the {@linkplain #maxLength() maximum length}, in code points
-     * @param password whether the box was in {@linkplain #isPassword() password mode}
      */
-    record State(String text, int caret, int anchor, int maxLength, boolean password) {
+    record State(String text, int caret, int anchor, int maxLength) {
 
         /**
          * Checks the text.
