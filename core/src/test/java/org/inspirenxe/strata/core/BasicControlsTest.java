@@ -50,7 +50,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * Image, check box and slider. Text in the test platform is 6 units per code point and 9 units per line.
+ * Image, checkbox and slider. Text in the test platform is 6 units per code point and 9 units per line.
  */
 class BasicControlsTest {
     private static final SpriteId ICON = SpriteId.of("test", "icon");

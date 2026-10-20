@@ -29,7 +29,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * A check box's three states, the user's changes between them, and the events each change fires.
+ * A checkbox's three states, the user's changes between them, and the events each change fires.
  */
 class CheckStateTest {
     private final List<String> heard = new ArrayList<>();

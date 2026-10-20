@@ -179,6 +179,19 @@ class ControlsTest {
             assertEquals(0, this.box.selectionStart());
             assertEquals(2, this.box.selectionEnd());
         }
+
+        @Test
+        void aClickThatFocusesSelectsEverythingAndTheNextClickPlacesTheCaret() {
+            this.box = ControlsTest.this.ui.textBox().setText("1234").setSelectAllOnFocus(true);
+            ControlsTest.this.test.show(ControlsTest.this.ui.absolutePanel().add(this.box, 0, 0));
+            final Rect bounds = this.box.bounds();
+            ControlsTest.this.test.click(bounds.x() + 2, bounds.y() + 2);
+            assertEquals(0, this.box.selectionStart());
+            assertEquals(4, this.box.selectionEnd());
+            ControlsTest.this.test.platform().advanceMillis(1000);
+            ControlsTest.this.test.click(bounds.x() + 2, bounds.y() + 2);
+            assertEquals(this.box.selectionStart(), this.box.selectionEnd());
+        }
     }
 
     @Nested

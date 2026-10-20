@@ -87,9 +87,9 @@ public final class CheckBoxImpl extends CustomComponent<CheckBox> implements Che
     private float boxSize;
 
     /**
-     * Creates a check box.
+     * Creates a checkbox.
      *
-     * @param ui the factory that owns the check box
+     * @param ui the factory that owns the checkbox
      * @param text the caption
      */
     @SuppressWarnings("this-escape")

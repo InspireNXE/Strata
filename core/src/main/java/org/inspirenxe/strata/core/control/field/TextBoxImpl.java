@@ -110,6 +110,11 @@ public final class TextBoxImpl extends CustomComponent<TextBox> implements TextB
     private UnaryOperator<String> filter;
     private boolean readOnly;
     private boolean selectAllOnFocus;
+    // Set when a press gives focus to a box that selects all on focus, so that press keeps everything selected
+    private boolean pressSelectsAll;
+    // Set while a press keeps everything selected; a drag from it selects from where the press landed instead
+    private boolean allFromPress;
+    private int pressIndex;
 
     // Suggestions
     private SuggestionProvider suggestionProvider;
@@ -783,11 +788,19 @@ public final class TextBoxImpl extends CustomComponent<TextBox> implements TextB
         }
         final int index = this.indexAt(event.localX());
         this.wordDrag = false;
+        this.allFromPress = this.pressSelectsAll && event.clicks() == 1 && !event.modifiers().shift();
+        this.pressSelectsAll = false;
+        this.pressIndex = index;
         switch (event.clicks()) {
             case 1 -> {
-                this.caret = index;
-                if (!event.modifiers().shift()) {
-                    this.anchor = index;
+                if (this.allFromPress) {
+                    this.anchor = 0;
+                    this.caret = this.buffer.length();
+                } else {
+                    this.caret = index;
+                    if (!event.modifiers().shift()) {
+                        this.anchor = index;
+                    }
                 }
             }
             case 2 -> {
@@ -832,6 +845,10 @@ public final class TextBoxImpl extends CustomComponent<TextBox> implements TextB
                 this.caret = Math.max(word[1], this.dragWordEnd);
             }
         } else {
+            if (this.allFromPress) {
+                this.allFromPress = false;
+                this.anchor = this.pressIndex;
+            }
             this.caret = index;
         }
         this.moved();
@@ -848,7 +865,10 @@ public final class TextBoxImpl extends CustomComponent<TextBox> implements TextB
             this.moved();
             return;
         }
-        // A press that gave focus places the caret right after this; keyboard focus starts at the end
+        // A press that gave focus places the caret right after this, unless the box selects all on focus;
+        // keyboard focus starts at the end
+        this.pressSelectsAll = this.selectAllOnFocus
+                && ((ComponentFactoryImpl) this.ui).nodeOf(this).root().isFocusFromPress();
         this.anchor = this.selectAllOnFocus ? 0 : this.buffer.length();
         this.caret = this.buffer.length();
         this.moved();
@@ -856,6 +876,8 @@ public final class TextBoxImpl extends CustomComponent<TextBox> implements TextB
 
     @Override
     protected void onFocusLost(final FocusEvent event) {
+        this.pressSelectsAll = false;
+        this.allFromPress = false;
         // A press on the list takes focus first; keep the list open for it
         if (this.suggestionList == null
                 || !((ComponentFactoryImpl) this.ui).nodeOf(this.suggestionList).isHoverWithin()) {

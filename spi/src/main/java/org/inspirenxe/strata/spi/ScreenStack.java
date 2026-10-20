@@ -97,6 +97,15 @@ public interface ScreenStack extends InputSink {
     void resize(float width, float height);
 
     /**
+     * Sets the tooltip delay of every screen, and of screens pushed later, as
+     * {@link ScreenHost#setTooltipDelay(long)} does.
+     *
+     * @param millis the delay in milliseconds; 0 shows tooltips as soon as the pointer arrives
+     * @throws IllegalArgumentException if {@code millis} is negative
+     */
+    void setTooltipDelay(long millis);
+
+    /**
      * Draws the visible screens, bottom to top.
      *
      * @param canvas the engine canvas for this frame

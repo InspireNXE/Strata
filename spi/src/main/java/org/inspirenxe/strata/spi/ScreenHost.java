@@ -110,6 +110,16 @@ public interface ScreenHost extends InputSink {
     void resize(float width, float height);
 
     /**
+     * Sets how long the pointer must rest on a component before its tooltip shows. The host starts with
+     * {@link org.inspirenxe.strata.api.component.Tooltip#DEFAULT_DELAY_MILLIS}. A waiting tooltip shows on the first
+     * {@link #render} after the delay has passed on the platform's clock.
+     *
+     * @param millis the delay in milliseconds; 0 shows tooltips as soon as the pointer arrives
+     * @throws IllegalArgumentException if {@code millis} is negative
+     */
+    void setTooltipDelay(long millis);
+
+    /**
      * Builds a pending screen and runs layout now if anything changed. {@link #render} does this itself; call it to
      * read bounds before the first frame.
      */

@@ -18,7 +18,7 @@ package org.inspirenxe.strata.api.control.attribute.text;
 import org.inspirenxe.strata.api.text.Text;
 
 /**
- * A control or entry that shows text as its caption, such as a button, a check box, a label, a tab or a menu item.
+ * A control or entry that shows text as its caption, such as a button, a checkbox, a label, a tab or a menu item.
  * The text may be styled or translated; see {@link Text}.
  *
  * <p>Only Strata implements this interface.</p>

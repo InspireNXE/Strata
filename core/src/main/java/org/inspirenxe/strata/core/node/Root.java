@@ -93,7 +93,9 @@ import java.util.function.Consumer;
  *
  * <p>Tooltips: the hovered node's tooltip, or its nearest ancestor's, shows {@link #TOOLTIP_OFFSET} units right of
  * and above the pointer, flipped left of it when it would leave the host on the right, kept inside the host. It
- * follows the pointer and hides while a drag is in progress.</p>
+ * shows on the first frame rendered once the pointer has stayed on its owner for the
+ * {@linkplain #setTooltipDelay tooltip delay}, or at once when the pointer moves to it from another tooltip's owner.
+ * It follows the pointer and hides while a drag is in progress.</p>
  *
  * <p>Every method must be called on the UI thread.</p>
  */
@@ -134,6 +136,11 @@ public final class Root {
     private Node tooltipOwner;
     private Tooltip tooltipShown;
     private Node tooltipNode;
+    private long tooltipDelay;
+    // The owner whose tooltip waits for the delay, and when the pointer reached it
+    private Node tooltipPending;
+    private long tooltipPendingSince;
+    private boolean focusFromPress;
 
     /**
      * Creates an empty root of size 0 by 0, and binds it to its factory.
@@ -156,6 +163,7 @@ public final class Root {
         this.overlays = new OverlaysImpl();
         this.modifiers = Modifiers.NONE;
         this.layoutRequested = true;
+        this.tooltipDelay = Tooltip.DEFAULT_DELAY_MILLIS;
         ui.bindRoot(this);
     }
 
@@ -195,6 +203,40 @@ public final class Root {
         return this.modifiers;
     }
 
+    /**
+     * Returns how long the pointer rests on a component before its tooltip shows.
+     *
+     * @return the delay in milliseconds
+     */
+    public long tooltipDelay() {
+        return this.tooltipDelay;
+    }
+
+    /**
+     * Sets how long the pointer rests on a component before its tooltip shows. A tooltip waiting to show uses the
+     * new delay.
+     *
+     * @param millis the delay in milliseconds; 0 shows tooltips at once
+     * @throws IllegalArgumentException if {@code millis} is negative
+     */
+    public void setTooltipDelay(final long millis) {
+        if (millis < 0L) {
+            throw new IllegalArgumentException("Tooltip delay must not be negative: " + millis);
+        }
+        this.tooltipDelay = millis;
+    }
+
+    /**
+     * Returns whether the focus change being reported comes from a pointer press. It is true only while focus
+     * events fire for a press, which happens just before the press itself fires, so a focus handler can tell a
+     * click from keyboard or code focus.
+     *
+     * @return true while a press moves focus
+     */
+    public boolean isFocusFromPress() {
+        return this.focusFromPress;
+    }
+
     // ------------------------------------------------------------------
     // Tree
     // ------------------------------------------------------------------
@@ -217,6 +259,7 @@ public final class Root {
         }
         this.overlays.closeAll();
         this.closeTooltip();
+        this.tooltipPending = null;
         if (this.content != null) {
             this.detachTree(this.content);
         }
@@ -288,6 +331,9 @@ public final class Root {
             }
             if (node == this.tooltipOwner) {
                 this.tooltipOwner = null;
+            }
+            if (node == this.tooltipPending) {
+                this.tooltipPending = null;
             }
             this.presses.values().removeIf(press -> press.target == node);
             node.detach();
@@ -459,6 +505,7 @@ public final class Root {
     public void render(final Canvas canvas) {
         this.pumpKeyRepeat();
         this.expireToasts();
+        this.showPendingTooltip();
         this.layout();
         final CanvasPainter frame = this.painter.begin(canvas, this.platform.capabilities().slicesSprites());
         if (this.content != null) {
@@ -611,7 +658,12 @@ public final class Root {
             return false;
         }
 
-        this.changeFocus(this.focusableAncestor(target));
+        this.focusFromPress = true;
+        try {
+            this.changeFocus(this.focusableAncestor(target));
+        } finally {
+            this.focusFromPress = false;
+        }
 
         final int clicks = this.clickCounter.press(target, button, x, y, this.platform.clock().millis());
         this.presses.put(button, new Press(target, clicks, x, y));
@@ -774,12 +826,41 @@ public final class Root {
                 // Follow the pointer
                 this.requestLayout();
             }
+            if (owner == null) {
+                this.tooltipPending = null;
+            }
             return;
         }
+        // Moving from one tooltip straight to another skips the delay
+        final boolean warm = this.tooltipNode != null;
         this.closeTooltip();
         if (owner == null) {
+            this.tooltipPending = null;
             return;
         }
+        if (!warm && this.tooltipDelay > 0L) {
+            if (owner != this.tooltipPending) {
+                this.tooltipPending = owner;
+                this.tooltipPendingSince = this.platform.clock().millis();
+            }
+            return;
+        }
+        this.showTooltip(owner);
+    }
+
+    /**
+     * Shows the waiting tooltip once its owner has been hovered for the delay.
+     */
+    private void showPendingTooltip() {
+        final Node owner = this.tooltipPending;
+        if (owner != null && owner.tooltip() != null
+                && this.platform.clock().millis() - this.tooltipPendingSince >= this.tooltipDelay) {
+            this.showTooltip(owner);
+        }
+    }
+
+    private void showTooltip(final Node owner) {
+        this.tooltipPending = null;
         final Tooltip tooltip = owner.tooltip();
         final Node node = switch (tooltip) {
             case Tooltip.Lines lines -> this.ui.nodeOf(new TooltipView(this.ui, lines));

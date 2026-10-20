@@ -15,6 +15,7 @@
  */
 package org.inspirenxe.strata.core.host;
 
+import org.inspirenxe.strata.api.component.Tooltip;
 import org.inspirenxe.strata.api.input.Key;
 import org.inspirenxe.strata.api.input.KeyAction;
 import org.inspirenxe.strata.api.input.Modifiers;
@@ -45,6 +46,7 @@ public final class ScreenStackImpl implements ScreenStack {
     private ThemeRef themeRef;
     private float width;
     private float height;
+    private long tooltipDelay = Tooltip.DEFAULT_DELAY_MILLIS;
 
     /**
      * Creates an empty stack of size 0 by 0. Adapters use {@code StrataCore} instead.
@@ -81,6 +83,7 @@ public final class ScreenStackImpl implements ScreenStack {
                 : new ScreenHostImpl(this.platform, this.theme, close);
         self[0] = host;
         host.resize(this.width, this.height);
+        host.setTooltipDelay(this.tooltipDelay);
         host.open(screen);
         this.hosts.add(host);
     }
@@ -144,6 +147,17 @@ public final class ScreenStackImpl implements ScreenStack {
         this.height = height;
         for (final ScreenHostImpl host : this.hosts) {
             host.resize(width, height);
+        }
+    }
+
+    @Override
+    public void setTooltipDelay(final long millis) {
+        if (millis < 0L) {
+            throw new IllegalArgumentException("Tooltip delay must not be negative: " + millis);
+        }
+        this.tooltipDelay = millis;
+        for (final ScreenHostImpl host : this.hosts) {
+            host.setTooltipDelay(millis);
         }
     }
 

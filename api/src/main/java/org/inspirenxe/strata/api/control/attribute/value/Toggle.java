@@ -21,7 +21,7 @@ import org.inspirenxe.strata.api.event.control.ValueEvent;
 import org.inspirenxe.strata.api.event.control.ValueRequestEvent;
 
 /**
- * A control that is on or off, such as a check box, a switch or a radio button.
+ * A control that is on or off, such as a checkbox, a switch or a radio button.
  *
  * <p>Handle {@link #TOGGLE} to refuse or change what the user does, and {@link #TOGGLED} to react to every change.
  * One handler on a container hears every toggle inside it:</p>

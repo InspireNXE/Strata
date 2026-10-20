@@ -34,9 +34,10 @@ import java.util.Objects;
  *
  * <p>With wrapping on, which is the default, a line too long for the width breaks after the last space that fits,
  * or between characters when a word alone is too wide. A space where the line breaks stays at the end of the row.
- * With wrapping off, rows are the lines of the text and the view scrolls sideways to keep the caret in sight. Text
- * taller than the view scrolls vertically, with a scroll bar at the right edge, by wheel, by dragging the thumb and to
- * keep the caret in sight.</p>
+ * With wrapping off, rows are the lines of the text, and a row wider than the view scrolls sideways, with a scroll
+ * bar at the bottom edge, by horizontal wheel, by dragging the thumb and to keep the caret in sight. Text taller than
+ * the view scrolls vertically, with a scroll bar at the right edge, by wheel, by dragging the thumb and to keep the
+ * caret in sight.</p>
  *
  * <p>It is focusable and tabbable, accepts text input and shows the text cursor. Tab is left to focus traversal. It
  * asks for {@value #DEFAULT_WIDTH} units of width and enough height for {@linkplain #setVisibleLines four lines}, and

@@ -178,6 +178,36 @@ class OverlayTest {
         }
 
         @Test
+        void aTooltipWaitsForTheDelayUnlessAnotherIsShowing() {
+            final Box first = new Box(OverlayTest.this.ui, 50, 50);
+            first.setTooltip("First");
+            final Box second = new Box(OverlayTest.this.ui, 50, 50);
+            second.setTooltip("Second");
+            OverlayTest.this.test.show(OverlayTest.this.ui.absolutePanel().add(first, 0, 0).add(second, 50, 0));
+            final var host = OverlayTest.this.test.host();
+            final var root = host.root();
+            host.setTooltipDelay(Tooltip.DEFAULT_DELAY_MILLIS);
+            host.pointerMoved(10, 10, Modifiers.NONE);
+            host.render(new NullCanvas());
+            assertTrue(root.tooltip().isEmpty());
+            OverlayTest.this.test.platform().advanceMillis(Tooltip.DEFAULT_DELAY_MILLIS - 1);
+            host.pointerMoved(12, 12, Modifiers.NONE);
+            host.render(new NullCanvas());
+            assertTrue(root.tooltip().isEmpty());
+            OverlayTest.this.test.platform().advanceMillis(1);
+            host.render(new NullCanvas());
+            assertTrue(root.tooltip().isPresent());
+            // Moving straight to another tooltip shows it at once
+            host.pointerMoved(60, 10, Modifiers.NONE);
+            assertTrue(root.tooltip().isPresent());
+            // Leaving and coming back waits again
+            host.pointerMoved(200, 200, Modifiers.NONE);
+            host.pointerMoved(10, 10, Modifiers.NONE);
+            host.render(new NullCanvas());
+            assertTrue(root.tooltip().isEmpty());
+        }
+
+        @Test
         void aTooltipFlipsLeftAtTheRightEdge() {
             final Box box = new Box(OverlayTest.this.ui, 300, 300);
             box.setTooltip(Tooltip.text("Wide tooltip"));

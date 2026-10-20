@@ -320,7 +320,7 @@ public interface ComponentFactory {
     /**
      * Makes an unchecked {@link CheckBox} with no caption, as {@code checkBox("")} does.
      *
-     * @return a new check box
+     * @return a new checkbox
      */
     default CheckBox checkBox() {
         return this.checkBox("");
@@ -330,7 +330,7 @@ public interface ComponentFactory {
      * Makes an unchecked {@link CheckBox}.
      *
      * @param text the caption
-     * @return a new check box
+     * @return a new checkbox
      */
     CheckBox checkBox(Text text);
 
@@ -338,7 +338,7 @@ public interface ComponentFactory {
      * Does the same as {@link #checkBox(Text)} with literal text.
      *
      * @param text the caption
-     * @return a new check box
+     * @return a new checkbox
      */
     default CheckBox checkBox(final String text) {
         return this.checkBox(Text.of(text));

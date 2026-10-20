@@ -41,6 +41,8 @@ public final class TestHost {
         this.platform = platform;
         this.host = (ScreenHostImpl) StrataCore.createScreenHost(platform, theme);
         this.host.resize(width, height);
+        // Tooltips show at once unless a test sets a delay
+        this.host.setTooltipDelay(0L);
     }
 
     public TestPlatform platform() {

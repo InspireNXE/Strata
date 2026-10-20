@@ -43,10 +43,12 @@ import org.inspirenxe.strata.api.input.KeyAction;
 import org.inspirenxe.strata.api.input.Modifier;
 import org.inspirenxe.strata.api.input.Modifiers;
 import org.inspirenxe.strata.api.input.MouseButton;
+import org.inspirenxe.strata.api.input.ScrollKind;
 import org.inspirenxe.strata.api.layout.AbsolutePanel;
 import org.inspirenxe.strata.api.layout.Anchor;
 import org.inspirenxe.strata.api.layout.GridLength;
 import org.inspirenxe.strata.api.layout.Orientation;
+import org.inspirenxe.strata.api.layout.ScrollPanel;
 import org.inspirenxe.strata.api.overlay.Overlay;
 import org.inspirenxe.strata.api.text.TextSpan;
 import org.junit.jupiter.api.Nested;
@@ -258,6 +260,27 @@ class StandardControlsTest {
             this.show("hello world foo bar\nnext");
             this.area.setWrap(false);
             assertEquals(List.of("hello world foo bar", "next"), StandardControlsTest.this.texts());
+        }
+
+        @Test
+        void withoutWrappingAWideLineScrollsSidewaysWithABarAtTheBottom() {
+            this.show("hello world foo bar baz qux\nnext");
+            final var host = StandardControlsTest.this.test.host();
+            final Rect bounds = this.area.bounds();
+            // A wrapped area has nothing to scroll sideways
+            assertFalse(host.scroll(bounds.x() + 10, bounds.y() + 10, -1f, 0f, ScrollKind.WHEEL, Modifiers.NONE));
+            this.area.setWrap(false);
+            this.area.select(0, 0);
+            final NullCanvas canvas = new NullCanvas();
+            host.render(canvas);
+            // The thumb spans part of the bottom track
+            assertTrue(canvas.fills().stream().anyMatch(fill -> fill.height() == ScrollPanel.BAR_WIDTH
+                    && fill.width() < bounds.width() - 20 && fill.bottom() > bounds.bottom() - 10));
+            assertTrue(host.scroll(bounds.x() + 10, bounds.y() + 10, -1f, 0f, ScrollKind.WHEEL, Modifiers.NONE));
+            // A press on the bar scrolls and leaves the caret alone
+            host.pointerButton(bounds.right() - 30, bounds.bottom() - 4 - ScrollPanel.BAR_WIDTH / 2, MouseButton.LEFT, true,
+                    Modifiers.NONE);
+            assertEquals(0, this.area.caret());
         }
 
         @Test

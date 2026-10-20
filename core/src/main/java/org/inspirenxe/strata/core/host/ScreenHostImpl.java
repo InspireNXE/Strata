@@ -203,6 +203,11 @@ public final class ScreenHostImpl implements ScreenHost {
     }
 
     @Override
+    public void setTooltipDelay(final long millis) {
+        this.root.setTooltipDelay(millis);
+    }
+
+    @Override
     public void layout() {
         this.refreshTheme();
         this.refreshText();

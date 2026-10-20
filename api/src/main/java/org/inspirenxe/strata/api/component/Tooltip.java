@@ -25,7 +25,9 @@ import java.util.function.Function;
 /**
  * What a host shows near the pointer while it rests on a component; see {@link HasTooltip#setTooltip(Tooltip)}.
  *
- * <p>The host shows a tooltip as soon as the pointer is over its component, and moves it with the pointer: 12 units
+ * <p>The host shows a tooltip once the pointer has rested on its component for the host's tooltip delay,
+ * {@value #DEFAULT_DELAY_MILLIS} milliseconds unless the adapter sets another, or at once when the pointer moves
+ * straight from another component's tooltip. It moves with the pointer: 12 units
  * right of and 12 units above the pointer, flipped to the left side when it would leave the host on the right, and
  * kept inside the host. Tooltips take no input. Text tooltips draw on the {@value #STYLE_BACKGROUND} paint with 4
  * units of padding. Their plain parts are drawn in the {@value #STYLE_TEXT} text style, and styled parts change
@@ -44,6 +46,11 @@ public sealed interface Tooltip {
      * Style key for the text of a {@link Lines} tooltip (text style, optional). Falls back to the default style.
      */
     String STYLE_TEXT = "tooltip.text";
+    /**
+     * How long, in milliseconds, the pointer rests on a component before its tooltip shows, unless the adapter sets
+     * another delay.
+     */
+    long DEFAULT_DELAY_MILLIS = 500L;
 
     /**
      * Returns a tooltip of text.

@@ -31,11 +31,11 @@ import java.util.Objects;
 /**
  * A box that is checked, empty or mixed, with a caption to its right.
  *
- * <p>A left click anywhere on the check box changes it, and so does Enter, keypad Enter or Space while it has focus
+ * <p>A left click anywhere on the checkbox changes it, and so does Enter, keypad Enter or Space while it has focus
  * (not repeated). It consumes those inputs. A change checks an empty or mixed box and empties a checked one. With
  * {@link #setAllowsMixed(boolean) mixed allowed}, the user's changes cycle empty, checked, mixed instead. Code sets
  * the mixed state with {@link #setState}, for example on a box that stands for several others while only some of them
- * are checked. A disabled check box takes no changes from the user and draws its disabled look.</p>
+ * are checked. A disabled checkbox takes no changes from the user and draws its disabled look.</p>
  *
  * <p>Each change by the user fires {@link #CHANGE}, and then {@link Toggle#TOGGLE} if it would change
  * {@link #isSelected()}, which is true only while checked. Every change fires {@link #CHANGED}, and
@@ -163,7 +163,7 @@ public interface CheckBox extends Component<CheckBox>, Focusable<CheckBox>, HasC
      * changed with it. {@code setSelected} sets {@link CheckState#CHECKED} or {@link CheckState#UNCHECKED}.
      *
      * @param state the state
-     * @return this check box
+     * @return this checkbox
      */
     CheckBox setState(CheckState state);
 
@@ -179,7 +179,7 @@ public interface CheckBox extends Component<CheckBox>, Focusable<CheckBox>, HasC
      * default a change checks an empty or mixed box and empties a checked one, and only code sets mixed.
      *
      * @param allowsMixed whether the user can choose mixed
-     * @return this check box
+     * @return this checkbox
      */
     CheckBox setAllowsMixed(boolean allowsMixed);
 
@@ -194,7 +194,7 @@ public interface CheckBox extends Component<CheckBox>, Focusable<CheckBox>, HasC
      * Replaces the caption. A new layout runs.
      *
      * @param text the caption, on one line; may be empty for a box alone
-     * @return this check box
+     * @return this checkbox
      */
     CheckBox setText(Text text);
 
@@ -210,13 +210,13 @@ public interface CheckBox extends Component<CheckBox>, Focusable<CheckBox>, HasC
      * Fixes the size of the square box. A new layout runs.
      *
      * @param size the box size in UI units, or {@link Float#NaN} for the caption's line height plus 8
-     * @return this check box
+     * @return this checkbox
      * @throws IllegalArgumentException if {@code size} is negative or infinite
      */
     CheckBox setBoxSize(float size);
 
     /**
-     * A check box's own state in a {@link org.inspirenxe.strata.api.component.ComponentSnapshot}.
+     * A checkbox's own state in a {@link org.inspirenxe.strata.api.component.ComponentSnapshot}.
      *
      * @param state the box's {@linkplain #state() state}; never null
      * @param text the caption; never null
