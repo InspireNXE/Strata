@@ -60,6 +60,11 @@ public interface MessageBox extends Component<MessageBox>, HasCursor<MessageBox>
      * The width the message wraps at, in UI units.
      */
     float MESSAGE_WIDTH = 280f;
+    /**
+     * Style key for the space between the window's padding and the message and buttons (insets, optional).
+     * Defaults to 4 on every side.
+     */
+    String STYLE_PADDING = "messagebox.padding";
 
     /**
      * Requested when the user answers: one of the buttons pressed with a click, Enter or Space, or the window's

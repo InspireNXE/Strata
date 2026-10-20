@@ -26,6 +26,7 @@ import org.inspirenxe.strata.api.event.input.KeyEvent;
 import org.inspirenxe.strata.api.extension.ArrangeContext;
 import org.inspirenxe.strata.api.extension.CustomComposite;
 import org.inspirenxe.strata.api.extension.MeasureContext;
+import org.inspirenxe.strata.api.geometry.Insets;
 import org.inspirenxe.strata.api.geometry.Rect;
 import org.inspirenxe.strata.api.geometry.Size;
 import org.inspirenxe.strata.api.layout.Anchor;
@@ -35,6 +36,7 @@ import org.inspirenxe.strata.api.layout.StackPanel;
 import org.inspirenxe.strata.api.layout.VerticalAlignment;
 import org.inspirenxe.strata.api.overlay.Overlay;
 import org.inspirenxe.strata.api.text.Text;
+import org.inspirenxe.strata.api.theme.Theme;
 
 import java.util.EnumMap;
 import java.util.Map;
@@ -50,6 +52,11 @@ public final class MessageBoxImpl extends CustomComposite<MessageBox> implements
      * The width of each button, in UI units.
      */
     public static final float BUTTON_WIDTH = 64f;
+    /**
+     * The space between the window's padding and the message and buttons when the theme sets no
+     * {@value #STYLE_PADDING}: 4 on every side.
+     */
+    public static final Insets DEFAULT_PADDING = Insets.of(4f);
 
     private final ComponentFactory ui;
     private final WindowImpl window;
@@ -57,6 +64,7 @@ public final class MessageBoxImpl extends CustomComposite<MessageBox> implements
     private final Map<Result, Text> captions;
     private final Label text;
     private final StackPanel row;
+    private final StackPanel column;
     private Buttons buttonSet;
     private boolean done;
 
@@ -81,11 +89,11 @@ public final class MessageBoxImpl extends CustomComposite<MessageBox> implements
         this.row = ui.stackPanel(Orientation.HORIZONTAL).setSpacing(4f);
         this.row.setAlignment(HorizontalAlignment.RIGHT, VerticalAlignment.TOP);
         this.setButtons(buttonSet);
-        final StackPanel column = ui.stackPanel().setSpacing(8f).setPadding(4f).add(this.text).add(this.row);
-        column.setAlignment(HorizontalAlignment.STRETCH, VerticalAlignment.TOP);
+        this.column = ui.stackPanel().setSpacing(8f).setPadding(DEFAULT_PADDING).add(this.text).add(this.row);
+        this.column.setAlignment(HorizontalAlignment.STRETCH, VerticalAlignment.TOP);
 
         this.window = new WindowImpl(ui, title);
-        this.window.add(column);
+        this.window.add(this.column);
         this.window.setAnchor(Anchor.FILL);
         // Closing the window from code answers the dismiss result without a request
         this.window.onEvent(Closable.CLOSED, event -> this.finish(this.buttonSet.dismissResult()));
@@ -103,6 +111,11 @@ public final class MessageBoxImpl extends CustomComposite<MessageBox> implements
             case NO -> Text.translatable("strata.button.no");
             case CLOSE -> Text.translatable("strata.button.close");
         };
+    }
+
+    @Override
+    protected void onApplyTheme(final Theme theme) {
+        this.column.setPadding(theme.insetsOr(STYLE_PADDING, DEFAULT_PADDING));
     }
 
     @Override

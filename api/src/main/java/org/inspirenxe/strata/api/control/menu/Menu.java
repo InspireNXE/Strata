@@ -119,6 +119,11 @@ public interface Menu extends Component<Menu>, Focusable<Menu>, HasCursor<Menu>,
      * mark and the right side the submenu arrow. Defaults to 14 at the sides and 3 at the top and bottom.
      */
     String STYLE_ITEM_PADDING = "menu.item.padding";
+    /**
+     * Style key for the space between the menu's edges and its items (insets, optional). Defaults to 2 on every
+     * side.
+     */
+    String STYLE_PADDING = "menu.padding";
 
     /**
      * Requested when the user chooses an entry: a click on it, or Enter, keypad Enter or Space while it is

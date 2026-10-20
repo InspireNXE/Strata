@@ -60,9 +60,10 @@ import java.util.function.Consumer;
  */
 public final class MenuImpl extends CustomComponent<Menu> implements Menu {
     /**
-     * The space between the menu's edge and its items, in UI units.
+     * The space between the menu's edges and its items when the theme sets no {@value #STYLE_PADDING}: 2 on every
+     * side.
      */
-    public static final float EDGE = 2f;
+    public static final Insets DEFAULT_PADDING = Insets.of(2f);
     /**
      * The space around an item's text when the theme sets no {@value #STYLE_ITEM_PADDING}: 14 at the sides, which
      * hold the check mark and the submenu arrow, and 3 at the top and bottom.
@@ -103,6 +104,7 @@ public final class MenuImpl extends CustomComponent<Menu> implements Menu {
     // Computed during measure
     private float itemHeight;
     private Insets itemPadding = DEFAULT_ITEM_PADDING;
+    private Insets padding = DEFAULT_PADDING;
     private float lineHeight;
     private float[] itemTop;
 
@@ -396,7 +398,7 @@ public final class MenuImpl extends CustomComponent<Menu> implements Menu {
             return;
         }
         final Rect bounds = this.bounds();
-        submenu.open(new Rect(bounds.right(), bounds.y() + this.itemTop[index] - EDGE, 0f, 0f));
+        submenu.open(new Rect(bounds.right(), bounds.y() + this.itemTop[index] - this.padding.top(), 0f, 0f));
         this.openSubmenu = submenu;
         if (fromKeyboard) {
             submenu.highlightFirst();
@@ -464,6 +466,7 @@ public final class MenuImpl extends CustomComponent<Menu> implements Menu {
         this.disabledTextStyle = theme.textStyleOr(STYLE_TEXT_DISABLED, this.textStyle);
         this.shortcutStyle = theme.textStyleOr(STYLE_SHORTCUT, this.disabledTextStyle);
         this.itemPadding = theme.insetsOr(STYLE_ITEM_PADDING, DEFAULT_ITEM_PADDING);
+        this.padding = theme.insetsOr(STYLE_PADDING, DEFAULT_PADDING);
     }
 
     @Override
@@ -476,7 +479,7 @@ public final class MenuImpl extends CustomComponent<Menu> implements Menu {
         }
         float textWidth = 0f;
         float shortcutWidth = 0f;
-        float y = EDGE;
+        float y = this.padding.top();
         for (int i = 0; i < this.items.size(); i++) {
             final MenuEntryImpl item = this.items.get(i);
             this.itemTop[i] = y;
@@ -492,16 +495,16 @@ public final class MenuImpl extends CustomComponent<Menu> implements Menu {
             shortcutWidth = Math.max(shortcutWidth, item.shortcutWidth);
             y += this.itemHeight;
         }
-        final float width = EDGE * 2f + this.itemPadding.horizontal() + textWidth
+        final float width = this.padding.horizontal() + this.itemPadding.horizontal() + textWidth
                 + (shortcutWidth > 0f ? SHORTCUT_GAP + shortcutWidth : 0f);
-        return new Size(Math.max(MIN_WIDTH, width), y + EDGE);
+        return new Size(Math.max(MIN_WIDTH, width), y + this.padding.bottom());
     }
 
     @Override
     protected void paint(final Painter painter, final Rect bounds) {
         this.background.paint(painter, bounds);
-        final float left = bounds.x() + EDGE;
-        final float width = bounds.width() - EDGE * 2f;
+        final float left = bounds.x() + this.padding.left();
+        final float width = bounds.width() - this.padding.horizontal();
         for (int i = 0; i < this.items.size(); i++) {
             final MenuEntryImpl item = this.items.get(i);
             final float top = bounds.y() + this.itemTop[i];

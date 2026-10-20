@@ -20,6 +20,7 @@ import org.inspirenxe.strata.api.control.display.ProgressBar;
 import org.inspirenxe.strata.api.extension.CustomComponent;
 import org.inspirenxe.strata.api.extension.MeasureContext;
 import org.inspirenxe.strata.api.extension.Painter;
+import org.inspirenxe.strata.api.geometry.Insets;
 import org.inspirenxe.strata.api.geometry.Rect;
 import org.inspirenxe.strata.api.geometry.Size;
 import org.inspirenxe.strata.api.text.Text;
@@ -45,6 +46,10 @@ public final class ProgressBarImpl extends CustomComponent<ProgressBar> implemen
      * The width the bar asks for, in UI units.
      */
     public static final float DEFAULT_WIDTH = 100f;
+    /**
+     * The space around the bar's text when the theme sets no {@value #STYLE_PADDING}: 2 on every side.
+     */
+    public static final Insets DEFAULT_PADDING = Insets.of(2f);
     /**
      * How long the indeterminate segment takes to cross the bar, in milliseconds.
      */
@@ -72,6 +77,7 @@ public final class ProgressBarImpl extends CustomComponent<ProgressBar> implemen
     private TextLine line;
     private float textWidth;
     private float lineHeight;
+    private Insets padding = DEFAULT_PADDING;
     // The indeterminate segment at each whole-unit step, for the bounds they were worked out for
     private Rect[] segments;
     private Rect segmentBounds;
@@ -175,6 +181,7 @@ public final class ProgressBarImpl extends CustomComponent<ProgressBar> implemen
         this.fillPaint = theme.paintOr(STYLE_FILL, Paint.NONE);
         this.segmentPaint = theme.paintOr(STYLE_SEGMENT, this.fillPaint);
         this.textStyle = theme.textStyleOr(STYLE_TEXT, TextStyle.DEFAULT);
+        this.padding = theme.insetsOr(STYLE_PADDING, DEFAULT_PADDING);
     }
 
     @Override
@@ -182,7 +189,8 @@ public final class ProgressBarImpl extends CustomComponent<ProgressBar> implemen
         this.line = TextLine.of(this.text, this.textStyle, context.text());
         this.textWidth = this.line.width();
         this.lineHeight = this.line.height();
-        return new Size(Math.max(DEFAULT_WIDTH, this.textWidth + 4f), this.lineHeight + 4f);
+        return new Size(Math.max(DEFAULT_WIDTH, this.textWidth + this.padding.horizontal()),
+                this.lineHeight + this.padding.vertical());
     }
 
     @Override
@@ -205,8 +213,10 @@ public final class ProgressBarImpl extends CustomComponent<ProgressBar> implemen
             }
         }
         if (!this.line.isEmpty()) {
-            this.line.draw(painter, bounds.x() + (bounds.width() - this.textWidth) * 0.5f,
-                    bounds.y() + (bounds.height() - this.lineHeight) * 0.5f);
+            final Insets padding = this.padding;
+            this.line.draw(painter,
+                    bounds.x() + padding.left() + (bounds.width() - padding.horizontal() - this.textWidth) * 0.5f,
+                    bounds.y() + padding.top() + (bounds.height() - padding.vertical() - this.lineHeight) * 0.5f);
         }
     }
 

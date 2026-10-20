@@ -102,6 +102,11 @@ public interface GridView<T> extends Component<GridView<T>>, HasCursor<GridView<
      */
     String STYLE_CELL_SELECTED = "grid.cell.selected";
     /**
+     * Style key for the space between a cell's edges and the component its cell factory made (insets, optional).
+     * Defaults to 1 on every side.
+     */
+    String STYLE_CELL_PADDING = "grid.cell.padding";
+    /**
      * The size of a cell unless {@linkplain #setCellSize set} otherwise, in UI units.
      */
     float DEFAULT_CELL_SIZE = 18f;

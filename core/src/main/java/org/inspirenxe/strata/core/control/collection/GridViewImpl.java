@@ -49,9 +49,10 @@ import java.util.function.Function;
  */
 public final class GridViewImpl<T> extends CustomComposite<GridView<T>> implements GridView<T> {
     /**
-     * How far a slot's content sits in from its edges, in UI units.
+     * How far a slot's content sits in from its edges when the theme sets no {@value #STYLE_CELL_PADDING}: 1 on
+     * every side.
      */
-    public static final float INSET = 1f;
+    public static final Insets DEFAULT_CELL_PADDING = Insets.of(1f);
     private static final Set<String> REQUIRED = Set.of(STYLE_CELL);
 
     private final ComponentFactory ui;
@@ -69,6 +70,7 @@ public final class GridViewImpl<T> extends CustomComposite<GridView<T>> implemen
 
     // Theme
     private Paint cellPaint;
+    private Insets cellPadding = DEFAULT_CELL_PADDING;
     private Paint hoveredPaint;
     private Paint selectedPaint;
 
@@ -336,6 +338,7 @@ public final class GridViewImpl<T> extends CustomComposite<GridView<T>> implemen
         this.cellPaint = theme.paintOr(STYLE_CELL, Paint.NONE);
         this.hoveredPaint = theme.paintOr(STYLE_CELL_HOVERED, Paint.NONE);
         this.selectedPaint = theme.paintOr(STYLE_CELL_SELECTED, this.hoveredPaint);
+        this.cellPadding = theme.insetsOr(STYLE_CELL_PADDING, DEFAULT_CELL_PADDING);
     }
 
     @Override
@@ -392,7 +395,9 @@ public final class GridViewImpl<T> extends CustomComposite<GridView<T>> implemen
         @Override
         protected Size measure(final MeasureContext context, final float availableWidth, final float availableHeight) {
             if (this.content != null) {
-                context.measure(this.content, Math.max(0f, availableWidth - INSET * 2f), Math.max(0f, availableHeight - INSET * 2f));
+                final Insets padding = this.grid.cellPadding;
+                context.measure(this.content, Math.max(0f, availableWidth - padding.horizontal()),
+                        Math.max(0f, availableHeight - padding.vertical()));
             }
             return new Size(this.grid.cellSize, this.grid.cellSize);
         }
@@ -400,7 +405,7 @@ public final class GridViewImpl<T> extends CustomComposite<GridView<T>> implemen
         @Override
         protected void arrange(final ArrangeContext context, final Rect bounds) {
             if (this.content != null) {
-                context.arrange(this.content, bounds.shrink(Insets.of(INSET)));
+                context.arrange(this.content, bounds.shrink(this.grid.cellPadding));
             }
         }
 

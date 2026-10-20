@@ -24,6 +24,7 @@ import org.inspirenxe.strata.api.event.input.PointerButtonEvent;
 import org.inspirenxe.strata.api.extension.CustomComponent;
 import org.inspirenxe.strata.api.extension.MeasureContext;
 import org.inspirenxe.strata.api.extension.Painter;
+import org.inspirenxe.strata.api.geometry.Insets;
 import org.inspirenxe.strata.api.geometry.Rect;
 import org.inspirenxe.strata.api.geometry.Size;
 import org.inspirenxe.strata.api.input.MouseButton;
@@ -95,6 +96,7 @@ public final class SliderImpl extends CustomComponent<Slider> implements Slider 
     private float labelHeight;
     // The bounds the label is drawn in, set just before drawLabel runs
     private Rect labelBounds;
+    private Insets padding = Insets.NONE;
     private Painter labelPainter;
 
     /**
@@ -278,6 +280,7 @@ public final class SliderImpl extends CustomComponent<Slider> implements Slider 
         this.thumbDisabled = theme.paintOr(STYLE_THUMB_DISABLED, this.thumb);
         this.textStyle = theme.textStyleOr(STYLE_TEXT, TextStyle.DEFAULT);
         this.disabledTextStyle = theme.textStyleOr(STYLE_TEXT_DISABLED, this.textStyle);
+        this.padding = theme.insetsOr(STYLE_PADDING, Insets.NONE);
         this.labelSpan = null;
     }
 
@@ -314,9 +317,9 @@ public final class SliderImpl extends CustomComponent<Slider> implements Slider 
         }
 
         if (!this.labelText.isEmpty()) {
-            this.labelBounds = bounds;
+            this.labelBounds = bounds.shrink(this.padding);
             this.labelPainter = painter;
-            painter.clipped(bounds, this.drawLabel);
+            painter.clipped(this.labelBounds, this.drawLabel);
             this.labelPainter = null;
         }
     }

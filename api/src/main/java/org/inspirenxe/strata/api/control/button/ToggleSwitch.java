@@ -101,6 +101,17 @@ public interface ToggleSwitch extends Component<ToggleSwitch>, Focusable<ToggleS
      * Style key for the caption when disabled (text style, optional).
      */
     String STYLE_TEXT_DISABLED = "toggle.text.disabled";
+    /**
+     * Style key for the track's size around a box a line tall and two lines wide (insets, optional): the track is
+     * that box grown by these insets. Defaults to 4 at the sides and 2 at the top and bottom.
+     */
+    String STYLE_TRACK_PADDING = "toggle.track.padding";
+    /**
+     * Style key for the space between the knob and the track's edges (insets, optional). The knob is square, as
+     * tall as the track less this top and bottom, and sits this left in from the track's left end when off and
+     * this right in from its right end when on. Defaults to 2 on every side.
+     */
+    String STYLE_KNOB_PADDING = "toggle.knob.padding";
 
     /**
      * Returns the caption.

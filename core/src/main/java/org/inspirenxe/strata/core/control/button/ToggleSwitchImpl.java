@@ -23,6 +23,7 @@ import org.inspirenxe.strata.api.event.input.PointerButtonEvent;
 import org.inspirenxe.strata.api.extension.CustomComponent;
 import org.inspirenxe.strata.api.extension.MeasureContext;
 import org.inspirenxe.strata.api.extension.Painter;
+import org.inspirenxe.strata.api.geometry.Insets;
 import org.inspirenxe.strata.api.geometry.Rect;
 import org.inspirenxe.strata.api.geometry.Size;
 import org.inspirenxe.strata.api.input.Key;
@@ -49,13 +50,15 @@ public final class ToggleSwitchImpl extends CustomComponent<ToggleSwitch> implem
      */
     public static final float GAP = 4f;
     /**
-     * Added to the caption's line height for the track's height, in UI units.
+     * How far the track grows around a box a line tall and two lines wide when the theme sets no
+     * {@value #STYLE_TRACK_PADDING}: 4 at the sides and 2 at the top and bottom.
      */
-    public static final float TRACK_PADDING = 4f;
+    public static final Insets DEFAULT_TRACK_PADDING = Insets.of(4f, 2f);
     /**
-     * The space between the knob and the track's edges, in UI units.
+     * The space between the knob and the track's edges when the theme sets no {@value #STYLE_KNOB_PADDING}: 2 on
+     * every side.
      */
-    public static final float KNOB_INSET = 2f;
+    public static final Insets DEFAULT_KNOB_PADDING = Insets.of(2f);
     private static final Set<String> REQUIRED = Set.of(STYLE_TRACK, STYLE_TRACK_ON, STYLE_KNOB);
 
     private Text text;
@@ -68,6 +71,8 @@ public final class ToggleSwitchImpl extends CustomComponent<ToggleSwitch> implem
     private Paint knobHovered;
     private Paint knobDisabled;
     private Paint focusRing;
+    private Insets trackPadding = DEFAULT_TRACK_PADDING;
+    private Insets knobPadding = DEFAULT_KNOB_PADDING;
     private TextStyle textStyle;
     private TextStyle disabledTextStyle;
 
@@ -76,6 +81,7 @@ public final class ToggleSwitchImpl extends CustomComponent<ToggleSwitch> implem
     private TextLine disabledCaption;
     private float captionHeight;
     private float trackHeight;
+    private float trackWidth;
 
     /**
      * Creates a switch that is off.
@@ -165,6 +171,8 @@ public final class ToggleSwitchImpl extends CustomComponent<ToggleSwitch> implem
         this.focusRing = theme.paintOr(STYLE_FOCUS, Paint.NONE);
         this.textStyle = theme.textStyleOr(STYLE_TEXT, TextStyle.DEFAULT);
         this.disabledTextStyle = theme.textStyleOr(STYLE_TEXT_DISABLED, this.textStyle);
+        this.trackPadding = theme.insetsOr(STYLE_TRACK_PADDING, DEFAULT_TRACK_PADDING);
+        this.knobPadding = theme.insetsOr(STYLE_KNOB_PADDING, DEFAULT_KNOB_PADDING);
     }
 
     @Override
@@ -173,29 +181,30 @@ public final class ToggleSwitchImpl extends CustomComponent<ToggleSwitch> implem
         this.caption = TextLine.of(this.text, this.textStyle, metrics);
         this.disabledCaption = TextLine.of(this.text, this.disabledTextStyle, metrics);
         this.captionHeight = Math.max(this.caption.height(), this.disabledCaption.height());
-        this.trackHeight = this.captionHeight + TRACK_PADDING;
-        final float trackWidth = this.trackHeight * 2f;
+        this.trackHeight = this.captionHeight + this.trackPadding.vertical();
+        this.trackWidth = this.captionHeight * 2f + this.trackPadding.horizontal();
         final float captionWidth = Math.max(this.caption.width(), this.disabledCaption.width());
-        final float width = this.caption.isEmpty() ? trackWidth : trackWidth + GAP + captionWidth;
+        final float width = this.caption.isEmpty() ? this.trackWidth : this.trackWidth + GAP + captionWidth;
         return new Size(width, Math.max(this.trackHeight, this.captionHeight));
     }
 
     @Override
     protected void paint(final Painter painter, final Rect bounds) {
         final float middle = bounds.y() + bounds.height() * 0.5f;
-        final Rect bar = new Rect(bounds.x(), middle - this.trackHeight * 0.5f, this.trackHeight * 2f, this.trackHeight);
+        final Rect bar = new Rect(bounds.x(), middle - this.trackHeight * 0.5f, this.trackWidth, this.trackHeight);
         final boolean enabled = this.isEnabled();
         (enabled ? (this.on ? this.trackOn : this.track) : this.trackDisabled).paint(painter, bar);
 
-        final float knobSize = Math.max(0f, this.trackHeight - KNOB_INSET * 2f);
-        final float knobX = this.on ? bar.right() - KNOB_INSET - knobSize : bar.x() + KNOB_INSET;
+        final Insets inset = this.knobPadding;
+        final float knobSize = Math.max(0f, this.trackHeight - inset.vertical());
+        final float knobX = this.on ? bar.right() - inset.right() - knobSize : bar.x() + inset.left();
         final Paint face;
         if (!enabled) {
             face = this.knobDisabled;
         } else {
             face = this.isHovered() || this.isFocused() ? this.knobHovered : this.knob;
         }
-        face.paint(painter, new Rect(knobX, bar.y() + KNOB_INSET, knobSize, knobSize));
+        face.paint(painter, new Rect(knobX, bar.y() + inset.top(), knobSize, knobSize));
 
         if (this.isFocused() && this.focusRing != Paint.NONE) {
             Rings.paint(painter, this.focusRing, bar);

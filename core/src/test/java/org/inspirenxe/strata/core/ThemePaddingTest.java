@@ -19,20 +19,27 @@ import org.inspirenxe.strata.api.ComponentFactory;
 import org.inspirenxe.strata.api.component.Component;
 import org.inspirenxe.strata.api.component.Tooltip;
 import org.inspirenxe.strata.api.control.button.Button;
+import org.inspirenxe.strata.api.control.button.ToggleSwitch;
 import org.inspirenxe.strata.api.control.collection.ComboBox;
+import org.inspirenxe.strata.api.control.collection.GridView;
 import org.inspirenxe.strata.api.control.collection.ListView;
 import org.inspirenxe.strata.api.control.display.Label;
+import org.inspirenxe.strata.api.control.display.ProgressBar;
 import org.inspirenxe.strata.api.control.field.TextArea;
 import org.inspirenxe.strata.api.control.field.TextBox;
+import org.inspirenxe.strata.api.control.menu.Menu;
 import org.inspirenxe.strata.api.control.pane.Expander;
+import org.inspirenxe.strata.api.control.window.MessageBox;
 import org.inspirenxe.strata.api.control.window.Window;
 import org.inspirenxe.strata.api.geometry.Insets;
 import org.inspirenxe.strata.api.geometry.Rect;
 import org.inspirenxe.strata.api.input.Modifiers;
+import org.inspirenxe.strata.api.text.Text;
 import org.inspirenxe.strata.api.theme.Theme;
 import org.inspirenxe.strata.api.theme.Themes;
 import org.junit.jupiter.api.Test;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -144,5 +151,76 @@ class ThemePaddingTest {
         final Rect bounds = test.host().root().tooltip().orElseThrow().bounds();
         assertEquals(20, bounds.width());
         assertEquals(11, bounds.height());
+    }
+
+    @Test
+    void aToggleSwitchSizesItsTrackAndKnobFromTheTheme() {
+        final TestHost test = host(Themes.flat().toBuilder()
+                .insets(ToggleSwitch.STYLE_TRACK_PADDING, Insets.of(1))
+                .insets(ToggleSwitch.STYLE_KNOB_PADDING, Insets.of(3)).build());
+        final ToggleSwitch toggle = test.factory().toggleSwitch("ab");
+        // A track two lines and 2 wide, the 4 gap and 12 of caption; a line and 2 tall
+        assertEquals(new Rect(0, 0, 36, 11), place(test, toggle));
+
+        // Without the keys, 4 at the sides and 2 at the top and bottom
+        test.host().setTheme(Themes.flat());
+        test.host().layout();
+        assertEquals(new Rect(0, 0, 42, 13), toggle.bounds());
+    }
+
+    @Test
+    void aGridCellInsetsItsContentByTheCellPadding() {
+        final TestHost test = host(flatWith(GridView.STYLE_CELL_PADDING, new Insets(2, 3, 4, 5)));
+        final List<Label> made = new ArrayList<>();
+        final GridView<String> grid = test.factory().<String>gridView(item -> {
+            final Label label = test.factory().label(item);
+            made.add(label);
+            return label;
+        }).setItems(List.of("a"));
+        place(test, grid);
+        // The label keeps its own size at the cell's top-left less the padding
+        final Rect bounds = made.getFirst().bounds();
+        assertEquals(2, bounds.x());
+        assertEquals(3, bounds.y());
+    }
+
+    @Test
+    void aMenuPadsItsItemsFromTheTheme() {
+        final TestHost test = host(flatWith(Menu.STYLE_PADDING, new Insets(1, 5, 1, 7)));
+        test.show(test.factory().absolutePanel());
+        final Menu menu = test.factory().menu().addItem("Copy", () -> { });
+        menu.open(new Rect(0, 0, 0, 0));
+        // 5 above, a line and 3 above and below, 7 below
+        assertEquals(5 + 9 + 6 + 7, menu.bounds().height());
+    }
+
+    @Test
+    void aProgressBarIsALinePlusItsPadding() {
+        final TestHost test = host(flatWith(ProgressBar.STYLE_PADDING, new Insets(60, 1, 60, 2)));
+        final ProgressBar bar = test.factory().progressBar().setText(Text.of("ab"));
+        // 12 of text and 60 a side, wider than the default 100
+        assertEquals(new Rect(0, 0, 132, 12), place(test, bar));
+
+        test.host().setTheme(Themes.flat());
+        test.host().layout();
+        assertEquals(new Rect(0, 0, 100, 13), bar.bounds());
+    }
+
+    @Test
+    void aMessageBoxPadsItsMessageAndButtonsFromTheTheme() {
+        final Rect plain = messageWindow(Themes.flat());
+        final Rect padded = messageWindow(flatWith(MessageBox.STYLE_PADDING, Insets.of(9)));
+        // 5 more than the default 4 on every side
+        assertEquals(plain.width() + 10, padded.width());
+        assertEquals(plain.height() + 10, padded.height());
+    }
+
+    private static Rect messageWindow(final Theme theme) {
+        final TestHost test = host(theme);
+        test.show(test.factory().absolutePanel());
+        final MessageBox box = test.factory().messageBox("Save", "Save?", MessageBox.Buttons.OK);
+        test.factory().overlays().dialog(box);
+        test.host().layout();
+        return box.window().bounds();
     }
 }

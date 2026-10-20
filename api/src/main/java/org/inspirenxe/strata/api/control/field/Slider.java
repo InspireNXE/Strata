@@ -133,6 +133,11 @@ public interface Slider extends Component<Slider>, Focusable<Slider>, HasCursor<
      * Style key for the label when disabled (text style, optional).
      */
     String STYLE_TEXT_DISABLED = "slider.text.disabled";
+    /**
+     * Style key for the space between the slider's edges and its label (insets, optional). The label centers in
+     * the slider less this padding and is cut to it. Defaults to none.
+     */
+    String STYLE_PADDING = "slider.padding";
 
     /**
      * Returns the value.

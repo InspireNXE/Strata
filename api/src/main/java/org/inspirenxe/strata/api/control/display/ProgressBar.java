@@ -72,6 +72,12 @@ public interface ProgressBar extends Component<ProgressBar>, HasCursor<ProgressB
      * Style key for the moving segment of an indeterminate bar (paint, optional).
      */
     String STYLE_SEGMENT = "progress.segment";
+    /**
+     * Style key for the space around the bar's text (insets, optional). The bar is at least as wide as its text
+     * plus this left and right, as tall as a line plus this top and bottom, and its text centers in it less this
+     * padding. Defaults to 2 on every side.
+     */
+    String STYLE_PADDING = "progress.padding";
 
     /**
      * Returns whether the bar shows a moving segment instead of its value.
