@@ -15,6 +15,8 @@
  */
 package org.inspirenxe.strata.api.component;
 
+import org.inspirenxe.strata.api.text.Text;
+
 /**
  * A component that can show a tooltip. Every container and nearly every control has one.
  *
@@ -45,7 +47,17 @@ public interface HasTooltip<S extends HasTooltip<S>> {
     S setTooltip(Tooltip tooltip);
 
     /**
-     * Sets a plain-text tooltip. Line breaks ({@code \n}) start new lines.
+     * Sets a tooltip of text. Line breaks ({@code \n}) start new lines.
+     *
+     * @param text the text, or {@code null} for no tooltip
+     * @return this component
+     */
+    default S setTooltip(final Text text) {
+        return this.setTooltip(text == null ? null : Tooltip.text(text));
+    }
+
+    /**
+     * Sets a tooltip of literal text. Line breaks ({@code \n}) start new lines.
      *
      * @param text the text, or {@code null} for no tooltip
      * @return this component

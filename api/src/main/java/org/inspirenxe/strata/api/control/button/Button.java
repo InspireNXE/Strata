@@ -24,6 +24,7 @@ import org.inspirenxe.strata.api.event.EventType;
 import org.inspirenxe.strata.api.event.control.ControlEvent;
 import org.inspirenxe.strata.api.event.control.RequestEvent;
 import org.inspirenxe.strata.api.geometry.Insets;
+import org.inspirenxe.strata.api.text.Text;
 import org.inspirenxe.strata.api.theme.SpriteId;
 import org.inspirenxe.strata.api.visual.Visual;
 
@@ -134,7 +135,7 @@ public interface Button extends Component<Button>, Focusable<Button>, HasCursor<
      *
      * @return the caption text
      */
-    String text();
+    Text text();
 
     /**
      * Replaces the caption. A new layout runs.
@@ -142,7 +143,7 @@ public interface Button extends Component<Button>, Focusable<Button>, HasCursor<
      * @param text the caption, on one line
      * @return this button
      */
-    Button setText(String text);
+    Button setText(Text text);
 
     /**
      * Sets the space between the caption and the button's edges, which with the caption gives the desired size.
@@ -280,7 +281,7 @@ public interface Button extends Component<Button>, Focusable<Button>, HasCursor<
      *
      * @param text the caption; never null
      */
-    record State(String text) {
+    record State(Text text) {
 
         /**
          * Checks the text.

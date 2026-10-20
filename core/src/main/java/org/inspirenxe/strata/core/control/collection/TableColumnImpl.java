@@ -19,6 +19,7 @@ import org.inspirenxe.strata.api.ComponentFactory;
 import org.inspirenxe.strata.api.component.Component;
 import org.inspirenxe.strata.api.control.collection.TableColumn;
 import org.inspirenxe.strata.api.layout.GridLength;
+import org.inspirenxe.strata.api.text.Text;
 
 import java.util.Comparator;
 import java.util.Objects;
@@ -33,7 +34,7 @@ import java.util.function.Function;
  */
 public final class TableColumnImpl<T> implements TableColumn<T> {
     private final ComponentFactory ui;
-    private String title;
+    private Text title;
     private GridLength width;
     private Function<? super T, ? extends Component<?>> cellFactory;
     private Comparator<? super T> comparator;
@@ -45,7 +46,7 @@ public final class TableColumnImpl<T> implements TableColumn<T> {
      * @param ui the factory that makes text cells
      * @param title the header title
      */
-    public TableColumnImpl(final ComponentFactory ui, final String title) {
+    public TableColumnImpl(final ComponentFactory ui, final Text title) {
         this.ui = Objects.requireNonNull(ui, "ui");
         this.title = Objects.requireNonNull(title, "title");
         this.width = GridLength.weighted(1f);
@@ -53,12 +54,12 @@ public final class TableColumnImpl<T> implements TableColumn<T> {
     }
 
     @Override
-    public String title() {
+    public Text title() {
         return this.title;
     }
 
     @Override
-    public TableColumn<T> setTitle(final String title) {
+    public TableColumn<T> setTitle(final Text title) {
         this.title = Objects.requireNonNull(title, "title");
         this.layoutChanged();
         return this;
@@ -140,6 +141,6 @@ public final class TableColumnImpl<T> implements TableColumn<T> {
 
     @Override
     public String toString() {
-        return "TableColumn[" + this.title + "]";
+        return "TableColumn[" + this.title.plain() + "]";
     }
 }

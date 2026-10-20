@@ -23,6 +23,7 @@ import org.inspirenxe.strata.api.extension.Painter;
 import org.inspirenxe.strata.api.geometry.Rect;
 import org.inspirenxe.strata.api.geometry.Size;
 import org.inspirenxe.strata.api.overlay.Overlays;
+import org.inspirenxe.strata.api.text.Text;
 import org.inspirenxe.strata.api.text.TextMetrics;
 import org.inspirenxe.strata.api.text.TextSpan;
 import org.inspirenxe.strata.api.text.TextStyle;
@@ -48,12 +49,12 @@ final class ToastView extends CustomComponent<ToastView> {
     private static final Paint FALLBACK_BACKGROUND = Paint.solid(0xF0100010);
     private static final Border FALLBACK_EDGE = Border.of(0x805000FF, 1f);
 
-    private final String message;
+    private final Text message;
     private final List<List<TextSpan>> lines;
     private TextStyle textStyle;
     private float lineHeight;
 
-    ToastView(final ComponentFactory factory, final String message) {
+    ToastView(final ComponentFactory factory, final Text message) {
         super(factory);
         this.message = message;
         this.lines = new ArrayList<>();
@@ -75,8 +76,13 @@ final class ToastView extends CustomComponent<ToastView> {
         final TextMetrics metrics = context.text();
         this.lines.clear();
         final float wrapAt = Float.isInfinite(availableWidth) ? availableWidth : Math.max(1f, availableWidth / 3f - PADDING * 2f);
-        this.lines.addAll(RichText.wrap(List.of(new TextSpan(this.message, this.textStyle)), wrapAt, metrics));
-        this.lineHeight = metrics.lineHeight(this.textStyle);
+        final List<TextSpan> spans = this.message.resolve(this.textStyle);
+        this.lines.addAll(RichText.wrap(spans, wrapAt, metrics));
+        float lineHeight = metrics.lineHeight(this.textStyle);
+        for (final TextSpan span : spans) {
+            lineHeight = Math.max(lineHeight, metrics.lineHeight(span.style()));
+        }
+        this.lineHeight = lineHeight;
         float width = 0f;
         for (final List<TextSpan> line : this.lines) {
             width = Math.max(width, RichText.width(line, metrics));
@@ -100,6 +106,6 @@ final class ToastView extends CustomComponent<ToastView> {
 
     @Override
     public String toString() {
-        return "ToastView[" + this.message + "]";
+        return "ToastView[" + this.message.plain() + "]";
     }
 }

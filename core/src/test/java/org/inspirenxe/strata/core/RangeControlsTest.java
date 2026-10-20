@@ -360,7 +360,7 @@ class RangeControlsTest {
 
         @Test
         void itMeasuresTheCaptionAndTheDots() {
-            assertEquals("", RangeControlsTest.this.test.factory().busyIndicator().text());
+            assertEquals("", RangeControlsTest.this.test.factory().busyIndicator().text().plain());
             assertEquals(new Rect(0, 0, 24, 17), this.busy.bounds());
             this.busy.setText("");
             RangeControlsTest.this.test.host().layout();

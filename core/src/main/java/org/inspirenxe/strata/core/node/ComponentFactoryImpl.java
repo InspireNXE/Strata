@@ -65,6 +65,7 @@ import org.inspirenxe.strata.api.layout.ScrollPanel;
 import org.inspirenxe.strata.api.layout.Spacer;
 import org.inspirenxe.strata.api.layout.StackPanel;
 import org.inspirenxe.strata.api.overlay.Overlays;
+import org.inspirenxe.strata.api.text.Text;
 import org.inspirenxe.strata.api.theme.SpriteId;
 import org.inspirenxe.strata.api.theme.Theme;
 import org.inspirenxe.strata.api.visual.Visual;
@@ -216,7 +217,7 @@ public final class ComponentFactoryImpl implements ComponentFactory {
     }
 
     @Override
-    public Label label(final String text) {
+    public Label label(final Text text) {
         return new LabelImpl(this, text);
     }
 
@@ -236,12 +237,12 @@ public final class ComponentFactoryImpl implements ComponentFactory {
     }
 
     @Override
-    public Button button(final String text) {
+    public Button button(final Text text) {
         return new ButtonImpl(this, text);
     }
 
     @Override
-    public CheckBox checkBox(final String text) {
+    public CheckBox checkBox(final Text text) {
         return new CheckBoxImpl(this, text);
     }
 
@@ -261,7 +262,7 @@ public final class ComponentFactoryImpl implements ComponentFactory {
     }
 
     @Override
-    public <T> CycleButton<T> cycleButton(final String text, final Function<? super T, String> valueLabelFunction) {
+    public <T> CycleButton<T> cycleButton(final Text text, final Function<? super T, String> valueLabelFunction) {
         return new CycleButtonImpl<>(this, text, valueLabelFunction);
     }
 
@@ -271,12 +272,12 @@ public final class ComponentFactoryImpl implements ComponentFactory {
     }
 
     @Override
-    public Window window(final String title) {
+    public Window window(final Text title) {
         return new WindowImpl(this, title);
     }
 
     @Override
-    public MessageBox messageBox(final String title, final String message, final MessageBox.Buttons buttons) {
+    public MessageBox messageBox(final Text title, final Text message, final MessageBox.Buttons buttons) {
         return new MessageBoxImpl(this, Objects.requireNonNull(title, "title"), Objects.requireNonNull(message, "message"),
                 Objects.requireNonNull(buttons, "buttons"));
     }
@@ -287,7 +288,7 @@ public final class ComponentFactoryImpl implements ComponentFactory {
     }
 
     @Override
-    public Tab tab(final String text) {
+    public Tab tab(final Text text) {
         return new TabImpl(text);
     }
 
@@ -307,7 +308,7 @@ public final class ComponentFactoryImpl implements ComponentFactory {
     }
 
     @Override
-    public ToggleSwitch toggleSwitch(final String text) {
+    public ToggleSwitch toggleSwitch(final Text text) {
         return new ToggleSwitchImpl(this, text);
     }
 
@@ -327,7 +328,7 @@ public final class ComponentFactoryImpl implements ComponentFactory {
     }
 
     @Override
-    public <T> TableColumn<T> tableColumn(final String title) {
+    public <T> TableColumn<T> tableColumn(final Text title) {
         return new TableColumnImpl<>(this, title);
     }
 
@@ -347,17 +348,17 @@ public final class ComponentFactoryImpl implements ComponentFactory {
     }
 
     @Override
-    public MenuItem menuItem(final String text) {
+    public MenuItem menuItem(final Text text) {
         return new MenuItemImpl(text);
     }
 
     @Override
-    public CheckMenuItem checkMenuItem(final String text) {
+    public CheckMenuItem checkMenuItem(final Text text) {
         return new CheckMenuItemImpl(text);
     }
 
     @Override
-    public SubmenuItem submenuItem(final String text) {
+    public SubmenuItem submenuItem(final Text text) {
         return new SubmenuItemImpl(text);
     }
 
@@ -367,7 +368,7 @@ public final class ComponentFactoryImpl implements ComponentFactory {
     }
 
     @Override
-    public Expander expander(final String title) {
+    public Expander expander(final Text title) {
         return new ExpanderImpl(this, title);
     }
 

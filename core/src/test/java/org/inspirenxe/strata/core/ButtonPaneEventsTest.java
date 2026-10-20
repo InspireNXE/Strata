@@ -278,11 +278,11 @@ class ButtonPaneEventsTest {
             for (final RadioButton button : this.group.buttons()) {
                 button.onEvent(Toggle.TOGGLE, event -> {
                     assertFalse(event.control().isSelected());
-                    this.requests.add(((RadioButton) event.control()).text());
+                    this.requests.add(((RadioButton) event.control()).text().plain());
                 });
             }
             this.group.onEvent(SingleSelection.SELECTED, event -> this.heard.add(event.previous() + "->" + event.value()
-                    + " " + ((RadioButton) event.target()).text()));
+                    + " " + ((RadioButton) event.target()).text().plain()));
             this.column = ui.stackPanel().add(this.easy).add(this.normal).add(this.hard);
             ButtonPaneEventsTest.this.test.show(this.column);
         }

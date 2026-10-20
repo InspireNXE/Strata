@@ -34,6 +34,7 @@ import org.inspirenxe.strata.api.layout.Orientation;
 import org.inspirenxe.strata.api.layout.StackPanel;
 import org.inspirenxe.strata.api.layout.VerticalAlignment;
 import org.inspirenxe.strata.api.overlay.Overlay;
+import org.inspirenxe.strata.api.text.Text;
 
 import java.util.EnumMap;
 import java.util.Map;
@@ -53,7 +54,7 @@ public final class MessageBoxImpl extends CustomComposite<MessageBox> implements
     private final ComponentFactory ui;
     private final WindowImpl window;
     private final Map<Result, Button> buttons;
-    private final Map<Result, String> captions;
+    private final Map<Result, Text> captions;
     private final Label text;
     private final StackPanel row;
     private Buttons buttonSet;
@@ -68,7 +69,7 @@ public final class MessageBoxImpl extends CustomComposite<MessageBox> implements
      * @param buttonSet which buttons it has
      */
     @SuppressWarnings("this-escape")
-    public MessageBoxImpl(final ComponentFactory ui, final String title, final String message,
+    public MessageBoxImpl(final ComponentFactory ui, final Text title, final Text message,
                           final Buttons buttonSet) {
         super(ui);
         this.ui = ui;
@@ -94,13 +95,13 @@ public final class MessageBoxImpl extends CustomComposite<MessageBox> implements
         this.setAnchor(Anchor.CENTER);
     }
 
-    private static String caption(final Result result) {
+    private static Text caption(final Result result) {
         return switch (result) {
-            case OK -> "OK";
-            case CANCEL -> "Cancel";
-            case YES -> "Yes";
-            case NO -> "No";
-            case CLOSE -> "Close";
+            case OK -> Text.translatable("strata.button.ok");
+            case CANCEL -> Text.translatable("strata.button.cancel");
+            case YES -> Text.translatable("strata.button.yes");
+            case NO -> Text.translatable("strata.button.no");
+            case CLOSE -> Text.translatable("strata.button.close");
         };
     }
 
@@ -110,23 +111,23 @@ public final class MessageBoxImpl extends CustomComposite<MessageBox> implements
     }
 
     @Override
-    public String title() {
+    public Text title() {
         return this.window.title();
     }
 
     @Override
-    public MessageBox setTitle(final String title) {
+    public MessageBox setTitle(final Text title) {
         this.window.setTitle(title);
         return this;
     }
 
     @Override
-    public String message() {
+    public Text message() {
         return this.text.text();
     }
 
     @Override
-    public MessageBox setMessage(final String message) {
+    public MessageBox setMessage(final Text message) {
         this.text.setText(message);
         return this;
     }
@@ -152,7 +153,7 @@ public final class MessageBoxImpl extends CustomComposite<MessageBox> implements
     }
 
     @Override
-    public MessageBox setButtonText(final Result result, final String caption) {
+    public MessageBox setButtonText(final Result result, final Text caption) {
         this.captions.put(Objects.requireNonNull(result, "result"), Objects.requireNonNull(caption, "caption"));
         final Button button = this.buttons.get(result);
         if (button != null) {

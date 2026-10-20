@@ -26,6 +26,7 @@ import org.inspirenxe.strata.api.control.attribute.item.SingleSelection;
 import org.inspirenxe.strata.api.event.EventType;
 import org.inspirenxe.strata.api.event.control.ValueEvent;
 import org.inspirenxe.strata.api.event.control.ValueRequestEvent;
+import org.inspirenxe.strata.api.text.Text;
 
 import java.util.List;
 import java.util.Optional;
@@ -250,7 +251,7 @@ public interface TreeView<T> extends Component<TreeView<T>>, HasCursor<TreeView<
      * @param placeholder the text, or null for none
      * @return this tree
      */
-    TreeView<T> setPlaceholder(String placeholder);
+    TreeView<T> setPlaceholder(Text placeholder);
 
     /**
      * Returns the selected row.

@@ -37,6 +37,7 @@ import org.inspirenxe.strata.api.input.Modifiers;
 import org.inspirenxe.strata.api.input.MouseButton;
 import org.inspirenxe.strata.api.layout.Anchor;
 import org.inspirenxe.strata.api.overlay.Overlay;
+import org.inspirenxe.strata.api.text.Text;
 import org.inspirenxe.strata.api.text.TextHighlighter;
 import org.inspirenxe.strata.api.text.TextMetrics;
 import org.inspirenxe.strata.api.text.TextOverflow;
@@ -47,6 +48,7 @@ import org.inspirenxe.strata.api.theme.Theme;
 import org.inspirenxe.strata.core.control.collection.ListViewImpl;
 import org.inspirenxe.strata.core.node.ComponentFactoryImpl;
 import org.inspirenxe.strata.core.text.StyledText;
+import org.inspirenxe.strata.core.text.TextLine;
 
 import java.util.List;
 import java.util.Objects;
@@ -148,10 +150,10 @@ public final class TextBoxImpl extends CustomComponent<TextBox> implements TextB
     private TextStyle readOnlyTextStyle;
     private Paint suggestionsPaint;
     private TextStyle suggestionTextStyle;
-    private String placeholder;
+    private Text placeholder;
     private TextStyle placeholderStyle;
-    // Rebuilt when the placeholder or the theme changes
-    private TextSpan placeholderSpan;
+    // Made during measure
+    private TextLine placeholderLine;
 
     // Derived from text and caret, recomputed only after a change
     private boolean visualsDirty;
@@ -196,9 +198,9 @@ public final class TextBoxImpl extends CustomComponent<TextBox> implements TextB
         this.readOnlyTextStyle = TextStyle.DEFAULT;
         this.suggestionsPaint = Paint.NONE;
         this.suggestionTextStyle = TextStyle.DEFAULT;
-        this.placeholder = "";
+        this.placeholder = Text.empty();
         this.placeholderStyle = TextStyle.DEFAULT;
-        this.placeholderSpan = TextSpan.of("");
+        this.placeholderLine = TextLine.EMPTY;
         this.styled = new StyledText();
         this.highlighter = TextHighlighter.NONE;
         this.displaySpans = new TextSpan[0];
@@ -260,14 +262,14 @@ public final class TextBoxImpl extends CustomComponent<TextBox> implements TextB
     }
 
     @Override
-    public String placeholder() {
+    public Text placeholder() {
         return this.placeholder;
     }
 
     @Override
-    public TextBox setPlaceholder(final String placeholder) {
-        this.placeholder = placeholder == null ? "" : placeholder;
-        this.placeholderSpan = new TextSpan(this.placeholder, this.placeholderStyle);
+    public TextBox setPlaceholder(final Text placeholder) {
+        this.placeholder = placeholder == null ? Text.empty() : placeholder;
+        this.invalidateLayout();
         return this;
     }
 
@@ -607,7 +609,6 @@ public final class TextBoxImpl extends CustomComponent<TextBox> implements TextB
         this.suggestionsPaint = theme.paintOr(STYLE_SUGGESTIONS, theme.paintOr(ComboBox.STYLE_POPUP, Paint.NONE));
         this.suggestionTextStyle = theme.textStyleOr(STYLE_SUGGESTION_TEXT, this.textStyle);
         this.placeholderStyle = theme.textStyleOr(STYLE_PLACEHOLDER, this.disabledTextStyle);
-        this.placeholderSpan = new TextSpan(this.placeholder, this.placeholderStyle);
         if (this.suggestionList != null) {
             ((ComponentFactoryImpl) this.ui).nodeOf(this.suggestionList).setBackground(this.suggestionsPaint);
         }
@@ -617,6 +618,7 @@ public final class TextBoxImpl extends CustomComponent<TextBox> implements TextB
     @Override
     protected Size measure(final MeasureContext context, final float availableWidth, final float availableHeight) {
         this.lineHeight = Math.max(context.text().lineHeight(this.textStyle), context.text().lineHeight(this.disabledTextStyle));
+        this.placeholderLine = TextLine.of(this.placeholder, this.placeholderStyle, context.text());
         return new Size(DEFAULT_WIDTH, this.lineHeight + this.textPadding.vertical());
     }
 
@@ -661,8 +663,8 @@ public final class TextBoxImpl extends CustomComponent<TextBox> implements TextB
             this.selectionPaint.paint(this.painter, new Rect(originX + this.selectionStartX, this.textY,
                     this.selectionEndX - this.selectionStartX, this.lineHeight));
         }
-        if (this.buffer.isEmpty() && !this.placeholder.isEmpty()) {
-            this.painter.text(this.placeholderSpan, this.contentBox.x(), this.textY);
+        if (this.buffer.isEmpty() && !this.placeholderLine.isEmpty()) {
+            this.placeholderLine.draw(this.painter, this.contentBox.x(), this.textY);
         } else {
             for (int i = 0; i < this.displaySpans.length; i++) {
                 this.painter.text(this.displaySpans[i], originX + this.displayX[i], this.textY);

@@ -33,14 +33,15 @@ import org.inspirenxe.strata.api.input.Key;
 import org.inspirenxe.strata.api.input.KeyAction;
 import org.inspirenxe.strata.api.input.MouseButton;
 import org.inspirenxe.strata.api.overlay.Overlay;
+import org.inspirenxe.strata.api.text.Text;
 import org.inspirenxe.strata.api.text.TextMetrics;
-import org.inspirenxe.strata.api.text.TextSpan;
 import org.inspirenxe.strata.api.text.TextStyle;
 import org.inspirenxe.strata.api.theme.Paint;
 import org.inspirenxe.strata.api.theme.Theme;
 import org.inspirenxe.strata.core.control.Rings;
 import org.inspirenxe.strata.core.node.ComponentFactoryImpl;
 import org.inspirenxe.strata.core.node.Node;
+import org.inspirenxe.strata.core.text.TextLine;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -183,22 +184,22 @@ public final class MenuImpl extends CustomComponent<Menu> implements Menu {
     }
 
     @Override
-    public Menu addItem(final String text, final Runnable action) {
+    public Menu addItem(final Text text, final Runnable action) {
         return this.addItem(new MenuItemImpl(text).setAction(action));
     }
 
     @Override
-    public Menu addItem(final String text, final String shortcut, final Runnable action) {
+    public Menu addItem(final Text text, final Text shortcut, final Runnable action) {
         return this.addItem(new MenuItemImpl(text).setShortcut(shortcut).setAction(action));
     }
 
     @Override
-    public Menu addCheckItem(final String text, final boolean checked, final Consumer<Boolean> action) {
+    public Menu addCheckItem(final Text text, final boolean checked, final Consumer<Boolean> action) {
         return this.addItem(new CheckMenuItemImpl(text).setSelected(checked).setAction(action));
     }
 
     @Override
-    public Menu addSubmenu(final String text, final Menu submenu) {
+    public Menu addSubmenu(final Text text, final Menu submenu) {
         return this.addItem(new SubmenuItemImpl(text).setMenu(submenu));
     }
 
@@ -479,11 +480,11 @@ public final class MenuImpl extends CustomComponent<Menu> implements Menu {
                 y += SEPARATOR_HEIGHT;
                 continue;
             }
-            item.span = new TextSpan(item.label(), this.textStyle);
-            item.disabledSpan = new TextSpan(item.label(), this.disabledTextStyle);
-            item.shortcutSpan = new TextSpan(item.hint(), this.shortcutStyle);
-            textWidth = Math.max(textWidth, Math.max(metrics.width(item.span), metrics.width(item.disabledSpan)));
-            item.shortcutWidth = item.hint().isEmpty() ? 0f : metrics.width(item.shortcutSpan);
+            item.span = TextLine.of(item.label(), this.textStyle, metrics);
+            item.disabledSpan = TextLine.of(item.label(), this.disabledTextStyle, metrics);
+            item.shortcutSpan = TextLine.of(item.hint(), this.shortcutStyle, metrics);
+            textWidth = Math.max(textWidth, Math.max(item.span.width(), item.disabledSpan.width()));
+            item.shortcutWidth = item.shortcutSpan.width();
             shortcutWidth = Math.max(shortcutWidth, item.shortcutWidth);
             y += this.itemHeight;
         }
@@ -507,14 +508,14 @@ public final class MenuImpl extends CustomComponent<Menu> implements Menu {
                 this.itemHovered.paint(painter, new Rect(left, top, width, this.itemHeight));
             }
             final float textY = top + (this.itemHeight - this.lineHeight) * 0.5f;
-            painter.text(item.usable() ? item.span : item.disabledSpan, left + GUTTER, textY);
+            (item.usable() ? item.span : item.disabledSpan).draw(painter, left + GUTTER, textY);
             final int color = (item.usable() ? this.textStyle : this.disabledTextStyle).color();
             if (item.checked()) {
                 painter.fill(new Rect(left + (GUTTER - CHECK_SIZE) * 0.5f, top + (this.itemHeight - CHECK_SIZE) * 0.5f,
                         CHECK_SIZE, CHECK_SIZE), color);
             }
-            if (!item.hint().isEmpty()) {
-                painter.text(item.shortcutSpan, left + width - GUTTER - item.shortcutWidth, textY);
+            if (!item.shortcutSpan.isEmpty()) {
+                item.shortcutSpan.draw(painter, left + width - GUTTER - item.shortcutWidth, textY);
             }
             if (item instanceof SubmenuItemImpl) {
                 Rings.right(painter, color, left + width - (GUTTER + Rings.ARROW_SHORT) * 0.5f,

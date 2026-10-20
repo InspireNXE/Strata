@@ -20,6 +20,7 @@ import org.inspirenxe.strata.api.component.Focusable;
 import org.inspirenxe.strata.api.component.HasCursor;
 import org.inspirenxe.strata.api.component.HasTooltip;
 import org.inspirenxe.strata.api.control.attribute.item.SingleSelection;
+import org.inspirenxe.strata.api.text.Text;
 
 import java.util.List;
 import java.util.Optional;
@@ -155,7 +156,17 @@ public interface TabBar extends Component<TabBar>, Focusable<TabBar>, HasCursor<
      * @param text the tab's text
      * @return this bar
      */
-    TabBar addTab(String text);
+    TabBar addTab(Text text);
+
+    /**
+     * Does the same as {@link #addTab(Text)} with literal text.
+     *
+     * @param text the tab's text
+     * @return this bar
+     */
+    default TabBar addTab(final String text) {
+        return this.addTab(Text.of(text));
+    }
 
     /**
      * Returns the selected tab.

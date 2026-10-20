@@ -29,11 +29,12 @@ import org.inspirenxe.strata.api.geometry.Size;
 import org.inspirenxe.strata.api.input.Key;
 import org.inspirenxe.strata.api.input.KeyAction;
 import org.inspirenxe.strata.api.input.MouseButton;
+import org.inspirenxe.strata.api.text.Text;
 import org.inspirenxe.strata.api.text.TextMetrics;
-import org.inspirenxe.strata.api.text.TextSpan;
 import org.inspirenxe.strata.api.text.TextStyle;
 import org.inspirenxe.strata.api.theme.Paint;
 import org.inspirenxe.strata.api.theme.Theme;
+import org.inspirenxe.strata.core.text.TextLine;
 
 import java.util.Objects;
 import java.util.Set;
@@ -58,7 +59,7 @@ public final class CheckBoxImpl extends CustomComponent<CheckBox> implements Che
     public static final float BOX_PADDING = 8f;
     private static final Set<String> REQUIRED = Set.of(STYLE_NORMAL, STYLE_HOVERED, STYLE_CHECKED, STYLE_CHECKED_HOVERED);
 
-    private String text;
+    private Text text;
     private boolean checked;
     private float fixedBoxSize;
 
@@ -75,8 +76,8 @@ public final class CheckBoxImpl extends CustomComponent<CheckBox> implements Che
     private TextStyle disabledTextStyle;
 
     // Computed during measure
-    private TextSpan caption;
-    private TextSpan disabledCaption;
+    private TextLine caption;
+    private TextLine disabledCaption;
     private float captionHeight;
     private float boxSize;
 
@@ -87,7 +88,7 @@ public final class CheckBoxImpl extends CustomComponent<CheckBox> implements Che
      * @param text the caption
      */
     @SuppressWarnings("this-escape")
-    public CheckBoxImpl(final ComponentFactory ui, final String text) {
+    public CheckBoxImpl(final ComponentFactory ui, final Text text) {
         super(ui);
         this.text = Objects.requireNonNull(text, "text");
         this.fixedBoxSize = Float.NaN;
@@ -102,18 +103,18 @@ public final class CheckBoxImpl extends CustomComponent<CheckBox> implements Che
         this.focusRing = Paint.NONE;
         this.textStyle = TextStyle.DEFAULT;
         this.disabledTextStyle = TextStyle.DEFAULT;
-        this.caption = TextSpan.of(text);
+        this.caption = TextLine.EMPTY;
         this.disabledCaption = this.caption;
         this.setCursor(CursorKind.HAND);
     }
 
     @Override
-    public String text() {
+    public Text text() {
         return this.text;
     }
 
     @Override
-    public CheckBox setText(final String text) {
+    public CheckBox setText(final Text text) {
         this.text = Objects.requireNonNull(text, "text");
         this.invalidateLayout();
         return this;
@@ -193,12 +194,12 @@ public final class CheckBoxImpl extends CustomComponent<CheckBox> implements Che
     @Override
     protected Size measure(final MeasureContext context, final float availableWidth, final float availableHeight) {
         final TextMetrics metrics = context.text();
-        this.caption = new TextSpan(this.text, this.textStyle);
-        this.disabledCaption = new TextSpan(this.text, this.disabledTextStyle);
-        this.captionHeight = Math.max(metrics.lineHeight(this.textStyle), metrics.lineHeight(this.disabledTextStyle));
+        this.caption = TextLine.of(this.text, this.textStyle, metrics);
+        this.disabledCaption = TextLine.of(this.text, this.disabledTextStyle, metrics);
+        this.captionHeight = Math.max(this.caption.height(), this.disabledCaption.height());
         this.boxSize = Float.isNaN(this.fixedBoxSize) ? this.captionHeight + BOX_PADDING : this.fixedBoxSize;
-        final float captionWidth = Math.max(metrics.width(this.caption), metrics.width(this.disabledCaption));
-        final float width = this.text.isEmpty() ? this.boxSize : this.boxSize + GAP + captionWidth;
+        final float captionWidth = Math.max(this.caption.width(), this.disabledCaption.width());
+        final float width = this.caption.isEmpty() ? this.boxSize : this.boxSize + GAP + captionWidth;
         return new Size(width, Math.max(this.boxSize, this.captionHeight));
     }
 
@@ -228,8 +229,8 @@ public final class CheckBoxImpl extends CustomComponent<CheckBox> implements Che
             this.focusRing.paint(painter, new Rect(box.x(), box.y() + 1f, 1f, box.height() - 2f));
             this.focusRing.paint(painter, new Rect(box.right() - 1f, box.y() + 1f, 1f, box.height() - 2f));
         }
-        if (!this.text.isEmpty()) {
-            painter.text(enabled ? this.caption : this.disabledCaption, box.right() + GAP, middle - this.captionHeight * 0.5f);
+        if (!this.caption.isEmpty()) {
+            (enabled ? this.caption : this.disabledCaption).draw(painter, box.right() + GAP, middle - this.captionHeight * 0.5f);
         }
     }
 

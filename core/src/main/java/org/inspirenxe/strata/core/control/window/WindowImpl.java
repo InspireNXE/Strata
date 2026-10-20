@@ -35,6 +35,7 @@ import org.inspirenxe.strata.api.input.KeyAction;
 import org.inspirenxe.strata.api.input.MouseButton;
 import org.inspirenxe.strata.api.layout.Anchor;
 import org.inspirenxe.strata.api.overlay.Overlay;
+import org.inspirenxe.strata.api.text.Text;
 import org.inspirenxe.strata.api.text.TextMetrics;
 import org.inspirenxe.strata.api.text.TextSpan;
 import org.inspirenxe.strata.api.text.TextStyle;
@@ -42,6 +43,7 @@ import org.inspirenxe.strata.api.theme.Paint;
 import org.inspirenxe.strata.api.theme.Theme;
 import org.inspirenxe.strata.core.node.ComponentFactoryImpl;
 import org.inspirenxe.strata.core.node.Node;
+import org.inspirenxe.strata.core.text.TextLine;
 
 import java.util.Objects;
 import java.util.Set;
@@ -69,7 +71,7 @@ public final class WindowImpl extends CustomContainer<Window> implements Window 
     private static final int BOTTOM = 8;
 
     private final ComponentFactory ui;
-    private String title;
+    private Text title;
     private boolean closable;
     private boolean movable;
     private boolean resizable;
@@ -98,7 +100,7 @@ public final class WindowImpl extends CustomContainer<Window> implements Window 
 
     // Computed during measure
     private float titleHeight;
-    private TextSpan titleSpan;
+    private TextLine titleSpan;
     private float titleWidth;
     private TextSpan closeSpan;
     private TextSpan closeHoveredSpan;
@@ -121,7 +123,7 @@ public final class WindowImpl extends CustomContainer<Window> implements Window 
      * @param title the title
      */
     @SuppressWarnings("this-escape")
-    public WindowImpl(final ComponentFactory ui, final String title) {
+    public WindowImpl(final ComponentFactory ui, final Text title) {
         super(ui);
         this.ui = ui;
         this.title = Objects.requireNonNull(title, "title");
@@ -135,7 +137,7 @@ public final class WindowImpl extends CustomContainer<Window> implements Window 
         this.gripPaint = Paint.NONE;
         this.gripHoveredPaint = Paint.NONE;
         this.gripDots = new Rect[6];
-        this.titleSpan = TextSpan.of(title);
+        this.titleSpan = TextLine.EMPTY;
         this.closeSpan = TextSpan.of("x");
         this.closeHoveredSpan = this.closeSpan;
         this.setPadding(3f);
@@ -147,12 +149,12 @@ public final class WindowImpl extends CustomContainer<Window> implements Window 
     // ------------------------------------------------------------------
 
     @Override
-    public String title() {
+    public Text title() {
         return this.title;
     }
 
     @Override
-    public Window setTitle(final String title) {
+    public Window setTitle(final Text title) {
         this.title = Objects.requireNonNull(title, "title");
         this.invalidateLayout();
         return this;
@@ -426,9 +428,9 @@ public final class WindowImpl extends CustomContainer<Window> implements Window 
     @Override
     protected Size measure(final MeasureContext context, final float availableWidth, final float availableHeight) {
         final TextMetrics metrics = context.text();
-        this.titleSpan = new TextSpan(this.title, this.titleStyle);
-        this.titleWidth = metrics.width(this.titleSpan);
-        this.titleHeight = metrics.lineHeight(this.titleStyle) + TITLE_PADDING * 2f;
+        this.titleSpan = TextLine.of(this.title, this.titleStyle, metrics);
+        this.titleWidth = this.titleSpan.width();
+        this.titleHeight = this.titleSpan.height() + TITLE_PADDING * 2f;
         this.closeSpan = new TextSpan("x", this.closeStyle);
         this.closeHoveredSpan = new TextSpan("x", this.closeHoveredStyle);
         this.closeWidth = metrics.width(this.closeSpan);
@@ -490,7 +492,7 @@ public final class WindowImpl extends CustomContainer<Window> implements Window 
         final Rect bar = this.titleBarRect(bounds);
         this.titleBar.paint(painter, bar);
         final float textY = bounds.y() + TITLE_PADDING;
-        painter.text(this.titleSpan, bounds.x() + (bounds.width() - this.titleWidth) * 0.5f, textY);
+        this.titleSpan.draw(painter, bounds.x() + (bounds.width() - this.titleWidth) * 0.5f, textY);
         if (this.closable) {
             final Rect close = this.closeRect(bounds);
             painter.text(this.closeHovered ? this.closeHoveredSpan : this.closeSpan,

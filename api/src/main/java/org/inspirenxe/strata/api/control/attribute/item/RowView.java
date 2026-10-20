@@ -15,6 +15,8 @@
  */
 package org.inspirenxe.strata.api.control.attribute.item;
 
+import org.inspirenxe.strata.api.text.Text;
+
 /**
  * A control that shows its entries as scrolling rows of one height, such as a list, a table or a tree.
  *
@@ -66,7 +68,17 @@ public interface RowView<S extends RowView<S>> {
      * @param placeholder the text, or {@code null} for none
      * @return this control
      */
-    S setPlaceholder(String placeholder);
+    S setPlaceholder(Text placeholder);
+
+    /**
+     * Does the same as {@link #setPlaceholder(Text)} with literal text.
+     *
+     * @param placeholder the text, or {@code null} for none
+     * @return this control
+     */
+    default S setPlaceholder(final String placeholder) {
+        return this.setPlaceholder(placeholder == null ? null : Text.of(placeholder));
+    }
 
     /**
      * Returns the vertical offset.

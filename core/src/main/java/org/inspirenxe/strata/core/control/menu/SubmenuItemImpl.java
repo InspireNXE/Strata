@@ -18,6 +18,7 @@ package org.inspirenxe.strata.core.control.menu;
 import org.inspirenxe.strata.api.control.menu.Menu;
 import org.inspirenxe.strata.api.control.menu.MenuEntry;
 import org.inspirenxe.strata.api.control.menu.SubmenuItem;
+import org.inspirenxe.strata.api.text.Text;
 
 import java.util.Objects;
 import java.util.Optional;
@@ -27,7 +28,7 @@ import java.util.Optional;
  * where it opens from; setting another menu unlinks the old one, closing it first.
  */
 public final class SubmenuItemImpl extends MenuEntryImpl implements SubmenuItem {
-    private String text;
+    private Text text;
     private boolean enabled;
     private MenuImpl menu;
 
@@ -36,7 +37,7 @@ public final class SubmenuItemImpl extends MenuEntryImpl implements SubmenuItem 
      *
      * @param text the item's text
      */
-    public SubmenuItemImpl(final String text) {
+    public SubmenuItemImpl(final Text text) {
         this.text = Objects.requireNonNull(text, "text");
         this.enabled = true;
     }
@@ -47,7 +48,7 @@ public final class SubmenuItemImpl extends MenuEntryImpl implements SubmenuItem 
     }
 
     @Override
-    String label() {
+    Text label() {
         return this.text;
     }
 
@@ -62,12 +63,12 @@ public final class SubmenuItemImpl extends MenuEntryImpl implements SubmenuItem 
     }
 
     @Override
-    public String text() {
+    public Text text() {
         return this.text;
     }
 
     @Override
-    public SubmenuItem setText(final String text) {
+    public SubmenuItem setText(final Text text) {
         this.text = Objects.requireNonNull(text, "text");
         this.changed();
         return this;
@@ -152,6 +153,6 @@ public final class SubmenuItemImpl extends MenuEntryImpl implements SubmenuItem 
 
     @Override
     public String toString() {
-        return "SubmenuItem[" + this.text + "]";
+        return "SubmenuItem[" + this.text.plain() + "]";
     }
 }

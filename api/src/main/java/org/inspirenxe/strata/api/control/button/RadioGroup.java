@@ -18,6 +18,7 @@ package org.inspirenxe.strata.api.control.button;
 import org.inspirenxe.strata.api.control.attribute.item.SingleSelection;
 import org.inspirenxe.strata.api.control.attribute.value.Toggle;
 import org.inspirenxe.strata.api.event.EventTarget;
+import org.inspirenxe.strata.api.text.Text;
 
 import java.util.List;
 import java.util.Optional;
@@ -59,7 +60,18 @@ public interface RadioGroup<T> extends SingleSelection<T, RadioGroup<T>> {
      * @param value the value the button stands for; may be null
      * @return the new button
      */
-    RadioButton add(String text, T value);
+    RadioButton add(Text text, T value);
+
+    /**
+     * Does the same as {@link #add(Text, T)} with literal text.
+     *
+     * @param text the button's caption
+     * @param value the value the button stands for; may be null
+     * @return the new button
+     */
+    default RadioButton add(final String text, final T value) {
+        return this.add(Text.of(text), value);
+    }
 
     /**
      * Returns the group's buttons in the order they were made.

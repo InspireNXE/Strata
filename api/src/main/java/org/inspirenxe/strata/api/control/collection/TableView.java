@@ -26,6 +26,7 @@ import org.inspirenxe.strata.api.event.EventType;
 import org.inspirenxe.strata.api.event.control.ValueEvent;
 import org.inspirenxe.strata.api.event.control.ValueRequestEvent;
 import org.inspirenxe.strata.api.layout.GridLength;
+import org.inspirenxe.strata.api.text.Text;
 
 import java.util.List;
 import java.util.Optional;
@@ -176,7 +177,19 @@ public interface TableView<T> extends Component<TableView<T>>, HasCursor<TableVi
      * @param cellFactory makes the cell for an item; called when the row comes into view
      * @return this table
      */
-    TableView<T> addColumn(String title, GridLength width, Function<? super T, ? extends Component<?>> cellFactory);
+    TableView<T> addColumn(Text title, GridLength width, Function<? super T, ? extends Component<?>> cellFactory);
+
+    /**
+     * Does the same as {@link #addColumn(Text, GridLength, Function)} with literal text.
+     *
+     * @param title the header title
+     * @param width how wide the column is
+     * @param cellFactory makes the cell for an item; called when the row comes into view
+     * @return this table
+     */
+    default TableView<T> addColumn(final String title, final GridLength width, final Function<? super T, ? extends Component<?>> cellFactory) {
+        return this.addColumn(Text.of(title), width, cellFactory);
+    }
 
     /**
      * Adds a column of text, sortable by that text ignoring case, as
@@ -187,7 +200,19 @@ public interface TableView<T> extends Component<TableView<T>>, HasCursor<TableVi
      * @param text returns the text for an item
      * @return this table
      */
-    TableView<T> addTextColumn(String title, GridLength width, Function<? super T, String> text);
+    TableView<T> addTextColumn(Text title, GridLength width, Function<? super T, String> text);
+
+    /**
+     * Does the same as {@link #addTextColumn(Text, GridLength, Function)} with literal text.
+     *
+     * @param title the header title
+     * @param width how wide the column is
+     * @param text returns the text for an item
+     * @return this table
+     */
+    default TableView<T> addTextColumn(final String title, final GridLength width, final Function<? super T, String> text) {
+        return this.addTextColumn(Text.of(title), width, text);
+    }
 
     /**
      * Sorts the rows by a column, or shows them in their set order. The selection stays on the same item.
@@ -267,7 +292,7 @@ public interface TableView<T> extends Component<TableView<T>>, HasCursor<TableVi
      * @param placeholder the text, or null for none
      * @return this table
      */
-    TableView<T> setPlaceholder(String placeholder);
+    TableView<T> setPlaceholder(Text placeholder);
 
     /**
      * Returns the index of the selected row in the shown order.

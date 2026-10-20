@@ -30,12 +30,13 @@ import org.inspirenxe.strata.api.geometry.Size;
 import org.inspirenxe.strata.api.input.Key;
 import org.inspirenxe.strata.api.input.KeyAction;
 import org.inspirenxe.strata.api.input.MouseButton;
+import org.inspirenxe.strata.api.text.Text;
 import org.inspirenxe.strata.api.text.TextMetrics;
-import org.inspirenxe.strata.api.text.TextSpan;
 import org.inspirenxe.strata.api.text.TextStyle;
 import org.inspirenxe.strata.api.theme.Paint;
 import org.inspirenxe.strata.api.theme.Theme;
 import org.inspirenxe.strata.core.control.Rings;
+import org.inspirenxe.strata.core.text.TextLine;
 
 import java.util.Objects;
 import java.util.Set;
@@ -50,7 +51,7 @@ public final class RadioButtonImpl extends CustomComponent<RadioButton> implemen
     private static final Set<String> REQUIRED = Set.of(STYLE_NORMAL, STYLE_HOVERED, STYLE_SELECTED, STYLE_SELECTED_HOVERED);
 
     private final RadioGroupImpl<?> group;
-    private String text;
+    private Text text;
 
     private Paint normal;
     private Paint hoveredPaint;
@@ -65,8 +66,8 @@ public final class RadioButtonImpl extends CustomComponent<RadioButton> implemen
     private TextStyle disabledTextStyle;
 
     // Computed during measure
-    private TextSpan caption;
-    private TextSpan disabledCaption;
+    private TextLine caption;
+    private TextLine disabledCaption;
     private float captionHeight;
     private float boxSize;
 
@@ -78,7 +79,7 @@ public final class RadioButtonImpl extends CustomComponent<RadioButton> implemen
      * @param text the caption
      */
     @SuppressWarnings("this-escape")
-    RadioButtonImpl(final ComponentFactory ui, final RadioGroupImpl<?> group, final String text) {
+    RadioButtonImpl(final ComponentFactory ui, final RadioGroupImpl<?> group, final Text text) {
         super(ui);
         this.group = group;
         this.text = Objects.requireNonNull(text, "text");
@@ -93,18 +94,18 @@ public final class RadioButtonImpl extends CustomComponent<RadioButton> implemen
         this.focusRing = Paint.NONE;
         this.textStyle = TextStyle.DEFAULT;
         this.disabledTextStyle = TextStyle.DEFAULT;
-        this.caption = TextSpan.of(text);
+        this.caption = TextLine.EMPTY;
         this.disabledCaption = this.caption;
         this.setCursor(CursorKind.HAND);
     }
 
     @Override
-    public String text() {
+    public Text text() {
         return this.text;
     }
 
     @Override
-    public RadioButton setText(final String text) {
+    public RadioButton setText(final Text text) {
         this.text = Objects.requireNonNull(text, "text");
         this.invalidateLayout();
         return this;
@@ -199,12 +200,12 @@ public final class RadioButtonImpl extends CustomComponent<RadioButton> implemen
     @Override
     protected Size measure(final MeasureContext context, final float availableWidth, final float availableHeight) {
         final TextMetrics metrics = context.text();
-        this.caption = new TextSpan(this.text, this.textStyle);
-        this.disabledCaption = new TextSpan(this.text, this.disabledTextStyle);
-        this.captionHeight = Math.max(metrics.lineHeight(this.textStyle), metrics.lineHeight(this.disabledTextStyle));
+        this.caption = TextLine.of(this.text, this.textStyle, metrics);
+        this.disabledCaption = TextLine.of(this.text, this.disabledTextStyle, metrics);
+        this.captionHeight = Math.max(this.caption.height(), this.disabledCaption.height());
         this.boxSize = this.captionHeight + CheckBoxImpl.BOX_PADDING;
-        final float captionWidth = Math.max(metrics.width(this.caption), metrics.width(this.disabledCaption));
-        final float width = this.text.isEmpty() ? this.boxSize : this.boxSize + CheckBoxImpl.GAP + captionWidth;
+        final float captionWidth = Math.max(this.caption.width(), this.disabledCaption.width());
+        final float width = this.caption.isEmpty() ? this.boxSize : this.boxSize + CheckBoxImpl.GAP + captionWidth;
         return new Size(width, Math.max(this.boxSize, this.captionHeight));
     }
 
@@ -232,8 +233,8 @@ public final class RadioButtonImpl extends CustomComponent<RadioButton> implemen
         if (this.isFocused() && this.focusRing != Paint.NONE) {
             Rings.paint(painter, this.focusRing, box);
         }
-        if (!this.text.isEmpty()) {
-            painter.text(enabled ? this.caption : this.disabledCaption, box.right() + CheckBoxImpl.GAP,
+        if (!this.caption.isEmpty()) {
+            (enabled ? this.caption : this.disabledCaption).draw(painter, box.right() + CheckBoxImpl.GAP,
                     middle - this.captionHeight * 0.5f);
         }
     }

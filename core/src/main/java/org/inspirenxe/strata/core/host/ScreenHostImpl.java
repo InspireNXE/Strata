@@ -30,6 +30,7 @@ import org.inspirenxe.strata.api.theme.ThemeRef;
 import org.inspirenxe.strata.core.node.ComponentFactoryImpl;
 import org.inspirenxe.strata.core.node.Node;
 import org.inspirenxe.strata.core.node.Root;
+import org.inspirenxe.strata.core.text.Translations;
 import org.inspirenxe.strata.core.theme.ThemeResolver;
 import org.inspirenxe.strata.spi.Canvas;
 import org.inspirenxe.strata.spi.Platform;
@@ -58,6 +59,7 @@ public final class ScreenHostImpl implements ScreenHost {
     private Theme theme;
     private ThemeRef themeRef;
     private long themeVersion;
+    private long textVersion = Translations.version();
     private Screen screen;
     private boolean rebuild;
 
@@ -184,6 +186,17 @@ public final class ScreenHostImpl implements ScreenHost {
         }
     }
 
+    /**
+     * Lays out every node again if translations changed since the last time.
+     */
+    private void refreshText() {
+        final long version = Translations.version();
+        if (version != this.textVersion) {
+            this.textVersion = version;
+            this.root.invalidateText();
+        }
+    }
+
     @Override
     public void resize(final float width, final float height) {
         this.root.resize(width, height);
@@ -192,6 +205,7 @@ public final class ScreenHostImpl implements ScreenHost {
     @Override
     public void layout() {
         this.refreshTheme();
+        this.refreshText();
         this.rebuildIfNeeded();
         this.root.layout();
     }
@@ -199,6 +213,7 @@ public final class ScreenHostImpl implements ScreenHost {
     @Override
     public void render(final Canvas canvas) {
         this.refreshTheme();
+        this.refreshText();
         this.rebuildIfNeeded();
         this.root.render(canvas);
     }

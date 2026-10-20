@@ -23,6 +23,7 @@ import org.inspirenxe.strata.api.control.attribute.item.SingleSelection;
 import org.inspirenxe.strata.api.event.EventType;
 import org.inspirenxe.strata.api.event.control.ValueEvent;
 import org.inspirenxe.strata.api.event.control.ValueRequestEvent;
+import org.inspirenxe.strata.api.text.Text;
 
 import java.util.List;
 import java.util.Objects;
@@ -180,7 +181,7 @@ public interface DualList<T> extends Component<DualList<T>>, HasCursor<DualList<
      * @param side which list
      * @return the title above that list; empty by default
      */
-    String title(Side side);
+    Text title(Side side);
 
     /**
      * Sets the title above one list. The row of titles shows while either side has a title that is not empty.
@@ -189,7 +190,18 @@ public interface DualList<T> extends Component<DualList<T>>, HasCursor<DualList<
      * @param title the title, or an empty string for none
      * @return this list
      */
-    DualList<T> setTitle(Side side, String title);
+    DualList<T> setTitle(Side side, Text title);
+
+    /**
+     * Does the same as {@link #setTitle(Side, Text)} with literal text.
+     *
+     * @param side which list
+     * @param title the title, or an empty string for none
+     * @return this list
+     */
+    default DualList<T> setTitle(final Side side, final String title) {
+        return this.setTitle(side, Text.of(title));
+    }
 
     /**
      * Returns how many rows the lists ask to be tall enough for.

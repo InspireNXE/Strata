@@ -29,6 +29,7 @@ import org.inspirenxe.strata.api.geometry.Rect;
 import org.inspirenxe.strata.api.geometry.Size;
 import org.inspirenxe.strata.api.input.MouseButton;
 import org.inspirenxe.strata.api.layout.Anchor;
+import org.inspirenxe.strata.api.text.Text;
 import org.inspirenxe.strata.api.theme.Paint;
 import org.inspirenxe.strata.api.theme.Theme;
 import org.inspirenxe.strata.core.control.Rings;
@@ -360,7 +361,7 @@ public final class TreeViewImpl<T> extends CustomComposite<TreeView<T>> implemen
     }
 
     @Override
-    public TreeView<T> setPlaceholder(final String placeholder) {
+    public TreeView<T> setPlaceholder(final Text placeholder) {
         this.list.setPlaceholder(placeholder);
         return this;
     }

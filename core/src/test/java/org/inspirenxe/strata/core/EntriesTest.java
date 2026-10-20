@@ -85,8 +85,8 @@ class EntriesTest {
             final List<MenuEntry> items = menu.items();
             assertEquals(4, items.size());
             final MenuItem copy = (MenuItem) items.getFirst();
-            assertEquals("Copy", copy.text());
-            assertEquals("Ctrl+C", copy.shortcut());
+            assertEquals("Copy", copy.text().plain());
+            assertEquals("Ctrl+C", copy.shortcut().plain());
             assertTrue(((CheckMenuItem) items.get(2)).isSelected());
             assertSame(submenu, ((SubmenuItem) items.get(3)).menu().orElseThrow());
         }
@@ -135,7 +135,7 @@ class EntriesTest {
             final MenuBar bar = ui.menuBar()
                     .addMenu(file)
                     .addMenu("View", ui.menu().addItem("Zoom", () -> { }));
-            assertEquals(List.of("File", "View"), bar.menus().stream().map(SubmenuItem::text).toList());
+            assertEquals(List.of("File", "View"), bar.menus().stream().map(item -> item.text().plain()).toList());
             EntriesTest.this.test.show(ui.absolutePanel().add(bar, 0, 0));
             file.setEnabled(false);
             bar.select(0);
@@ -162,7 +162,7 @@ class EntriesTest {
             bar.addTab(0, ui.tab("Trade"));
             assertEquals(2, bar.selectedIndex());
             bar.removeTab(sell);
-            assertEquals("Buy", bar.selected().orElseThrow().text());
+            assertEquals("Buy", bar.selected().orElseThrow().text().plain());
             assertEquals(List.of("0->1", "1->2", "2->1"), EntriesTest.this.heard);
             assertThrows(IllegalArgumentException.class, () -> ui.tabBar().addTab(bar.tabs().getFirst()));
         }
@@ -226,12 +226,12 @@ class EntriesTest {
         @Test
         void everyFactoryMethodHasAFormWithNoArguments() {
             final ComponentFactory ui = EntriesTest.this.ui;
-            assertEquals("", ui.label().text());
-            assertEquals("", ui.button().text());
+            assertEquals("", ui.label().text().plain());
+            assertEquals("", ui.button().text().plain());
             assertFalse(ui.checkBox().isSelected());
             assertFalse(ui.toggleSwitch().isSelected());
-            assertEquals("", ui.window().title());
-            assertEquals("", ui.expander().title());
+            assertEquals("", ui.window().title().plain());
+            assertEquals("", ui.expander().title().plain());
             assertEquals(Orientation.HORIZONTAL, ui.separator().orientation());
             assertEquals(Orientation.HORIZONTAL, ui.splitPane().orientation());
             final Image image = ui.image();
@@ -239,7 +239,7 @@ class EntriesTest {
             assertNull(image.visual());
             final MessageBox box = ui.messageBox();
             assertEquals(MessageBox.Buttons.OK, box.buttons());
-            assertEquals("", box.message());
+            assertEquals("", box.message().plain());
         }
 
         @Test
@@ -255,7 +255,7 @@ class EntriesTest {
 
         private static void labels(final Node node, final List<String> texts) {
             if ((Object) node.facade() instanceof Label label) {
-                texts.add(label.text());
+                texts.add(label.text().plain());
             }
             if (node instanceof ContainerNode container) {
                 for (final Node child : container.childNodes()) {
@@ -276,8 +276,8 @@ class EntriesTest {
                     .setMessage("This cannot be undone.")
                     .setButtonText(MessageBox.Result.NO, "Keep")
                     .setButtons(MessageBox.Buttons.YES_NO);
-            assertEquals("Delete?", box.window().title());
-            assertEquals("This cannot be undone.", box.message());
+            assertEquals("Delete?", box.window().title().plain());
+            assertEquals("This cannot be undone.", box.message().plain());
             assertEquals(MessageBox.Buttons.YES_NO, box.buttons());
         }
     }

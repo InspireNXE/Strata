@@ -22,6 +22,7 @@ import org.inspirenxe.strata.api.component.HasTooltip;
 import org.inspirenxe.strata.api.control.attribute.item.ItemSource;
 import org.inspirenxe.strata.api.control.attribute.item.SingleSelection;
 import org.inspirenxe.strata.api.control.attribute.text.HasText;
+import org.inspirenxe.strata.api.text.Text;
 
 import java.util.function.Function;
 
@@ -81,7 +82,7 @@ public interface CycleButton<T> extends Component<CycleButton<T>>, Focusable<Cyc
      * @return the label; empty for none
      */
     @Override
-    String text();
+    Text text();
 
     /**
      * Replaces the label that comes before the value. A new layout runs.
@@ -90,7 +91,7 @@ public interface CycleButton<T> extends Component<CycleButton<T>>, Focusable<Cyc
      * @return this button
      */
     @Override
-    CycleButton<T> setText(String text);
+    CycleButton<T> setText(Text text);
 
     /**
      * Sets how a value is turned into the text shown after the label. A new layout runs.

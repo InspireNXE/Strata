@@ -33,6 +33,7 @@ import org.inspirenxe.strata.api.input.MouseButton;
 import org.inspirenxe.strata.api.input.ScrollKind;
 import org.inspirenxe.strata.api.overlay.Overlay;
 import org.inspirenxe.strata.api.overlay.Overlays;
+import org.inspirenxe.strata.api.text.Text;
 import org.inspirenxe.strata.api.theme.Paint;
 import org.inspirenxe.strata.api.theme.Theme;
 import org.inspirenxe.strata.api.theme.ThemeException;
@@ -243,6 +244,15 @@ public final class Root {
             visit(top, node -> node.applyTheme(theme));
         }
         this.requestLayout();
+    }
+
+    /**
+     * Marks every node for measuring, so text is resolved again, as after the language changes.
+     */
+    public void invalidateText() {
+        for (final Node top : this.tops()) {
+            visit(top, Node::invalidateLayout);
+        }
     }
 
     /**
@@ -772,7 +782,6 @@ public final class Root {
         }
         final Tooltip tooltip = owner.tooltip();
         final Node node = switch (tooltip) {
-            case Tooltip.Text text -> this.ui.nodeOf(new TooltipView(this.ui, text));
             case Tooltip.Lines lines -> this.ui.nodeOf(new TooltipView(this.ui, lines));
             case Tooltip.Custom custom -> this.ui.nodeOf(custom.builder().apply(this.ui));
         };
@@ -1178,7 +1187,7 @@ public final class Root {
         }
 
         @Override
-        public Overlay toast(final String message) {
+        public Overlay toast(final Text message) {
             return this.toast(new ToastView(Root.this.ui, Objects.requireNonNull(message, "message")), DEFAULT_TOAST_MILLIS);
         }
 

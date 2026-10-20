@@ -32,6 +32,7 @@ import org.inspirenxe.strata.api.input.Modifiers;
 import org.inspirenxe.strata.api.layout.AbsolutePanel;
 import org.inspirenxe.strata.api.layout.Orientation;
 import org.inspirenxe.strata.api.layout.StackPanel;
+import org.inspirenxe.strata.api.text.Text;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
@@ -183,7 +184,7 @@ class SnapshotTest {
 
         final ComponentSnapshot snapshot = kept.getFirst();
         assertTrue(snapshot.enabled());
-        assertEquals(Optional.of(new Button.State("Go")), snapshot.state(Button.State.class));
+        assertEquals(Optional.of(new Button.State(Text.of("Go"))), snapshot.state(Button.State.class));
         assertEquals(Optional.empty(), snapshot.state(TextBox.State.class), "a state of another type is empty");
         assertFalse(button.isEnabled());
     }

@@ -20,6 +20,7 @@ import org.inspirenxe.strata.api.component.HasCursor;
 import org.inspirenxe.strata.api.component.HasTooltip;
 import org.inspirenxe.strata.api.control.attribute.text.HasText;
 import org.inspirenxe.strata.api.control.attribute.value.Ranged;
+import org.inspirenxe.strata.api.text.Text;
 
 /**
  * A bar filled from the left to show how far a value is through its range, with an optional caption centered on it,
@@ -139,7 +140,7 @@ public interface ProgressBar extends Component<ProgressBar>, HasCursor<ProgressB
      * @return the caption; empty by default
      */
     @Override
-    String text();
+    Text text();
 
     /**
      * Sets the caption drawn centered on the bar.
@@ -148,5 +149,5 @@ public interface ProgressBar extends Component<ProgressBar>, HasCursor<ProgressB
      * @return this bar
      */
     @Override
-    ProgressBar setText(String text);
+    ProgressBar setText(Text text);
 }

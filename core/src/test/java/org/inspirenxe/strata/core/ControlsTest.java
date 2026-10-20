@@ -36,6 +36,7 @@ import org.inspirenxe.strata.api.input.Modifiers;
 import org.inspirenxe.strata.api.input.MouseButton;
 import org.inspirenxe.strata.api.layout.Anchor;
 import org.inspirenxe.strata.api.layout.Orientation;
+import org.inspirenxe.strata.api.text.Text;
 import org.inspirenxe.strata.api.text.TextOverflow;
 import org.inspirenxe.strata.api.text.TextSpan;
 import org.inspirenxe.strata.api.text.TextStyle;
@@ -76,12 +77,10 @@ class ControlsTest {
     class Labels {
         @Test
         void spansJoinTheirTextAndMeasureTogether() {
-            final Label label = ControlsTest.this.ui.label("").setSpans(List.of(TextSpan.of("Diamond"), TextSpan.of(" x 64")));
+            final Label label = ControlsTest.this.ui.label(Text.concat(Text.of("Diamond"), Text.of(" x 64").italic()));
             ControlsTest.this.test.show(label);
-            assertEquals("Diamond x 64", label.text());
+            assertEquals("Diamond x 64", label.text().plain());
             assertEquals(12 * 6f, label.desiredWidth());
-            label.setText("plain");
-            assertEquals(List.of(), label.spans());
         }
 
         @Test
@@ -106,13 +105,13 @@ class ControlsTest {
         @Test
         void wrappedSpansKeepTheirStyles() {
             final TextStyle red = TextStyle.DEFAULT.withColor(0xFFFF0000);
-            final Label label = ControlsTest.this.ui.label("").setWrap(true)
-                    .setSpans(List.of(TextSpan.of("one two "), new TextSpan("three four", red)));
+            final Label label = ControlsTest.this.ui.label(Text.of("one two ").append("three four", red)).setWrap(true);
             label.setMaxSize(48, Float.POSITIVE_INFINITY);
             ControlsTest.this.test.show(label);
             final NullCanvas canvas = new NullCanvas();
             ControlsTest.this.test.host().render(canvas);
-            assertEquals(List.of(TextSpan.of("one two"), new TextSpan("three", red), new TextSpan("four", red)), canvas.texts());
+            assertEquals(List.of(new TextSpan("one two", label.style()), new TextSpan("three", red), new TextSpan("four", red)),
+                    canvas.texts());
         }
     }
 

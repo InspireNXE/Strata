@@ -23,6 +23,7 @@ import org.inspirenxe.strata.api.extension.Painter;
 import org.inspirenxe.strata.api.geometry.Rect;
 import org.inspirenxe.strata.api.geometry.Size;
 import org.inspirenxe.strata.api.layout.HorizontalAlignment;
+import org.inspirenxe.strata.api.text.Text;
 import org.inspirenxe.strata.api.text.TextMetrics;
 import org.inspirenxe.strata.api.text.TextOverflow;
 import org.inspirenxe.strata.api.text.TextSpan;
@@ -36,7 +37,8 @@ import java.util.List;
 import java.util.Objects;
 
 /**
- * The core {@link Label}. Measuring breaks the text into lines with {@link RichText} (plain text wraps exactly as
+ * The core {@link Label}. Measuring resolves the text against the label's style and breaks it into lines with
+ * {@link RichText} (plain text wraps exactly as
  * {@link TextWrap} wraps it), at the width the parent offers when wrapping is on, and keeps them for painting. Each
  * line is aligned on its own within the bounds. The line height is the tallest of the styles in use.
  *
@@ -44,8 +46,7 @@ import java.util.Objects;
  * until the next change, so painting allocates nothing in between.</p>
  */
 public final class LabelImpl extends CustomComponent<Label> implements Label {
-    private String text;
-    private List<TextSpan> spans;
+    private Text text;
     private TextStyle explicitStyle;
     private TextStyle themeStyle;
     private boolean wrap;
@@ -74,10 +75,9 @@ public final class LabelImpl extends CustomComponent<Label> implements Label {
      * @param ui the factory that owns the label
      * @param text the text, with {@code \n} for line breaks
      */
-    public LabelImpl(final ComponentFactory ui, final String text) {
+    public LabelImpl(final ComponentFactory ui, final Text text) {
         super(ui);
         this.text = Objects.requireNonNull(text, "text");
-        this.spans = List.of();
         this.themeStyle = TextStyle.DEFAULT;
         this.textAlignment = HorizontalAlignment.LEFT;
         this.textScale = 1f;
@@ -91,36 +91,15 @@ public final class LabelImpl extends CustomComponent<Label> implements Label {
     }
 
     @Override
-    public String text() {
+    public Text text() {
         return this.text;
     }
 
     @Override
-    public Label setText(final String text) {
+    public Label setText(final Text text) {
         Objects.requireNonNull(text, "text");
-        if (!this.text.equals(text) || !this.spans.isEmpty()) {
+        if (!this.text.equals(text)) {
             this.text = text;
-            this.spans = List.of();
-            this.invalidateLayout();
-        }
-        return this;
-    }
-
-    @Override
-    public List<TextSpan> spans() {
-        return this.spans;
-    }
-
-    @Override
-    public Label setSpans(final List<TextSpan> spans) {
-        final List<TextSpan> copy = List.copyOf(spans);
-        if (!copy.equals(this.spans)) {
-            this.spans = copy;
-            final StringBuilder joined = new StringBuilder();
-            for (final TextSpan span : copy) {
-                joined.append(span.text());
-            }
-            this.text = joined.toString();
             this.invalidateLayout();
         }
         return this;
@@ -196,7 +175,7 @@ public final class LabelImpl extends CustomComponent<Label> implements Label {
     @Override
     protected Size measure(final MeasureContext context, final float availableWidth, final float availableHeight) {
         final TextMetrics metrics = context.text();
-        final List<TextSpan> runs = this.spans.isEmpty() ? List.of(new TextSpan(this.text, this.style())) : this.spans;
+        final List<TextSpan> runs = this.text.resolve(this.style());
         final float maxWidth = this.wrap ? availableWidth / this.textScale : Float.POSITIVE_INFINITY;
 
         this.lines.clear();
@@ -209,7 +188,7 @@ public final class LabelImpl extends CustomComponent<Label> implements Label {
             this.lineWidths.add(lineWidth);
             width = Math.max(width, lineWidth);
         }
-        float height = 0f;
+        float height = metrics.lineHeight(this.style());
         for (final TextSpan run : runs) {
             height = Math.max(height, metrics.lineHeight(run.style()));
         }

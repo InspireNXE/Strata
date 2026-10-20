@@ -24,6 +24,7 @@ import org.inspirenxe.strata.api.control.attribute.item.CellSource;
 import org.inspirenxe.strata.api.control.attribute.item.ItemSource;
 import org.inspirenxe.strata.api.control.attribute.item.RowView;
 import org.inspirenxe.strata.api.control.attribute.item.SingleSelection;
+import org.inspirenxe.strata.api.text.Text;
 
 import java.util.List;
 import java.util.Optional;
@@ -268,7 +269,7 @@ public interface ListView<T> extends Component<ListView<T>>, Focusable<ListView<
      * @param placeholder the text, or {@code null} for none
      * @return this list
      */
-    ListView<T> setPlaceholder(String placeholder);
+    ListView<T> setPlaceholder(Text placeholder);
 
     /**
      * Returns the vertical offset.

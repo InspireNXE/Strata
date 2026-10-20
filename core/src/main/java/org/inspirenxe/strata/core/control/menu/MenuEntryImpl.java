@@ -16,7 +16,8 @@
 package org.inspirenxe.strata.core.control.menu;
 
 import org.inspirenxe.strata.api.control.menu.MenuEntry;
-import org.inspirenxe.strata.api.text.TextSpan;
+import org.inspirenxe.strata.api.text.Text;
+import org.inspirenxe.strata.core.text.TextLine;
 
 /**
  * The shared state of the core menu entries: the menu or bar that holds the entry, and the text spans its menu
@@ -24,16 +25,16 @@ import org.inspirenxe.strata.api.text.TextSpan;
  */
 public abstract class MenuEntryImpl {
     private Object owner;
-    TextSpan span;
-    TextSpan disabledSpan;
-    TextSpan shortcutSpan;
+    TextLine span;
+    TextLine disabledSpan;
+    TextLine shortcutSpan;
     float shortcutWidth;
 
     /**
      * Creates an entry that no menu holds yet.
      */
     MenuEntryImpl() {
-        this.span = TextSpan.of("");
+        this.span = TextLine.EMPTY;
         this.disabledSpan = this.span;
         this.shortcutSpan = this.span;
     }
@@ -46,15 +47,15 @@ public abstract class MenuEntryImpl {
     /**
      * Returns the text drawn for the entry.
      */
-    String label() {
-        return "";
+    Text label() {
+        return Text.empty();
     }
 
     /**
      * Returns the shortcut hint drawn at the entry's right.
      */
-    String hint() {
-        return "";
+    Text hint() {
+        return Text.empty();
     }
 
     /**

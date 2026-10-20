@@ -19,6 +19,7 @@ import org.inspirenxe.strata.api.component.Component;
 import org.inspirenxe.strata.api.component.HasCursor;
 import org.inspirenxe.strata.api.component.HasTooltip;
 import org.inspirenxe.strata.api.control.attribute.item.SingleSelection;
+import org.inspirenxe.strata.api.text.Text;
 
 import java.util.List;
 import java.util.Optional;
@@ -126,7 +127,19 @@ public interface MenuBar extends Component<MenuBar>, HasCursor<MenuBar>, HasTool
      * @return this bar
      * @throws IllegalArgumentException if {@code menu} already belongs to a bar or is a submenu
      */
-    MenuBar addMenu(String title, Menu menu);
+    MenuBar addMenu(Text title, Menu menu);
+
+    /**
+     * Does the same as {@link #addMenu(Text, Menu)} with literal text.
+     *
+     * @param title the title
+     * @param menu the menu it opens; it must not belong to another bar or be a submenu
+     * @return this bar
+     * @throws IllegalArgumentException if {@code menu} already belongs to a bar or is a submenu
+     */
+    default MenuBar addMenu(final String title, final Menu menu) {
+        return this.addMenu(Text.of(title), menu);
+    }
 
     /**
      * Returns the index of the title whose menu is open.

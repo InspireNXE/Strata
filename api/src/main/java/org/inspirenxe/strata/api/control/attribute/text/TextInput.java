@@ -20,6 +20,7 @@ import org.inspirenxe.strata.api.event.EventType;
 import org.inspirenxe.strata.api.event.control.ValueEvent;
 import org.inspirenxe.strata.api.event.control.ValueRequestEvent;
 import org.inspirenxe.strata.api.geometry.Insets;
+import org.inspirenxe.strata.api.text.Text;
 import org.inspirenxe.strata.api.text.TextHighlighter;
 
 /**
@@ -35,7 +36,7 @@ import org.inspirenxe.strata.api.text.TextHighlighter;
  *
  * @param <S> the control's own type, which the setters return
  */
-public interface TextInput<S extends TextInput<S>> extends HasText<S>, EventTarget<S> {
+public interface TextInput<S extends TextInput<S>> extends EventTarget<S> {
     /**
      * Asked before the user edits the text by typing, deleting, cutting or pasting. The value is the whole text the
      * edit would produce. While handlers run, the control still holds the text and selection from before the edit.
@@ -50,6 +51,21 @@ public interface TextInput<S extends TextInput<S>> extends HasText<S>, EventTarg
      * text before; neither is null. Fires for changes made from code too.
      */
     EventType<ValueEvent<TextInput<?>, String>> EDITED = EventType.valueReport("text_input.edited");
+
+    /**
+     * Returns the text.
+     *
+     * @return the text, never null; empty when there is none
+     */
+    String text();
+
+    /**
+     * Replaces the text. The caret moves to the end and the selection is cleared.
+     *
+     * @param text the text, or an empty string for none
+     * @return this control
+     */
+    S setText(String text);
 
     /**
      * Returns the length limit.

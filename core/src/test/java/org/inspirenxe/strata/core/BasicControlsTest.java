@@ -31,6 +31,7 @@ import org.inspirenxe.strata.api.input.Key;
 import org.inspirenxe.strata.api.input.KeyAction;
 import org.inspirenxe.strata.api.input.Modifiers;
 import org.inspirenxe.strata.api.input.MouseButton;
+import org.inspirenxe.strata.api.text.Text;
 import org.inspirenxe.strata.api.text.TextSpan;
 import org.inspirenxe.strata.api.theme.SpriteId;
 import org.inspirenxe.strata.api.theme.Themes;
@@ -236,7 +237,7 @@ class BasicControlsTest {
             final List<CheckBox.State> before = new ArrayList<>();
             this.box.onEvent(InputEvents.CLICK, event -> event.snapshot().state(CheckBox.State.class).ifPresent(before::add));
             this.test.click(45, 8);
-            assertEquals(List.of(new CheckBox.State(false, "Music")), before);
+            assertEquals(List.of(new CheckBox.State(false, Text.of("Music"))), before);
         }
     }
 

@@ -24,6 +24,7 @@ import org.inspirenxe.strata.api.control.display.Label;
 import org.inspirenxe.strata.api.event.EventType;
 import org.inspirenxe.strata.api.event.control.ValueEvent;
 import org.inspirenxe.strata.api.event.control.ValueRequestEvent;
+import org.inspirenxe.strata.api.text.Text;
 
 import java.util.List;
 
@@ -90,7 +91,7 @@ public interface MessageBox extends Component<MessageBox>, HasCursor<MessageBox>
      * @return the title, never null
      */
     @Override
-    String title();
+    Text title();
 
     /**
      * Replaces the window's title.
@@ -99,14 +100,14 @@ public interface MessageBox extends Component<MessageBox>, HasCursor<MessageBox>
      * @return this box
      */
     @Override
-    MessageBox setTitle(String title);
+    MessageBox setTitle(Text title);
 
     /**
      * Returns the message.
      *
      * @return the message, never null
      */
-    String message();
+    Text message();
 
     /**
      * Replaces the message. It wraps at {@value #MESSAGE_WIDTH} units, and {@code \n} starts a new line.
@@ -114,7 +115,17 @@ public interface MessageBox extends Component<MessageBox>, HasCursor<MessageBox>
      * @param message the message
      * @return this box
      */
-    MessageBox setMessage(String message);
+    MessageBox setMessage(Text message);
+
+    /**
+     * Does the same as {@link #setMessage(Text)} with literal text.
+     *
+     * @param message the message
+     * @return this box
+     */
+    default MessageBox setMessage(final String message) {
+        return this.setMessage(Text.of(message));
+    }
 
     /**
      * Returns which buttons the box has.
@@ -140,7 +151,18 @@ public interface MessageBox extends Component<MessageBox>, HasCursor<MessageBox>
      * @param caption the caption
      * @return this box
      */
-    MessageBox setButtonText(Result result, String caption);
+    MessageBox setButtonText(Result result, Text caption);
+
+    /**
+     * Does the same as {@link #setButtonText(Result, Text)} with literal text.
+     *
+     * @param result the result of the button
+     * @param caption the caption
+     * @return this box
+     */
+    default MessageBox setButtonText(final Result result, final String caption) {
+        return this.setButtonText(result, Text.of(caption));
+    }
 
     /**
      * What a message box reports.

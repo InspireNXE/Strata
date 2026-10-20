@@ -17,6 +17,7 @@ package org.inspirenxe.strata.api.overlay;
 
 import org.inspirenxe.strata.api.component.Component;
 import org.inspirenxe.strata.api.geometry.Rect;
+import org.inspirenxe.strata.api.text.Text;
 
 import java.util.List;
 import java.util.Optional;
@@ -99,7 +100,17 @@ public interface Overlays {
      * @param message the text
      * @return the open toast
      */
-    Overlay toast(String message);
+    Overlay toast(Text message);
+
+    /**
+     * Does the same as {@link #toast(Text)} with literal text.
+     *
+     * @param message the text
+     * @return the open toast
+     */
+    default Overlay toast(final String message) {
+        return this.toast(Text.of(message));
+    }
 
     /**
      * Shows a component as a toast for a time. The content takes its desired size and draws its own background.

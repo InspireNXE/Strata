@@ -26,6 +26,7 @@ import org.inspirenxe.strata.api.extension.MeasureContext;
 import org.inspirenxe.strata.api.geometry.Rect;
 import org.inspirenxe.strata.api.geometry.Size;
 import org.inspirenxe.strata.api.layout.Anchor;
+import org.inspirenxe.strata.api.text.Text;
 import org.inspirenxe.strata.api.text.TextOverflow;
 import org.inspirenxe.strata.api.text.TextStyle;
 import org.inspirenxe.strata.api.theme.Paint;
@@ -171,12 +172,12 @@ public final class DualListImpl<T> extends CustomComposite<DualList<T>> implemen
     }
 
     @Override
-    public String title(final Side side) {
+    public Text title(final Side side) {
         return this.titleLabel(Objects.requireNonNull(side, "side")).text();
     }
 
     @Override
-    public DualList<T> setTitle(final Side side, final String title) {
+    public DualList<T> setTitle(final Side side, final Text title) {
         this.titleLabel(Objects.requireNonNull(side, "side")).setText(Objects.requireNonNull(title, "title"));
         this.invalidateLayout();
         return this;

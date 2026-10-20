@@ -742,7 +742,7 @@ class StandardControlsTest {
             StandardControlsTest.this.test.show(form);
             StandardControlsTest.this.test.host().render(new NullCanvas());
             final List<String> pressed = new ArrayList<>();
-            form.onEvent(Button.PRESSED, e -> pressed.add(e.control().text()));
+            form.onEvent(Button.PRESSED, e -> pressed.add(e.control().text().plain()));
 
             buttons.get(0).press();
 
@@ -757,7 +757,7 @@ class StandardControlsTest {
             final AbsolutePanel form = ui.absolutePanel().add(expander);
             StandardControlsTest.this.test.show(form);
             final List<String> pressed = new ArrayList<>();
-            form.onEvent(Button.PRESSED, e -> pressed.add(e.control().text()));
+            form.onEvent(Button.PRESSED, e -> pressed.add(e.control().text().plain()));
 
             button.press();
 

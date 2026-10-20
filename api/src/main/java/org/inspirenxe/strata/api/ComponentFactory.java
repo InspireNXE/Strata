@@ -64,6 +64,7 @@ import org.inspirenxe.strata.api.layout.ScrollPanel;
 import org.inspirenxe.strata.api.layout.Spacer;
 import org.inspirenxe.strata.api.layout.StackPanel;
 import org.inspirenxe.strata.api.overlay.Overlays;
+import org.inspirenxe.strata.api.text.Text;
 import org.inspirenxe.strata.api.text.TextOverflow;
 import org.inspirenxe.strata.api.theme.SpriteId;
 import org.inspirenxe.strata.api.theme.Theme;
@@ -183,7 +184,17 @@ public interface ComponentFactory {
      * @param text the text; {@code \n} starts a new line
      * @return a new label
      */
-    Label label(String text);
+    Label label(Text text);
+
+    /**
+     * Does the same as {@link #label(Text)} with literal text.
+     *
+     * @param text the text; {@code \n} starts a new line
+     * @return a new label
+     */
+    default Label label(final String text) {
+        return this.label(Text.of(text));
+    }
 
     /**
      * Makes the label a list, tree, dual list or table row shows for text by default: {@value #CELL_PADDING} units
@@ -193,11 +204,21 @@ public interface ComponentFactory {
      * @param text the text
      * @return a new label
      */
-    default Label cellLabel(final String text) {
+    default Label cellLabel(final Text text) {
         final Label label = this.label(text)
                 .setOverflow(TextOverflow.ELLIPSIS)
                 .setAnchor(Anchor.MIDDLE_LEFT);
         return label.setMargin(CELL_PADDING, 0f);
+    }
+
+    /**
+     * Does the same as {@link #cellLabel(Text)} with literal text.
+     *
+     * @param text the text
+     * @return a new label
+     */
+    default Label cellLabel(final String text) {
+        return this.cellLabel(Text.of(text));
     }
 
     /**
@@ -239,7 +260,17 @@ public interface ComponentFactory {
      * @param text the caption
      * @return a new button
      */
-    Button button(String text);
+    Button button(Text text);
+
+    /**
+     * Does the same as {@link #button(Text)} with literal text.
+     *
+     * @param text the caption
+     * @return a new button
+     */
+    default Button button(final String text) {
+        return this.button(Text.of(text));
+    }
 
     /**
      * Makes an unchecked {@link CheckBox} with no caption, as {@code checkBox("")} does.
@@ -256,7 +287,17 @@ public interface ComponentFactory {
      * @param text the caption
      * @return a new check box
      */
-    CheckBox checkBox(String text);
+    CheckBox checkBox(Text text);
+
+    /**
+     * Does the same as {@link #checkBox(Text)} with literal text.
+     *
+     * @param text the caption
+     * @return a new check box
+     */
+    default CheckBox checkBox(final String text) {
+        return this.checkBox(Text.of(text));
+    }
 
     /**
      * Makes a {@link Slider} over the range 0 to 1, at 0, with no step.
@@ -326,7 +367,17 @@ public interface ComponentFactory {
      * @param title the title
      * @return a new window
      */
-    Window window(String title);
+    Window window(Text title);
+
+    /**
+     * Does the same as {@link #window(Text)} with literal text.
+     *
+     * @param title the title
+     * @return a new window
+     */
+    default Window window(final String title) {
+        return this.window(Text.of(title));
+    }
 
     /**
      * Makes a {@link MessageBox} with no title, no message and an OK button, as
@@ -346,7 +397,19 @@ public interface ComponentFactory {
      * @param buttons which buttons it has
      * @return a new message box
      */
-    MessageBox messageBox(String title, String message, MessageBox.Buttons buttons);
+    MessageBox messageBox(Text title, Text message, MessageBox.Buttons buttons);
+
+    /**
+     * Does the same as {@link #messageBox(Text, Text, MessageBox.Buttons)} with literal text.
+     *
+     * @param title the window's title
+     * @param message the message; it wraps, and {@code \n} starts a new line
+     * @param buttons which buttons it has
+     * @return a new message box
+     */
+    default MessageBox messageBox(final String title, final String message, final MessageBox.Buttons buttons) {
+        return this.messageBox(Text.of(title), Text.of(message), buttons);
+    }
 
     /**
      * Makes a {@link TabBar} with no tabs.
@@ -370,7 +433,17 @@ public interface ComponentFactory {
      * @param text the tab's text
      * @return a new tab
      */
-    Tab tab(String text);
+    Tab tab(Text text);
+
+    /**
+     * Does the same as {@link #tab(Text)} with literal text.
+     *
+     * @param text the tab's text
+     * @return a new tab
+     */
+    default Tab tab(final String text) {
+        return this.tab(Text.of(text));
+    }
 
     /**
      * Makes an empty {@link ProgressBar}.
@@ -420,7 +493,17 @@ public interface ComponentFactory {
      * @param text the caption
      * @return a new switch
      */
-    ToggleSwitch toggleSwitch(String text);
+    ToggleSwitch toggleSwitch(Text text);
+
+    /**
+     * Does the same as {@link #toggleSwitch(Text)} with literal text.
+     *
+     * @param text the caption
+     * @return a new switch
+     */
+    default ToggleSwitch toggleSwitch(final String text) {
+        return this.toggleSwitch(Text.of(text));
+    }
 
     /**
      * Makes a {@link Spinner} counting whole numbers from 0 to 100, at 0.
@@ -462,7 +545,18 @@ public interface ComponentFactory {
      * @param title the header title
      * @return a new column
      */
-    <T> TableColumn<T> tableColumn(String title);
+    <T> TableColumn<T> tableColumn(Text title);
+
+    /**
+     * Does the same as {@link #tableColumn(Text)} with literal text.
+     *
+     * @param <T> the type of the table's items
+     * @param title the header title
+     * @return a new column
+     */
+    default <T> TableColumn<T> tableColumn(final String title) {
+        return this.tableColumn(Text.of(title));
+    }
 
     /**
      * Makes a {@link TreeView} with no roots and no children function, whose cells are labels showing
@@ -514,7 +608,17 @@ public interface ComponentFactory {
      * @param text the item's text
      * @return a new item
      */
-    MenuItem menuItem(String text);
+    MenuItem menuItem(Text text);
+
+    /**
+     * Does the same as {@link #menuItem(Text)} with literal text.
+     *
+     * @param text the item's text
+     * @return a new item
+     */
+    default MenuItem menuItem(final String text) {
+        return this.menuItem(Text.of(text));
+    }
 
     /**
      * Makes an enabled, unchecked {@link CheckMenuItem} with no text and an action that does nothing, as
@@ -532,7 +636,17 @@ public interface ComponentFactory {
      * @param text the item's text
      * @return a new item
      */
-    CheckMenuItem checkMenuItem(String text);
+    CheckMenuItem checkMenuItem(Text text);
+
+    /**
+     * Does the same as {@link #checkMenuItem(Text)} with literal text.
+     *
+     * @param text the item's text
+     * @return a new item
+     */
+    default CheckMenuItem checkMenuItem(final String text) {
+        return this.checkMenuItem(Text.of(text));
+    }
 
     /**
      * Makes an enabled {@link SubmenuItem} with no text and no menu, as {@code submenuItem("")} does.
@@ -549,7 +663,17 @@ public interface ComponentFactory {
      * @param text the item's text, or a menu bar's title
      * @return a new item
      */
-    SubmenuItem submenuItem(String text);
+    SubmenuItem submenuItem(Text text);
+
+    /**
+     * Does the same as {@link #submenuItem(Text)} with literal text.
+     *
+     * @param text the item's text, or a menu bar's title
+     * @return a new item
+     */
+    default SubmenuItem submenuItem(final String text) {
+        return this.submenuItem(Text.of(text));
+    }
 
     /**
      * Makes a {@link MenuSeparator}.
@@ -573,7 +697,17 @@ public interface ComponentFactory {
      * @param title the header's title
      * @return a new expander
      */
-    Expander expander(String title);
+    Expander expander(Text title);
+
+    /**
+     * Does the same as {@link #expander(Text)} with literal text.
+     *
+     * @param title the header's title
+     * @return a new expander
+     */
+    default Expander expander(final String title) {
+        return this.expander(Text.of(title));
+    }
 
     /**
      * Makes an empty, side by side {@link SplitPane}, as {@code splitPane(Orientation.HORIZONTAL)} does.
@@ -631,8 +765,19 @@ public interface ComponentFactory {
      * @param text the label shown before the value
      * @return a new cycle button
      */
-    default <T> CycleButton<T> cycleButton(String text) {
+    default <T> CycleButton<T> cycleButton(final Text text) {
         return this.cycleButton(text, String::valueOf);
+    }
+
+    /**
+     * Does the same as {@link #cycleButton(Text)} with literal text.
+     *
+     * @param <T> the type of the values
+     * @param text the label shown before the value
+     * @return a new cycle button
+     */
+    default <T> CycleButton<T> cycleButton(final String text) {
+        return this.cycleButton(Text.of(text));
     }
 
     /**
@@ -643,7 +788,19 @@ public interface ComponentFactory {
      * @param valueLabelFunction returns the text for a value
      * @return a new cycle button
      */
-    <T> CycleButton<T> cycleButton(String text, Function<? super T, String> valueLabelFunction);
+    <T> CycleButton<T> cycleButton(Text text, Function<? super T, String> valueLabelFunction);
+
+    /**
+     * Does the same as {@link #cycleButton(Text, Function)} with literal text.
+     *
+     * @param <T> the type of the values
+     * @param text the label shown before the value
+     * @param valueLabelFunction returns the text for a value
+     * @return a new cycle button
+     */
+    default <T> CycleButton<T> cycleButton(final String text, final Function<? super T, String> valueLabelFunction) {
+        return this.cycleButton(Text.of(text), valueLabelFunction);
+    }
 
     /**
      * Makes a {@link Slider} over the range 0 to 1, at 0, with no step, running the given way.
@@ -687,8 +844,18 @@ public interface ComponentFactory {
      * @param text the caption
      * @return a new busy indicator
      */
-    default BusyIndicator busyIndicator(final String text) {
+    default BusyIndicator busyIndicator(final Text text) {
         return this.busyIndicator().setText(text);
+    }
+
+    /**
+     * Does the same as {@link #busyIndicator(Text)} with literal text.
+     *
+     * @param text the caption
+     * @return a new busy indicator
+     */
+    default BusyIndicator busyIndicator(final String text) {
+        return this.busyIndicator(Text.of(text));
     }
 
     /**

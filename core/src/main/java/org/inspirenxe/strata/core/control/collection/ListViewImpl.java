@@ -32,11 +32,12 @@ import org.inspirenxe.strata.api.geometry.Size;
 import org.inspirenxe.strata.api.input.KeyAction;
 import org.inspirenxe.strata.api.input.MouseButton;
 import org.inspirenxe.strata.api.layout.ScrollPanel;
-import org.inspirenxe.strata.api.text.TextSpan;
+import org.inspirenxe.strata.api.text.Text;
 import org.inspirenxe.strata.api.text.TextStyle;
 import org.inspirenxe.strata.api.theme.Paint;
 import org.inspirenxe.strata.api.theme.Theme;
 import org.inspirenxe.strata.core.layout.ScrollTrack;
+import org.inspirenxe.strata.core.text.TextLine;
 
 import java.util.HashMap;
 import java.util.Iterator;
@@ -74,7 +75,8 @@ public final class ListViewImpl<T> extends CustomComposite<ListView<T>> implemen
     private int selectedIndex;
     private boolean deselectable;
     private boolean activateOnClick;
-    private String placeholder;
+    private Text placeholder;
+    private TextLine placeholderLine = TextLine.EMPTY;
     private boolean rowsStale;
     private int reveal;
 
@@ -272,8 +274,9 @@ public final class ListViewImpl<T> extends CustomComposite<ListView<T>> implemen
     }
 
     @Override
-    public ListView<T> setPlaceholder(final String placeholder) {
+    public ListView<T> setPlaceholder(final Text placeholder) {
         this.placeholder = placeholder;
+        this.invalidateLayout();
         return this;
     }
 
@@ -454,6 +457,8 @@ public final class ListViewImpl<T> extends CustomComposite<ListView<T>> implemen
 
     @Override
     protected Size measure(final MeasureContext context, final float availableWidth, final float availableHeight) {
+        this.placeholderLine = this.placeholder == null ? TextLine.EMPTY
+                : TextLine.of(this.placeholder, this.placeholderStyle, context.text());
         final float insetWidth = this.border().widths().horizontal();
         final float insetHeight = this.border().widths().vertical();
         final float total = this.totalHeight();
@@ -535,11 +540,10 @@ public final class ListViewImpl<T> extends CustomComposite<ListView<T>> implemen
     protected void paint(final Painter painter, final Rect bounds) {
         this.background.paint(painter, bounds);
         if (this.items.isEmpty()) {
-            if (this.placeholder != null && !this.placeholder.isEmpty()) {
-                final TextSpan span = new TextSpan(this.placeholder, this.placeholderStyle);
-                final float width = this.environment().text().width(span);
-                final float height = this.environment().text().lineHeight(this.placeholderStyle);
-                painter.text(span, bounds.x() + (bounds.width() - width) * 0.5f, bounds.y() + (bounds.height() - height) * 0.5f);
+            final TextLine line = this.placeholderLine;
+            if (!line.isEmpty()) {
+                line.draw(painter, bounds.x() + (bounds.width() - line.width()) * 0.5f,
+                        bounds.y() + (bounds.height() - line.height()) * 0.5f);
             }
             return;
         }

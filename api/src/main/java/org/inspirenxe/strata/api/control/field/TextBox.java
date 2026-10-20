@@ -25,6 +25,7 @@ import org.inspirenxe.strata.api.event.control.RequestEvent;
 import org.inspirenxe.strata.api.event.control.ValueEvent;
 import org.inspirenxe.strata.api.event.control.ValueRequestEvent;
 import org.inspirenxe.strata.api.geometry.Insets;
+import org.inspirenxe.strata.api.text.Text;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -269,7 +270,7 @@ public interface TextBox extends Component<TextBox>, Focusable<TextBox>, HasCurs
      *
      * @return the placeholder; empty for a new box
      */
-    String placeholder();
+    Text placeholder();
 
     /**
      * Sets the hint drawn in the {@value #STYLE_PLACEHOLDER} style while the box is empty, such as
@@ -279,7 +280,17 @@ public interface TextBox extends Component<TextBox>, Focusable<TextBox>, HasCurs
      * @param placeholder the hint, or {@code null} or empty for none
      * @return this box
      */
-    TextBox setPlaceholder(String placeholder);
+    TextBox setPlaceholder(Text placeholder);
+
+    /**
+     * Does the same as {@link #setPlaceholder(Text)} with literal text.
+     *
+     * @param placeholder the hint, or {@code null} or empty for none
+     * @return this box
+     */
+    default TextBox setPlaceholder(final String placeholder) {
+        return this.setPlaceholder(placeholder == null ? null : Text.of(placeholder));
+    }
 
     /**
      * Returns whether the text is masked.

@@ -23,6 +23,7 @@ import org.inspirenxe.strata.api.control.attribute.text.Titled;
 import org.inspirenxe.strata.api.event.EventType;
 import org.inspirenxe.strata.api.event.control.ValueEvent;
 import org.inspirenxe.strata.api.event.control.ValueRequestEvent;
+import org.inspirenxe.strata.api.text.Text;
 
 import java.util.Objects;
 
@@ -94,7 +95,7 @@ public interface Expander extends Component<Expander>, Focusable<Expander>, HasC
      *
      * @return the title text
      */
-    String title();
+    Text title();
 
     /**
      * Replaces the title. A new layout runs.
@@ -102,7 +103,7 @@ public interface Expander extends Component<Expander>, Focusable<Expander>, HasC
      * @param title the title, on one line
      * @return this expander
      */
-    Expander setTitle(String title);
+    Expander setTitle(Text title);
 
     /**
      * Returns the content.
@@ -147,7 +148,7 @@ public interface Expander extends Component<Expander>, Focusable<Expander>, HasC
      * @param expanded whether the content showed
      * @param title the title; never null
      */
-    record State(boolean expanded, String title) {
+    record State(boolean expanded, Text title) {
 
         /**
          * Checks the title.

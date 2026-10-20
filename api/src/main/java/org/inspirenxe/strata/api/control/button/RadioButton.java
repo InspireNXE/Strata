@@ -22,6 +22,7 @@ import org.inspirenxe.strata.api.component.HasTooltip;
 import org.inspirenxe.strata.api.control.attribute.text.HasText;
 import org.inspirenxe.strata.api.control.attribute.item.SingleSelection;
 import org.inspirenxe.strata.api.control.attribute.value.Toggle;
+import org.inspirenxe.strata.api.text.Text;
 
 import java.util.Objects;
 
@@ -112,7 +113,7 @@ public interface RadioButton extends Component<RadioButton>, Focusable<RadioButt
      *
      * @return the caption text
      */
-    String text();
+    Text text();
 
     /**
      * Replaces the caption. A new layout runs.
@@ -120,7 +121,7 @@ public interface RadioButton extends Component<RadioButton>, Focusable<RadioButt
      * @param text the caption, on one line; may be empty for a box alone
      * @return this button
      */
-    RadioButton setText(String text);
+    RadioButton setText(Text text);
 
     /**
      * Returns the group this button belongs to.
@@ -154,7 +155,7 @@ public interface RadioButton extends Component<RadioButton>, Focusable<RadioButt
      * @param selected whether the button was {@linkplain #isSelected() selected}
      * @param text the caption; never null
      */
-    record State(boolean selected, String text) {
+    record State(boolean selected, Text text) {
 
         /**
          * Checks the text.

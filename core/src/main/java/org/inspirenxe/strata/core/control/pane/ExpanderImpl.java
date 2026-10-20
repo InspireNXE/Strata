@@ -31,12 +31,13 @@ import org.inspirenxe.strata.api.geometry.Size;
 import org.inspirenxe.strata.api.input.Key;
 import org.inspirenxe.strata.api.input.KeyAction;
 import org.inspirenxe.strata.api.input.MouseButton;
+import org.inspirenxe.strata.api.text.Text;
 import org.inspirenxe.strata.api.text.TextMetrics;
-import org.inspirenxe.strata.api.text.TextSpan;
 import org.inspirenxe.strata.api.text.TextStyle;
 import org.inspirenxe.strata.api.theme.Paint;
 import org.inspirenxe.strata.api.theme.Theme;
 import org.inspirenxe.strata.core.control.Rings;
+import org.inspirenxe.strata.core.text.TextLine;
 
 import java.util.Objects;
 
@@ -50,7 +51,7 @@ public final class ExpanderImpl extends CustomComposite<Expander> implements Exp
      */
     public static final float PADDING = 4f;
 
-    private String title;
+    private Text title;
     private Component<?> content;
     private boolean expanded;
     private float headerHeight;
@@ -63,8 +64,8 @@ public final class ExpanderImpl extends CustomComposite<Expander> implements Exp
     private TextStyle disabledTextStyle;
 
     // Computed during measure
-    private TextSpan span;
-    private TextSpan disabledSpan;
+    private TextLine span;
+    private TextLine disabledSpan;
     private float lineHeight;
 
     /**
@@ -74,25 +75,25 @@ public final class ExpanderImpl extends CustomComposite<Expander> implements Exp
      * @param title the header's title
      */
     @SuppressWarnings("this-escape")
-    public ExpanderImpl(final ComponentFactory ui, final String title) {
+    public ExpanderImpl(final ComponentFactory ui, final Text title) {
         super(ui);
         this.title = Objects.requireNonNull(title, "title");
         this.header = Paint.NONE;
         this.headerHovered = Paint.NONE;
         this.textStyle = TextStyle.DEFAULT;
         this.disabledTextStyle = TextStyle.DEFAULT;
-        this.span = TextSpan.of(title);
+        this.span = TextLine.EMPTY;
         this.disabledSpan = this.span;
         this.pointerY = Float.NaN;
     }
 
     @Override
-    public String title() {
+    public Text title() {
         return this.title;
     }
 
     @Override
-    public Expander setTitle(final String title) {
+    public Expander setTitle(final Text title) {
         this.title = Objects.requireNonNull(title, "title");
         this.invalidateLayout();
         return this;
@@ -174,12 +175,12 @@ public final class ExpanderImpl extends CustomComposite<Expander> implements Exp
     @Override
     protected Size measure(final MeasureContext context, final float availableWidth, final float availableHeight) {
         final TextMetrics metrics = context.text();
-        this.span = new TextSpan(this.title, this.textStyle);
-        this.disabledSpan = new TextSpan(this.title, this.disabledTextStyle);
-        this.lineHeight = Math.max(metrics.lineHeight(this.textStyle), metrics.lineHeight(this.disabledTextStyle));
+        this.span = TextLine.of(this.title, this.textStyle, metrics);
+        this.disabledSpan = TextLine.of(this.title, this.disabledTextStyle, metrics);
+        this.lineHeight = Math.max(this.span.height(), this.disabledSpan.height());
         this.headerHeight = this.lineHeight + 6f;
         final float headerWidth = PADDING + Rings.ARROW_LONG + PADDING
-                + Math.max(metrics.width(this.span), metrics.width(this.disabledSpan)) + PADDING;
+                + Math.max(this.span.width(), this.disabledSpan.width()) + PADDING;
         if (!this.expanded || this.content == null) {
             return new Size(headerWidth, this.headerHeight);
         }
@@ -210,7 +211,7 @@ public final class ExpanderImpl extends CustomComposite<Expander> implements Exp
             Rings.right(painter, color, arrowX + (Rings.ARROW_LONG - Rings.ARROW_SHORT) * 0.5f,
                     head.y() + (head.height() - Rings.ARROW_LONG) * 0.5f);
         }
-        painter.text(enabled ? this.span : this.disabledSpan, arrowX + Rings.ARROW_LONG + PADDING,
+        (enabled ? this.span : this.disabledSpan).draw(painter, arrowX + Rings.ARROW_LONG + PADDING,
                 head.y() + (head.height() - this.lineHeight) * 0.5f);
     }
 

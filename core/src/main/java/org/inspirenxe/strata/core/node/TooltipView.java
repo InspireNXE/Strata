@@ -22,6 +22,7 @@ import org.inspirenxe.strata.api.extension.MeasureContext;
 import org.inspirenxe.strata.api.extension.Painter;
 import org.inspirenxe.strata.api.geometry.Rect;
 import org.inspirenxe.strata.api.geometry.Size;
+import org.inspirenxe.strata.api.text.Text;
 import org.inspirenxe.strata.api.text.TextMetrics;
 import org.inspirenxe.strata.api.text.TextSpan;
 import org.inspirenxe.strata.api.text.TextStyle;
@@ -79,13 +80,10 @@ final class TooltipView extends CustomComponent<TooltipView> {
         final TextMetrics metrics = context.text();
         this.lines.clear();
         this.lineHeights.clear();
-        if (this.tooltip instanceof Tooltip.Text text) {
-            for (final List<TextSpan> line : RichText.wrap(List.of(new TextSpan(text.text(), this.textStyle)),
-                    Float.POSITIVE_INFINITY, metrics)) {
-                this.lines.add(line);
+        if (this.tooltip instanceof final Tooltip.Lines lines) {
+            for (final Text text : lines.lines()) {
+                this.lines.addAll(RichText.wrap(text.resolve(this.textStyle), Float.POSITIVE_INFINITY, metrics));
             }
-        } else if (this.tooltip instanceof Tooltip.Lines lines) {
-            this.lines.addAll(lines.lines());
         }
         float width = 0f;
         float height = 0f;

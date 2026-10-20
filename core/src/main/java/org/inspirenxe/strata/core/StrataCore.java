@@ -15,14 +15,19 @@
  */
 package org.inspirenxe.strata.core;
 
+import org.inspirenxe.strata.api.text.Text;
 import org.inspirenxe.strata.api.theme.Theme;
 import org.inspirenxe.strata.api.theme.ThemeRef;
 import org.inspirenxe.strata.core.host.ScreenHostImpl;
 import org.inspirenxe.strata.core.host.ScreenStackImpl;
+import org.inspirenxe.strata.core.text.TextFactoryImpl;
+import org.inspirenxe.strata.core.text.Translations;
 import org.inspirenxe.strata.core.theme.ThemeResolver;
 import org.inspirenxe.strata.spi.Platform;
 import org.inspirenxe.strata.spi.ScreenHost;
 import org.inspirenxe.strata.spi.ScreenStack;
+import org.inspirenxe.strata.spi.TextSource;
+import org.inspirenxe.strata.spi.Translator;
 
 /**
  * Where engine adapters get Strata's implementation. Developers never call this; screens receive a
@@ -31,6 +36,28 @@ import org.inspirenxe.strata.spi.ScreenStack;
 public final class StrataCore {
 
     private StrataCore() {
+    }
+
+    /**
+     * Sets the translator that {@linkplain Text#translatable translated text} reads through, for the whole process.
+     * Open hosts lay out again on their next layout or render. Adapters call this once when they start, and may call
+     * it again to replace the translator.
+     *
+     * @param translator the translator
+     */
+    public static void setTranslator(final Translator translator) {
+        Translations.setTranslator(translator);
+    }
+
+    /**
+     * Wraps an engine's own text as Strata text, so every text operation works on it and it reads anew whenever it
+     * is resolved.
+     *
+     * @param source the engine text
+     * @return the text
+     */
+    public static Text text(final TextSource source) {
+        return TextFactoryImpl.INSTANCE.of(source);
     }
 
     /**

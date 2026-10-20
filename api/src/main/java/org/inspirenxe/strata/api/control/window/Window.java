@@ -22,6 +22,7 @@ import org.inspirenxe.strata.api.event.EventType;
 import org.inspirenxe.strata.api.event.control.ValueEvent;
 import org.inspirenxe.strata.api.event.control.ValueRequestEvent;
 import org.inspirenxe.strata.api.geometry.Size;
+import org.inspirenxe.strata.api.text.Text;
 
 /**
  * A framed panel with a title bar, a close button, and content below the bar. Screens use it as their main frame,
@@ -159,7 +160,7 @@ public interface Window extends Container<Window>, Titled<Window>, Closable<Wind
      *
      * @return the title
      */
-    String title();
+    Text title();
 
     /**
      * Replaces the title.
@@ -167,7 +168,7 @@ public interface Window extends Container<Window>, Titled<Window>, Closable<Wind
      * @param title the title
      * @return this window
      */
-    Window setTitle(String title);
+    Window setTitle(Text title);
 
     /**
      * Returns whether the window can be closed by its close button and Escape.

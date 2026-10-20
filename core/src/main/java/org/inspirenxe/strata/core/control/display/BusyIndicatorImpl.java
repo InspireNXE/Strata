@@ -22,11 +22,11 @@ import org.inspirenxe.strata.api.extension.MeasureContext;
 import org.inspirenxe.strata.api.extension.Painter;
 import org.inspirenxe.strata.api.geometry.Rect;
 import org.inspirenxe.strata.api.geometry.Size;
-import org.inspirenxe.strata.api.text.TextMetrics;
-import org.inspirenxe.strata.api.text.TextSpan;
+import org.inspirenxe.strata.api.text.Text;
 import org.inspirenxe.strata.api.text.TextStyle;
 import org.inspirenxe.strata.api.theme.Paint;
 import org.inspirenxe.strata.api.theme.Theme;
+import org.inspirenxe.strata.core.text.TextLine;
 
 import java.util.Objects;
 import java.util.Set;
@@ -44,11 +44,11 @@ public final class BusyIndicatorImpl extends CustomComponent<BusyIndicator> impl
 
     private final Rect[] dots;
     private Rect dotBounds;
-    private String text;
+    private Text text;
     private Paint dotPaint;
     private Paint activePaint;
     private TextStyle textStyle;
-    private TextSpan span;
+    private TextLine line;
     private float textWidth;
     private float lineHeight;
 
@@ -61,20 +61,20 @@ public final class BusyIndicatorImpl extends CustomComponent<BusyIndicator> impl
         super(ui);
         this.dots = new Rect[DOT_COUNT];
         this.dotBounds = null;
-        this.text = "";
+        this.text = Text.empty();
         this.dotPaint = Paint.NONE;
         this.activePaint = Paint.NONE;
         this.textStyle = TextStyle.DEFAULT;
-        this.span = TextSpan.of("");
+        this.line = TextLine.EMPTY;
     }
 
     @Override
-    public String text() {
+    public Text text() {
         return this.text;
     }
 
     @Override
-    public BusyIndicator setText(final String text) {
+    public BusyIndicator setText(final Text text) {
         this.text = Objects.requireNonNull(text, "text");
         this.invalidateLayout();
         return this;
@@ -94,15 +94,14 @@ public final class BusyIndicatorImpl extends CustomComponent<BusyIndicator> impl
 
     @Override
     protected Size measure(final MeasureContext context, final float availableWidth, final float availableHeight) {
-        if (this.text.isEmpty()) {
+        this.line = TextLine.of(this.text, this.textStyle, context.text());
+        if (this.line.isEmpty()) {
             this.textWidth = 0f;
             this.lineHeight = 0f;
             return new Size(DOTS_WIDTH, DOT_SIZE);
         }
-        final TextMetrics metrics = context.text();
-        this.span = new TextSpan(this.text, this.textStyle);
-        this.textWidth = metrics.width(this.span);
-        this.lineHeight = metrics.lineHeight(this.textStyle);
+        this.textWidth = this.line.width();
+        this.lineHeight = this.line.height();
         return new Size(Math.max(DOTS_WIDTH, this.textWidth), this.lineHeight + DOT_GAP + DOT_SIZE);
     }
 
@@ -121,8 +120,8 @@ public final class BusyIndicatorImpl extends CustomComponent<BusyIndicator> impl
         for (int i = 0; i < DOT_COUNT; i++) {
             (i == lit ? this.activePaint : this.dotPaint).paint(painter, this.dots[i]);
         }
-        if (!this.text.isEmpty()) {
-            painter.text(this.span, bounds.x() + (bounds.width() - this.textWidth) * 0.5f,
+        if (!this.line.isEmpty()) {
+            this.line.draw(painter, bounds.x() + (bounds.width() - this.textWidth) * 0.5f,
                     bounds.bottom() - DOT_SIZE - DOT_GAP - this.lineHeight);
         }
     }

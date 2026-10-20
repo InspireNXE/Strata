@@ -17,6 +17,7 @@ package org.inspirenxe.strata.core.control.pane;
 
 import org.inspirenxe.strata.api.component.Tooltip;
 import org.inspirenxe.strata.api.control.pane.Tab;
+import org.inspirenxe.strata.api.text.Text;
 
 import java.util.Objects;
 import java.util.Optional;
@@ -26,7 +27,7 @@ import java.util.Optional;
  * own and is told of every change.
  */
 public final class TabImpl implements Tab {
-    private String text;
+    private Text text;
     private boolean enabled;
     private Tooltip tooltip;
     private TabBarImpl bar;
@@ -36,18 +37,18 @@ public final class TabImpl implements Tab {
      *
      * @param text the tab's text
      */
-    public TabImpl(final String text) {
+    public TabImpl(final Text text) {
         this.text = Objects.requireNonNull(text, "text");
         this.enabled = true;
     }
 
     @Override
-    public String text() {
+    public Text text() {
         return this.text;
     }
 
     @Override
-    public Tab setText(final String text) {
+    public Tab setText(final Text text) {
         this.text = Objects.requireNonNull(text, "text");
         this.changed();
         return this;
@@ -101,6 +102,6 @@ public final class TabImpl implements Tab {
 
     @Override
     public String toString() {
-        return "Tab[" + this.text + "]";
+        return "Tab[" + this.text.plain() + "]";
     }
 }

@@ -15,9 +15,11 @@
  */
 package org.inspirenxe.strata.api.control.attribute.text;
 
+import org.inspirenxe.strata.api.text.Text;
+
 /**
- * A control or entry that shows one string of text as its caption, such as a button, a check box, a label, a tab or a
- * menu item.
+ * A control or entry that shows text as its caption, such as a button, a check box, a label, a tab or a menu item.
+ * The text may be styled or translated; see {@link Text}.
  *
  * <p>Only Strata implements this interface.</p>
  *
@@ -30,13 +32,23 @@ public interface HasText<S extends HasText<S>> {
      *
      * @return the text, never null; empty when there is none
      */
-    String text();
+    Text text();
 
     /**
      * Replaces the text. The control lays out again if its size depends on it.
      *
+     * @param text the text, or {@link Text#empty()} for none
+     * @return this control
+     */
+    S setText(Text text);
+
+    /**
+     * Replaces the text with literal text in the control's own style.
+     *
      * @param text the text, or an empty string for none
      * @return this control
      */
-    S setText(String text);
+    default S setText(final String text) {
+        return this.setText(Text.of(text));
+    }
 }

@@ -20,6 +20,7 @@ import org.inspirenxe.strata.api.component.HasCursor;
 import org.inspirenxe.strata.api.component.HasTooltip;
 import org.inspirenxe.strata.api.control.attribute.text.HasText;
 import org.inspirenxe.strata.api.layout.HorizontalAlignment;
+import org.inspirenxe.strata.api.text.Text;
 import org.inspirenxe.strata.api.text.TextOverflow;
 import org.inspirenxe.strata.api.text.TextSpan;
 import org.inspirenxe.strata.api.text.TextStyle;
@@ -35,9 +36,9 @@ import java.util.Objects;
  * characters. The label's desired size is its widest line by the number of lines times the line height, all times
  * the {@linkplain #setTextScale text scale}.</p>
  *
- * <p>Text is either plain, drawn in the label's {@linkplain #style() style}, or made of
- * {@linkplain #setSpans spans} that each keep their own style, such as a white item name followed by a gray count.
- * Spans wrap and break like plain text.</p>
+ * <p>The text is {@link Text}: its plain parts are drawn in the label's {@linkplain #style() style}, and styled
+ * parts change that style, such as a white item name followed by a gray count. Styled parts wrap and break like plain
+ * text.</p>
  *
  * <p>With {@link TextOverflow#ELLIPSIS}, a line wider than the label's bounds is cut short and ends in
  * {@code ...}, and the label asks for no more width than it is offered.</p>
@@ -74,31 +75,16 @@ public interface Label extends Component<Label>, HasCursor<Label>, HasTooltip<La
      *
      * @return the text, possibly with {@code \n} line breaks
      */
-    String text();
+    Text text();
 
     /**
-     * Replaces the text with plain text in the label's style, dropping any spans. A new layout runs if it changed.
+     * Replaces the text. Its plain parts are drawn in the label's {@linkplain #style() style}, and styled parts
+     * change that style; see {@link Text}. A new layout runs if it changed.
      *
      * @param text the new text; {@code \n} starts a new line
      * @return this label
      */
-    Label setText(String text);
-
-    /**
-     * Returns the spans.
-     *
-     * @return the spans set with {@link #setSpans}, or an empty list while the text is plain
-     */
-    List<TextSpan> spans();
-
-    /**
-     * Replaces the text with spans drawn one after another, each in its own style. {@link #text()} then returns
-     * their text joined. A {@code \n} inside a span starts a new line. A new layout runs if they changed.
-     *
-     * @param spans the spans, in reading order
-     * @return this label
-     */
-    Label setSpans(List<TextSpan> spans);
+    Label setText(Text text);
 
     /**
      * Returns the text scale.
@@ -189,7 +175,7 @@ public interface Label extends Component<Label>, HasCursor<Label>, HasTooltip<La
      * @param wraps whether the text {@linkplain #wraps() wraps}
      * @param textAlignment how lines are {@linkplain #textAlignment() aligned}; never null
      */
-    record State(String text, TextStyle style, boolean wraps, HorizontalAlignment textAlignment) {
+    record State(Text text, TextStyle style, boolean wraps, HorizontalAlignment textAlignment) {
 
         /**
          * Checks the fields that must not be null.

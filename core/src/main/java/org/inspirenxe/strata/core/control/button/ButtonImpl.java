@@ -29,13 +29,14 @@ import org.inspirenxe.strata.api.geometry.Size;
 import org.inspirenxe.strata.api.input.Key;
 import org.inspirenxe.strata.api.input.KeyAction;
 import org.inspirenxe.strata.api.input.MouseButton;
+import org.inspirenxe.strata.api.text.Text;
 import org.inspirenxe.strata.api.text.TextMetrics;
-import org.inspirenxe.strata.api.text.TextSpan;
 import org.inspirenxe.strata.api.text.TextStyle;
 import org.inspirenxe.strata.api.theme.Paint;
 import org.inspirenxe.strata.api.theme.SpriteId;
 import org.inspirenxe.strata.api.theme.Theme;
 import org.inspirenxe.strata.api.visual.Visual;
+import org.inspirenxe.strata.core.text.TextLine;
 
 import java.util.Objects;
 import java.util.Set;
@@ -66,7 +67,7 @@ public final class ButtonImpl extends CustomComponent<Button> implements Button 
     private static final int DISABLED_ICON_TINT = 0xFF808080;
     private static final Set<String> REQUIRED = Set.of(STYLE_NORMAL, STYLE_HOVERED, STYLE_PRESSED, STYLE_DISABLED);
 
-    private String text;
+    private Text text;
     private Insets textPadding;
     private SpriteId iconSprite;
     private Visual iconVisual;
@@ -86,9 +87,9 @@ public final class ButtonImpl extends CustomComponent<Button> implements Button 
     private TextStyle linkDisabledTextStyle;
 
     // Computed during measure. Both captions are kept so enabling or disabling the button needs no relayout
-    private TextSpan caption;
-    private TextSpan disabledCaption;
-    private TextSpan hoveredCaption;
+    private TextLine caption;
+    private TextLine disabledCaption;
+    private TextLine hoveredCaption;
     private float captionWidth;
     private float captionHeight;
 
@@ -99,7 +100,7 @@ public final class ButtonImpl extends CustomComponent<Button> implements Button 
      * @param text the caption
      */
     @SuppressWarnings("this-escape")
-    public ButtonImpl(final ComponentFactory ui, final String text) {
+    public ButtonImpl(final ComponentFactory ui, final Text text) {
         super(ui);
         this.text = Objects.requireNonNull(text, "text");
         this.iconWidth = 16f;
@@ -114,7 +115,7 @@ public final class ButtonImpl extends CustomComponent<Button> implements Button 
         this.linkTextStyle = TextStyle.DEFAULT;
         this.linkHoveredTextStyle = TextStyle.DEFAULT;
         this.linkDisabledTextStyle = TextStyle.DEFAULT;
-        this.caption = TextSpan.of(text);
+        this.caption = TextLine.EMPTY;
         this.disabledCaption = this.caption;
         this.hoveredCaption = this.caption;
         this.setCursor(CursorKind.HAND);
@@ -122,12 +123,12 @@ public final class ButtonImpl extends CustomComponent<Button> implements Button 
     }
 
     @Override
-    public String text() {
+    public Text text() {
         return this.text;
     }
 
     @Override
-    public Button setText(final String text) {
+    public Button setText(final Text text) {
         this.text = Objects.requireNonNull(text, "text");
         this.invalidateLayout();
         return this;
@@ -225,7 +226,7 @@ public final class ButtonImpl extends CustomComponent<Button> implements Button 
         if (this.link) {
             return Insets.NONE;
         }
-        return this.hasIcon() && this.text.isEmpty() ? Insets.of(2f, 2f) : Insets.of(8f, 5f);
+        return this.hasIcon() && this.caption.isEmpty() ? Insets.of(2f, 2f) : Insets.of(8f, 5f);
     }
 
     @Override
@@ -270,16 +271,16 @@ public final class ButtonImpl extends CustomComponent<Button> implements Button 
         final TextStyle normalStyle = this.link ? this.linkTextStyle : this.textStyle;
         final TextStyle hoveredStyle = this.link ? this.linkHoveredTextStyle : this.textStyle;
         final TextStyle disabledStyle = this.link ? this.linkDisabledTextStyle : this.disabledTextStyle;
-        this.caption = new TextSpan(this.text, normalStyle);
-        this.hoveredCaption = new TextSpan(this.text, hoveredStyle);
-        this.disabledCaption = new TextSpan(this.text, disabledStyle);
-        this.captionWidth = Math.max(metrics.width(this.caption),
-                Math.max(metrics.width(this.hoveredCaption), metrics.width(this.disabledCaption)));
-        this.captionHeight = Math.max(metrics.lineHeight(normalStyle),
-                Math.max(metrics.lineHeight(hoveredStyle), metrics.lineHeight(disabledStyle)));
+        this.caption = TextLine.of(this.text, normalStyle, metrics);
+        this.hoveredCaption = TextLine.of(this.text, hoveredStyle, metrics);
+        this.disabledCaption = TextLine.of(this.text, disabledStyle, metrics);
+        this.captionWidth = Math.max(this.caption.width(),
+                Math.max(this.hoveredCaption.width(), this.disabledCaption.width()));
+        this.captionHeight = Math.max(this.caption.height(),
+                Math.max(this.hoveredCaption.height(), this.disabledCaption.height()));
         final boolean icon = this.hasIcon();
-        final boolean iconOnly = icon && this.text.isEmpty();
-        final float contentWidth = (icon ? this.iconWidth : 0f) + (icon && !this.text.isEmpty() ? ICON_GAP : 0f)
+        final boolean iconOnly = icon && this.caption.isEmpty();
+        final float contentWidth = (icon ? this.iconWidth : 0f) + (icon && !this.caption.isEmpty() ? ICON_GAP : 0f)
                 + this.captionWidth;
         final float contentHeight = iconOnly ? this.iconHeight : Math.max(this.captionHeight, icon ? this.iconHeight : 0f);
         final Insets padding = this.padding();
@@ -312,7 +313,7 @@ public final class ButtonImpl extends CustomComponent<Button> implements Button 
         }
 
         final boolean icon = this.hasIcon();
-        final boolean hasText = !this.text.isEmpty();
+        final boolean hasText = !this.caption.isEmpty();
         final float contentWidth = (icon ? this.iconWidth : 0f) + (icon && hasText ? ICON_GAP : 0f)
                 + (hasText ? this.captionWidth : 0f);
         float x = bounds.x() + (bounds.width() - contentWidth) * 0.5f;
@@ -328,7 +329,7 @@ public final class ButtonImpl extends CustomComponent<Button> implements Button 
             x += this.iconWidth + ICON_GAP;
         }
         if (hasText) {
-            final TextSpan shown;
+            final TextLine shown;
             if (!enabled) {
                 shown = this.disabledCaption;
             } else if (this.link && lit) {
@@ -336,7 +337,7 @@ public final class ButtonImpl extends CustomComponent<Button> implements Button 
             } else {
                 shown = this.caption;
             }
-            painter.text(shown, x, bounds.y() + (bounds.height() - this.captionHeight) * 0.5f);
+            shown.draw(painter, x, bounds.y() + (bounds.height() - this.captionHeight) * 0.5f);
         }
     }
 

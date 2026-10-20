@@ -27,11 +27,12 @@ import org.inspirenxe.strata.api.extension.Painter;
 import org.inspirenxe.strata.api.geometry.Rect;
 import org.inspirenxe.strata.api.geometry.Size;
 import org.inspirenxe.strata.api.input.MouseButton;
+import org.inspirenxe.strata.api.text.Text;
 import org.inspirenxe.strata.api.text.TextMetrics;
-import org.inspirenxe.strata.api.text.TextSpan;
 import org.inspirenxe.strata.api.text.TextStyle;
 import org.inspirenxe.strata.api.theme.Paint;
 import org.inspirenxe.strata.api.theme.Theme;
+import org.inspirenxe.strata.core.text.TextLine;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -63,7 +64,7 @@ public final class MenuBarImpl extends CustomComponent<MenuBar> implements MenuB
     // Computed during measure
     private float[] titleX;
     private float[] titleWidth;
-    private TextSpan[] spans;
+    private TextLine[] spans;
     private float lineHeight;
 
     /**
@@ -81,7 +82,7 @@ public final class MenuBarImpl extends CustomComponent<MenuBar> implements MenuB
         this.disabledTextStyle = TextStyle.DEFAULT;
         this.titleX = new float[0];
         this.titleWidth = new float[0];
-        this.spans = new TextSpan[0];
+        this.spans = new TextLine[0];
     }
 
     @Override
@@ -134,7 +135,7 @@ public final class MenuBarImpl extends CustomComponent<MenuBar> implements MenuB
     }
 
     @Override
-    public MenuBar addMenu(final String title, final Menu menu) {
+    public MenuBar addMenu(final Text title, final Menu menu) {
         return this.addMenu(new SubmenuItemImpl(title).setMenu(menu));
     }
 
@@ -278,14 +279,14 @@ public final class MenuBarImpl extends CustomComponent<MenuBar> implements MenuB
         if (this.titleX.length != count) {
             this.titleX = new float[count];
             this.titleWidth = new float[count];
-            this.spans = new TextSpan[count];
+            this.spans = new TextLine[count];
         }
         float x = 0f;
         for (int i = 0; i < count; i++) {
             final SubmenuItemImpl entry = this.entries.get(i);
-            this.spans[i] = new TextSpan(entry.text(), entry.usable() ? this.textStyle : this.disabledTextStyle);
+            this.spans[i] = TextLine.of(entry.text(), entry.usable() ? this.textStyle : this.disabledTextStyle, metrics);
             this.titleX[i] = x;
-            this.titleWidth[i] = metrics.width(this.spans[i]) + TITLE_PADDING * 2f;
+            this.titleWidth[i] = this.spans[i].width() + TITLE_PADDING * 2f;
             x += this.titleWidth[i];
         }
         this.lineHeight = metrics.lineHeight(this.textStyle);
@@ -311,7 +312,7 @@ public final class MenuBarImpl extends CustomComponent<MenuBar> implements MenuB
             if (i == hover || i == this.openIndex) {
                 this.hovered.paint(painter, new Rect(bounds.x() + this.titleX[i], bounds.y(), this.titleWidth[i], bounds.height()));
             }
-            painter.text(this.spans[i], bounds.x() + this.titleX[i] + TITLE_PADDING, textY);
+            this.spans[i].draw(painter, bounds.x() + this.titleX[i] + TITLE_PADDING, textY);
         }
     }
 

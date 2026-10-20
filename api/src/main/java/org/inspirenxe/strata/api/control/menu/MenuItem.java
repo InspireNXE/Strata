@@ -16,6 +16,7 @@
 package org.inspirenxe.strata.api.control.menu;
 
 import org.inspirenxe.strata.api.control.attribute.text.HasText;
+import org.inspirenxe.strata.api.text.Text;
 
 /**
  * A menu entry that runs a command when chosen, with an optional shortcut hint drawn at its right.
@@ -38,7 +39,7 @@ public non-sealed interface MenuItem extends MenuEntry, HasText<MenuItem> {
      *
      * @return the hint, never null; empty when there is none
      */
-    String shortcut();
+    Text shortcut();
 
     /**
      * Sets the hint drawn at the right of the item, such as {@code "Ctrl+C"}. It is only text and binds no key.
@@ -46,7 +47,17 @@ public non-sealed interface MenuItem extends MenuEntry, HasText<MenuItem> {
      * @param shortcut the hint, or an empty string for none
      * @return this item
      */
-    MenuItem setShortcut(String shortcut);
+    MenuItem setShortcut(Text shortcut);
+
+    /**
+     * Does the same as {@link #setShortcut(Text)} with literal text.
+     *
+     * @param shortcut the hint, or an empty string for none
+     * @return this item
+     */
+    default MenuItem setShortcut(final String shortcut) {
+        return this.setShortcut(Text.of(shortcut));
+    }
 
     /**
      * Returns whether the item can be chosen.

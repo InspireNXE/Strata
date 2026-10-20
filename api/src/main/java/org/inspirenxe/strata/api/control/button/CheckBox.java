@@ -21,6 +21,7 @@ import org.inspirenxe.strata.api.component.HasCursor;
 import org.inspirenxe.strata.api.component.HasTooltip;
 import org.inspirenxe.strata.api.control.attribute.text.HasText;
 import org.inspirenxe.strata.api.control.attribute.value.Toggle;
+import org.inspirenxe.strata.api.text.Text;
 
 import java.util.Objects;
 
@@ -120,7 +121,7 @@ public interface CheckBox extends Component<CheckBox>, Focusable<CheckBox>, HasC
      *
      * @return the caption text
      */
-    String text();
+    Text text();
 
     /**
      * Replaces the caption. A new layout runs.
@@ -128,7 +129,7 @@ public interface CheckBox extends Component<CheckBox>, Focusable<CheckBox>, HasC
      * @param text the caption, on one line; may be empty for a box alone
      * @return this check box
      */
-    CheckBox setText(String text);
+    CheckBox setText(Text text);
 
     /**
      * Returns the size of the square box.
@@ -153,7 +154,7 @@ public interface CheckBox extends Component<CheckBox>, Focusable<CheckBox>, HasC
      * @param selected whether the box was {@linkplain #isSelected() checked}
      * @param text the caption; never null
      */
-    record State(boolean selected, String text) {
+    record State(boolean selected, Text text) {
 
         /**
          * Checks the text.

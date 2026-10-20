@@ -22,6 +22,7 @@ import org.inspirenxe.strata.api.event.Event;
 import org.inspirenxe.strata.api.event.EventHandler;
 import org.inspirenxe.strata.api.event.EventType;
 import org.inspirenxe.strata.api.event.Subscription;
+import org.inspirenxe.strata.api.text.Text;
 import org.inspirenxe.strata.core.event.EventDispatcher;
 import org.inspirenxe.strata.core.event.ValueEventImpl;
 
@@ -59,7 +60,7 @@ public final class RadioGroupImpl<T> implements RadioGroup<T> {
     }
 
     @Override
-    public RadioButton add(final String text, final T value) {
+    public RadioButton add(final Text text, final T value) {
         final RadioButtonImpl button = new RadioButtonImpl(this.ui, this, text);
         this.buttons.add(button);
         this.values.add(value);

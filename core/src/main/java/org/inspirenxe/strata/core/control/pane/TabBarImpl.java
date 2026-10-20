@@ -33,11 +33,12 @@ import org.inspirenxe.strata.api.geometry.Rect;
 import org.inspirenxe.strata.api.geometry.Size;
 import org.inspirenxe.strata.api.input.MouseButton;
 import org.inspirenxe.strata.api.layout.Anchor;
+import org.inspirenxe.strata.api.text.Text;
 import org.inspirenxe.strata.api.text.TextMetrics;
-import org.inspirenxe.strata.api.text.TextSpan;
 import org.inspirenxe.strata.api.text.TextStyle;
 import org.inspirenxe.strata.api.theme.Paint;
 import org.inspirenxe.strata.api.theme.Theme;
+import org.inspirenxe.strata.core.text.TextLine;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -125,7 +126,7 @@ public final class TabBarImpl extends CustomComposite<TabBar> implements TabBar 
     }
 
     @Override
-    public TabBar addTab(final String text) {
+    public TabBar addTab(final Text text) {
         return this.addTab(new TabImpl(text));
     }
 
@@ -277,9 +278,9 @@ public final class TabBarImpl extends CustomComposite<TabBar> implements TabBar 
         private TextStyle selectedText;
         private TextStyle disabledText;
         private float lineHeight;
-        private TextSpan span;
-        private TextSpan selectedSpan;
-        private TextSpan disabledSpan;
+        private TextLine span;
+        private TextLine selectedSpan;
+        private TextLine disabledSpan;
         private float textWidth;
 
         @SuppressWarnings("this-escape")
@@ -295,7 +296,7 @@ public final class TabBarImpl extends CustomComposite<TabBar> implements TabBar 
             this.textStyle = TextStyle.DEFAULT;
             this.selectedText = TextStyle.DEFAULT;
             this.disabledText = TextStyle.DEFAULT;
-            this.span = TextSpan.of(tab.text());
+            this.span = TextLine.EMPTY;
             this.selectedSpan = this.span;
             this.disabledSpan = this.span;
             this.setAnchor(Anchor.FILL);
@@ -330,12 +331,12 @@ public final class TabBarImpl extends CustomComposite<TabBar> implements TabBar 
         @Override
         protected Size measure(final MeasureContext context, final float availableWidth, final float availableHeight) {
             final TextMetrics metrics = context.text();
-            final String text = this.tab.text();
-            this.span = new TextSpan(text, this.textStyle);
-            this.selectedSpan = new TextSpan(text, this.selectedText);
-            this.disabledSpan = new TextSpan(text, this.disabledText);
-            this.textWidth = Math.max(metrics.width(this.span), metrics.width(this.selectedSpan));
-            this.lineHeight = Math.max(metrics.lineHeight(this.textStyle), metrics.lineHeight(this.selectedText));
+            final Text text = this.tab.text();
+            this.span = TextLine.of(text, this.textStyle, metrics);
+            this.selectedSpan = TextLine.of(text, this.selectedText, metrics);
+            this.disabledSpan = TextLine.of(text, this.disabledText, metrics);
+            this.textWidth = Math.max(this.span.width(), this.selectedSpan.width());
+            this.lineHeight = Math.max(this.span.height(), this.selectedSpan.height());
             return new Size(this.textWidth + TAB_PADDING * 2f, this.lineHeight + 7f);
         }
 
@@ -345,7 +346,7 @@ public final class TabBarImpl extends CustomComposite<TabBar> implements TabBar 
             // A disabled bar draws every tab disabled, keeping the selected one distinct
             final boolean enabled = this.tab.isEnabled() && this.bar.isEnabled();
             final Paint face;
-            final TextSpan caption;
+            final TextLine caption;
             if (isSelected) {
                 face = enabled ? this.selected : this.selectedDisabled;
                 caption = enabled ? this.selectedSpan : this.disabledSpan;
@@ -357,7 +358,7 @@ public final class TabBarImpl extends CustomComposite<TabBar> implements TabBar 
                 caption = this.span;
             }
             face.paint(painter, bounds);
-            painter.text(caption, bounds.x() + (bounds.width() - this.textWidth) * 0.5f,
+            caption.draw(painter, bounds.x() + (bounds.width() - this.textWidth) * 0.5f,
                     bounds.y() + (bounds.height() - this.lineHeight) * 0.5f + 1f);
         }
 

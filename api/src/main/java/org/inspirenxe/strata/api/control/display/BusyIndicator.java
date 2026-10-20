@@ -17,6 +17,7 @@ package org.inspirenxe.strata.api.control.display;
 
 import org.inspirenxe.strata.api.component.Component;
 import org.inspirenxe.strata.api.control.attribute.text.HasText;
+import org.inspirenxe.strata.api.text.Text;
 
 /**
  * A small sign that something is under way, such as joining a server or loading a list: a row of three dots, one
@@ -76,7 +77,7 @@ public interface BusyIndicator extends Component<BusyIndicator>, HasText<BusyInd
      * @return the caption; empty by default
      */
     @Override
-    String text();
+    Text text();
 
     /**
      * Sets the caption drawn above the dots. A new layout runs, since the size depends on it.
@@ -85,5 +86,5 @@ public interface BusyIndicator extends Component<BusyIndicator>, HasText<BusyInd
      * @return this indicator
      */
     @Override
-    BusyIndicator setText(String text);
+    BusyIndicator setText(Text text);
 }

@@ -21,6 +21,7 @@ import org.inspirenxe.strata.api.component.HasCursor;
 import org.inspirenxe.strata.api.component.HasTooltip;
 import org.inspirenxe.strata.api.control.attribute.text.HasText;
 import org.inspirenxe.strata.api.control.attribute.value.Toggle;
+import org.inspirenxe.strata.api.text.Text;
 
 import java.util.Objects;
 
@@ -106,7 +107,7 @@ public interface ToggleSwitch extends Component<ToggleSwitch>, Focusable<ToggleS
      *
      * @return the caption text
      */
-    String text();
+    Text text();
 
     /**
      * Replaces the caption. A new layout runs.
@@ -114,7 +115,7 @@ public interface ToggleSwitch extends Component<ToggleSwitch>, Focusable<ToggleS
      * @param text the caption, on one line; may be empty for a switch alone
      * @return this switch
      */
-    ToggleSwitch setText(String text);
+    ToggleSwitch setText(Text text);
 
     /**
      * A switch's own state in a {@link org.inspirenxe.strata.api.component.ComponentSnapshot}.
@@ -122,7 +123,7 @@ public interface ToggleSwitch extends Component<ToggleSwitch>, Focusable<ToggleS
      * @param selected whether the switch was {@linkplain #isSelected() on}
      * @param text the caption; never null
      */
-    record State(boolean selected, String text) {
+    record State(boolean selected, Text text) {
 
         /**
          * Checks the text.

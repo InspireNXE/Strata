@@ -15,6 +15,8 @@
  */
 package org.inspirenxe.strata.api.control.attribute.text;
 
+import org.inspirenxe.strata.api.text.Text;
+
 /**
  * A control or entry with a title over its content, such as a window, an expander or a table column.
  *
@@ -29,13 +31,23 @@ public interface Titled<S extends Titled<S>> {
      *
      * @return the title, never null; empty when there is none
      */
-    String title();
+    Text title();
 
     /**
      * Replaces the title.
      *
+     * @param title the title, or {@link Text#empty()} for none
+     * @return this control
+     */
+    S setTitle(Text title);
+
+    /**
+     * Replaces the title with literal text in the control's own style.
+     *
      * @param title the title, or an empty string for none
      * @return this control
      */
-    S setTitle(String title);
+    default S setTitle(final String title) {
+        return this.setTitle(Text.of(title));
+    }
 }

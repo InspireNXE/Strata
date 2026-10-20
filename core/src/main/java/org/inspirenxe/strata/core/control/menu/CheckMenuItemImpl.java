@@ -17,6 +17,7 @@ package org.inspirenxe.strata.core.control.menu;
 
 import org.inspirenxe.strata.api.control.menu.CheckMenuItem;
 import org.inspirenxe.strata.api.control.menu.MenuEntry;
+import org.inspirenxe.strata.api.text.Text;
 
 import java.util.Objects;
 import java.util.function.Consumer;
@@ -25,7 +26,7 @@ import java.util.function.Consumer;
  * The core {@link CheckMenuItem}: enabled and unchecked, with an action that does nothing until set.
  */
 public final class CheckMenuItemImpl extends MenuEntryImpl implements CheckMenuItem {
-    private String text;
+    private Text text;
     private boolean selected;
     private boolean enabled;
     private Consumer<Boolean> action;
@@ -35,7 +36,7 @@ public final class CheckMenuItemImpl extends MenuEntryImpl implements CheckMenuI
      *
      * @param text the item's text
      */
-    public CheckMenuItemImpl(final String text) {
+    public CheckMenuItemImpl(final Text text) {
         this.text = Objects.requireNonNull(text, "text");
         this.enabled = true;
         this.action = selected -> { };
@@ -47,7 +48,7 @@ public final class CheckMenuItemImpl extends MenuEntryImpl implements CheckMenuI
     }
 
     @Override
-    String label() {
+    Text label() {
         return this.text;
     }
 
@@ -62,12 +63,12 @@ public final class CheckMenuItemImpl extends MenuEntryImpl implements CheckMenuI
     }
 
     @Override
-    public String text() {
+    public Text text() {
         return this.text;
     }
 
     @Override
-    public CheckMenuItem setText(final String text) {
+    public CheckMenuItem setText(final Text text) {
         this.text = Objects.requireNonNull(text, "text");
         this.changed();
         return this;
@@ -109,6 +110,6 @@ public final class CheckMenuItemImpl extends MenuEntryImpl implements CheckMenuI
 
     @Override
     public String toString() {
-        return "CheckMenuItem[" + this.text + "]";
+        return "CheckMenuItem[" + this.text.plain() + "]";
     }
 }

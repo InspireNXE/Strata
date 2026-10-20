@@ -83,7 +83,7 @@ class AttributesTest {
             AttributesTest.this.panel.add(box, 0, 0).add(flip, 0, 30).add(a, 0, 60).add(b, 0, 90);
             AttributesTest.this.test.show(AttributesTest.this.panel);
             AttributesTest.this.panel.onEvent(Toggle.TOGGLED, e -> AttributesTest.this.heard.add(
-                    ((HasText<?>) e.target()).text() + " " + e.value()));
+                    ((HasText<?>) e.target()).text().plain() + " " + e.value()));
             box.setSelected(true);
             flip.toggle();
             group.selectItem("a");

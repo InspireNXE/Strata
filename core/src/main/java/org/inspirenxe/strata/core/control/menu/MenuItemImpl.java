@@ -17,6 +17,7 @@ package org.inspirenxe.strata.core.control.menu;
 
 import org.inspirenxe.strata.api.control.menu.MenuEntry;
 import org.inspirenxe.strata.api.control.menu.MenuItem;
+import org.inspirenxe.strata.api.text.Text;
 
 import java.util.Objects;
 
@@ -24,8 +25,8 @@ import java.util.Objects;
  * The core {@link MenuItem}: enabled, with no shortcut and an action that does nothing until set.
  */
 public final class MenuItemImpl extends MenuEntryImpl implements MenuItem {
-    private String text;
-    private String shortcut;
+    private Text text;
+    private Text shortcut;
     private boolean enabled;
     private Runnable action;
 
@@ -34,9 +35,9 @@ public final class MenuItemImpl extends MenuEntryImpl implements MenuItem {
      *
      * @param text the item's text
      */
-    public MenuItemImpl(final String text) {
+    public MenuItemImpl(final Text text) {
         this.text = Objects.requireNonNull(text, "text");
-        this.shortcut = "";
+        this.shortcut = Text.empty();
         this.enabled = true;
         this.action = () -> { };
     }
@@ -47,12 +48,12 @@ public final class MenuItemImpl extends MenuEntryImpl implements MenuItem {
     }
 
     @Override
-    String label() {
+    Text label() {
         return this.text;
     }
 
     @Override
-    String hint() {
+    Text hint() {
         return this.shortcut;
     }
 
@@ -62,24 +63,24 @@ public final class MenuItemImpl extends MenuEntryImpl implements MenuItem {
     }
 
     @Override
-    public String text() {
+    public Text text() {
         return this.text;
     }
 
     @Override
-    public MenuItem setText(final String text) {
+    public MenuItem setText(final Text text) {
         this.text = Objects.requireNonNull(text, "text");
         this.changed();
         return this;
     }
 
     @Override
-    public String shortcut() {
+    public Text shortcut() {
         return this.shortcut;
     }
 
     @Override
-    public MenuItem setShortcut(final String shortcut) {
+    public MenuItem setShortcut(final Text shortcut) {
         this.shortcut = Objects.requireNonNull(shortcut, "shortcut");
         this.changed();
         return this;
@@ -110,6 +111,6 @@ public final class MenuItemImpl extends MenuEntryImpl implements MenuItem {
 
     @Override
     public String toString() {
-        return "MenuItem[" + this.text + "]";
+        return "MenuItem[" + this.text.plain() + "]";
     }
 }

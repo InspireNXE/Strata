@@ -24,6 +24,7 @@ import org.inspirenxe.strata.api.control.pane.TabBar;
 import org.inspirenxe.strata.api.geometry.Insets;
 import org.inspirenxe.strata.api.geometry.Rect;
 import org.inspirenxe.strata.api.layout.Anchor;
+import org.inspirenxe.strata.api.text.Text;
 import org.inspirenxe.strata.api.text.TextOverflow;
 import org.inspirenxe.strata.api.text.TextSpan;
 import org.inspirenxe.strata.api.theme.SpriteId;
@@ -99,7 +100,7 @@ class ControlPolishTest {
         final TestHost test = new TestHost(200, 100);
         final TextBox box = test.factory().textBox().setPlaceholder("Search items").setWidth(120);
         test.show(test.factory().absolutePanel().add(box, 0, 0));
-        assertEquals("Search items", box.placeholder());
+        assertEquals("Search items", box.placeholder().plain());
         assertEquals("", box.text());
 
         final RecordingCanvas empty = new RecordingCanvas();
@@ -111,8 +112,8 @@ class ControlPolishTest {
         test.host().render(typed);
         assertEquals(List.of("apple"), typed.texts);
 
-        box.setPlaceholder(null);
-        assertEquals("", box.placeholder());
+        box.setPlaceholder((Text) null);
+        assertEquals("", box.placeholder().plain());
     }
 
     private record Fill(Rect rect, int argb) {

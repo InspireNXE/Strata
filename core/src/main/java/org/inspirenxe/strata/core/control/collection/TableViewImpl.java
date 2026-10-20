@@ -35,14 +35,14 @@ import org.inspirenxe.strata.api.geometry.Size;
 import org.inspirenxe.strata.api.input.MouseButton;
 import org.inspirenxe.strata.api.layout.Anchor;
 import org.inspirenxe.strata.api.layout.GridLength;
+import org.inspirenxe.strata.api.text.Text;
 import org.inspirenxe.strata.api.text.TextMetrics;
-import org.inspirenxe.strata.api.text.TextSpan;
 import org.inspirenxe.strata.api.text.TextStyle;
 import org.inspirenxe.strata.api.theme.Paint;
 import org.inspirenxe.strata.api.theme.Theme;
 import org.inspirenxe.strata.core.control.Rings;
-import org.inspirenxe.strata.core.text.RichText;
 import org.inspirenxe.strata.core.node.ComponentFactoryImpl;
+import org.inspirenxe.strata.core.text.TextLine;
 
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -83,7 +83,7 @@ public final class TableViewImpl<T> extends CustomComposite<TableView<T>> implem
     // Column offsets and widths, relative to the start of a row
     private float[] columnX;
     private float[] columnWidth;
-    private TextSpan[] titles;
+    private TextLine[] titles;
     private float rowsX;
 
     // Theme
@@ -107,7 +107,7 @@ public final class TableViewImpl<T> extends CustomComposite<TableView<T>> implem
         this.ascending = true;
         this.columnX = new float[0];
         this.columnWidth = new float[0];
-        this.titles = new TextSpan[0];
+        this.titles = new TextLine[0];
         this.headerPaint = Paint.NONE;
         this.headerHovered = Paint.NONE;
         this.grid = Paint.NONE;
@@ -158,13 +158,13 @@ public final class TableViewImpl<T> extends CustomComposite<TableView<T>> implem
     }
 
     @Override
-    public TableView<T> addColumn(final String title, final GridLength width,
+    public TableView<T> addColumn(final Text title, final GridLength width,
                                   final Function<? super T, ? extends Component<?>> cellFactory) {
         return this.addColumn(new TableColumnImpl<T>(this.ui, title).setWidth(width).setCellFactory(cellFactory));
     }
 
     @Override
-    public TableView<T> addTextColumn(final String title, final GridLength width, final Function<? super T, String> text) {
+    public TableView<T> addTextColumn(final Text title, final GridLength width, final Function<? super T, String> text) {
         return this.addColumn(new TableColumnImpl<T>(this.ui, title).setWidth(width).setCellText(text));
     }
 
@@ -358,7 +358,7 @@ public final class TableViewImpl<T> extends CustomComposite<TableView<T>> implem
     }
 
     @Override
-    public TableView<T> setPlaceholder(final String placeholder) {
+    public TableView<T> setPlaceholder(final Text placeholder) {
         this.list.setPlaceholder(placeholder);
         return this;
     }
@@ -454,7 +454,7 @@ public final class TableViewImpl<T> extends CustomComposite<TableView<T>> implem
 
     private float autoWidth(final TextMetrics metrics, final int column) {
         final TableColumnImpl<T> definition = this.columns.get(column);
-        return metrics.width(new TextSpan(definition.title(), this.headerText)) + CELL_PADDING * 2f
+        return TextLine.of(definition.title(), this.headerText, metrics).width() + CELL_PADDING * 2f
                 + (definition.isSortable() ? ARROW_ROOM : 0f);
     }
 
@@ -490,7 +490,7 @@ public final class TableViewImpl<T> extends CustomComposite<TableView<T>> implem
         if (this.columnX.length != count) {
             this.columnX = new float[count];
             this.columnWidth = new float[count];
-            this.titles = new TextSpan[count];
+            this.titles = new TextLine[count];
         }
         float used = 0f;
         float weights = 0f;
@@ -515,9 +515,8 @@ public final class TableViewImpl<T> extends CustomComposite<TableView<T>> implem
             this.columnX[i] = x;
             x += this.columnWidth[i];
             final float room = this.columnWidth[i] - CELL_PADDING * 2f - (this.isSortable(i) ? ARROW_ROOM : 0f);
-            final List<TextSpan> title = RichText.ellipsize(List.of(new TextSpan(this.columns.get(i).title(), this.headerText)),
-                    room, metrics);
-            this.titles[i] = title.isEmpty() ? new TextSpan("", this.headerText) : title.getFirst();
+            this.titles[i] = TextLine.of(this.columns.get(i).title(), this.headerText, metrics)
+                    .ellipsize(room, this.headerText, metrics);
         }
     }
 
@@ -571,7 +570,7 @@ public final class TableViewImpl<T> extends CustomComposite<TableView<T>> implem
                 if (i == hovered && this.table.isSortable(i)) {
                     this.table.headerHovered.paint(painter, cell);
                 }
-                painter.text(this.table.titles[i], cell.x() + CELL_PADDING, textY);
+                this.table.titles[i].draw(painter, cell.x() + CELL_PADDING, textY);
                 if (this.table.sortColumn != null && this.table.columns.get(i) == this.table.sortColumn) {
                     final float arrowX = cell.right() - CELL_PADDING - Rings.ARROW_LONG;
                     final float arrowY = cell.y() + (cell.height() - Rings.ARROW_SHORT) * 0.5f;

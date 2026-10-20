@@ -29,11 +29,12 @@ import org.inspirenxe.strata.api.geometry.Size;
 import org.inspirenxe.strata.api.input.Key;
 import org.inspirenxe.strata.api.input.KeyAction;
 import org.inspirenxe.strata.api.input.MouseButton;
+import org.inspirenxe.strata.api.text.Text;
 import org.inspirenxe.strata.api.text.TextMetrics;
-import org.inspirenxe.strata.api.text.TextSpan;
 import org.inspirenxe.strata.api.text.TextStyle;
 import org.inspirenxe.strata.api.theme.Paint;
 import org.inspirenxe.strata.api.theme.Theme;
+import org.inspirenxe.strata.core.text.TextLine;
 
 import java.util.List;
 import java.util.Objects;
@@ -56,7 +57,8 @@ public final class CycleButtonImpl<T> extends CustomComponent<CycleButton<T>> im
     private static final Set<String> REQUIRED = Set.of(Button.STYLE_NORMAL, Button.STYLE_HOVERED,
             Button.STYLE_PRESSED, Button.STYLE_DISABLED);
 
-    private String text;
+    private Text text;
+    private boolean textEmpty;
     private List<T> items;
     private Function<? super T, String> valueLabelFunction;
     private Function<? super T, ?> keyFunction;
@@ -73,12 +75,10 @@ public final class CycleButtonImpl<T> extends CustomComponent<CycleButton<T>> im
     // Computed during measure
     private float lineHeight;
 
-    // The joined text last painted, with its spans and widths
-    private String shownFor;
-    private TextSpan shown;
-    private TextSpan shownDisabled;
-    private float shownWidth;
-    private float shownDisabledWidth;
+    // The joined text last painted, for the selected index it was made for; -2 when it must be made again
+    private int shownIndex;
+    private TextLine shown;
+    private TextLine shownDisabled;
 
     /**
      * Creates a button with no items.
@@ -88,7 +88,7 @@ public final class CycleButtonImpl<T> extends CustomComponent<CycleButton<T>> im
      * @param valueLabelFunction returns the text for a value
      */
     @SuppressWarnings("this-escape")
-    public CycleButtonImpl(final ComponentFactory ui, final String text,
+    public CycleButtonImpl(final ComponentFactory ui, final Text text,
             final Function<? super T, String> valueLabelFunction) {
         super(ui);
         this.text = Objects.requireNonNull(text, "text");
@@ -96,6 +96,9 @@ public final class CycleButtonImpl<T> extends CustomComponent<CycleButton<T>> im
         this.items = List.of();
         this.keyFunction = Function.identity();
         this.selectedIndex = -1;
+        this.shownIndex = -2;
+        this.shown = TextLine.EMPTY;
+        this.shownDisabled = TextLine.EMPTY;
         this.normal = Paint.NONE;
         this.hoveredPaint = Paint.NONE;
         this.pressedPaint = Paint.NONE;
@@ -112,14 +115,14 @@ public final class CycleButtonImpl<T> extends CustomComponent<CycleButton<T>> im
     // ------------------------------------------------------------------
 
     @Override
-    public String text() {
+    public Text text() {
         return this.text;
     }
 
     @Override
-    public CycleButton<T> setText(final String text) {
+    public CycleButton<T> setText(final Text text) {
         this.text = Objects.requireNonNull(text, "text");
-        this.shownFor = null;
+        this.shownIndex = -2;
         this.invalidateLayout();
         return this;
     }
@@ -127,7 +130,7 @@ public final class CycleButtonImpl<T> extends CustomComponent<CycleButton<T>> im
     @Override
     public CycleButton<T> setValueLabelFunction(final Function<? super T, String> valueLabelFunction) {
         this.valueLabelFunction = Objects.requireNonNull(valueLabelFunction, "valueLabelFunction");
-        this.shownFor = null;
+        this.shownIndex = -2;
         this.invalidateLayout();
         return this;
     }
@@ -152,7 +155,7 @@ public final class CycleButtonImpl<T> extends CustomComponent<CycleButton<T>> im
             }
         }
         this.selectedIndex = index;
-        this.shownFor = null;
+        this.shownIndex = -2;
         this.invalidateLayout();
         if (index != beforeIndex || !this.selected().equals(before)) {
             this.report(SELECTED, index, beforeIndex);
@@ -162,7 +165,7 @@ public final class CycleButtonImpl<T> extends CustomComponent<CycleButton<T>> im
 
     @Override
     public CycleButton<T> refresh() {
-        this.shownFor = null;
+        this.shownIndex = -2;
         this.invalidateLayout();
         return this;
     }
@@ -207,7 +210,7 @@ public final class CycleButtonImpl<T> extends CustomComponent<CycleButton<T>> im
         final int previous = this.selectedIndex;
         if (index != previous) {
             this.selectedIndex = index;
-            this.shownFor = null;
+            this.shownIndex = -2;
             this.report(SELECTED, index, previous);
         }
         return this;
@@ -267,11 +270,11 @@ public final class CycleButtonImpl<T> extends CustomComponent<CycleButton<T>> im
     /**
      * Joins the label and a value as shown: {@code label: value}, or whichever of them is not empty.
      */
-    private String join(final String value) {
-        if (this.text.isEmpty()) {
-            return value;
+    private Text join(final String value) {
+        if (this.textEmpty) {
+            return Text.of(value);
         }
-        return value.isEmpty() ? this.text : this.text + ": " + value;
+        return value.isEmpty() ? this.text : this.text.append(": " + value);
     }
 
     // ------------------------------------------------------------------
@@ -292,20 +295,24 @@ public final class CycleButtonImpl<T> extends CustomComponent<CycleButton<T>> im
         this.focusRing = theme.paintOr(Button.STYLE_FOCUS, Paint.NONE);
         this.textStyle = theme.textStyleOr(Button.STYLE_TEXT, TextStyle.DEFAULT);
         this.disabledTextStyle = theme.textStyleOr(Button.STYLE_TEXT_DISABLED, this.textStyle);
-        this.shownFor = null;
+        this.shownIndex = -2;
     }
 
     @Override
     protected Size measure(final MeasureContext context, final float availableWidth, final float availableHeight) {
         final TextMetrics metrics = context.text();
-        float widest = metrics.width(new TextSpan(this.join(""), this.textStyle));
+        this.textEmpty = this.text.isEmpty();
+        float widest = TextLine.of(this.join(""), this.textStyle, metrics).width();
+        float height = Math.max(metrics.lineHeight(this.textStyle), metrics.lineHeight(this.disabledTextStyle));
         for (int i = 0; i < this.items.size(); i++) {
-            final String joined = this.join(this.valueLabel(i));
-            widest = Math.max(widest, Math.max(metrics.width(new TextSpan(joined, this.textStyle)),
-                    metrics.width(new TextSpan(joined, this.disabledTextStyle))));
+            final Text joined = this.join(this.valueLabel(i));
+            final TextLine line = TextLine.of(joined, this.textStyle, metrics);
+            final TextLine disabledLine = TextLine.of(joined, this.disabledTextStyle, metrics);
+            widest = Math.max(widest, Math.max(line.width(), disabledLine.width()));
+            height = Math.max(height, Math.max(line.height(), disabledLine.height()));
         }
-        this.lineHeight = Math.max(metrics.lineHeight(this.textStyle), metrics.lineHeight(this.disabledTextStyle));
-        this.shownFor = null;
+        this.lineHeight = height;
+        this.shownIndex = -2;
         return new Size(widest + 16f, this.lineHeight + 10f);
     }
 
@@ -331,17 +338,15 @@ public final class CycleButtonImpl<T> extends CustomComponent<CycleButton<T>> im
             this.focusRing.paint(painter, new Rect(bounds.right() - 1f, bounds.y() + 1f, 1f, bounds.height() - 2f));
         }
 
-        final String joined = this.join(this.valueLabel(this.selectedIndex));
-        if (!joined.equals(this.shownFor)) {
+        if (this.selectedIndex != this.shownIndex) {
             final TextMetrics metrics = this.environment().text();
-            this.shown = new TextSpan(joined, this.textStyle);
-            this.shownDisabled = new TextSpan(joined, this.disabledTextStyle);
-            this.shownWidth = metrics.width(this.shown);
-            this.shownDisabledWidth = metrics.width(this.shownDisabled);
-            this.shownFor = joined;
+            final Text joined = this.join(this.valueLabel(this.selectedIndex));
+            this.shown = TextLine.of(joined, this.textStyle, metrics);
+            this.shownDisabled = TextLine.of(joined, this.disabledTextStyle, metrics);
+            this.shownIndex = this.selectedIndex;
         }
-        final float width = enabled ? this.shownWidth : this.shownDisabledWidth;
-        painter.text(enabled ? this.shown : this.shownDisabled, bounds.x() + (bounds.width() - width) * 0.5f,
+        final TextLine line = enabled ? this.shown : this.shownDisabled;
+        line.draw(painter, bounds.x() + (bounds.width() - line.width()) * 0.5f,
                 bounds.y() + (bounds.height() - this.lineHeight) * 0.5f);
     }
 

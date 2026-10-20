@@ -26,6 +26,7 @@ import org.inspirenxe.strata.api.event.EventType;
 import org.inspirenxe.strata.api.event.control.ValueEvent;
 import org.inspirenxe.strata.api.event.control.ValueRequestEvent;
 import org.inspirenxe.strata.api.geometry.Rect;
+import org.inspirenxe.strata.api.text.Text;
 
 import java.util.List;
 import java.util.function.Consumer;
@@ -173,7 +174,18 @@ public interface Menu extends Component<Menu>, Focusable<Menu>, HasCursor<Menu>,
      * @param action run when the item is chosen, after the menus close
      * @return this menu
      */
-    Menu addItem(String text, Runnable action);
+    Menu addItem(Text text, Runnable action);
+
+    /**
+     * Does the same as {@link #addItem(Text, Runnable)} with literal text.
+     *
+     * @param text the item's text
+     * @param action run when the item is chosen, after the menus close
+     * @return this menu
+     */
+    default Menu addItem(final String text, final Runnable action) {
+        return this.addItem(Text.of(text), action);
+    }
 
     /**
      * Adds a command with a shortcut hint.
@@ -183,7 +195,19 @@ public interface Menu extends Component<Menu>, Focusable<Menu>, HasCursor<Menu>,
      * @param action run when the item is chosen, after the menus close
      * @return this menu
      */
-    Menu addItem(String text, String shortcut, Runnable action);
+    Menu addItem(Text text, Text shortcut, Runnable action);
+
+    /**
+     * Does the same as {@link #addItem(Text, Text, Runnable)} with literal text.
+     *
+     * @param text the item's text
+     * @param shortcut the hint drawn at the right, such as {@code "Ctrl+C"}
+     * @param action run when the item is chosen, after the menus close
+     * @return this menu
+     */
+    default Menu addItem(final String text, final String shortcut, final Runnable action) {
+        return this.addItem(Text.of(text), Text.of(shortcut), action);
+    }
 
     /**
      * Adds a {@link CheckMenuItem}, an item with a check mark that flips each time it is chosen.
@@ -193,7 +217,19 @@ public interface Menu extends Component<Menu>, Focusable<Menu>, HasCursor<Menu>,
      * @param action told the new state when the item is chosen, after the menus close
      * @return this menu
      */
-    Menu addCheckItem(String text, boolean checked, Consumer<Boolean> action);
+    Menu addCheckItem(Text text, boolean checked, Consumer<Boolean> action);
+
+    /**
+     * Does the same as {@link #addCheckItem(Text, boolean, Consumer)} with literal text.
+     *
+     * @param text the item's text
+     * @param checked whether it starts checked
+     * @param action told the new state when the item is chosen, after the menus close
+     * @return this menu
+     */
+    default Menu addCheckItem(final String text, final boolean checked, final Consumer<Boolean> action) {
+        return this.addCheckItem(Text.of(text), checked, action);
+    }
 
     /**
      * Adds a {@link SubmenuItem}, an item that opens another menu beside this one.
@@ -204,7 +240,20 @@ public interface Menu extends Component<Menu>, Focusable<Menu>, HasCursor<Menu>,
      * @throws IllegalArgumentException if {@code submenu} is this menu or one this menu opens from, is already a
      *     submenu, or is in a {@link MenuBar}
      */
-    Menu addSubmenu(String text, Menu submenu);
+    Menu addSubmenu(Text text, Menu submenu);
+
+    /**
+     * Does the same as {@link #addSubmenu(Text, Menu)} with literal text.
+     *
+     * @param text the item's text
+     * @param submenu the menu to open beside this one
+     * @return this menu
+     * @throws IllegalArgumentException if {@code submenu} is this menu or one this menu opens from, is already a
+     *     submenu, or is in a {@link MenuBar}
+     */
+    default Menu addSubmenu(final String text, final Menu submenu) {
+        return this.addSubmenu(Text.of(text), submenu);
+    }
 
     /**
      * Adds a {@link MenuSeparator}.

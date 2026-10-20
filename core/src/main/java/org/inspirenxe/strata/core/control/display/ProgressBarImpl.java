@@ -22,11 +22,11 @@ import org.inspirenxe.strata.api.extension.MeasureContext;
 import org.inspirenxe.strata.api.extension.Painter;
 import org.inspirenxe.strata.api.geometry.Rect;
 import org.inspirenxe.strata.api.geometry.Size;
-import org.inspirenxe.strata.api.text.TextMetrics;
-import org.inspirenxe.strata.api.text.TextSpan;
+import org.inspirenxe.strata.api.text.Text;
 import org.inspirenxe.strata.api.text.TextStyle;
 import org.inspirenxe.strata.api.theme.Paint;
 import org.inspirenxe.strata.api.theme.Theme;
+import org.inspirenxe.strata.core.text.TextLine;
 
 import java.util.Objects;
 import java.util.Set;
@@ -63,13 +63,13 @@ public final class ProgressBarImpl extends CustomComponent<ProgressBar> implemen
     private double value;
     private double min;
     private double max;
-    private String text;
+    private Text text;
     private boolean indeterminate;
     private Paint trackPaint;
     private Paint fillPaint;
     private Paint segmentPaint;
     private TextStyle textStyle;
-    private TextSpan span;
+    private TextLine line;
     private float textWidth;
     private float lineHeight;
     // The indeterminate segment at each whole-unit step, for the bounds they were worked out for
@@ -84,14 +84,14 @@ public final class ProgressBarImpl extends CustomComponent<ProgressBar> implemen
     public ProgressBarImpl(final ComponentFactory ui) {
         super(ui);
         this.max = 1.0;
-        this.text = "";
+        this.text = Text.empty();
         this.trackPaint = Paint.NONE;
         this.fillPaint = Paint.NONE;
         this.segmentPaint = Paint.NONE;
         this.segments = NO_SEGMENTS;
         this.segmentBounds = Rect.ZERO;
         this.textStyle = TextStyle.DEFAULT;
-        this.span = TextSpan.of("");
+        this.line = TextLine.EMPTY;
     }
 
     @Override
@@ -153,12 +153,12 @@ public final class ProgressBarImpl extends CustomComponent<ProgressBar> implemen
     }
 
     @Override
-    public String text() {
+    public Text text() {
         return this.text;
     }
 
     @Override
-    public ProgressBar setText(final String text) {
+    public ProgressBar setText(final Text text) {
         this.text = Objects.requireNonNull(text, "text");
         this.invalidateLayout();
         return this;
@@ -179,10 +179,9 @@ public final class ProgressBarImpl extends CustomComponent<ProgressBar> implemen
 
     @Override
     protected Size measure(final MeasureContext context, final float availableWidth, final float availableHeight) {
-        final TextMetrics metrics = context.text();
-        this.span = new TextSpan(this.text, this.textStyle);
-        this.textWidth = metrics.width(this.span);
-        this.lineHeight = metrics.lineHeight(this.textStyle);
+        this.line = TextLine.of(this.text, this.textStyle, context.text());
+        this.textWidth = this.line.width();
+        this.lineHeight = this.line.height();
         return new Size(Math.max(DEFAULT_WIDTH, this.textWidth + 4f), this.lineHeight + 4f);
     }
 
@@ -205,8 +204,8 @@ public final class ProgressBarImpl extends CustomComponent<ProgressBar> implemen
                         bounds.height()));
             }
         }
-        if (!this.text.isEmpty()) {
-            painter.text(this.span, bounds.x() + (bounds.width() - this.textWidth) * 0.5f,
+        if (!this.line.isEmpty()) {
+            this.line.draw(painter, bounds.x() + (bounds.width() - this.textWidth) * 0.5f,
                     bounds.y() + (bounds.height() - this.lineHeight) * 0.5f);
         }
     }
