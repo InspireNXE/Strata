@@ -26,6 +26,8 @@ import org.inspirenxe.strata.spi.Platform;
 import org.inspirenxe.strata.spi.TextInputSink;
 import org.junit.jupiter.api.Test;
 
+import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -117,6 +119,26 @@ public abstract class PlatformContract {
             previous = now;
         }
         assertEquals(clock.nanoTime() / 1_000_000L, clock.millis(), 1L, "millis is nanoTime in milliseconds");
+    }
+
+    @Test
+    void wallClockGivesADateAndAZone() {
+        final java.time.Clock wall = this.platform().clock().wall();
+        assertNotNull(wall, "wall");
+        assertNotNull(wall.getZone(), "the wall clock's zone");
+        assertNotNull(wall.instant(), "the wall clock's instant");
+        assertDoesNotThrow(() -> LocalDate.now(wall), "today can be read from the wall clock");
+    }
+
+    @Test
+    void theDefaultWallClockIsTheSystemClockInTheDefaultZone() {
+        final Clock clock = () -> 0L;
+        final java.time.Clock wall = clock.wall();
+        assertEquals(ZoneId.systemDefault(), wall.getZone(), "the default wall clock's zone");
+        final long before = System.currentTimeMillis();
+        final long read = wall.millis();
+        final long after = System.currentTimeMillis();
+        assertTrue(read >= before - 1000L && read <= after + 1000L, "the default wall clock reads the system time");
     }
 
     @Test

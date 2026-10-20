@@ -27,16 +27,21 @@ import org.inspirenxe.strata.spi.Platform;
 import org.inspirenxe.strata.spi.TextInputSink;
 import org.inspirenxe.strata.spi.ThemeSource;
 
+import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.Optional;
 
 /**
- * A platform with monospaced text (6 units per code point, 9 units per line) and a clock tests move by hand.
+ * A platform with monospaced text (6 units per code point, 9 units per line), a clock tests move by hand, and a
+ * fixed wall clock.
  */
 public final class TestPlatform implements Platform {
     public static final float CHAR_WIDTH = 6f;
     public static final float LINE_HEIGHT = 9f;
     // Monospaced text measures wider, so tests can tell which style a span was measured in
     public static final float MONO_CHAR_WIDTH = 7f;
+    // What the wall clock reads until a test sets another time
+    public static final LocalDateTime TODAY = LocalDateTime.of(2026, 10, 20, 12, 0);
 
     private final boolean sendsKeyRepeat;
     private long nanos;
@@ -44,6 +49,7 @@ public final class TestPlatform implements Platform {
     private Rect textInputArea;
     private TextInputKind textInputKind;
     private ThemeSource themes = ThemeSource.NONE;
+    private java.time.Clock wall = java.time.Clock.fixed(TODAY.toInstant(ZoneOffset.UTC), ZoneOffset.UTC);
 
     public TestPlatform() {
         this(true);
@@ -102,9 +108,33 @@ public final class TestPlatform implements Platform {
         };
     }
 
+    /**
+     * Sets the wall clock the platform's clock reports, which is noon UTC on 20 October 2026 until set.
+     */
+    public void setWall(final java.time.Clock wall) {
+        this.wall = wall;
+    }
+
+    /**
+     * Sets the wall clock to a fixed instant in UTC.
+     */
+    public void setToday(final LocalDateTime now) {
+        this.wall = java.time.Clock.fixed(now.toInstant(ZoneOffset.UTC), ZoneOffset.UTC);
+    }
+
     @Override
     public Clock clock() {
-        return () -> this.nanos;
+        return new Clock() {
+            @Override
+            public long nanoTime() {
+                return TestPlatform.this.nanos;
+            }
+
+            @Override
+            public java.time.Clock wall() {
+                return TestPlatform.this.wall;
+            }
+        };
     }
 
     @Override

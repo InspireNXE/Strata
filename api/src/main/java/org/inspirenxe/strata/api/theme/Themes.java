@@ -29,6 +29,7 @@ import org.inspirenxe.strata.api.control.display.BusyIndicator;
 import org.inspirenxe.strata.api.control.display.Label;
 import org.inspirenxe.strata.api.control.display.ProgressBar;
 import org.inspirenxe.strata.api.control.display.Separator;
+import org.inspirenxe.strata.api.control.field.CalendarView;
 import org.inspirenxe.strata.api.control.field.ColorPicker;
 import org.inspirenxe.strata.api.control.field.Slider;
 import org.inspirenxe.strata.api.control.field.TextBox;
@@ -186,6 +187,10 @@ public final class Themes {
                 .paint(ColorPicker.STYLE_MARKER, Paint.solid(0xFFFFFFFF))
                 .paint(ColorPicker.STYLE_MARKER_OUTLINE, Paint.solid(0xFF000000))
                 .paint(ColorPicker.STYLE_DISABLED, Paint.solid(0xA0141518))
+                .paint(CalendarView.STYLE_DAY_SELECTED, Paint.solid(0xFF3A4D6E))
+                .textStyle(CalendarView.STYLE_HEADER_TEXT, TextStyle.DEFAULT.withColor(0xFFF0F0F0))
+                .textStyle(CalendarView.STYLE_WEEKDAY_TEXT, TextStyle.DEFAULT.withColor(0xFF909090))
+                .textStyle(CalendarView.STYLE_DAY_TEXT, TextStyle.DEFAULT.withColor(0xFFE0E0E0))
                 .paint(Overlays.STYLE_TOAST, Paint.solid(0xF02B2D31))
                 .textStyle(Overlays.STYLE_TOAST_TEXT, TextStyle.DEFAULT.withColor(0xFFF0F0F0))
                 .paint(Overlays.STYLE_BACKDROP, Paint.solid(0x60000000))

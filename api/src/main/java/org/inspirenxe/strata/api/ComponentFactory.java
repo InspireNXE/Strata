@@ -33,12 +33,16 @@ import org.inspirenxe.strata.api.control.display.Image;
 import org.inspirenxe.strata.api.control.display.Label;
 import org.inspirenxe.strata.api.control.display.ProgressBar;
 import org.inspirenxe.strata.api.control.display.Separator;
+import org.inspirenxe.strata.api.control.field.CalendarView;
 import org.inspirenxe.strata.api.control.field.ColorPicker;
+import org.inspirenxe.strata.api.control.field.DatePicker;
+import org.inspirenxe.strata.api.control.field.DateTimePicker;
 import org.inspirenxe.strata.api.control.field.Slider;
 import org.inspirenxe.strata.api.control.field.Spinner;
 import org.inspirenxe.strata.api.control.field.PasswordTextBox;
 import org.inspirenxe.strata.api.control.field.TextArea;
 import org.inspirenxe.strata.api.control.field.TextBox;
+import org.inspirenxe.strata.api.control.field.TimePicker;
 import org.inspirenxe.strata.api.control.menu.CheckMenuItem;
 import org.inspirenxe.strata.api.control.menu.Menu;
 import org.inspirenxe.strata.api.control.menu.MenuBar;
@@ -69,6 +73,9 @@ import org.inspirenxe.strata.api.theme.SpriteId;
 import org.inspirenxe.strata.api.theme.Theme;
 import org.inspirenxe.strata.api.visual.Visual;
 
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.function.Function;
 
 /**
@@ -908,6 +915,64 @@ public interface ComponentFactory {
      * @return a new color picker
      */
     ColorPicker colorPicker();
+
+    /**
+     * Makes a {@link CalendarView} with no date picked, showing today's month.
+     *
+     * @return a new calendar
+     */
+    CalendarView calendarView();
+
+    /**
+     * Makes an empty {@link DatePicker} that shows its placeholder.
+     *
+     * @return a new date picker
+     */
+    DatePicker datePicker();
+
+    /**
+     * Makes a {@link DatePicker} set to a date.
+     *
+     * @param date the date
+     * @return a new date picker
+     */
+    default DatePicker datePicker(final LocalDate date) {
+        return this.datePicker().setDate(date);
+    }
+
+    /**
+     * Makes an empty {@link TimePicker} that shows its placeholder.
+     *
+     * @return a new time picker
+     */
+    TimePicker timePicker();
+
+    /**
+     * Makes a {@link TimePicker} set to a time.
+     *
+     * @param time the time
+     * @return a new time picker
+     */
+    default TimePicker timePicker(final LocalTime time) {
+        return this.timePicker().setTime(time);
+    }
+
+    /**
+     * Makes an empty {@link DateTimePicker} that shows its placeholder.
+     *
+     * @return a new date and time picker
+     */
+    DateTimePicker dateTimePicker();
+
+    /**
+     * Makes a {@link DateTimePicker} set to a date and time.
+     *
+     * @param dateTime the date and time
+     * @return a new date and time picker
+     */
+    default DateTimePicker dateTimePicker(final LocalDateTime dateTime) {
+        return this.dateTimePicker().setDateTime(dateTime);
+    }
 
     /**
      * Creates the peer of a new leaf component. Called by {@link CustomComponent}'s constructor; do not call it

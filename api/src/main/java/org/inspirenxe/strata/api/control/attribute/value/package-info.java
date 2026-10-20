@@ -14,10 +14,13 @@
  * limitations under the License.
  */
 /**
- * Attributes of controls that hold a value the user changes: on or off, or a number in a range.
+ * Attributes of controls that hold a value the user changes: on or off, a number in a range, a date or a time of
+ * day.
  *
  * <p>This package holds {@link org.inspirenxe.strata.api.control.attribute.value.Toggle},
- * {@link org.inspirenxe.strata.api.control.attribute.value.Ranged} and
- * {@link org.inspirenxe.strata.api.control.attribute.value.Stepped}.</p>
+ * {@link org.inspirenxe.strata.api.control.attribute.value.Ranged},
+ * {@link org.inspirenxe.strata.api.control.attribute.value.Stepped},
+ * {@link org.inspirenxe.strata.api.control.attribute.value.HasDate} and
+ * {@link org.inspirenxe.strata.api.control.attribute.value.HasTime}.</p>
  */
 package org.inspirenxe.strata.api.control.attribute.value;

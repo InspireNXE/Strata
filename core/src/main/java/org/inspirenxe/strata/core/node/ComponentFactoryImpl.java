@@ -34,7 +34,11 @@ import org.inspirenxe.strata.api.control.display.Image;
 import org.inspirenxe.strata.api.control.display.Label;
 import org.inspirenxe.strata.api.control.display.ProgressBar;
 import org.inspirenxe.strata.api.control.display.Separator;
+import org.inspirenxe.strata.api.control.field.CalendarView;
 import org.inspirenxe.strata.api.control.field.ColorPicker;
+import org.inspirenxe.strata.api.control.field.DatePicker;
+import org.inspirenxe.strata.api.control.field.DateTimePicker;
+import org.inspirenxe.strata.api.control.field.TimePicker;
 import org.inspirenxe.strata.api.control.field.Slider;
 import org.inspirenxe.strata.api.control.field.Spinner;
 import org.inspirenxe.strata.api.control.field.PasswordTextBox;
@@ -92,7 +96,11 @@ import org.inspirenxe.strata.core.control.display.ImageImpl;
 import org.inspirenxe.strata.core.control.display.LabelImpl;
 import org.inspirenxe.strata.core.control.display.ProgressBarImpl;
 import org.inspirenxe.strata.core.control.display.SeparatorImpl;
+import org.inspirenxe.strata.core.control.field.CalendarViewImpl;
 import org.inspirenxe.strata.core.control.field.ColorPickerImpl;
+import org.inspirenxe.strata.core.control.field.DatePickerImpl;
+import org.inspirenxe.strata.core.control.field.DateTimePickerImpl;
+import org.inspirenxe.strata.core.control.field.TimePickerImpl;
 import org.inspirenxe.strata.core.control.field.SliderImpl;
 import org.inspirenxe.strata.core.control.field.SpinnerImpl;
 import org.inspirenxe.strata.core.control.field.PasswordTextBoxImpl;
@@ -139,6 +147,7 @@ public final class ComponentFactoryImpl implements ComponentFactory {
 
     private final Supplier<Theme> theme;
     private final Environment environment;
+    private final Platform platform;
     private Root root;
 
     /**
@@ -151,6 +160,16 @@ public final class ComponentFactoryImpl implements ComponentFactory {
     public ComponentFactoryImpl(final Supplier<Theme> theme, final Platform platform) {
         this.theme = Objects.requireNonNull(theme, "theme");
         this.environment = new EnvironmentImpl(platform, this);
+        this.platform = platform;
+    }
+
+    /**
+     * Returns the host's platform, for what only core reads, such as the wall clock.
+     *
+     * @return the platform
+     */
+    public Platform platform() {
+        return this.platform;
     }
 
     /**
@@ -457,6 +476,26 @@ public final class ComponentFactoryImpl implements ComponentFactory {
     @Override
     public ColorPicker colorPicker() {
         return new ColorPickerImpl(this);
+    }
+
+    @Override
+    public CalendarView calendarView() {
+        return new CalendarViewImpl(this);
+    }
+
+    @Override
+    public DatePicker datePicker() {
+        return new DatePickerImpl(this);
+    }
+
+    @Override
+    public TimePicker timePicker() {
+        return new TimePickerImpl(this);
+    }
+
+    @Override
+    public DateTimePicker dateTimePicker() {
+        return new DateTimePickerImpl(this);
     }
 
     /**

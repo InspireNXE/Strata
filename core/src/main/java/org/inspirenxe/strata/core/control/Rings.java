@@ -93,6 +93,34 @@ public final class Rings {
     }
 
     /**
+     * Fills an arrow 4 wide and 7 tall pointing left, its top-left corner at a point.
+     *
+     * @param painter what to draw with
+     * @param color the fill color, as ARGB
+     * @param x the left edge
+     * @param y the top edge
+     */
+    public static void left(final Painter painter, final int color, final float x, final float y) {
+        for (int i = 0; i < 4; i++) {
+            painter.fill(new Rect(x + 3f - i, y + i, 1f, ARROW_LONG - i * 2f), color);
+        }
+    }
+
+    /**
+     * Paints an arrow 4 wide and 7 tall pointing left with a paint, its top-left corner at a point.
+     *
+     * @param painter what to draw with
+     * @param paint the arrow's paint
+     * @param x the left edge
+     * @param y the top edge
+     */
+    public static void left(final Painter painter, final Paint paint, final float x, final float y) {
+        for (int i = 0; i < 4; i++) {
+            paint.paint(painter, new Rect(x + 3f - i, y + i, 1f, ARROW_LONG - i * 2f));
+        }
+    }
+
+    /**
      * Paints an arrow 4 wide and 7 tall pointing right with a paint, its top-left corner at a point.
      *
      * @param painter what to draw with

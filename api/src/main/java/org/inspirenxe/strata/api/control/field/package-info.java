@@ -14,11 +14,16 @@
  * limitations under the License.
  */
 /**
- * Controls that edit a value: text or a number: {@link org.inspirenxe.strata.api.control.field.TextBox},
+ * Controls that edit a value: text, a number, a color, a date or a time:
+ * {@link org.inspirenxe.strata.api.control.field.TextBox},
  * {@link org.inspirenxe.strata.api.control.field.PasswordTextBox},
  * {@link org.inspirenxe.strata.api.control.field.TextArea}, {@link org.inspirenxe.strata.api.control.field.Spinner},
- * {@link org.inspirenxe.strata.api.control.field.Slider} and
- * {@link org.inspirenxe.strata.api.control.field.ColorPicker}.
+ * {@link org.inspirenxe.strata.api.control.field.Slider},
+ * {@link org.inspirenxe.strata.api.control.field.ColorPicker},
+ * {@link org.inspirenxe.strata.api.control.field.CalendarView},
+ * {@link org.inspirenxe.strata.api.control.field.DatePicker},
+ * {@link org.inspirenxe.strata.api.control.field.TimePicker} and
+ * {@link org.inspirenxe.strata.api.control.field.DateTimePicker}.
  *
  * <p>Make them with a {@link org.inspirenxe.strata.api.ComponentFactory}. Each control lists the theme style
  * keys it reads as {@code STYLE_*} constants and says which are required, and its events as constants too:

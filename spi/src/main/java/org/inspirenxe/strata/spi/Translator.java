@@ -15,6 +15,7 @@
  */
 package org.inspirenxe.strata.spi;
 
+import java.util.Locale;
 import java.util.Optional;
 
 /**
@@ -30,6 +31,11 @@ import java.util.Optional;
  *     <li>{@link #version()} changes whenever {@link #translate} may return something else, such as after the
  *     language changes or translations reload. Hosts compare it on every layout and render, and lay out every
  *     control again when it changes, so it must be cheap.</li>
+ *     <li>{@link #locale()} returns the locale of the current language. Core reads month and weekday names, the
+ *     first day of the week, the order of a date's parts and whether the clock has 12 or 24 hours from it, after
+ *     asking {@link #translate} for the {@code strata.date.*} and {@code strata.time.*} keys. Core caches what it
+ *     reads per locale and version, so a translator whose locale changes must change its version too. The default is
+ *     the JVM's default locale for formatting.</li>
  *     <li>Calls may come from any thread, since code can read text outside the UI thread. Store the version in a
  *     volatile field or an atomic.</li>
  * </ul>
@@ -64,4 +70,15 @@ public interface Translator {
      * @return the version
      */
     long version();
+
+    /**
+     * Returns the locale of the current language, for month and day names, the first day of the week, the order of a
+     * date's parts and the 12 or 24 hour clock.
+     *
+     * @return the JVM's {@linkplain Locale#getDefault(Locale.Category) default locale for formatting}, unless the
+     *     translator returns another
+     */
+    default Locale locale() {
+        return Locale.getDefault(Locale.Category.FORMAT);
+    }
 }

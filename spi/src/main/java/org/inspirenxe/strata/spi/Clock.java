@@ -16,12 +16,17 @@
 package org.inspirenxe.strata.spi;
 
 /**
- * A monotonic time source. Strata never reads the system clock itself, so tests can drive time.
+ * A monotonic time source, and the wall clock that dates shown to the user come from. Strata never reads the system
+ * clock itself, so tests can drive time.
  *
  * <h2>Requirements for implementors</h2>
  * <ul>
  *     <li>Never go backward. Only differences between readings matter; the zero point is arbitrary.</li>
  *     <li>Advance in real time while the UI runs, or click counting, caret blinking and key repeat stall.</li>
+ *     <li>{@link #wall()} returns the clock and zone that today's date is read from, such as the day a calendar
+ *     marks. The default is the system clock in the default zone. An adapter may return the engine's own clock or
+ *     zone instead, and a test a fixed clock. Core reads it on the UI thread, at most about once a minute for each
+ *     control that shows today, so it need not be fast. It must not return null.</li>
  * </ul>
  */
 @FunctionalInterface
@@ -45,5 +50,15 @@ public interface Clock {
      */
     default long millis() {
         return this.nanoTime() / 1_000_000L;
+    }
+
+    /**
+     * Returns the wall clock and zone that dates shown to the user come from, such as a calendar's today. Unlike
+     * {@link #nanoTime()}, it may jump when the system time or the zone changes.
+     *
+     * @return the system clock in the default zone, unless the platform returns another
+     */
+    default java.time.Clock wall() {
+        return java.time.Clock.systemDefaultZone();
     }
 }

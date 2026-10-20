@@ -34,14 +34,19 @@ public final class Translations {
     /**
      * English for the keys Strata's controls use, so they read correctly where the engine has no translation.
      */
-    public static final Map<String, String> DEFAULTS = Map.of(
-            "strata.button.ok", "OK",
-            "strata.button.cancel", "Cancel",
-            "strata.button.yes", "Yes",
-            "strata.button.no", "No",
-            "strata.button.close", "Close",
-            "strata.password.show", "Show password",
-            "strata.password.hide", "Hide password");
+    public static final Map<String, String> DEFAULTS = Map.ofEntries(
+            Map.entry("strata.button.ok", "OK"),
+            Map.entry("strata.button.cancel", "Cancel"),
+            Map.entry("strata.button.yes", "Yes"),
+            Map.entry("strata.button.no", "No"),
+            Map.entry("strata.button.close", "Close"),
+            Map.entry("strata.password.show", "Show password"),
+            Map.entry("strata.password.hide", "Hide password"),
+            Map.entry("strata.date.placeholder", "Pick a date"),
+            Map.entry("strata.time.placeholder", "Pick a time"),
+            Map.entry("strata.datetime.placeholder", "Pick a date and time"),
+            Map.entry("strata.calendar.title", "%1$s %2$s"),
+            Map.entry("strata.calendar.decade", "%1$s - %2$s"));
 
     private static final System.Logger LOGGER = System.getLogger(Translations.class.getName());
     private static final Set<String> MISSING = ConcurrentHashMap.newKeySet();
