@@ -460,7 +460,7 @@ public final class Root {
         this.pumpKeyRepeat();
         this.expireToasts();
         this.layout();
-        final CanvasPainter frame = this.painter.begin(canvas);
+        final CanvasPainter frame = this.painter.begin(canvas, this.platform.capabilities().slicesSprites());
         if (this.content != null) {
             this.content.paint(frame);
         }

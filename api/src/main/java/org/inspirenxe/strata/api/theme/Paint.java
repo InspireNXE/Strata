@@ -18,12 +18,14 @@ package org.inspirenxe.strata.api.theme;
 import org.inspirenxe.strata.api.extension.Painter;
 import org.inspirenxe.strata.api.geometry.Insets;
 import org.inspirenxe.strata.api.geometry.Rect;
+import org.inspirenxe.strata.api.geometry.Size;
 
 import java.util.Objects;
 
 /**
- * How to fill a rectangle: a solid color, a vertical gradient, a stretched sprite or a nine-slice sprite. Themes
- * map style keys to paints, and components draw them with {@link #paint} without caring which kind they hold.
+ * How to fill a rectangle: a solid color, a vertical gradient, a stretched sprite, a tiled sprite or a nine-slice
+ * sprite. Themes map style keys to paints, and components draw them with {@link #paint} without caring which kind
+ * they hold.
  *
  * <p>Colors are ARGB ints ({@code 0xAARRGGBB}). A color with alpha 0 draws nothing; {@link #NONE} is such a
  * color.</p>
@@ -78,6 +80,46 @@ public sealed interface Paint {
     }
 
     /**
+     * Returns a nine-slice sprite that stands for an image of a given size, untinted. Edges and the center
+     * stretch. See {@link NineSlice}.
+     *
+     * @param sprite the sprite
+     * @param size the size in UI units that the whole image stands for, whatever its pixel size
+     * @param border the width of each fixed border, in units of {@code size}
+     * @return the paint
+     * @throws IllegalArgumentException if the size is not positive or the borders do not fit in it
+     */
+    static Paint nineSlice(final SpriteId sprite, final Size size, final Insets border) {
+        return new NineSlice(sprite, border, 0xFFFFFFFF, size, false);
+    }
+
+    /**
+     * Returns a nine-slice sprite whose edges and center repeat at their size instead of stretching, untinted.
+     * See {@link NineSlice}.
+     *
+     * @param sprite the sprite
+     * @param size the size in UI units that the whole image stands for, whatever its pixel size
+     * @param border the width of each fixed border, in units of {@code size}
+     * @return the paint
+     * @throws IllegalArgumentException if the size is not positive or the borders do not fit in it
+     */
+    static Paint tiledNineSlice(final SpriteId sprite, final Size size, final Insets border) {
+        return new NineSlice(sprite, border, 0xFFFFFFFF, size, true);
+    }
+
+    /**
+     * Returns a sprite repeated over the rectangle at a given size, untinted. See {@link Tiled}.
+     *
+     * @param sprite the sprite
+     * @param size the size in UI units of one copy of the image
+     * @return the paint
+     * @throws IllegalArgumentException if the size is not positive
+     */
+    static Paint tiled(final SpriteId sprite, final Size size) {
+        return new Tiled(sprite, size, 0xFFFFFFFF);
+    }
+
+    /**
      * Draws this paint over a rectangle.
      *
      * @param painter what to draw with
@@ -92,7 +134,14 @@ public sealed interface Paint {
             }
             case Gradient gradient -> painter.fillGradient(rect, gradient.topArgb, gradient.bottomArgb);
             case Sprite sprite -> painter.sprite(sprite.sprite, rect, sprite.tint);
-            case NineSlice slice -> painter.nineSlice(slice.sprite, rect, slice.border, slice.tint);
+            case Tiled tiled -> painter.tiled(tiled.sprite, rect, tiled.size, tiled.tint);
+            case NineSlice slice -> {
+                if (slice.size == null) {
+                    painter.nineSlice(slice.sprite, rect, slice.border, slice.tint);
+                } else {
+                    painter.nineSlice(slice.sprite, rect, slice.size, slice.border, slice.tiled, slice.tint);
+                }
+            }
         }
     }
 
@@ -129,23 +178,84 @@ public sealed interface Paint {
     }
 
     /**
-     * A sprite cut into a 3 by 3 grid. Corners keep their size, edges stretch along one axis, and the center
-     * stretches both ways, so one small image can frame a rectangle of any size.
+     * A sprite repeated from the rectangle's top left corner, one copy per {@code size}. The copies in the last
+     * column and row are cropped to the rectangle.
      *
-     * <p>An engine that stores the slicing with the image may use that and ignore {@code border}; keep the two in
-     * agreement so every engine draws the same.</p>
+     * <p>An engine that stores the slicing with the image may use that instead; keep the two in agreement so
+     * every engine draws the same.</p>
      *
      * @param sprite the sprite
-     * @param border the width of each fixed border, in the sprite's pixels
+     * @param size the size in UI units of one copy of the image, whatever its pixel size
      * @param tint an ARGB color multiplied with the sprite; opaque white leaves it unchanged
      */
-    record NineSlice(SpriteId sprite, Insets border, int tint) implements Paint {
+    record Tiled(SpriteId sprite, Size size, int tint) implements Paint {
         /**
          * Checks the arguments.
+         *
+         * @throws IllegalArgumentException if the size is not positive
+         */
+        public Tiled {
+            Objects.requireNonNull(sprite, "sprite");
+            Objects.requireNonNull(size, "size");
+            if (!(size.width() > 0f) || !(size.height() > 0f)) {
+                throw new IllegalArgumentException("Tile size must be positive: " + size);
+            }
+        }
+    }
+
+    /**
+     * A sprite cut into a 3 by 3 grid. Corners keep their size, edges stretch or repeat along one axis, and the
+     * center stretches or repeats both ways, so one small image can frame a rectangle of any size. When the
+     * rectangle is smaller than the borders, they shrink in proportion.
+     *
+     * <p>Without a {@code size}, {@code border} is in the sprite's pixels and the image is drawn at one pixel per
+     * UI unit. With one, the whole image stands for {@code size} UI units and {@code border} is in those units, so
+     * an image with twice the pixels draws the same borders, only sharper. {@code tiled} repeats the edges and the
+     * center at their size instead of stretching them, cropping the last copy, and needs a size.</p>
+     *
+     * <p>An engine that stores the slicing with the image may use that and ignore {@code border}, {@code size}
+     * and {@code tiled}; keep them in agreement so every engine draws the same.</p>
+     *
+     * @param sprite the sprite
+     * @param border the width of each fixed border, in the sprite's pixels, or in units of {@code size} when there
+     *               is one
+     * @param tint an ARGB color multiplied with the sprite; opaque white leaves it unchanged
+     * @param size the size in UI units that the whole image stands for, or {@code null} for its pixel size
+     * @param tiled true to repeat the edges and the center instead of stretching them
+     */
+    record NineSlice(SpriteId sprite, Insets border, int tint, Size size, boolean tiled) implements Paint {
+        /**
+         * Checks the arguments.
+         *
+         * @throws IllegalArgumentException if {@code tiled} is set without a size, the size is not positive, or
+         *     the borders do not fit in it
          */
         public NineSlice {
             Objects.requireNonNull(sprite, "sprite");
             Objects.requireNonNull(border, "border");
+            if (size == null) {
+                if (tiled) {
+                    throw new IllegalArgumentException("A tiled nine-slice needs a size");
+                }
+            } else {
+                if (!(size.width() > 0f) || !(size.height() > 0f)) {
+                    throw new IllegalArgumentException("Nine-slice size must be positive: " + size);
+                }
+                if (border.left() + border.right() > size.width() || border.top() + border.bottom() > size.height()) {
+                    throw new IllegalArgumentException("Borders " + border + " do not fit in " + size);
+                }
+            }
+        }
+
+        /**
+         * Creates a nine-slice whose border is in the sprite's pixels, with stretched edges and center.
+         *
+         * @param sprite the sprite
+         * @param border the width of each fixed border, in the sprite's pixels
+         * @param tint an ARGB color multiplied with the sprite; opaque white leaves it unchanged
+         */
+        public NineSlice(final SpriteId sprite, final Insets border, final int tint) {
+            this(sprite, border, tint, null, false);
         }
     }
 }

@@ -18,6 +18,7 @@ package org.inspirenxe.strata.core.paint;
 import org.inspirenxe.strata.api.extension.Painter;
 import org.inspirenxe.strata.api.geometry.Insets;
 import org.inspirenxe.strata.api.geometry.Rect;
+import org.inspirenxe.strata.api.geometry.Size;
 import org.inspirenxe.strata.api.text.TextSpan;
 import org.inspirenxe.strata.api.theme.SpriteId;
 import org.inspirenxe.strata.api.visual.Visual;
@@ -27,9 +28,19 @@ import org.inspirenxe.strata.spi.Canvas;
  * The {@link Painter} that components draw with, passing each call to the engine's {@link Canvas}. The scoped clip
  * and translation calls pop what they pushed even if the drawing code throws, so the canvas stacks stay balanced.
  * Each host reuses one painter for every frame.
+ *
+ * <p>Sized nine-slices and tiled sprites go to the canvas as they are when the engine
+ * {@linkplain org.inspirenxe.strata.spi.Capabilities#slicesSprites() slices sprites} itself. Otherwise the painter
+ * draws them from pieces: each piece is the whole sprite drawn with {@link Canvas#sprite}, scaled and moved so the
+ * wanted part of the image lands on the piece, inside a clip of the piece. A row or column holds at most
+ * {@value #MAX_COPIES} copies; past that, the part is stretched instead.</p>
  */
 public final class CanvasPainter implements Painter {
+    /** The most copies of a tile in one row or column, so a tiny tile cannot flood the canvas with calls. */
+    static final int MAX_COPIES = 1024;
+
     private Canvas canvas;
+    private boolean slicesSprites;
 
     /**
      * Creates a painter with no canvas. Call {@link #begin(Canvas)} before drawing.
@@ -38,13 +49,26 @@ public final class CanvasPainter implements Painter {
     }
 
     /**
-     * Points the painter at the canvas for this frame.
+     * Points the painter at the canvas for this frame, for an engine that stores no slicing with its images.
      *
      * @param canvas the frame's canvas
      * @return this painter
      */
     public CanvasPainter begin(final Canvas canvas) {
+        return this.begin(canvas, false);
+    }
+
+    /**
+     * Points the painter at the canvas for this frame.
+     *
+     * @param canvas the frame's canvas
+     * @param slicesSprites true when the engine applies slicing stored with its images, so sized nine-slices and
+     *                      tiled sprites go to the canvas as they are
+     * @return this painter
+     */
+    public CanvasPainter begin(final Canvas canvas, final boolean slicesSprites) {
         this.canvas = canvas;
+        this.slicesSprites = slicesSprites;
         return this;
     }
 
@@ -75,6 +99,120 @@ public final class CanvasPainter implements Painter {
     @Override
     public void nineSlice(final SpriteId sprite, final Rect rect, final Insets border, final int tint) {
         this.canvas.nineSlice(sprite, rect, border, tint);
+    }
+
+    @Override
+    public void nineSlice(final SpriteId sprite, final Rect rect, final Size size, final Insets border,
+                          final boolean tiled, final int tint) {
+        CanvasPainter.checkSize(size);
+        if (border.left() + border.right() > size.width() || border.top() + border.bottom() > size.height()) {
+            throw new IllegalArgumentException("Borders " + border + " do not fit in " + size);
+        }
+        if (this.slicesSprites) {
+            this.canvas.nineSlice(sprite, rect, border, tint);
+            return;
+        }
+        if (!(rect.width() > 0f) || !(rect.height() > 0f)) {
+            return;
+        }
+        // Borders wider than the rectangle shrink in proportion, as the canvas does for its own nine-slices
+        final float horizontal = border.left() + border.right() > rect.width()
+                ? rect.width() / (border.left() + border.right()) : 1f;
+        final float vertical = border.top() + border.bottom() > rect.height()
+                ? rect.height() / (border.top() + border.bottom()) : 1f;
+        final float[] dx = {rect.x(), rect.x() + border.left() * horizontal,
+            rect.right() - border.right() * horizontal, rect.right()};
+        final float[] dy = {rect.y(), rect.y() + border.top() * vertical,
+            rect.bottom() - border.bottom() * vertical, rect.bottom()};
+        final float[] sx = {0f, border.left(), size.width() - border.right(), size.width()};
+        final float[] sy = {0f, border.top(), size.height() - border.bottom(), size.height()};
+        for (int row = 0; row < 3; row++) {
+            for (int column = 0; column < 3; column++) {
+                this.part(sprite, size, tint,
+                        sx[column], sy[row], sx[column + 1] - sx[column], sy[row + 1] - sy[row],
+                        Rect.ofEdges(dx[column], dy[row], dx[column + 1], dy[row + 1]),
+                        tiled && column == 1, tiled && row == 1);
+            }
+        }
+    }
+
+    @Override
+    public void tiled(final SpriteId sprite, final Rect rect, final Size size, final int tint) {
+        CanvasPainter.checkSize(size);
+        if (this.slicesSprites) {
+            this.canvas.sprite(sprite, rect, tint);
+            return;
+        }
+        if (!(rect.width() > 0f) || !(rect.height() > 0f)) {
+            return;
+        }
+        final int columns = CanvasPainter.copies(rect.width(), size.width());
+        final int rows = CanvasPainter.copies(rect.height(), size.height());
+        if (columns > MAX_COPIES || rows > MAX_COPIES) {
+            this.canvas.sprite(sprite, rect, tint);
+            return;
+        }
+        // Whole copies never overlap, so one clip crops the last row and column
+        this.canvas.pushClip(rect);
+        try {
+            for (int row = 0; row < rows; row++) {
+                for (int column = 0; column < columns; column++) {
+                    this.canvas.sprite(sprite, new Rect(rect.x() + column * size.width(),
+                            rect.y() + row * size.height(), size.width(), size.height()), tint);
+                }
+            }
+        } finally {
+            this.canvas.popClip();
+        }
+    }
+
+    /**
+     * Draws one part of a nine-slice: the image region at {@code sx, sy} of {@code sw} by {@code sh} units of
+     * {@code size}, over {@code dest}, stretched along an axis or repeated at its own length.
+     */
+    private void part(final SpriteId sprite, final Size size, final int tint, final float sx, final float sy,
+                      final float sw, final float sh, final Rect dest, final boolean tileX, final boolean tileY) {
+        if (!(sw > 0f) || !(sh > 0f) || !(dest.width() > 0f) || !(dest.height() > 0f)) {
+            return;
+        }
+        int columns = tileX ? CanvasPainter.copies(dest.width(), sw) : 1;
+        int rows = tileY ? CanvasPainter.copies(dest.height(), sh) : 1;
+        final float stepX = columns > MAX_COPIES || !tileX ? dest.width() : sw;
+        final float stepY = rows > MAX_COPIES || !tileY ? dest.height() : sh;
+        columns = stepX == dest.width() ? 1 : columns;
+        rows = stepY == dest.height() ? 1 : rows;
+        final float scaleX = stepX / sw;
+        final float scaleY = stepY / sh;
+        for (int row = 0; row < rows; row++) {
+            for (int column = 0; column < columns; column++) {
+                final float x = dest.x() + column * stepX;
+                final float y = dest.y() + row * stepY;
+                final Rect copy = Rect.ofEdges(x, y, Math.min(x + stepX, dest.right()), Math.min(y + stepY, dest.bottom()));
+                // The whole image, placed so the region lands on the copy; the clip hides the rest
+                final Rect image = new Rect(x - sx * scaleX, y - sy * scaleY, size.width() * scaleX,
+                        size.height() * scaleY);
+                this.canvas.pushClip(copy);
+                try {
+                    this.canvas.sprite(sprite, image, tint);
+                } finally {
+                    this.canvas.popClip();
+                }
+            }
+        }
+    }
+
+    /**
+     * Returns how many copies of a length cover a span, the last one cropped.
+     */
+    private static int copies(final float span, final float length) {
+        final double count = Math.ceil(span / length - 1e-4);
+        return count > Integer.MAX_VALUE ? Integer.MAX_VALUE : Math.max(1, (int) count);
+    }
+
+    private static void checkSize(final Size size) {
+        if (!(size.width() > 0f) || !(size.height() > 0f)) {
+            throw new IllegalArgumentException("Sprite size must be positive: " + size);
+        }
     }
 
     @Override

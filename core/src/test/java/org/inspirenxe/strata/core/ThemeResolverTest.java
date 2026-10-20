@@ -17,6 +17,7 @@ package org.inspirenxe.strata.core;
 
 import org.inspirenxe.strata.api.control.button.Button;
 import org.inspirenxe.strata.api.geometry.Insets;
+import org.inspirenxe.strata.api.geometry.Size;
 import org.inspirenxe.strata.api.text.TextStyle;
 import org.inspirenxe.strata.api.theme.Paint;
 import org.inspirenxe.strata.api.theme.SpriteId;
@@ -193,6 +194,25 @@ class ThemeResolverTest {
         }
 
         @Test
+        void sizedAndTiledNineSlices() {
+            final SpriteId sprite = SpriteId.of("a", "b");
+            assertEquals(Paint.nineSlice(sprite, new Size(200, 20), Insets.of(3)),
+                    this.paint("{ \"nine_slice\": \"a:b\", \"border\": 3, \"size\": [200, 20] }"));
+            assertEquals(Paint.tiledNineSlice(sprite, new Size(200, 20), Insets.of(3)),
+                    this.paint("{ \"nine_slice\": \"a:b\", \"border\": 3, \"size\": [200, 20], \"tiled\": true }"));
+            assertEquals(Paint.nineSlice(sprite, Insets.of(3)),
+                    this.paint("{ \"nine_slice\": \"a:b\", \"border\": 3, \"tiled\": false }"));
+        }
+
+        @Test
+        void tiledSprites() {
+            assertEquals(Paint.tiled(SpriteId.of("a", "b"), new Size(16, 8)),
+                    this.paint("{ \"tiled\": \"a:b\", \"size\": [16, 8] }"));
+            assertEquals(new Paint.Tiled(SpriteId.of("a", "b"), new Size(16, 8), 0x80FF0000),
+                    this.paint("{ \"tiled\": \"a:b\", \"size\": [16, 8], \"tint\": \"#80FF0000\" }"));
+        }
+
+        @Test
         void gradients() {
             assertEquals(Paint.gradient(0xFF000001, 0xFF000002), this.paint("{ \"gradient\": [\"#000001\", \"#000002\"] }"));
         }
@@ -206,6 +226,11 @@ class ThemeResolverTest {
             assertTrue(this.tryPaint("\"red\"").isEmpty());
             assertTrue(this.tryPaint("{ \"sprite\": \"nocolon\" }").isEmpty());
             assertTrue(this.tryPaint("{}").isEmpty());
+            assertTrue(this.tryPaint("{ \"nine_slice\": \"a:b\", \"border\": 3, \"tiled\": true }").isEmpty());
+            assertTrue(this.tryPaint("{ \"nine_slice\": \"a:b\", \"border\": 3, \"size\": [4, 20] }").isEmpty());
+            assertTrue(this.tryPaint("{ \"nine_slice\": \"a:b\", \"border\": 3, \"size\": [20] }").isEmpty());
+            assertTrue(this.tryPaint("{ \"tiled\": \"a:b\" }").isEmpty());
+            assertTrue(this.tryPaint("{ \"tiled\": \"a:b\", \"size\": [0, 8] }").isEmpty());
         }
     }
 

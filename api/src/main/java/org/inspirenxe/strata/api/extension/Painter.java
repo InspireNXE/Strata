@@ -17,6 +17,7 @@ package org.inspirenxe.strata.api.extension;
 
 import org.inspirenxe.strata.api.geometry.Insets;
 import org.inspirenxe.strata.api.geometry.Rect;
+import org.inspirenxe.strata.api.geometry.Size;
 import org.inspirenxe.strata.api.text.TextSpan;
 import org.inspirenxe.strata.api.theme.SpriteId;
 import org.inspirenxe.strata.api.visual.Visual;
@@ -73,6 +74,32 @@ public interface Painter {
      * @param tint an ARGB color multiplied with the sprite
      */
     void nineSlice(SpriteId sprite, Rect rect, Insets border, int tint);
+
+    /**
+     * Draws a sprite as a nine-slice whose image stands for a given size, with its edges and center stretched or
+     * repeated. See {@link org.inspirenxe.strata.api.theme.Paint.NineSlice}.
+     *
+     * @param sprite the sprite
+     * @param rect the area
+     * @param size the size in UI units that the whole image stands for
+     * @param border the width of each fixed border, in units of {@code size}
+     * @param tiled true to repeat the edges and the center at their size, false to stretch them
+     * @param tint an ARGB color multiplied with the sprite
+     * @throws IllegalArgumentException if the size is not positive or the borders do not fit in it
+     */
+    void nineSlice(SpriteId sprite, Rect rect, Size size, Insets border, boolean tiled, int tint);
+
+    /**
+     * Draws a sprite repeated over a rectangle from its top left corner, cropping the last column and row. See
+     * {@link org.inspirenxe.strata.api.theme.Paint.Tiled}.
+     *
+     * @param sprite the sprite
+     * @param rect the area
+     * @param size the size in UI units of one copy of the image
+     * @param tint an ARGB color multiplied with the sprite
+     * @throws IllegalArgumentException if the size is not positive
+     */
+    void tiled(SpriteId sprite, Rect rect, Size size, int tint);
 
     /**
      * Draws one line of text with its top-left corner at the given point. Use

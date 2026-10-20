@@ -16,6 +16,7 @@
 package org.inspirenxe.strata.core.theme;
 
 import org.inspirenxe.strata.api.geometry.Insets;
+import org.inspirenxe.strata.api.geometry.Size;
 import org.inspirenxe.strata.api.text.TextStyle;
 import org.inspirenxe.strata.api.theme.Paint;
 import org.inspirenxe.strata.api.theme.SpriteId;
@@ -39,7 +40,8 @@ import java.util.Set;
 record ThemeFile(Optional<ThemeId> parent, Map<String, Paint> paints, Map<String, TextPatch> text) {
     private static final Set<String> TOP_KEYS = Set.of("parent", "paints", "text");
     private static final Set<String> SPRITE_KEYS = Set.of("sprite", "tint");
-    private static final Set<String> NINE_SLICE_KEYS = Set.of("nine_slice", "border", "tint");
+    private static final Set<String> NINE_SLICE_KEYS = Set.of("nine_slice", "border", "tint", "size", "tiled");
+    private static final Set<String> TILED_KEYS = Set.of("tiled", "size", "tint");
     private static final Set<String> GRADIENT_KEYS = Set.of("gradient");
     private static final Set<String> TEXT_KEYS =
             Set.of("color", "bold", "italic", "underline", "strikethrough", "shadow", "monospace");
@@ -90,8 +92,21 @@ record ThemeFile(Optional<ThemeId> parent, Map<String, Paint> paints, Map<String
             if (!map.containsKey("border")) {
                 throw new IllegalArgumentException(where + " needs a border");
             }
+            final boolean tiled = Boolean.TRUE.equals(flag(map, "tiled", where));
+            final Size size = map.containsKey("size") ? size(map.get("size"), where + ".size") : null;
+            if (tiled && size == null) {
+                throw new IllegalArgumentException(where + " is tiled and needs a size");
+            }
             return new Paint.NineSlice(SpriteId.parse(string(map.get("nine_slice"), where + ".nine_slice")),
-                    insets(map.get("border"), where + ".border"), tint(map, where));
+                    insets(map.get("border"), where + ".border"), tint(map, where), size, tiled);
+        }
+        if (map.containsKey("tiled")) {
+            checkKeys(map, TILED_KEYS, where);
+            if (!map.containsKey("size")) {
+                throw new IllegalArgumentException(where + " needs a size");
+            }
+            return new Paint.Tiled(SpriteId.parse(string(map.get("tiled"), where + ".tiled")),
+                    size(map.get("size"), where + ".size"), tint(map, where));
         }
         if (map.containsKey("gradient")) {
             checkKeys(map, GRADIENT_KEYS, where);
@@ -102,7 +117,8 @@ record ThemeFile(Optional<ThemeId> parent, Map<String, Paint> paints, Map<String
             return Paint.gradient(color(string(colors.get(0), where + ".gradient"), where + ".gradient"),
                     color(string(colors.get(1), where + ".gradient"), where + ".gradient"));
         }
-        throw new IllegalArgumentException(where + " needs a color, \"none\", or one of sprite, nine_slice, gradient");
+        throw new IllegalArgumentException(where
+                + " needs a color, \"none\", or one of sprite, tiled, nine_slice, gradient");
     }
 
     private static TextPatch textPatch(final Object value, final String where) {
@@ -139,6 +155,14 @@ record ThemeFile(Optional<ThemeId> parent, Map<String, Paint> paints, Map<String
     /**
      * Parses {@code #RRGGBB} (opaque) or {@code #AARRGGBB}.
      */
+    private static Size size(final Object value, final String where) {
+        final List<?> parts = list(value, where);
+        if (parts.size() != 2) {
+            throw new IllegalArgumentException(where + " needs [width, height]");
+        }
+        return new Size(number(parts.get(0), where), number(parts.get(1), where));
+    }
+
     private static int color(final String text, final String where) {
         if (text.startsWith("#") && (text.length() == 7 || text.length() == 9)) {
             try {

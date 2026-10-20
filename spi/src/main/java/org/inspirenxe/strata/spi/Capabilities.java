@@ -28,6 +28,23 @@ package org.inspirenxe.strata.spi;
  *                      drawn with every character the same width. When false, such a span uses the engine's normal
  *                      font; it is still measured and drawn alike, so layout stays correct and only columns stop
  *                      lining up.
+ * @param slicesSprites true when the engine stores slicing with its images and applies it whenever it draws them,
+ *                      in {@link Canvas#sprite} as well as {@link Canvas#nineSlice}. The host then passes a sized
+ *                      {@linkplain org.inspirenxe.strata.api.theme.Paint.NineSlice nine-slice} to {@code nineSlice}
+ *                      and a {@linkplain org.inspirenxe.strata.api.theme.Paint.Tiled tiled} sprite to
+ *                      {@code sprite}, and the engine's slicing decides how they look. When false, the host draws
+ *                      both itself, each part being the whole sprite drawn with {@code sprite} inside a clip, so
+ *                      the canvas must draw a sprite exactly over the rectangle it is given, even where the
+ *                      rectangle reaches past the clip.
  */
-public record Capabilities(boolean sendsKeyRepeat, boolean monospaceFont) {
+public record Capabilities(boolean sendsKeyRepeat, boolean monospaceFont, boolean slicesSprites) {
+    /**
+     * Creates capabilities for an engine that stores no slicing with its images.
+     *
+     * @param sendsKeyRepeat true when the adapter delivers key repeats itself
+     * @param monospaceFont true when the engine has a monospaced font
+     */
+    public Capabilities(final boolean sendsKeyRepeat, final boolean monospaceFont) {
+        this(sendsKeyRepeat, monospaceFont, false);
+    }
 }
