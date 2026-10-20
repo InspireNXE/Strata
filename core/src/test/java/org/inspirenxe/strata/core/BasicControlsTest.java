@@ -20,6 +20,7 @@ import org.inspirenxe.strata.api.control.attribute.value.Ranged;
 import org.inspirenxe.strata.api.control.attribute.value.Toggle;
 import org.inspirenxe.strata.api.control.button.Button;
 import org.inspirenxe.strata.api.control.button.CheckBox;
+import org.inspirenxe.strata.api.control.button.CheckState;
 import org.inspirenxe.strata.api.control.display.Image;
 import org.inspirenxe.strata.api.control.display.Label;
 import org.inspirenxe.strata.api.control.field.Slider;
@@ -237,7 +238,7 @@ class BasicControlsTest {
             final List<CheckBox.State> before = new ArrayList<>();
             this.box.onEvent(InputEvents.CLICK, event -> event.snapshot().state(CheckBox.State.class).ifPresent(before::add));
             this.test.click(45, 8);
-            assertEquals(List.of(new CheckBox.State(false, Text.of("Music"))), before);
+            assertEquals(List.of(new CheckBox.State(CheckState.UNCHECKED, Text.of("Music"))), before);
         }
     }
 

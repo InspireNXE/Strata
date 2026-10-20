@@ -21,16 +21,26 @@ import org.inspirenxe.strata.api.component.HasCursor;
 import org.inspirenxe.strata.api.component.HasTooltip;
 import org.inspirenxe.strata.api.control.attribute.text.HasText;
 import org.inspirenxe.strata.api.control.attribute.value.Toggle;
+import org.inspirenxe.strata.api.event.EventType;
+import org.inspirenxe.strata.api.event.control.ValueEvent;
+import org.inspirenxe.strata.api.event.control.ValueRequestEvent;
 import org.inspirenxe.strata.api.text.Text;
 
 import java.util.Objects;
 
 /**
- * A box that is checked or not, with a caption to its right.
+ * A box that is checked, empty or mixed, with a caption to its right.
  *
- * <p>A left click anywhere on the check box toggles it, and so does Enter, keypad Enter or Space while it has focus
- * (not repeated). It consumes those inputs. Each toggle by the user fires {@link Toggle#TOGGLE}, and every change
- * fires {@link Toggle#TOGGLED}. A disabled check box does neither and draws its disabled look.</p>
+ * <p>A left click anywhere on the check box changes it, and so does Enter, keypad Enter or Space while it has focus
+ * (not repeated). It consumes those inputs. A change checks an empty or mixed box and empties a checked one. With
+ * {@link #setAllowsMixed(boolean) mixed allowed}, the user's changes cycle empty, checked, mixed instead. Code sets
+ * the mixed state with {@link #setState}, for example on a box that stands for several others while only some of them
+ * are checked. A disabled check box takes no changes from the user and draws its disabled look.</p>
+ *
+ * <p>Each change by the user fires {@link #CHANGE}, and then {@link Toggle#TOGGLE} if it would change
+ * {@link #isSelected()}, which is true only while checked. Every change fires {@link #CHANGED}, and
+ * {@link Toggle#TOGGLED} when {@code isSelected()} changed, so a handler on {@code TOGGLED} hears a box go between
+ * checked and anything else.</p>
  *
  * <p>It is focusable and tabbable and shows the hand cursor. The box is square, {@linkplain #setBoxSize sized} to the
  * caption's line height plus 8 units by default, rounded to whole units so the mark centers exactly, which is 17
@@ -39,8 +49,9 @@ import java.util.Objects;
  * caption's width wide (just the box when the caption is empty), and the taller of the box and the caption.</p>
  *
  * <h2>Theme keys</h2>
- * <p>The box paints cover the whole box. Themes built from images draw the check mark into
- * the checked paints; themes built from colors draw it with {@value #STYLE_MARK} instead.</p>
+ * <p>The box paints cover the whole box. Themes built from images draw the check mark into the checked paints;
+ * themes built from colors draw it with {@value #STYLE_MARK} instead. A mixed box uses the unchecked paints with the
+ * {@value #STYLE_MARK_MIXED} square over them.</p>
  * <ul>
  *     <li>{@value #STYLE_NORMAL} (paint, required): the box when unchecked.</li>
  *     <li>{@value #STYLE_HOVERED} (paint, required): the box when unchecked and hovered or focused.</li>
@@ -50,10 +61,14 @@ import java.util.Objects;
  *     {@value #STYLE_NORMAL}.</li>
  *     <li>{@value #STYLE_CHECKED_DISABLED} (paint, optional): the box when checked and disabled. Falls back to
  *     {@value #STYLE_CHECKED}.</li>
- *     <li>{@value #STYLE_MARK} (paint, optional): drawn over the box while checked, inset by a fifth of the box size.
- *     Nothing if missing.</li>
+ *     <li>{@value #STYLE_MARK} (paint, optional): a check mark drawn over the box while checked, inside a fifth of
+ *     the box size from each edge. Nothing if missing.</li>
  *     <li>{@value #STYLE_MARK_DISABLED} (paint, optional): the mark when disabled. Falls back to
  *     {@value #STYLE_MARK}.</li>
+ *     <li>{@value #STYLE_MARK_MIXED} (paint, optional): a square over the box while mixed, inset by a fifth of the box
+ *     size. Falls back to {@value #STYLE_MARK}; nothing if both are missing.</li>
+ *     <li>{@value #STYLE_MARK_MIXED_DISABLED} (paint, optional): the mixed square when disabled. Falls back to
+ *     {@value #STYLE_MARK_DISABLED}, then to the mixed square.</li>
  *     <li>{@value #STYLE_FOCUS} (paint, optional): a one-unit ring drawn inside the box's edge while focused. No ring
  *     if missing.</li>
  *     <li>{@value #STYLE_TEXT} (text style, optional): the caption. Falls back to the default text style.</li>
@@ -105,6 +120,14 @@ public interface CheckBox extends Component<CheckBox>, Focusable<CheckBox>, HasC
      */
     String STYLE_MARK_DISABLED = "checkbox.mark.disabled";
     /**
+     * Style key for the square drawn over a mixed box (paint, optional).
+     */
+    String STYLE_MARK_MIXED = "checkbox.mark.mixed";
+    /**
+     * Style key for the mixed square when disabled (paint, optional).
+     */
+    String STYLE_MARK_MIXED_DISABLED = "checkbox.mark.mixed.disabled";
+    /**
      * Style key for the focus ring (paint, optional).
      */
     String STYLE_FOCUS = "checkbox.focus";
@@ -116,6 +139,49 @@ public interface CheckBox extends Component<CheckBox>, Focusable<CheckBox>, HasC
      * Style key for the caption when disabled (text style, optional).
      */
     String STYLE_TEXT_DISABLED = "checkbox.text.disabled";
+
+    /**
+     * Asked before the user changes the box. The value is the state the change would leave; cancel to keep the box as
+     * it is, or set another state. Fires only for the user's actions, before {@link Toggle#TOGGLE}.
+     */
+    EventType<ValueRequestEvent<CheckBox, CheckState>> CHANGE = EventType.valueRequest("checkbox.change");
+    /**
+     * Told after the state changed, by the user or from code. The value is the new state and the previous value the
+     * state before.
+     */
+    EventType<ValueEvent<CheckBox, CheckState>> CHANGED = EventType.valueReport("checkbox.changed");
+
+    /**
+     * Returns the state.
+     *
+     * @return the state; {@link CheckState#UNCHECKED} for a new box
+     */
+    CheckState state();
+
+    /**
+     * Sets the state. {@link #CHANGED} fires if it changed, and {@link Toggle#TOGGLED} if {@link #isSelected()}
+     * changed with it. {@code setSelected} sets {@link CheckState#CHECKED} or {@link CheckState#UNCHECKED}.
+     *
+     * @param state the state
+     * @return this check box
+     */
+    CheckBox setState(CheckState state);
+
+    /**
+     * Returns whether the user's changes include the mixed state.
+     *
+     * @return whether the user can choose mixed; false by default
+     */
+    boolean allowsMixed();
+
+    /**
+     * Sets whether the user's changes cycle empty, checked, mixed, for a box where mixed is a choice of its own. By
+     * default a change checks an empty or mixed box and empties a checked one, and only code sets mixed.
+     *
+     * @param allowsMixed whether the user can choose mixed
+     * @return this check box
+     */
+    CheckBox setAllowsMixed(boolean allowsMixed);
 
     /**
      * Returns the caption.
@@ -152,16 +218,26 @@ public interface CheckBox extends Component<CheckBox>, Focusable<CheckBox>, HasC
     /**
      * A check box's own state in a {@link org.inspirenxe.strata.api.component.ComponentSnapshot}.
      *
-     * @param selected whether the box was {@linkplain #isSelected() checked}
+     * @param state the box's {@linkplain #state() state}; never null
      * @param text the caption; never null
      */
-    record State(boolean selected, Text text) {
+    record State(CheckState state, Text text) {
 
         /**
-         * Checks the text.
+         * Checks the fields.
          */
         public State {
+            Objects.requireNonNull(state, "state");
             Objects.requireNonNull(text, "text");
+        }
+
+        /**
+         * Returns whether the box was checked.
+         *
+         * @return whether the state is {@link CheckState#CHECKED}
+         */
+        public boolean selected() {
+            return this.state.isChecked();
         }
     }
 }

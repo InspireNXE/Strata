@@ -18,6 +18,7 @@ package org.inspirenxe.strata.core.control.button;
 import org.inspirenxe.strata.api.ComponentFactory;
 import org.inspirenxe.strata.api.component.CursorKind;
 import org.inspirenxe.strata.api.control.button.CheckBox;
+import org.inspirenxe.strata.api.control.button.CheckState;
 import org.inspirenxe.strata.api.event.input.KeyEvent;
 import org.inspirenxe.strata.api.event.input.PointerButtonEvent;
 import org.inspirenxe.strata.api.extension.CustomComponent;
@@ -42,8 +43,9 @@ import java.util.Set;
 /**
  * The core {@link CheckBox}. The box sits at the left edge, vertically centered, and the caption 4 units to its
  * right, also centered on the box's middle. The box uses the hovered paints while hovered or focused, and the
- * disabled paints when disabled. A checked box also draws the mark paint, inset by a fifth of the box size on each
- * side, and a focused box a one-unit focus ring.
+ * disabled paints when disabled. A checked box also draws a check in the mark paint, made of small squares inside a
+ * fifth of the box size from each edge, with strokes an eighth of the box size thick; a mixed box draws the unchecked
+ * paints and the mixed mark as a square at the same inset. A focused box draws a one-unit focus ring.
  *
  * <p>Measuring takes the wider and taller of the normal and disabled captions, so enabling or disabling it needs no
  * relayout. Without a fixed box size, the box is the caption's line height plus 8.</p>
@@ -60,7 +62,8 @@ public final class CheckBoxImpl extends CustomComponent<CheckBox> implements Che
     private static final Set<String> REQUIRED = Set.of(STYLE_NORMAL, STYLE_HOVERED, STYLE_CHECKED, STYLE_CHECKED_HOVERED);
 
     private Text text;
-    private boolean checked;
+    private CheckState state;
+    private boolean allowsMixed;
     private float fixedBoxSize;
 
     private Paint normal;
@@ -71,6 +74,8 @@ public final class CheckBoxImpl extends CustomComponent<CheckBox> implements Che
     private Paint checkedDisabled;
     private Paint mark;
     private Paint markDisabled;
+    private Paint mixedMark;
+    private Paint mixedMarkDisabled;
     private Paint focusRing;
     private TextStyle textStyle;
     private TextStyle disabledTextStyle;
@@ -100,6 +105,9 @@ public final class CheckBoxImpl extends CustomComponent<CheckBox> implements Che
         this.checkedDisabled = Paint.NONE;
         this.mark = Paint.NONE;
         this.markDisabled = Paint.NONE;
+        this.mixedMark = Paint.NONE;
+        this.mixedMarkDisabled = Paint.NONE;
+        this.state = CheckState.UNCHECKED;
         this.focusRing = Paint.NONE;
         this.textStyle = TextStyle.DEFAULT;
         this.disabledTextStyle = TextStyle.DEFAULT;
@@ -122,38 +130,89 @@ public final class CheckBoxImpl extends CustomComponent<CheckBox> implements Che
 
     @Override
     public boolean isSelected() {
-        return this.checked;
+        return this.state.isChecked();
     }
 
     @Override
     public CheckBox setSelected(final boolean checked) {
-        if (this.checked != checked) {
-            this.checked = checked;
-            this.report(TOGGLED, checked, !checked);
-        }
-        return this;
+        return this.setState(checked ? CheckState.CHECKED : CheckState.UNCHECKED);
     }
 
     @Override
     public CheckBox toggle() {
         if (this.isEnabled()) {
-            this.setSelected(!this.checked);
+            this.setSelected(!this.isSelected());
         }
         return this;
     }
 
+    @Override
+    public CheckState state() {
+        return this.state;
+    }
+
+    @Override
+    public CheckBox setState(final CheckState state) {
+        Objects.requireNonNull(state, "state");
+        final CheckState previous = this.state;
+        if (previous != state) {
+            this.state = state;
+            this.report(CHANGED, state, previous);
+            if (previous.isChecked() != state.isChecked()) {
+                this.report(TOGGLED, state.isChecked(), previous.isChecked());
+            }
+        }
+        return this;
+    }
+
+    @Override
+    public boolean allowsMixed() {
+        return this.allowsMixed;
+    }
+
+    @Override
+    public CheckBox setAllowsMixed(final boolean allowsMixed) {
+        this.allowsMixed = allowsMixed;
+        return this;
+    }
+
     /**
-     * Toggles the box for the user through {@link CheckBox#TOGGLE}, applying the final value unless it is null. Does
-     * nothing while disabled.
+     * Returns the state a change by the user moves to from the current one.
+     */
+    private CheckState next() {
+        if (this.allowsMixed) {
+            return switch (this.state) {
+                case UNCHECKED -> CheckState.CHECKED;
+                case CHECKED -> CheckState.MIXED;
+                case MIXED -> CheckState.UNCHECKED;
+            };
+        }
+        return this.state.isChecked() ? CheckState.UNCHECKED : CheckState.CHECKED;
+    }
+
+    /**
+     * Changes the box for the user: {@link CheckBox#CHANGE} first, then {@link CheckBox#TOGGLE} when the final state
+     * would change whether the box is checked. A null value from either keeps the box as it is. Does nothing while
+     * disabled.
      */
     private void userToggle() {
-        if (this.isEnabled()) {
-            this.request(TOGGLE, !this.checked, checked -> {
-                if (checked != null) {
-                    this.setSelected(checked);
-                }
-            });
+        if (!this.isEnabled()) {
+            return;
         }
+        this.request(CHANGE, this.next(), wanted -> {
+            if (wanted == null || wanted == this.state) {
+                return;
+            }
+            if (wanted.isChecked() == this.isSelected()) {
+                this.setState(wanted);
+            } else {
+                this.request(TOGGLE, wanted.isChecked(), checked -> {
+                    if (checked != null) {
+                        this.setState(checked == wanted.isChecked() ? wanted : checked ? CheckState.CHECKED : CheckState.UNCHECKED);
+                    }
+                });
+            }
+        });
     }
 
     @Override
@@ -186,6 +245,9 @@ public final class CheckBoxImpl extends CustomComponent<CheckBox> implements Che
         this.checkedDisabled = theme.paintOr(STYLE_CHECKED_DISABLED, this.checkedPaint);
         this.mark = theme.paintOr(STYLE_MARK, Paint.NONE);
         this.markDisabled = theme.paintOr(STYLE_MARK_DISABLED, this.mark);
+        this.mixedMark = theme.paintOr(STYLE_MARK_MIXED, this.mark);
+        this.mixedMarkDisabled = theme.paintOr(STYLE_MARK_MIXED_DISABLED,
+                theme.paint(STYLE_MARK_DISABLED).orElse(this.mixedMark));
         this.focusRing = theme.paintOr(STYLE_FOCUS, Paint.NONE);
         this.textStyle = theme.textStyleOr(STYLE_TEXT, TextStyle.DEFAULT);
         this.disabledTextStyle = theme.textStyleOr(STYLE_TEXT_DISABLED, this.textStyle);
@@ -211,18 +273,22 @@ public final class CheckBoxImpl extends CustomComponent<CheckBox> implements Che
         final boolean enabled = this.isEnabled();
         final boolean lit = this.isHovered() || this.isFocused();
 
+        final boolean checked = this.state.isChecked();
         final Paint face;
         if (!enabled) {
-            face = this.checked ? this.checkedDisabled : this.disabled;
-        } else if (this.checked) {
+            face = checked ? this.checkedDisabled : this.disabled;
+        } else if (checked) {
             face = lit ? this.checkedHovered : this.checkedPaint;
         } else {
             face = lit ? this.hoveredPaint : this.normal;
         }
         face.paint(painter, box);
 
-        if (this.checked) {
-            (enabled ? this.mark : this.markDisabled).paint(painter, box.shrink(Insets.of(Math.round(this.boxSize * 0.2f))));
+        final Rect inner = box.shrink(Insets.of(Math.round(this.boxSize * 0.2f)));
+        if (checked) {
+            this.drawCheck(painter, enabled ? this.mark : this.markDisabled, inner);
+        } else if (this.state == CheckState.MIXED) {
+            (enabled ? this.mixedMark : this.mixedMarkDisabled).paint(painter, inner);
         }
         if (this.isFocused() && this.focusRing != Paint.NONE) {
             this.focusRing.paint(painter, new Rect(box.x(), box.y(), box.width(), 1f));
@@ -232,6 +298,32 @@ public final class CheckBoxImpl extends CustomComponent<CheckBox> implements Che
         }
         if (!this.caption.isEmpty()) {
             (enabled ? this.caption : this.disabledCaption).draw(painter, box.right() + GAP, middle - this.captionHeight * 0.5f);
+        }
+    }
+
+    /**
+     * Draws a check in a square: a short stroke down to the right from the left middle, then a long one up to the top
+     * right, each a run of squares a stroke thick.
+     */
+    private void drawCheck(final Painter painter, final Paint paint, final Rect area) {
+        if (paint == Paint.NONE) {
+            return;
+        }
+        final float size = Math.min(area.width(), area.height());
+        final float stroke = Math.max(1f, Math.round(this.boxSize / 8f));
+        final float span = size - stroke;
+        final float bottomX = area.x() + span * 0.375f;
+        final float bottomY = area.y() + span;
+        CheckBoxImpl.stroke(painter, paint, area.x(), area.y() + span * 0.5f, bottomX, bottomY, stroke);
+        CheckBoxImpl.stroke(painter, paint, bottomX, bottomY, area.x() + span, area.y(), stroke);
+    }
+
+    private static void stroke(final Painter painter, final Paint paint, final float fromX, final float fromY,
+                               final float toX, final float toY, final float stroke) {
+        final int steps = Math.max(1, Math.round(Math.max(Math.abs(toX - fromX), Math.abs(toY - fromY)) / (stroke * 0.5f)));
+        for (int i = 0; i <= steps; i++) {
+            final float t = (float) i / steps;
+            paint.paint(painter, new Rect(fromX + (toX - fromX) * t, fromY + (toY - fromY) * t, stroke, stroke));
         }
     }
 
@@ -253,6 +345,6 @@ public final class CheckBoxImpl extends CustomComponent<CheckBox> implements Che
 
     @Override
     protected Object snapshotState() {
-        return new CheckBox.State(this.checked, this.text);
+        return new CheckBox.State(this.state, this.text);
     }
 }
