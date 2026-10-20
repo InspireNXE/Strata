@@ -31,7 +31,8 @@ import java.util.Optional;
  * click.
  *
  * <p>The flyout draws its background and shows its content inside its padding, at the content's desired size plus
- * the padding, but no larger than the host. It opens below or above its anchor like any popup.</p>
+ * the padding, but no larger than the host. It opens below or above its anchor like any popup, or with
+ * {@link #openIn} inside an area, such as the space beside a component.</p>
  *
  * <p>Opening it moves focus to the first component in the content that Tab would stop at, or else to the flyout
  * itself, which is focusable for that reason but not tabbable. While focus is inside it, Tab and Shift+Tab move only
@@ -142,6 +143,18 @@ public interface Flyout extends Component<Flyout>, Focusable<Flyout>, HasTooltip
      */
     @Override
     Flyout openAt(float x, float y);
+
+    /**
+     * Opens the flyout laid out in an area, as {@link org.inspirenxe.strata.api.overlay.Overlays#popupIn} lays
+     * popups out: at its desired size, no larger than the area, where its alignment places it in the area, which is
+     * the area's top-left corner by default. The area is cut to the host. To open it beside a button, pass the space
+     * from the button's right edge to the host's. Does nothing if it is already open or has no content.
+     *
+     * @param area the area in root coordinates
+     * @return this flyout
+     * @throws IllegalStateException if the factory's host has no screen yet
+     */
+    Flyout openIn(Rect area);
 
     /**
      * Closes the flyout and reports {@link Closable#CLOSED}. Does nothing if it is not open.

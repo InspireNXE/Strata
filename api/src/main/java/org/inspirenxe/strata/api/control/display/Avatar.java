@@ -73,8 +73,9 @@ import java.util.Optional;
  *     and 1 at the top and bottom.</li>
  * </ul>
  *
- * <p>The three {@code badge.*} keys carry no avatar prefix, since any control that shows a count may read them, so
- * counts look the same everywhere.</p>
+ * <p>The three {@code badge.*} keys carry no avatar prefix, since the items of a
+ * {@link org.inspirenxe.strata.api.control.pane.NavigationView} read them too, so counts look the same
+ * everywhere.</p>
  *
  * <pre>{@code
  * Avatar seller = factory.avatar(account).setAvatarSize(32);
@@ -107,18 +108,16 @@ public interface Avatar extends Component<Avatar>, HasCursor<Avatar>, HasTooltip
      */
     String STYLE_PLACEHOLDER_GROUP = "avatar.placeholder.group";
     /**
-     * Style key for behind a badge's number (paint, optional). Falls back to a red fill. Any control that shows a count
-     * may read it.
+     * Style key for behind a badge's number (paint, optional). Falls back to a red fill. Navigation items read it too.
      */
     String STYLE_BADGE = "badge.background";
     /**
-     * Style key for a badge's number (text style, optional). Any control that shows a count may read
-     * it.
+     * Style key for a badge's number (text style, optional). Navigation items read it too.
      */
     String STYLE_BADGE_TEXT = "badge.text";
     /**
      * Style key for the space around a badge's number (insets, optional). Defaults to 2 at the sides and 1 at the
-     * top and bottom. Any control that shows a count may read it.
+     * top and bottom. Navigation items read it too.
      */
     String STYLE_BADGE_PADDING = "badge.padding";
     /**

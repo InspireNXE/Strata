@@ -86,6 +86,20 @@ public final class ContainerNode extends Node implements ContainerPeer {
 
     @Override
     public void add(final Component<?> child) {
+        this.add(this.childNodes.size(), child);
+    }
+
+    /**
+     * Adds a child at a place in the drawing order, which is also the tree order Tab follows.
+     *
+     * @param index where the child goes: 0 for the first, the number of children for the last
+     * @param child the child
+     * @throws IndexOutOfBoundsException if the index is negative or greater than the number of children
+     * @throws IllegalArgumentException if the child already has a parent, is a host's content, would create a
+     *     cycle, or was made by another factory
+     */
+    public void add(final int index, final Component<?> child) {
+        Objects.checkIndex(index, this.childNodes.size() + 1);
         final Node node = this.factory().nodeOf(child);
         if (node.parentNode() != null) {
             throw new IllegalArgumentException(child + " already belongs to " + node.parent());
@@ -96,8 +110,8 @@ public final class ContainerNode extends Node implements ContainerPeer {
         if (node.root() != null) {
             throw new IllegalArgumentException(child + " is the content of a host and cannot be added to a container");
         }
-        this.childNodes.add(node);
-        this.children.add(node.facade());
+        this.childNodes.add(index, node);
+        this.children.add(index, node.facade());
         node.setParent(this);
         final Root root = this.root();
         if (root != null) {
@@ -109,6 +123,20 @@ public final class ContainerNode extends Node implements ContainerPeer {
     @Override
     public void addContent(final Component<?> child) {
         this.add(child);
+        this.factory().nodeOf(child).setContent(true);
+    }
+
+    /**
+     * Adds content, as {@link #addContent(Component)} does, at a place in the drawing order.
+     *
+     * @param index where the child goes: 0 for the first, the number of children for the last
+     * @param child the child
+     * @throws IndexOutOfBoundsException if the index is negative or greater than the number of children
+     * @throws IllegalArgumentException if the child already has a parent, is a host's content, would create a
+     *     cycle, or was made by another factory
+     */
+    public void addContent(final int index, final Component<?> child) {
+        this.add(index, child);
         this.factory().nodeOf(child).setContent(true);
     }
 

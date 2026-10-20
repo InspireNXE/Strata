@@ -146,6 +146,20 @@ public abstract class BuiltInComposite<T extends Component<T>> extends BuiltInCo
     }
 
     /**
+     * Adds a private part at a place in the drawing order, which is also the tree order Tab follows. Only core can
+     * do this; the public {@code CustomComposite} adds at the end.
+     *
+     * @param index where the child goes: 0 for the first, the number of children for the last
+     * @param child the child
+     * @throws IndexOutOfBoundsException if the index is negative or greater than the number of children
+     * @throws IllegalArgumentException if the child already has a parent, is a host's content, would create a
+     *     cycle, or was made by another factory
+     */
+    protected final void addChild(final int index, final Component<?> child) {
+        this.node().add(index, child);
+    }
+
+    /**
      * Adds a child that is content shown for the user, such as a cell from the user's cell factory. Its control
      * events, and those of anything inside it, pass this component and every composite above it.
      *
@@ -155,6 +169,20 @@ public abstract class BuiltInComposite<T extends Component<T>> extends BuiltInCo
      */
     protected final void addContent(final Component<?> child) {
         this.node().addContent(child);
+    }
+
+    /**
+     * Adds content, as {@link #addContent(Component)} does, at a place in the drawing order, which is also the tree
+     * order Tab follows. Only core can do this.
+     *
+     * @param index where the child goes: 0 for the first, the number of children for the last
+     * @param child the child
+     * @throws IndexOutOfBoundsException if the index is negative or greater than the number of children
+     * @throws IllegalArgumentException if the child already has a parent, is a host's content, would create a
+     *     cycle, or was made by another factory
+     */
+    protected final void addContent(final int index, final Component<?> child) {
+        this.node().addContent(index, child);
     }
 
     /**

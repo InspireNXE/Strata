@@ -38,6 +38,7 @@ import org.inspirenxe.strata.api.control.field.TextBox;
 import org.inspirenxe.strata.api.control.menu.Menu;
 import org.inspirenxe.strata.api.control.menu.MenuBar;
 import org.inspirenxe.strata.api.control.pane.Expander;
+import org.inspirenxe.strata.api.control.pane.NavigationView;
 import org.inspirenxe.strata.api.control.pane.ScrollBar;
 import org.inspirenxe.strata.api.control.pane.SplitPane;
 import org.inspirenxe.strata.api.control.pane.TabBar;
@@ -213,6 +214,10 @@ public final class Themes {
                 .paint(InfoBar.STYLE_ACCENT_SUCCESS, Paint.solid(0xFF43A047))
                 .paint(InfoBar.STYLE_ACCENT_WARNING, Paint.solid(0xFFE8A33D))
                 .paint(InfoBar.STYLE_ACCENT_ERROR, Paint.solid(0xFFE05050))
+                .paint(NavigationView.STYLE_PANE, Paint.solid(0xFF1F2024))
+                .paint(NavigationView.STYLE_ITEM_SELECTED, Paint.solid(0xFF3A4D6E))
+                .paint(NavigationView.STYLE_INDICATOR, Paint.solid(0xFF6A9FFF))
+                .textStyle(NavigationView.STYLE_ITEM_TEXT, TextStyle.DEFAULT.withColor(0xFFE0E0E0))
                 .build();
     }
 }

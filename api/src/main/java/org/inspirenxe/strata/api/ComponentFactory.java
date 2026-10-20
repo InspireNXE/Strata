@@ -55,6 +55,11 @@ import org.inspirenxe.strata.api.control.menu.MenuItem;
 import org.inspirenxe.strata.api.control.menu.MenuSeparator;
 import org.inspirenxe.strata.api.control.menu.SubmenuItem;
 import org.inspirenxe.strata.api.control.pane.Expander;
+import org.inspirenxe.strata.api.control.pane.NavigationEntry;
+import org.inspirenxe.strata.api.control.pane.NavigationHeader;
+import org.inspirenxe.strata.api.control.pane.NavigationItem;
+import org.inspirenxe.strata.api.control.pane.NavigationSeparator;
+import org.inspirenxe.strata.api.control.pane.NavigationView;
 import org.inspirenxe.strata.api.control.pane.ScrollBar;
 import org.inspirenxe.strata.api.control.pane.SplitPane;
 import org.inspirenxe.strata.api.control.pane.Tab;
@@ -1033,6 +1038,76 @@ public interface ComponentFactory {
     default BusyIndicator busyIndicator(final String text) {
         return this.busyIndicator(Text.of(text));
     }
+
+    /**
+     * Makes an empty {@link NavigationView} in {@link NavigationView.DisplayMode#AUTO} that stretches over its slot,
+     * with nothing selected.
+     *
+     * @return a new navigation view
+     */
+    NavigationView navigationView();
+
+    /**
+     * Makes a {@link NavigationItem} with no text, as {@code navigationItem("")} does.
+     *
+     * @return a new item
+     */
+    default NavigationItem navigationItem() {
+        return this.navigationItem("");
+    }
+
+    /**
+     * Makes an enabled, selectable, collapsed {@link NavigationItem} with no icon, badge, page or children, for
+     * {@link NavigationView#addItem(NavigationEntry)}.
+     *
+     * @param text the item's text
+     * @return a new item
+     */
+    NavigationItem navigationItem(Text text);
+
+    /**
+     * Does the same as {@link #navigationItem(Text)} with literal text.
+     *
+     * @param text the item's text
+     * @return a new item
+     */
+    default NavigationItem navigationItem(final String text) {
+        return this.navigationItem(Text.of(text));
+    }
+
+    /**
+     * Makes a {@link NavigationHeader} with no text, as {@code navigationHeader("")} does.
+     *
+     * @return a new header
+     */
+    default NavigationHeader navigationHeader() {
+        return this.navigationHeader("");
+    }
+
+    /**
+     * Makes a {@link NavigationHeader}, a caption over a group of items.
+     *
+     * @param text the header's text
+     * @return a new header
+     */
+    NavigationHeader navigationHeader(Text text);
+
+    /**
+     * Does the same as {@link #navigationHeader(Text)} with literal text.
+     *
+     * @param text the header's text
+     * @return a new header
+     */
+    default NavigationHeader navigationHeader(final String text) {
+        return this.navigationHeader(Text.of(text));
+    }
+
+    /**
+     * Makes a {@link NavigationSeparator}, a line between groups of items.
+     *
+     * @return a new separator
+     */
+    NavigationSeparator navigationSeparator();
 
     /**
      * Makes a {@link ColorPicker} set to opaque white, with the alpha strip hidden.

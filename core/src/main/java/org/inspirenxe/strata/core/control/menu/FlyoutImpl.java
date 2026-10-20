@@ -39,6 +39,7 @@ import org.inspirenxe.strata.core.node.Root;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.function.Function;
 
 /**
  * The core {@link Flyout}. It owns the popup overlay it opens in, as {@link MenuImpl} does, and adds its content
@@ -149,6 +150,19 @@ public final class FlyoutImpl extends BuiltInComposite<Flyout> implements Flyout
     @Override
     public Flyout open(final Rect anchor) {
         Objects.requireNonNull(anchor, "anchor");
+        return this.show(root -> root.popup(this, anchor, this.lightDismiss));
+    }
+
+    @Override
+    public Flyout openIn(final Rect area) {
+        Objects.requireNonNull(area, "area");
+        return this.show(root -> root.popupIn(this, area, this.lightDismiss));
+    }
+
+    /**
+     * Opens the flyout in the popup the function opens in the host's root, unless it cannot open.
+     */
+    private Flyout show(final Function<Root, Overlay> opener) {
         if (!this.canOpen()) {
             return this;
         }
@@ -159,7 +173,7 @@ public final class FlyoutImpl extends BuiltInComposite<Flyout> implements Flyout
             return this;
         }
         this.returnFocus = root.focused() == null ? null : root.focused().facade();
-        this.popup = root.popup(this, anchor, this.lightDismiss);
+        this.popup = opener.apply(root);
         this.popup.onEvent(Overlay.CLOSED, event -> this.closed());
         // Lay the popup out now, so focus and keys find the content before the next frame
         root.layout();

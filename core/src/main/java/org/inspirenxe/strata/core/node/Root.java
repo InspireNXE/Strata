@@ -89,6 +89,10 @@ import java.util.function.Consumer;
  * only to the focused node. When the platform does not send key repeats, the root makes them with a
  * {@link KeyRepeater}; each repeat goes to whatever has focus when it fires.</p>
  *
+ * <p>A popup opened next to an anchor takes its desired size below or above the anchor. A popup opened in an area
+ * is measured with the area's size and arranged into it, where its own alignment places it, as a dialog is in the
+ * whole host; the area is cut to the host, and core can move it while the popup is open.</p>
+ *
  * <p>Toasts are overlays placed down the top-right corner. Presses elsewhere and Escape leave them open; each closes
  * on a click that nothing in it consumed, or on the first frame rendered after its time runs out.</p>
  *
@@ -1171,6 +1175,44 @@ public final class Root {
     }
 
     /**
+     * Opens a popup laid out in an area, as {@link Overlays#popupIn} does, choosing whether a press outside it closes
+     * it. Core's flyout and navigation view open through here.
+     *
+     * @param content what to show; it must not be in a tree already
+     * @param area the area to lay it out in, in the host's coordinates; cut to the host
+     * @param lightDismiss true to close it on a press outside, which then goes no further; false to leave it open
+     *     and let the press through
+     * @return the open popup
+     * @throws IllegalArgumentException if the content is already in a tree or was made by another factory
+     */
+    public Overlay popupIn(final Component<?> content, final Rect area, final boolean lightDismiss) {
+        Objects.requireNonNull(area, "area");
+        final Layer layer = this.open(content, null, false);
+        layer.area = area;
+        layer.lightDismiss = lightDismiss;
+        return layer;
+    }
+
+    /**
+     * Moves an open popup that was laid out in an area to another area, such as when the component it covers moved.
+     * The popup is laid out again before the next frame.
+     *
+     * @param overlay a popup this root opened in an area
+     * @param area the new area, in the host's coordinates; cut to the host
+     * @throws IllegalArgumentException if this root did not open the overlay in an area
+     */
+    public void setPopupArea(final Overlay overlay, final Rect area) {
+        Objects.requireNonNull(area, "area");
+        if (!(overlay instanceof final Layer layer) || layer.root() != this || layer.area == null) {
+            throw new IllegalArgumentException(overlay + " is not a popup this root opened in an area");
+        }
+        if (!layer.area.equals(area)) {
+            layer.area = area;
+            this.requestLayout();
+        }
+    }
+
+    /**
      * Changes whether a press outside an open popup closes it.
      *
      * @param overlay a popup this root opened
@@ -1221,6 +1263,8 @@ public final class Root {
         boolean open;
         // Whether a press outside closes the layer; only popups can turn it off
         boolean lightDismiss;
+        // The area a popup opened in an area is laid out in, or null
+        Rect area;
 
         Layer(final Node node, final Rect anchor, final boolean modal, final long expiresAt) {
             this.node = node;
@@ -1238,6 +1282,12 @@ public final class Root {
 
         void layout(final Rect area) {
             final LayoutPass pass = Root.this.layoutPass;
+            if (this.area != null) {
+                final Rect inside = this.area.intersect(area);
+                this.node.measure(pass, inside.width(), inside.height());
+                this.node.arrange(pass, inside);
+                return;
+            }
             this.node.measure(pass, area.width(), area.height());
             if (this.anchor == null) {
                 this.node.arrange(pass, area);
@@ -1332,6 +1382,11 @@ public final class Root {
         @Override
         public Overlay popup(final Component<?> content, final Rect anchor) {
             return Root.this.open(content, Objects.requireNonNull(anchor, "anchor"), false);
+        }
+
+        @Override
+        public Overlay popupIn(final Component<?> content, final Rect area) {
+            return Root.this.popupIn(content, area, true);
         }
 
         @Override

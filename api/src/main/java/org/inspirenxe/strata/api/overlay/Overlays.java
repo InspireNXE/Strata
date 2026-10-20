@@ -89,6 +89,20 @@ public interface Overlays {
     Overlay popup(Component<?> content, Rect anchor);
 
     /**
+     * Opens a popup laid out in an area, such as a pane over the side of a screen. The content is measured with the
+     * area's size and arranged into it, where its own alignment and margin place it, as a dialog is in the whole
+     * host: content that stretches fills the area, and other content takes its desired size at its alignment's
+     * place. The area is cut to the host. Like any popup, a press outside closes it and goes no further, Escape
+     * closes it, and it is not modal.
+     *
+     * @param content what to show; it must not be in a tree already
+     * @param area the area to lay it out in, in the host's coordinates
+     * @return the open popup
+     * @throws IllegalArgumentException if the content is already in a tree or was made by another factory
+     */
+    Overlay popupIn(Component<?> content, Rect area);
+
+    /**
      * Opens a modal dialog. The content is laid out in the whole host, where its own alignment places it: a
      * centered window stays centered when the host resizes.
      *
@@ -100,8 +114,7 @@ public interface Overlays {
 
     /**
      * Shows a line of text as a toast for {@value #DEFAULT_TOAST_MILLIS} milliseconds. The text wraps at a third of
-     * the host's width and sits 6 units in from the toast's edges; {@code 
-} starts a new line.
+     * the host's width and sits 6 units in from the toast's edges; {@code \n} starts a new line.
      *
      * @param message the text
      * @return the open toast

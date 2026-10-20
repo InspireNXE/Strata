@@ -55,6 +55,10 @@ import org.inspirenxe.strata.api.control.menu.MenuItem;
 import org.inspirenxe.strata.api.control.menu.MenuSeparator;
 import org.inspirenxe.strata.api.control.menu.SubmenuItem;
 import org.inspirenxe.strata.api.control.pane.Expander;
+import org.inspirenxe.strata.api.control.pane.NavigationHeader;
+import org.inspirenxe.strata.api.control.pane.NavigationItem;
+import org.inspirenxe.strata.api.control.pane.NavigationSeparator;
+import org.inspirenxe.strata.api.control.pane.NavigationView;
 import org.inspirenxe.strata.api.control.pane.ScrollBar;
 import org.inspirenxe.strata.api.control.pane.SplitPane;
 import org.inspirenxe.strata.api.control.pane.Tab;
@@ -121,6 +125,10 @@ import org.inspirenxe.strata.core.control.menu.MenuItemImpl;
 import org.inspirenxe.strata.core.control.menu.MenuSeparatorImpl;
 import org.inspirenxe.strata.core.control.menu.SubmenuItemImpl;
 import org.inspirenxe.strata.core.control.pane.ExpanderImpl;
+import org.inspirenxe.strata.core.control.pane.NavigationHeaderImpl;
+import org.inspirenxe.strata.core.control.pane.NavigationItemImpl;
+import org.inspirenxe.strata.core.control.pane.NavigationSeparatorImpl;
+import org.inspirenxe.strata.core.control.pane.NavigationViewImpl;
 import org.inspirenxe.strata.core.control.pane.ScrollBarImpl;
 import org.inspirenxe.strata.core.control.pane.SplitPaneImpl;
 import org.inspirenxe.strata.core.control.pane.TabBarImpl;
@@ -504,6 +512,26 @@ public final class ComponentFactoryImpl implements ComponentFactory {
     @Override
     public ColorPicker colorPicker() {
         return new ColorPickerImpl(this);
+    }
+
+    @Override
+    public NavigationView navigationView() {
+        return new NavigationViewImpl(this);
+    }
+
+    @Override
+    public NavigationItem navigationItem(final Text text) {
+        return new NavigationItemImpl(text);
+    }
+
+    @Override
+    public NavigationHeader navigationHeader(final Text text) {
+        return new NavigationHeaderImpl(text);
+    }
+
+    @Override
+    public NavigationSeparator navigationSeparator() {
+        return new NavigationSeparatorImpl();
     }
 
     @Override
