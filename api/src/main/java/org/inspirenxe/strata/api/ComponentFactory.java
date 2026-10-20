@@ -30,6 +30,7 @@ import org.inspirenxe.strata.api.control.collection.ListView;
 import org.inspirenxe.strata.api.control.collection.TableColumn;
 import org.inspirenxe.strata.api.control.collection.TableView;
 import org.inspirenxe.strata.api.control.collection.TreeView;
+import org.inspirenxe.strata.api.control.display.Avatar;
 import org.inspirenxe.strata.api.control.display.BusyIndicator;
 import org.inspirenxe.strata.api.control.display.Image;
 import org.inspirenxe.strata.api.control.display.Label;
@@ -286,6 +287,25 @@ public interface ComponentFactory {
      */
     default Image image(final Object value) {
         return this.image().setValue(value);
+    }
+
+    /**
+     * Makes an {@link Avatar} {@value Avatar#DEFAULT_SIZE} units on a side that shows its placeholder until it is
+     * given a picture, a name or a value.
+     *
+     * @return a new avatar
+     */
+    Avatar avatar();
+
+    /**
+     * Makes an {@link Avatar} of a value: its icon, or else initials from its name, and its tooltip; see
+     * {@link Avatar#setValue}.
+     *
+     * @param value the value
+     * @return a new avatar
+     */
+    default Avatar avatar(final Object value) {
+        return this.avatar().setValue(value);
     }
 
     /**

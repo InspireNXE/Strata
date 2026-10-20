@@ -30,6 +30,7 @@ import org.inspirenxe.strata.api.control.collection.ListView;
 import org.inspirenxe.strata.api.control.collection.TableColumn;
 import org.inspirenxe.strata.api.control.collection.TableView;
 import org.inspirenxe.strata.api.control.collection.TreeView;
+import org.inspirenxe.strata.api.control.display.Avatar;
 import org.inspirenxe.strata.api.control.display.BusyIndicator;
 import org.inspirenxe.strata.api.control.display.Image;
 import org.inspirenxe.strata.api.control.display.Label;
@@ -94,6 +95,7 @@ import org.inspirenxe.strata.core.control.collection.ListViewImpl;
 import org.inspirenxe.strata.core.control.collection.TableColumnImpl;
 import org.inspirenxe.strata.core.control.collection.TableViewImpl;
 import org.inspirenxe.strata.core.control.collection.TreeViewImpl;
+import org.inspirenxe.strata.core.control.display.AvatarImpl;
 import org.inspirenxe.strata.core.control.display.BusyIndicatorImpl;
 import org.inspirenxe.strata.core.control.display.ImageImpl;
 import org.inspirenxe.strata.core.control.display.LabelImpl;
@@ -304,6 +306,11 @@ public final class ComponentFactoryImpl implements ComponentFactory {
     @Override
     public Image image() {
         return new ImageImpl(this);
+    }
+
+    @Override
+    public Avatar avatar() {
+        return new AvatarImpl(this);
     }
 
     @Override
