@@ -21,7 +21,6 @@ import org.inspirenxe.strata.api.control.button.CheckBox;
 import org.inspirenxe.strata.api.control.button.RadioButton;
 import org.inspirenxe.strata.api.control.button.ToggleSwitch;
 import org.inspirenxe.strata.api.control.collection.ComboBox;
-import org.inspirenxe.strata.api.control.collection.DualList;
 import org.inspirenxe.strata.api.control.collection.ListView;
 import org.inspirenxe.strata.api.control.collection.GridView;
 import org.inspirenxe.strata.api.control.collection.TableView;
@@ -183,8 +182,6 @@ public final class Themes {
                 .paint(GridView.STYLE_CELL_SELECTED, Paint.solid(0x606A9FFF))
                 .paint(TextBox.STYLE_SUGGESTIONS, Paint.solid(0xFF16171A))
                 .textStyle(TextBox.STYLE_SUGGESTION_TEXT, TextStyle.DEFAULT.withColor(0xFFE0E0E0))
-                .paint(DualList.STYLE_LIST, Paint.solid(0xFF16171A))
-                .textStyle(DualList.STYLE_TITLE, TextStyle.DEFAULT.withColor(0xFFC8C8C8))
                 .paint(ColorPicker.STYLE_FRAME, Paint.solid(0xFF3C3F44))
                 .paint(ColorPicker.STYLE_MARKER, Paint.solid(0xFFFFFFFF))
                 .paint(ColorPicker.STYLE_MARKER_OUTLINE, Paint.solid(0xFF000000))

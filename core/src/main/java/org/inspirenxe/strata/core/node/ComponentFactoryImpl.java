@@ -23,7 +23,6 @@ import org.inspirenxe.strata.api.control.button.CycleButton;
 import org.inspirenxe.strata.api.control.button.RadioGroup;
 import org.inspirenxe.strata.api.control.button.ToggleSwitch;
 import org.inspirenxe.strata.api.control.collection.ComboBox;
-import org.inspirenxe.strata.api.control.collection.DualList;
 import org.inspirenxe.strata.api.control.collection.GridView;
 import org.inspirenxe.strata.api.control.collection.ListView;
 import org.inspirenxe.strata.api.control.collection.TableColumn;
@@ -75,7 +74,6 @@ import org.inspirenxe.strata.core.control.button.CycleButtonImpl;
 import org.inspirenxe.strata.core.control.button.RadioGroupImpl;
 import org.inspirenxe.strata.core.control.button.ToggleSwitchImpl;
 import org.inspirenxe.strata.core.control.collection.ComboBoxImpl;
-import org.inspirenxe.strata.core.control.collection.DualListImpl;
 import org.inspirenxe.strata.core.control.collection.GridViewImpl;
 import org.inspirenxe.strata.core.control.collection.ListViewImpl;
 import org.inspirenxe.strata.core.control.collection.TableColumnImpl;
@@ -390,11 +388,6 @@ public final class ComponentFactoryImpl implements ComponentFactory {
     @Override
     public BusyIndicator busyIndicator() {
         return new BusyIndicatorImpl(this);
-    }
-
-    @Override
-    public <T> DualList<T> dualList(final Function<? super T, ? extends Component<?>> cellFactory) {
-        return new DualListImpl<>(this, cellFactory);
     }
 
     @Override

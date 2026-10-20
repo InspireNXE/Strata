@@ -22,7 +22,6 @@ import org.inspirenxe.strata.api.control.button.CycleButton;
 import org.inspirenxe.strata.api.control.button.RadioGroup;
 import org.inspirenxe.strata.api.control.button.ToggleSwitch;
 import org.inspirenxe.strata.api.control.collection.ComboBox;
-import org.inspirenxe.strata.api.control.collection.DualList;
 import org.inspirenxe.strata.api.control.collection.GridView;
 import org.inspirenxe.strata.api.control.collection.ListView;
 import org.inspirenxe.strata.api.control.collection.TableColumn;
@@ -197,7 +196,7 @@ public interface ComponentFactory {
     }
 
     /**
-     * Makes the label a list, tree, dual list or table row shows for text by default: {@value #CELL_PADDING} units
+     * Makes the label a list, tree or table row shows for text by default: {@value #CELL_PADDING} units
      * of margin on each side, vertically centered, and cut short with an ellipsis when it does not fit. Use it in
      * your own cell factories so text rows line up with the built-in ones.
      *
@@ -857,26 +856,6 @@ public interface ComponentFactory {
     default BusyIndicator busyIndicator(final String text) {
         return this.busyIndicator(Text.of(text));
     }
-
-    /**
-     * Makes a {@link DualList} with no items and no titles, whose cells are labels showing
-     * {@link String#valueOf(Object)} of each item. Set other cells with {@code setCellFactory}.
-     *
-     * @param <T> the type of the items
-     * @return a new dual list
-     */
-    default <T> DualList<T> dualList() {
-        return this.dualList(item -> this.cellLabel(String.valueOf(item)));
-    }
-
-    /**
-     * Makes a {@link DualList} with no items and no titles.
-     *
-     * @param <T> the type of the items
-     * @param cellFactory makes the component for an item's row, in either list
-     * @return a new dual list
-     */
-    <T> DualList<T> dualList(Function<? super T, ? extends Component<?>> cellFactory);
 
     /**
      * Makes a {@link ColorPicker} set to opaque white, with the alpha strip hidden.
