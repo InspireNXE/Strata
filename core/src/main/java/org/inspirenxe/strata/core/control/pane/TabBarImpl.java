@@ -28,6 +28,7 @@ import org.inspirenxe.strata.api.extension.CustomComponent;
 import org.inspirenxe.strata.api.extension.CustomComposite;
 import org.inspirenxe.strata.api.extension.MeasureContext;
 import org.inspirenxe.strata.api.extension.Painter;
+import org.inspirenxe.strata.api.geometry.Insets;
 import org.inspirenxe.strata.api.geometry.Rect;
 import org.inspirenxe.strata.api.geometry.Size;
 import org.inspirenxe.strata.api.input.MouseButton;
@@ -53,9 +54,9 @@ import java.util.Set;
  */
 public final class TabBarImpl extends CustomComposite<TabBar> implements TabBar {
     /**
-     * The space on each side of a tab's text, in UI units.
+     * The space around a tab's text, in UI units, when the theme sets no {@value #STYLE_PADDING}.
      */
-    public static final float TAB_PADDING = 8f;
+    public static final Insets DEFAULT_PADDING = new Insets(8f, 4f, 8f, 3f);
     private static final Set<String> REQUIRED = Set.of(STYLE_NORMAL, STYLE_SELECTED);
 
     private final ComponentFactory ui;
@@ -277,6 +278,8 @@ public final class TabBarImpl extends CustomComposite<TabBar> implements TabBar 
         private TextStyle textStyle;
         private TextStyle selectedText;
         private TextStyle disabledText;
+        private Insets padding;
+        private Insets selectedPadding;
         private float lineHeight;
         private TextLine span;
         private TextLine selectedSpan;
@@ -326,6 +329,8 @@ public final class TabBarImpl extends CustomComposite<TabBar> implements TabBar 
             this.textStyle = theme.textStyleOr(STYLE_TEXT, TextStyle.DEFAULT);
             this.selectedText = theme.textStyleOr(STYLE_TEXT_SELECTED, this.textStyle);
             this.disabledText = theme.textStyleOr(STYLE_TEXT_DISABLED, this.textStyle);
+            this.padding = theme.insetsOr(STYLE_PADDING, DEFAULT_PADDING);
+            this.selectedPadding = theme.insetsOr(STYLE_PADDING_SELECTED, this.padding);
         }
 
         @Override
@@ -337,7 +342,12 @@ public final class TabBarImpl extends CustomComposite<TabBar> implements TabBar 
             this.disabledSpan = TextLine.of(text, this.disabledText, metrics);
             this.textWidth = Math.max(this.span.width(), this.selectedSpan.width());
             this.lineHeight = Math.max(this.span.height(), this.selectedSpan.height());
-            return new Size(this.textWidth + TAB_PADDING * 2f, this.lineHeight + 7f);
+            // Sized for the larger padding, so selecting a tab never moves its neighbors
+            final float sides = Math.max(this.padding.left() + this.padding.right(),
+                    this.selectedPadding.left() + this.selectedPadding.right());
+            final float ends = Math.max(this.padding.top() + this.padding.bottom(),
+                    this.selectedPadding.top() + this.selectedPadding.bottom());
+            return new Size(this.textWidth + sides, this.lineHeight + ends);
         }
 
         @Override
@@ -358,8 +368,11 @@ public final class TabBarImpl extends CustomComposite<TabBar> implements TabBar 
                 caption = this.span;
             }
             face.paint(painter, bounds);
-            caption.draw(painter, bounds.x() + (bounds.width() - this.textWidth) * 0.5f,
-                    bounds.y() + (bounds.height() - this.lineHeight) * 0.5f + 1f);
+            // Centered in the tab less its state's padding
+            final Insets pad = isSelected ? this.selectedPadding : this.padding;
+            caption.draw(painter,
+                    bounds.x() + pad.left() + (bounds.width() - pad.left() - pad.right() - this.textWidth) * 0.5f,
+                    bounds.y() + pad.top() + (bounds.height() - pad.top() - pad.bottom() - this.lineHeight) * 0.5f);
         }
 
         @Override

@@ -36,9 +36,11 @@ import java.util.Set;
  * @param parent the theme the file builds on, if it names one
  * @param paints the paints it sets
  * @param text the text style changes it makes, applied over the inherited style of each key
+ * @param insets the insets it sets
  */
-record ThemeFile(Optional<ThemeId> parent, Map<String, Paint> paints, Map<String, TextPatch> text) {
-    private static final Set<String> TOP_KEYS = Set.of("parent", "paints", "text");
+record ThemeFile(Optional<ThemeId> parent, Map<String, Paint> paints, Map<String, TextPatch> text,
+                 Map<String, Insets> insets) {
+    private static final Set<String> TOP_KEYS = Set.of("parent", "paints", "text", "insets");
     private static final Set<String> SPRITE_KEYS = Set.of("sprite", "tint");
     private static final Set<String> NINE_SLICE_KEYS = Set.of("nine_slice", "border", "tint", "size", "tiled");
     private static final Set<String> TILED_KEYS = Set.of("tiled", "size", "tint");
@@ -72,7 +74,13 @@ record ThemeFile(Optional<ThemeId> parent, Map<String, Paint> paints, Map<String
                     text.put(entry.getKey(), textPatch(entry.getValue(), "text." + entry.getKey()));
                 }
             }
-            return new ThemeFile(parent, paints, text);
+            final Map<String, Insets> insets = new LinkedHashMap<>();
+            if (root.containsKey("insets")) {
+                for (final Map.Entry<String, Object> entry : object(root.get("insets"), "insets").entrySet()) {
+                    insets.put(entry.getKey(), insets(entry.getValue(), "insets." + entry.getKey()));
+                }
+            }
+            return new ThemeFile(parent, paints, text, insets);
         } catch (final IllegalArgumentException e) {
             throw new ThemeException("Theme file " + document.origin() + " is invalid: " + e.getMessage());
         }

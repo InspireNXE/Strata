@@ -15,6 +15,7 @@
  */
 package org.inspirenxe.strata.core.theme;
 
+import org.inspirenxe.strata.api.geometry.Insets;
 import org.inspirenxe.strata.api.text.TextStyle;
 import org.inspirenxe.strata.api.theme.Paint;
 import org.inspirenxe.strata.api.theme.Theme;
@@ -43,7 +44,7 @@ import java.util.Set;
  * {@code parent} is ignored when the id has a base. The source's files are then applied in order, each one per
  * key, and the ref's overrides last. The result is named after the ref's id.</p>
  *
- * <p>A theme file is a JSON object with three optional members:</p>
+ * <p>A theme file is a JSON object with four optional members:</p>
  * <pre>{@code
  * {
  *   "parent": "strata:flat",
@@ -56,6 +57,9 @@ import java.util.Set;
  *   },
  *   "text": {
  *     "button.text": { "color": "#FFFFFF", "shadow": true }
+ *   },
+ *   "insets": {
+ *     "tab.padding": [8, 5, 8, 2]
  *   }
  * }
  * }</pre>
@@ -64,7 +68,8 @@ import java.util.Set;
  * {@code tint} is optional and defaults to opaque white. A nine-slice {@code border} is one number,
  * {@code [horizontal, vertical]} or {@code [left, top, right, bottom]}. A text style sets any of {@code color},
  * {@code bold}, {@code italic}, {@code underline}, {@code strikethrough} and {@code shadow}; the rest keep the
- * inherited style for that key, or {@link TextStyle#DEFAULT} if there is none. Unknown members are errors.</p>
+ * inherited style for that key, or {@link TextStyle#DEFAULT} if there is none. Insets take the same forms as a
+ * border, in UI units. Unknown members are errors.</p>
  *
  * <p>A file that cannot be parsed is skipped and logged, so one broken pack does not hide the others. The
  * resolver reads the source on every call and keeps no cache.</p>
@@ -94,9 +99,11 @@ public final class ThemeResolver {
         final Layers layers = this.resolve(ref.id(), new LinkedHashSet<>());
         layers.paints.putAll(ref.paints());
         layers.text.putAll(ref.textStyles());
+        layers.insets.putAll(ref.insets());
         final Theme.Builder builder = Theme.builder(ref.id().toString());
         layers.paints.forEach(builder::paint);
         layers.text.forEach(builder::textStyle);
+        layers.insets.forEach(builder::insets);
         return builder.build();
     }
 
@@ -111,7 +118,8 @@ public final class ThemeResolver {
         final Optional<Theme> base = id.equals(Themes.FLAT) ? Optional.of(Themes.flat()) : this.source.base(id);
         final Layers layers;
         if (base.isPresent()) {
-            layers = new Layers(new HashMap<>(base.get().paints()), new HashMap<>(base.get().textStyles()));
+            layers = new Layers(new HashMap<>(base.get().paints()), new HashMap<>(base.get().textStyles()),
+                    new HashMap<>(base.get().insets()));
         } else {
             Optional<ThemeId> parent = Optional.empty();
             for (final ThemeFile file : files) {
@@ -124,11 +132,12 @@ public final class ThemeResolver {
             } else if (files.isEmpty()) {
                 throw new ThemeException("No theme is registered as " + id + " and no theme file defines it");
             } else {
-                layers = new Layers(new HashMap<>(), new HashMap<>());
+                layers = new Layers(new HashMap<>(), new HashMap<>(), new HashMap<>());
             }
         }
         for (final ThemeFile file : files) {
             layers.paints.putAll(file.paints());
+            layers.insets.putAll(file.insets());
             file.text().forEach((key, patch) ->
                     layers.text.put(key, patch.apply(layers.text.getOrDefault(key, TextStyle.DEFAULT))));
         }
@@ -151,6 +160,6 @@ public final class ThemeResolver {
     /**
      * The keys built up so far.
      */
-    private record Layers(Map<String, Paint> paints, Map<String, TextStyle> text) {
+    private record Layers(Map<String, Paint> paints, Map<String, TextStyle> text, Map<String, Insets> insets) {
     }
 }

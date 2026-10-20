@@ -15,6 +15,7 @@
  */
 package org.inspirenxe.strata.api.theme;
 
+import org.inspirenxe.strata.api.geometry.Insets;
 import org.inspirenxe.strata.api.text.TextStyle;
 
 import java.util.Collection;
@@ -26,7 +27,9 @@ import java.util.Optional;
 import java.util.Set;
 
 /**
- * A set of style keys mapped to paints and text styles. A key may have a paint, a text style, or both.
+ * A set of style keys mapped to paints, text styles and insets. A key may have any of the three. Paints and text
+ * styles say what a control looks like; insets, in UI units, say where it puts its content, such as the space
+ * around a tab's text.
  *
  * <p>Themes are immutable values; make one with {@link #builder(String)}, or derive a variant of an existing theme
  * with {@link #toBuilder()}:</p>
@@ -41,11 +44,13 @@ public final class Theme {
     private final String name;
     private final Map<String, Paint> paints;
     private final Map<String, TextStyle> textStyles;
+    private final Map<String, Insets> insets;
 
     private Theme(final Builder builder) {
         this.name = builder.name;
         this.paints = Map.copyOf(builder.paints);
         this.textStyles = Map.copyOf(builder.textStyles);
+        this.insets = Map.copyOf(builder.insets);
     }
 
     /**
@@ -110,6 +115,27 @@ public final class Theme {
     }
 
     /**
+     * Looks up insets.
+     *
+     * @param key the style key
+     * @return the insets, or empty if the key has none
+     */
+    public Optional<Insets> insets(final String key) {
+        return Optional.ofNullable(this.insets.get(key));
+    }
+
+    /**
+     * Looks up insets, with a fallback.
+     *
+     * @param key the style key
+     * @param fallback returned if the key has no insets
+     * @return the insets, or {@code fallback}
+     */
+    public Insets insetsOr(final String key, final Insets fallback) {
+        return this.insets.getOrDefault(key, fallback);
+    }
+
+    /**
      * Returns every paint this theme sets, by style key.
      *
      * @return an immutable map
@@ -128,13 +154,22 @@ public final class Theme {
     }
 
     /**
-     * Returns whether a key has a paint or a text style.
+     * Returns every set of insets this theme sets, by style key.
+     *
+     * @return an immutable map
+     */
+    public Map<String, Insets> insets() {
+        return this.insets;
+    }
+
+    /**
+     * Returns whether a key has a paint, a text style or insets.
      *
      * @param key the style key
      * @return true if the theme defines the key
      */
     public boolean has(final String key) {
-        return this.paints.containsKey(key) || this.textStyles.containsKey(key);
+        return this.paints.containsKey(key) || this.textStyles.containsKey(key) || this.insets.containsKey(key);
     }
 
     /**
@@ -162,6 +197,7 @@ public final class Theme {
         final Builder builder = new Builder(this.name);
         builder.paints.putAll(this.paints);
         builder.textStyles.putAll(this.textStyles);
+        builder.insets.putAll(this.insets);
         return builder;
     }
 
@@ -173,11 +209,13 @@ public final class Theme {
         private final String name;
         private final Map<String, Paint> paints;
         private final Map<String, TextStyle> textStyles;
+        private final Map<String, Insets> insets;
 
         private Builder(final String name) {
             this.name = Objects.requireNonNull(name, "name");
             this.paints = new HashMap<>();
             this.textStyles = new HashMap<>();
+            this.insets = new HashMap<>();
         }
 
         /**
@@ -201,6 +239,18 @@ public final class Theme {
          */
         public Builder textStyle(final String key, final TextStyle style) {
             this.textStyles.put(Objects.requireNonNull(key, "key"), Objects.requireNonNull(style, "style"));
+            return this;
+        }
+
+        /**
+         * Sets a key's insets, replacing any earlier ones.
+         *
+         * @param key the style key
+         * @param insets the insets, in UI units
+         * @return this builder
+         */
+        public Builder insets(final String key, final Insets insets) {
+            this.insets.put(Objects.requireNonNull(key, "key"), Objects.requireNonNull(insets, "insets"));
             return this;
         }
 

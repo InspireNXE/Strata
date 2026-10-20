@@ -15,6 +15,7 @@
  */
 package org.inspirenxe.strata.api.theme;
 
+import org.inspirenxe.strata.api.geometry.Insets;
 import org.inspirenxe.strata.api.text.TextStyle;
 
 import java.util.HashMap;
@@ -30,14 +31,16 @@ import java.util.Objects;
  * applies the theme files the engine finds for the id in pack order, and then applies the overrides held here.
  * Overrides always win over packs.</p>
  *
- * <p>A ref is immutable. {@link #override(String, Paint)} and {@link #override(String, TextStyle)} return a new
- * ref.</p>
+ * <p>A ref is immutable. {@link #override(String, Paint)}, {@link #override(String, TextStyle)} and
+ * {@link #override(String, Insets)} return a new ref.</p>
  *
  * @param id the theme to start from
  * @param paints paint overrides by style key; copied
  * @param textStyles text style overrides by style key; copied
+ * @param insets insets overrides by style key; copied
  */
-public record ThemeRef(ThemeId id, Map<String, Paint> paints, Map<String, TextStyle> textStyles) {
+public record ThemeRef(ThemeId id, Map<String, Paint> paints, Map<String, TextStyle> textStyles,
+                       Map<String, Insets> insets) {
     /**
      * Checks and copies the arguments.
      */
@@ -45,6 +48,18 @@ public record ThemeRef(ThemeId id, Map<String, Paint> paints, Map<String, TextSt
         Objects.requireNonNull(id, "id");
         paints = Map.copyOf(paints);
         textStyles = Map.copyOf(textStyles);
+        insets = Map.copyOf(insets);
+    }
+
+    /**
+     * Creates a ref with paint and text style overrides and no insets overrides.
+     *
+     * @param id the theme to start from
+     * @param paints paint overrides by style key; copied
+     * @param textStyles text style overrides by style key; copied
+     */
+    public ThemeRef(final ThemeId id, final Map<String, Paint> paints, final Map<String, TextStyle> textStyles) {
+        this(id, paints, textStyles, Map.of());
     }
 
     /**
@@ -54,7 +69,7 @@ public record ThemeRef(ThemeId id, Map<String, Paint> paints, Map<String, TextSt
      * @return the ref
      */
     public static ThemeRef of(final ThemeId id) {
-        return new ThemeRef(id, Map.of(), Map.of());
+        return new ThemeRef(id, Map.of(), Map.of(), Map.of());
     }
 
     /**
@@ -68,7 +83,7 @@ public record ThemeRef(ThemeId id, Map<String, Paint> paints, Map<String, TextSt
     public ThemeRef override(final String key, final Paint paint) {
         final Map<String, Paint> paints = new HashMap<>(this.paints);
         paints.put(Objects.requireNonNull(key, "key"), Objects.requireNonNull(paint, "paint"));
-        return new ThemeRef(this.id, paints, this.textStyles);
+        return new ThemeRef(this.id, paints, this.textStyles, this.insets);
     }
 
     /**
@@ -82,6 +97,20 @@ public record ThemeRef(ThemeId id, Map<String, Paint> paints, Map<String, TextSt
     public ThemeRef override(final String key, final TextStyle style) {
         final Map<String, TextStyle> styles = new HashMap<>(this.textStyles);
         styles.put(Objects.requireNonNull(key, "key"), Objects.requireNonNull(style, "style"));
-        return new ThemeRef(this.id, this.paints, styles);
+        return new ThemeRef(this.id, this.paints, styles, this.insets);
+    }
+
+    /**
+     * Returns a copy of this ref that sets insets after the packs are applied. A later override of the same key
+     * replaces an earlier one.
+     *
+     * @param key the style key
+     * @param insets the insets to use, in UI units
+     * @return the new ref
+     */
+    public ThemeRef override(final String key, final Insets insets) {
+        final Map<String, Insets> all = new HashMap<>(this.insets);
+        all.put(Objects.requireNonNull(key, "key"), Objects.requireNonNull(insets, "insets"));
+        return new ThemeRef(this.id, this.paints, this.textStyles, all);
     }
 }

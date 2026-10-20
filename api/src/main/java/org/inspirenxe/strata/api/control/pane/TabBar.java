@@ -65,6 +65,10 @@ import java.util.Optional;
  *     {@value #STYLE_TEXT}.</li>
  *     <li>{@value #STYLE_TEXT_DISABLED} (text style, optional): a disabled tab's text. Falls back to
  *     {@value #STYLE_TEXT}.</li>
+ *     <li>{@value #STYLE_PADDING} (insets, optional): the space between an unselected tab's edges and its text,
+ *     hovered and disabled tabs included. Defaults to 8 at the sides, 4 at the top and 3 at the bottom.</li>
+ *     <li>{@value #STYLE_PADDING_SELECTED} (insets, optional): the same for the selected tab. Falls back to
+ *     {@value #STYLE_PADDING}.</li>
  * </ul>
  *
  * <pre>{@code
@@ -111,6 +115,14 @@ public interface TabBar extends Component<TabBar>, Focusable<TabBar>, HasCursor<
      * Style key for a disabled tab's text (text style, optional).
      */
     String STYLE_TEXT_DISABLED = "tab.text.disabled";
+    /**
+     * Style key for the space around an unselected tab's text.
+     */
+    String STYLE_PADDING = "tab.padding";
+    /**
+     * Style key for the space around the selected tab's text.
+     */
+    String STYLE_PADDING_SELECTED = "tab.padding.selected";
 
     /**
      * Returns the tabs, left to right.
