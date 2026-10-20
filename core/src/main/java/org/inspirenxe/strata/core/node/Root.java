@@ -75,7 +75,8 @@ import java.util.function.Consumer;
  * it, and the tooltip is never hit.</p>
  *
  * <p>Pointer rules: hover goes to the deepest visible, enabled node under the pointer. A press first closes every
- * popup above the layer it lands on, and then goes nowhere if any closed. Otherwise it focuses the pressed node or
+ * popup above the layer it lands on, except those opened without light dismiss, and then goes nowhere if any
+ * closed. Otherwise it focuses the pressed node or
  * its nearest focusable ancestor and clears focus if there is none. Each button is tracked on its own. A drag starts
  * once the pointer moves more than {@link #DRAG_THRESHOLD} units from the press on either axis, and its events go to
  * the pressed node wherever the pointer is. A release fires a click only when it ends no drag and lands inside the
@@ -656,7 +657,7 @@ public final class Root {
             if (layer.modal) {
                 break;
             }
-            if (layer.isToast()) {
+            if (layer.isToast() || !layer.lightDismiss) {
                 continue;
             }
             layer.close();
@@ -1069,6 +1070,21 @@ public final class Root {
         return this.tabOrder;
     }
 
+    /**
+     * Returns the nodes Tab would move through inside one subtree, such as an open popup: every focusable, tabbable
+     * node in it whose ancestors within it are visible and enabled, sorted by tab index and then by tree order. Not
+     * cached.
+     *
+     * @param scope the top of the subtree, which counts too
+     * @return a new list, possibly empty
+     */
+    public List<Node> tabOrderWithin(final Node scope) {
+        final List<Node> order = new ArrayList<>();
+        this.collectTabbable(scope, order);
+        order.sort(Comparator.comparingInt(Node::tabIndex));
+        return order;
+    }
+
     private void collectTabbable(final Node node, final List<Node> out) {
         if (!node.isVisible() || !node.isEnabled()) {
             return;
@@ -1137,6 +1153,37 @@ public final class Root {
     // Overlays
     // ------------------------------------------------------------------
 
+    /**
+     * Opens a popup as {@link Overlays#popup} does, choosing whether a press outside it closes it. Core's flyout
+     * opens through here.
+     *
+     * @param content what to show; it must not be in a tree already
+     * @param anchor the area to show it next to, in the host's coordinates
+     * @param lightDismiss true to close it on a press outside, which then goes no further; false to leave it open
+     *     and let the press through
+     * @return the open popup
+     * @throws IllegalArgumentException if the content is already in a tree or was made by another factory
+     */
+    public Overlay popup(final Component<?> content, final Rect anchor, final boolean lightDismiss) {
+        final Layer layer = this.open(content, Objects.requireNonNull(anchor, "anchor"), false);
+        layer.lightDismiss = lightDismiss;
+        return layer;
+    }
+
+    /**
+     * Changes whether a press outside an open popup closes it.
+     *
+     * @param overlay a popup this root opened
+     * @param lightDismiss true to close it on a press outside
+     * @throws IllegalArgumentException if this root did not open the overlay
+     */
+    public void setLightDismiss(final Overlay overlay, final boolean lightDismiss) {
+        if (!(overlay instanceof final Layer layer) || layer.root() != this) {
+            throw new IllegalArgumentException(overlay + " is not an overlay of this root");
+        }
+        layer.lightDismiss = lightDismiss;
+    }
+
     private Layer open(final Component<?> content, final Rect anchor, final boolean modal) {
         return this.open(content, anchor, modal, -1L);
     }
@@ -1172,6 +1219,8 @@ public final class Root {
         final EventDispatcher handlers;
         Node previousFocus;
         boolean open;
+        // Whether a press outside closes the layer; only popups can turn it off
+        boolean lightDismiss;
 
         Layer(final Node node, final Rect anchor, final boolean modal, final long expiresAt) {
             this.node = node;
@@ -1180,6 +1229,11 @@ public final class Root {
             this.expiresAt = expiresAt;
             this.handlers = new EventDispatcher();
             this.open = true;
+            this.lightDismiss = true;
+        }
+
+        Root root() {
+            return Root.this;
         }
 
         void layout(final Rect area) {

@@ -31,7 +31,8 @@ import java.util.Optional;
  * <ul>
  *     <li>The pointer reaches the topmost overlay under it, and the screen only where no overlay is.</li>
  *     <li>A press outside a popup closes it and goes no further. A press on a popup below the top one closes the
- *     popups above it.</li>
+ *     popups above it. A {@link org.inspirenxe.strata.api.control.menu.Flyout} with light dismiss turned off stays
+ *     open through such presses, and a press that closes nothing goes on to what is under the pointer.</li>
  *     <li>A dialog is modal: nothing below it gets pointer input, focus, or Tab, and keys go to it when nothing in it
  *     has focus.</li>
  *     <li>An Escape press that nothing consumed closes the topmost overlay that is not a toast.</li>

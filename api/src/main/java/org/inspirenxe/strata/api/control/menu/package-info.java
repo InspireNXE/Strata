@@ -14,8 +14,9 @@
  * limitations under the License.
  */
 /**
- * Menus of commands: {@link org.inspirenxe.strata.api.control.menu.Menu} and
- * {@link org.inspirenxe.strata.api.control.menu.MenuBar}.
+ * Menus of commands and other popups: {@link org.inspirenxe.strata.api.control.menu.Menu},
+ * {@link org.inspirenxe.strata.api.control.menu.MenuBar}, and
+ * {@link org.inspirenxe.strata.api.control.menu.Flyout}, a popup that shows any component.
  *
  * <p>Make them with a {@link org.inspirenxe.strata.api.ComponentFactory}. Each control lists the theme style
  * keys it reads as {@code STYLE_*} constants and says which are required, and its events as constants too:

@@ -21,6 +21,7 @@ import org.inspirenxe.strata.api.component.HasCursor;
 import org.inspirenxe.strata.api.component.HasTooltip;
 import org.inspirenxe.strata.api.control.attribute.popup.Closable;
 import org.inspirenxe.strata.api.control.attribute.popup.Openable;
+import org.inspirenxe.strata.api.control.attribute.popup.Popup;
 import org.inspirenxe.strata.api.control.display.Separator;
 import org.inspirenxe.strata.api.event.EventType;
 import org.inspirenxe.strata.api.event.control.ValueEvent;
@@ -47,13 +48,14 @@ import java.util.function.Consumer;
  * the chain opened.</p>
  *
  * <p>A menu is a component only so it can sit in a popup. Open it with {@link #open} or {@link #openAt} rather than
- * adding it to a container. Items are one line plus 6 units tall, with 14 units at the left for the check mark and 14
- * at the right for the submenu arrow, and separators 5 units tall.</p>
+ * adding it to a container, or give it to a {@link org.inspirenxe.strata.api.control.button.DropDownButton}, which
+ * opens it below itself at least as wide as the button. Items are one line plus 6 units tall, with 14 units at the
+ * left for the check mark and 14 at the right for the submenu arrow, and separators 5 units tall.</p>
  *
  * <p>A menu is the whole content of its popup and has no parent, so its events ({@link #CHOOSE}, {@link #CHOSEN},
  * {@link Openable#OPENED} and {@link Closable#CLOSED}) reach only the handlers registered on the menu itself. A menu
- * opens only from code or from its bar, so it never fires {@link Openable#OPEN}, and it never fires
- * {@link Closable#CLOSE}.</p>
+ * opens only from code, its bar or a drop-down button, and the bar and the button ask on their own behalf, so it
+ * never fires {@link Openable#OPEN}. It never fires {@link Closable#CLOSE} either.</p>
  *
  * <h2>Events</h2>
  * <ul>
@@ -89,7 +91,7 @@ import java.util.function.Consumer;
  *
  * <p>Get one from {@link org.inspirenxe.strata.api.ComponentFactory#menu()}. Do not implement this interface.</p>
  */
-public interface Menu extends Component<Menu>, Focusable<Menu>, HasCursor<Menu>, HasTooltip<Menu>, Openable<Menu> {
+public interface Menu extends Component<Menu>, Focusable<Menu>, HasCursor<Menu>, HasTooltip<Menu>, Popup<Menu> {
     /**
      * Style key for the menu's background (paint, required).
      */
@@ -248,7 +250,8 @@ public interface Menu extends Component<Menu>, Focusable<Menu>, HasCursor<Menu>,
      * @param submenu the menu to open beside this one
      * @return this menu
      * @throws IllegalArgumentException if {@code submenu} is this menu or one this menu opens from, is already a
-     *     submenu, or is in a {@link MenuBar}
+     *     submenu, is in a {@link MenuBar}, or is held by a
+     *     {@link org.inspirenxe.strata.api.control.button.DropDownButton}
      */
     Menu addSubmenu(Text text, Menu submenu);
 
@@ -259,7 +262,8 @@ public interface Menu extends Component<Menu>, Focusable<Menu>, HasCursor<Menu>,
      * @param submenu the menu to open beside this one
      * @return this menu
      * @throws IllegalArgumentException if {@code submenu} is this menu or one this menu opens from, is already a
-     *     submenu, or is in a {@link MenuBar}
+     *     submenu, is in a {@link MenuBar}, or is held by a
+     *     {@link org.inspirenxe.strata.api.control.button.DropDownButton}
      */
     default Menu addSubmenu(final String text, final Menu submenu) {
         return this.addSubmenu(Text.of(text), submenu);
@@ -280,6 +284,17 @@ public interface Menu extends Component<Menu>, Focusable<Menu>, HasCursor<Menu>,
     Menu clearItems();
 
     /**
+     * Sets the least width the menu is laid out at, keeping its minimum height, as
+     * {@code setMinSize(width, minHeight())} does. A menu is also never narrower than 60 units or than its widest
+     * item, and a {@link org.inspirenxe.strata.api.control.button.DropDownButton} opens it at least as wide as the
+     * button without changing this setting. {@link #minWidth()} returns it.
+     *
+     * @param width the least width in UI units; 0 by default
+     * @return this menu
+     */
+    Menu setMinWidth(float width);
+
+    /**
      * Returns whether the menu is open.
      *
      * @return true while it shows in a popup
@@ -296,6 +311,7 @@ public interface Menu extends Component<Menu>, Focusable<Menu>, HasCursor<Menu>,
      * @return this menu
      * @throws IllegalStateException if the factory's host has no screen yet
      */
+    @Override
     Menu open(Rect anchor);
 
     /**
@@ -307,6 +323,7 @@ public interface Menu extends Component<Menu>, Focusable<Menu>, HasCursor<Menu>,
      * @return this menu
      * @throws IllegalStateException if the factory's host has no screen yet
      */
+    @Override
     Menu openAt(float x, float y);
 
     /**

@@ -28,9 +28,6 @@ import org.inspirenxe.strata.api.input.Key;
 import org.inspirenxe.strata.api.input.KeyAction;
 import org.inspirenxe.strata.api.input.MouseButton;
 import org.inspirenxe.strata.api.text.Text;
-import org.inspirenxe.strata.api.text.TextMetrics;
-import org.inspirenxe.strata.api.text.TextStyle;
-import org.inspirenxe.strata.api.theme.Paint;
 import org.inspirenxe.strata.api.theme.SpriteId;
 import org.inspirenxe.strata.api.theme.Theme;
 import org.inspirenxe.strata.api.visual.Visual;
@@ -38,7 +35,6 @@ import org.inspirenxe.strata.core.node.BuiltInComponent;
 import org.inspirenxe.strata.core.node.ComponentFactoryImpl;
 import org.inspirenxe.strata.core.text.TextLine;
 
-import java.util.Objects;
 import java.util.Set;
 
 /**
@@ -59,6 +55,9 @@ import java.util.Set;
  * <p>A link draws no face and no focus ring, has no default padding and no minimum size, and draws its caption in
  * the link text style. That is the hovered one while the link is hovered or focused, or else the link text with an
  * underline when the theme has no hovered link style.</p>
+ *
+ * <p>The keys, the caption and the icon, and how they measure and draw, live in a helper that
+ * {@link DropDownButtonImpl} shares, so the two buttons look and measure alike.</p>
  */
 public final class ButtonImpl extends BuiltInComponent<Button> implements Button {
     /**
@@ -75,37 +74,9 @@ public final class ButtonImpl extends BuiltInComponent<Button> implements Button
      * side.
      */
     public static final Insets DEFAULT_ICON_PADDING = Insets.of(2f);
-    private static final int DISABLED_ICON_TINT = 0xFF808080;
-    private static final Set<String> REQUIRED = Set.of(STYLE_NORMAL, STYLE_HOVERED, STYLE_PRESSED, STYLE_DISABLED);
 
-    private Text text;
-    // Set with setTextPadding; null follows the theme
-    private Insets textPadding;
-    private Insets themePadding = DEFAULT_PADDING;
-    private Insets themeIconPadding = DEFAULT_ICON_PADDING;
-    private SpriteId iconSprite;
-    private Visual iconVisual;
-    private float iconWidth;
-    private float iconHeight;
+    private final ButtonContent content;
     private boolean link;
-
-    private Paint normal;
-    private Paint hoveredPaint;
-    private Paint pressedPaint;
-    private Paint disabled;
-    private Paint focusRing;
-    private TextStyle textStyle;
-    private TextStyle disabledTextStyle;
-    private TextStyle linkTextStyle;
-    private TextStyle linkHoveredTextStyle;
-    private TextStyle linkDisabledTextStyle;
-
-    // Computed during measure. Both captions are kept so enabling or disabling the button needs no relayout
-    private TextLine caption;
-    private TextLine disabledCaption;
-    private TextLine hoveredCaption;
-    private float captionWidth;
-    private float captionHeight;
 
     /**
      * Creates a button.
@@ -116,95 +87,74 @@ public final class ButtonImpl extends BuiltInComponent<Button> implements Button
     @SuppressWarnings("this-escape")
     public ButtonImpl(final ComponentFactoryImpl ui, final Text text) {
         super(ui);
-        this.text = Objects.requireNonNull(text, "text");
-        this.iconWidth = 16f;
-        this.iconHeight = 16f;
-        this.normal = Paint.NONE;
-        this.hoveredPaint = Paint.NONE;
-        this.pressedPaint = Paint.NONE;
-        this.disabled = Paint.NONE;
-        this.focusRing = Paint.NONE;
-        this.textStyle = TextStyle.DEFAULT;
-        this.disabledTextStyle = TextStyle.DEFAULT;
-        this.linkTextStyle = TextStyle.DEFAULT;
-        this.linkHoveredTextStyle = TextStyle.DEFAULT;
-        this.linkDisabledTextStyle = TextStyle.DEFAULT;
-        this.caption = TextLine.EMPTY;
-        this.disabledCaption = this.caption;
-        this.hoveredCaption = this.caption;
+        this.content = new ButtonContent(text);
         this.setCursor(CursorKind.HAND);
         this.setMinSize(20f, 20f);
     }
 
     @Override
     public Text text() {
-        return this.text;
+        return this.content.text();
     }
 
     @Override
     public Button setText(final Text text) {
-        this.text = Objects.requireNonNull(text, "text");
+        this.content.setText(text);
         this.invalidateLayout();
         return this;
     }
 
     @Override
     public Button setTextPadding(final Insets padding) {
-        this.textPadding = padding;
+        this.content.setTextPadding(padding);
         this.invalidateLayout();
         return this;
     }
 
     @Override
     public SpriteId iconSprite() {
-        return this.iconSprite;
+        return this.content.iconSprite();
     }
 
     @Override
     public Visual iconVisual() {
-        return this.iconVisual;
+        return this.content.iconVisual();
     }
 
     @Override
     public Button setIcon(final SpriteId sprite) {
-        this.iconSprite = Objects.requireNonNull(sprite, "sprite");
-        this.iconVisual = null;
+        this.content.setIcon(sprite);
         this.invalidateLayout();
         return this;
     }
 
     @Override
     public Button setIcon(final Visual visual) {
-        this.iconVisual = Objects.requireNonNull(visual, "visual");
-        this.iconSprite = null;
-        return this.setIconSize(visual.size().width(), visual.size().height());
+        this.content.setIcon(visual);
+        this.invalidateLayout();
+        return this;
     }
 
     @Override
     public Button clearIcon() {
-        this.iconSprite = null;
-        this.iconVisual = null;
+        this.content.clearIcon();
         this.invalidateLayout();
         return this;
     }
 
     @Override
     public float iconWidth() {
-        return this.iconWidth;
+        return this.content.iconWidth();
     }
 
     @Override
     public float iconHeight() {
-        return this.iconHeight;
+        return this.content.iconHeight();
     }
 
     @Override
     public Button setIconSize(final float width, final float height) {
-        if (!(width >= 0f) || !(height >= 0f) || Float.isInfinite(width) || Float.isInfinite(height)) {
-            throw new IllegalArgumentException("Icon size must be finite and not negative: " + width + " x " + height);
-        }
-        this.iconWidth = width;
-        this.iconHeight = height;
+        this.content.setIconSize(width, height);
         this.invalidateLayout();
         return this;
     }
@@ -226,23 +176,6 @@ public final class ButtonImpl extends BuiltInComponent<Button> implements Button
         return this;
     }
 
-    private boolean hasIcon() {
-        return this.iconSprite != null || this.iconVisual != null;
-    }
-
-    /**
-     * Returns the padding to measure with: the one set, or the default for what the button shows.
-     */
-    private Insets padding() {
-        if (this.textPadding != null) {
-            return this.textPadding;
-        }
-        if (this.link) {
-            return Insets.NONE;
-        }
-        return this.hasIcon() && this.caption.isEmpty() ? this.themeIconPadding : this.themePadding;
-    }
-
     @Override
     public void press() {
         if (this.isEnabled()) {
@@ -262,103 +195,45 @@ public final class ButtonImpl extends BuiltInComponent<Button> implements Button
 
     @Override
     protected Set<String> requiredStyleKeys() {
-        return REQUIRED;
+        return ButtonContent.REQUIRED;
     }
 
     @Override
     protected void onApplyTheme(final Theme theme) {
-        this.normal = theme.paintOr(STYLE_NORMAL, Paint.NONE);
-        this.hoveredPaint = theme.paintOr(STYLE_HOVERED, this.normal);
-        this.pressedPaint = theme.paintOr(STYLE_PRESSED, this.hoveredPaint);
-        this.disabled = theme.paintOr(STYLE_DISABLED, this.normal);
-        this.focusRing = theme.paintOr(STYLE_FOCUS, Paint.NONE);
-        this.textStyle = theme.textStyleOr(STYLE_TEXT, TextStyle.DEFAULT);
-        this.disabledTextStyle = theme.textStyleOr(STYLE_TEXT_DISABLED, this.textStyle);
-        this.linkTextStyle = theme.textStyleOr(STYLE_LINK_TEXT, this.textStyle);
-        this.linkHoveredTextStyle = theme.textStyleOr(STYLE_LINK_TEXT_HOVERED, this.linkTextStyle.withUnderline(true));
-        this.linkDisabledTextStyle = theme.textStyleOr(STYLE_LINK_TEXT_DISABLED, this.disabledTextStyle);
-        this.themePadding = theme.insetsOr(STYLE_PADDING, DEFAULT_PADDING);
-        this.themeIconPadding = theme.insetsOr(STYLE_PADDING_ICON, DEFAULT_ICON_PADDING);
+        this.content.applyTheme(theme);
     }
 
     @Override
     protected Size measure(final MeasureContext context, final float availableWidth, final float availableHeight) {
-        final TextMetrics metrics = context.text();
-        final TextStyle normalStyle = this.link ? this.linkTextStyle : this.textStyle;
-        final TextStyle hoveredStyle = this.link ? this.linkHoveredTextStyle : this.textStyle;
-        final TextStyle disabledStyle = this.link ? this.linkDisabledTextStyle : this.disabledTextStyle;
-        this.caption = TextLine.of(this.text, normalStyle, metrics);
-        this.hoveredCaption = TextLine.of(this.text, hoveredStyle, metrics);
-        this.disabledCaption = TextLine.of(this.text, disabledStyle, metrics);
-        this.captionWidth = Math.max(this.caption.width(),
-                Math.max(this.hoveredCaption.width(), this.disabledCaption.width()));
-        this.captionHeight = Math.max(this.caption.height(),
-                Math.max(this.hoveredCaption.height(), this.disabledCaption.height()));
-        final boolean icon = this.hasIcon();
-        final boolean iconOnly = icon && this.caption.isEmpty();
-        final float contentWidth = (icon ? this.iconWidth : 0f) + (icon && !this.caption.isEmpty() ? ICON_GAP : 0f)
-                + this.captionWidth;
-        final float contentHeight = iconOnly ? this.iconHeight : Math.max(this.captionHeight, icon ? this.iconHeight : 0f);
-        final Insets padding = this.padding();
-        return new Size(contentWidth + padding.horizontal(), contentHeight + padding.vertical());
+        this.content.measure(context.text(), this.link);
+        final Insets padding = this.content.padding(this.link);
+        return new Size(this.content.contentWidth() + padding.horizontal(),
+                this.content.contentHeight() + padding.vertical());
     }
 
     @Override
     protected void paint(final Painter painter, final Rect bounds) {
+        final ButtonContent content = this.content;
         final boolean enabled = this.isEnabled();
         final boolean lit = this.isHovered() || this.isFocused();
         if (!this.link) {
-            final Paint face;
-            if (!enabled) {
-                face = this.disabled;
-            } else if (this.isPressed() && this.isHovered()) {
-                face = this.pressedPaint;
-            } else if (lit) {
-                face = this.hoveredPaint;
-            } else {
-                face = this.normal;
-            }
-            face.paint(painter, bounds);
-
-            if (this.isFocused() && this.focusRing != Paint.NONE) {
-                this.focusRing.paint(painter, new Rect(bounds.x(), bounds.y(), bounds.width(), 1f));
-                this.focusRing.paint(painter, new Rect(bounds.x(), bounds.bottom() - 1f, bounds.width(), 1f));
-                this.focusRing.paint(painter, new Rect(bounds.x(), bounds.y() + 1f, 1f, bounds.height() - 2f));
-                this.focusRing.paint(painter, new Rect(bounds.right() - 1f, bounds.y() + 1f, 1f, bounds.height() - 2f));
+            content.face(enabled, this.isPressed() && this.isHovered(), lit).paint(painter, bounds);
+            if (this.isFocused()) {
+                content.paintFocusRing(painter, bounds);
             }
         }
-
-        final boolean icon = this.hasIcon();
-        final boolean hasText = !this.caption.isEmpty();
-        final float contentWidth = (icon ? this.iconWidth : 0f) + (icon && hasText ? ICON_GAP : 0f)
-                + (hasText ? this.captionWidth : 0f);
+        final TextLine shown;
+        if (!enabled) {
+            shown = content.disabledCaption;
+        } else if (this.link && lit) {
+            shown = content.hoveredCaption;
+        } else {
+            shown = content.caption;
+        }
         // Centered in the button less its padding, which is the whole button when the padding is even
-        final Insets padding = this.padding();
-        final float innerY = bounds.y() + padding.top();
-        final float innerHeight = bounds.height() - padding.vertical();
-        float x = bounds.x() + padding.left() + (bounds.width() - padding.horizontal() - contentWidth) * 0.5f;
-        if (icon) {
-            final Rect iconRect = new Rect(x, innerY + (innerHeight - this.iconHeight) * 0.5f, this.iconWidth,
-                    this.iconHeight);
-            final int tint = enabled ? 0xFFFFFFFF : DISABLED_ICON_TINT;
-            if (this.iconVisual != null) {
-                painter.visual(this.iconVisual, iconRect, tint);
-            } else {
-                painter.sprite(this.iconSprite, iconRect, tint);
-            }
-            x += this.iconWidth + ICON_GAP;
-        }
-        if (hasText) {
-            final TextLine shown;
-            if (!enabled) {
-                shown = this.disabledCaption;
-            } else if (this.link && lit) {
-                shown = this.hoveredCaption;
-            } else {
-                shown = this.caption;
-            }
-            shown.draw(painter, x, innerY + (innerHeight - this.captionHeight) * 0.5f);
-        }
+        final Insets padding = content.padding(this.link);
+        content.paintContent(painter, bounds.x() + padding.left(), bounds.y() + padding.top(),
+                bounds.width() - padding.horizontal(), bounds.height() - padding.vertical(), enabled, shown);
     }
 
     @Override
@@ -379,6 +254,6 @@ public final class ButtonImpl extends BuiltInComponent<Button> implements Button
 
     @Override
     protected Object snapshotState() {
-        return new Button.State(this.text);
+        return new Button.State(this.content.text());
     }
 }

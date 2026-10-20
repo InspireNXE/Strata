@@ -37,6 +37,7 @@ import org.inspirenxe.strata.api.text.TextMetrics;
 import org.inspirenxe.strata.api.text.TextStyle;
 import org.inspirenxe.strata.api.theme.Paint;
 import org.inspirenxe.strata.api.theme.Theme;
+import org.inspirenxe.strata.core.control.CorePopup;
 import org.inspirenxe.strata.core.control.Rings;
 import org.inspirenxe.strata.core.node.BuiltInComponent;
 import org.inspirenxe.strata.core.node.ComponentFactoryImpl;
@@ -56,8 +57,12 @@ import java.util.function.Consumer;
  * <p>Opening a menu lays out its host's overlays at once, so its bounds and items are known before the next frame.
  * The first menu of a chain remembers what had focus when it opened and gives focus back when it closes, if that
  * component can still take it. A submenu that closes gives focus back to the menu it opened from.</p>
+ *
+ * <p>A drop-down button can hold a menu that is not a submenu and not in a bar. It opens the menu through
+ * {@link #openBelow}, which makes the menu at least as wide as the button until it closes, without touching the
+ * minimum width set with {@link #setMinWidth}.</p>
  */
-public final class MenuImpl extends BuiltInComponent<Menu> implements Menu {
+public final class MenuImpl extends BuiltInComponent<Menu> implements Menu, CorePopup {
     /**
      * The space between the menu's edges and its items when the theme sets no {@value #STYLE_PADDING}: 2 on every
      * side.
@@ -87,6 +92,9 @@ public final class MenuImpl extends BuiltInComponent<Menu> implements Menu {
     private final List<MenuEntryImpl> items;
     private MenuImpl parent;
     private MenuBarImpl bar;
+    private Holder holder;
+    // The width of what opened the menu through openBelow, kept until it closes
+    private float anchorWidth;
     private Overlay popup;
     private MenuImpl openSubmenu;
     private Component<?> returnFocus;
@@ -317,6 +325,10 @@ public final class MenuImpl extends BuiltInComponent<Menu> implements Menu {
     private void closed() {
         this.popup = null;
         this.highlighted = -1;
+        if (this.anchorWidth != 0f) {
+            this.anchorWidth = 0f;
+            this.invalidateLayout();
+        }
         if (this.openSubmenu != null) {
             this.openSubmenu.close();
         }
@@ -334,6 +346,9 @@ public final class MenuImpl extends BuiltInComponent<Menu> implements Menu {
             }
         }
         this.report(CLOSED);
+        if (this.holder != null) {
+            this.holder.popupClosed();
+        }
     }
 
     private Component<?> focusedComponent() {
@@ -357,7 +372,53 @@ public final class MenuImpl extends BuiltInComponent<Menu> implements Menu {
     }
 
     boolean isFree() {
-        return this.bar == null && this.parent == null;
+        return this.bar == null && this.parent == null && this.holder == null;
+    }
+
+    // ------------------------------------------------------------------
+    // Held by a drop-down button
+    // ------------------------------------------------------------------
+
+    @Override
+    public boolean canOpen() {
+        return !this.isOpen() && !this.items.isEmpty();
+    }
+
+    @Override
+    public Holder holder() {
+        return this.holder;
+    }
+
+    @Override
+    public void setHolder(final Holder holder) {
+        if (holder != null && holder != this.holder) {
+            if (this.holder != null) {
+                throw new IllegalArgumentException(this + " already belongs to another drop-down button");
+            }
+            if (this.bar != null || this.parent != null) {
+                throw new IllegalArgumentException(this + " opens from a menu or a menu bar");
+            }
+        }
+        this.holder = holder;
+    }
+
+    @Override
+    public void openBelow(final Rect anchor, final boolean fromKeyboard) {
+        Objects.requireNonNull(anchor, "anchor");
+        if (!this.canOpen()) {
+            return;
+        }
+        this.anchorWidth = anchor.width();
+        this.invalidateLayout();
+        this.open(anchor);
+        if (this.isOpen() && fromKeyboard) {
+            this.highlightFirst();
+        }
+    }
+
+    @Override
+    public Menu setMinWidth(final float width) {
+        return this.setMinSize(width, this.minHeight());
     }
 
     /**
@@ -493,7 +554,7 @@ public final class MenuImpl extends BuiltInComponent<Menu> implements Menu {
         }
         final float width = this.padding.horizontal() + this.itemPadding.horizontal() + textWidth
                 + (shortcutWidth > 0f ? SHORTCUT_GAP + shortcutWidth : 0f);
-        return new Size(Math.max(MIN_WIDTH, width), y + this.padding.bottom());
+        return new Size(Math.max(Math.max(MIN_WIDTH, this.anchorWidth), width), y + this.padding.bottom());
     }
 
     @Override

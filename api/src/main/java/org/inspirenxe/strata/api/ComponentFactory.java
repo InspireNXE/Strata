@@ -17,9 +17,11 @@ package org.inspirenxe.strata.api;
 
 import org.inspirenxe.strata.api.appearance.Appearances;
 import org.inspirenxe.strata.api.component.Component;
+import org.inspirenxe.strata.api.control.attribute.popup.Popup;
 import org.inspirenxe.strata.api.control.button.Button;
 import org.inspirenxe.strata.api.control.button.CheckBox;
 import org.inspirenxe.strata.api.control.button.CycleButton;
+import org.inspirenxe.strata.api.control.button.DropDownButton;
 import org.inspirenxe.strata.api.control.button.RadioGroup;
 import org.inspirenxe.strata.api.control.button.ToggleSwitch;
 import org.inspirenxe.strata.api.control.collection.ComboBox;
@@ -44,6 +46,7 @@ import org.inspirenxe.strata.api.control.field.TextArea;
 import org.inspirenxe.strata.api.control.field.TextBox;
 import org.inspirenxe.strata.api.control.field.TimePicker;
 import org.inspirenxe.strata.api.control.menu.CheckMenuItem;
+import org.inspirenxe.strata.api.control.menu.Flyout;
 import org.inspirenxe.strata.api.control.menu.Menu;
 import org.inspirenxe.strata.api.control.menu.MenuBar;
 import org.inspirenxe.strata.api.control.menu.MenuItem;
@@ -310,6 +313,57 @@ public interface ComponentFactory {
      */
     default Button button(final String text) {
         return this.button(Text.of(text));
+    }
+
+    /**
+     * Makes a {@link DropDownButton} with no caption and no popup, as {@code dropDownButton("")} does.
+     *
+     * @return a new drop-down button
+     */
+    default DropDownButton dropDownButton() {
+        return this.dropDownButton("");
+    }
+
+    /**
+     * Makes a {@link DropDownButton} with no popup. Give it one with {@link DropDownButton#setPopup(Popup)}.
+     *
+     * @param text the caption
+     * @return a new drop-down button
+     */
+    DropDownButton dropDownButton(Text text);
+
+    /**
+     * Does the same as {@link #dropDownButton(Text)} with literal text.
+     *
+     * @param text the caption
+     * @return a new drop-down button
+     */
+    default DropDownButton dropDownButton(final String text) {
+        return this.dropDownButton(Text.of(text));
+    }
+
+    /**
+     * Makes a {@link DropDownButton} that opens a popup, such as a {@link Menu} or a {@link Flyout}.
+     *
+     * @param text the caption
+     * @param popup the popup it opens
+     * @return a new drop-down button
+     * @throws IllegalArgumentException for the reasons {@link DropDownButton#setPopup(Popup)} gives
+     */
+    default DropDownButton dropDownButton(final Text text, final Popup<?> popup) {
+        return this.dropDownButton(text).setPopup(popup);
+    }
+
+    /**
+     * Does the same as {@link #dropDownButton(Text, Popup)} with literal text.
+     *
+     * @param text the caption
+     * @param popup the popup it opens
+     * @return a new drop-down button
+     * @throws IllegalArgumentException for the reasons {@link DropDownButton#setPopup(Popup)} gives
+     */
+    default DropDownButton dropDownButton(final String text, final Popup<?> popup) {
+        return this.dropDownButton(Text.of(text), popup);
     }
 
     /**
@@ -641,6 +695,24 @@ public interface ComponentFactory {
      * @return a new menu bar
      */
     MenuBar menuBar();
+
+    /**
+     * Makes an empty, closed {@link Flyout} that closes on a press outside.
+     *
+     * @return a new flyout
+     */
+    Flyout flyout();
+
+    /**
+     * Makes a closed {@link Flyout} that shows a component and closes on a press outside.
+     *
+     * @param content what the flyout shows
+     * @return a new flyout
+     * @throws IllegalArgumentException if the content is already in a tree or was made by another factory
+     */
+    default Flyout flyout(final Component<?> content) {
+        return this.flyout().setContent(content);
+    }
 
     /**
      * Makes an enabled {@link MenuItem} with no text and an action that does nothing, as {@code menuItem("")} does.

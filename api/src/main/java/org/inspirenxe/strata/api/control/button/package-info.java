@@ -15,6 +15,7 @@
  */
 /**
  * Controls the user presses or toggles: {@link org.inspirenxe.strata.api.control.button.Button},
+ * {@link org.inspirenxe.strata.api.control.button.DropDownButton},
  * {@link org.inspirenxe.strata.api.control.button.CheckBox},
  * {@link org.inspirenxe.strata.api.control.button.RadioButton},
  * {@link org.inspirenxe.strata.api.control.button.RadioGroup} and

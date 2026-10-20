@@ -118,7 +118,7 @@ public final class SubmenuItemImpl extends MenuEntryImpl implements SubmenuItem 
             return;
         }
         if (!next.isFree()) {
-            throw new IllegalArgumentException(next + " is already a submenu or in a menu bar");
+            throw new IllegalArgumentException(next + " is already a submenu, in a menu bar or held by a drop-down button");
         }
         if (holder instanceof MenuImpl parent) {
             parent.checkNotAbove(next);

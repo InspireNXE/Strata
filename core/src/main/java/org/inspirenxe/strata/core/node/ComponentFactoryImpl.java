@@ -21,6 +21,7 @@ import org.inspirenxe.strata.api.component.Component;
 import org.inspirenxe.strata.api.control.button.Button;
 import org.inspirenxe.strata.api.control.button.CheckBox;
 import org.inspirenxe.strata.api.control.button.CycleButton;
+import org.inspirenxe.strata.api.control.button.DropDownButton;
 import org.inspirenxe.strata.api.control.button.RadioGroup;
 import org.inspirenxe.strata.api.control.button.ToggleSwitch;
 import org.inspirenxe.strata.api.control.collection.ComboBox;
@@ -45,6 +46,7 @@ import org.inspirenxe.strata.api.control.field.PasswordTextBox;
 import org.inspirenxe.strata.api.control.field.TextArea;
 import org.inspirenxe.strata.api.control.field.TextBox;
 import org.inspirenxe.strata.api.control.menu.CheckMenuItem;
+import org.inspirenxe.strata.api.control.menu.Flyout;
 import org.inspirenxe.strata.api.control.menu.Menu;
 import org.inspirenxe.strata.api.control.menu.MenuBar;
 import org.inspirenxe.strata.api.control.menu.MenuItem;
@@ -83,6 +85,7 @@ import org.inspirenxe.strata.api.visual.Visual;
 import org.inspirenxe.strata.core.control.button.ButtonImpl;
 import org.inspirenxe.strata.core.control.button.CheckBoxImpl;
 import org.inspirenxe.strata.core.control.button.CycleButtonImpl;
+import org.inspirenxe.strata.core.control.button.DropDownButtonImpl;
 import org.inspirenxe.strata.core.control.button.RadioGroupImpl;
 import org.inspirenxe.strata.core.control.button.ToggleSwitchImpl;
 import org.inspirenxe.strata.core.control.collection.ComboBoxImpl;
@@ -107,6 +110,7 @@ import org.inspirenxe.strata.core.control.field.PasswordTextBoxImpl;
 import org.inspirenxe.strata.core.control.field.TextAreaImpl;
 import org.inspirenxe.strata.core.control.field.TextBoxImpl;
 import org.inspirenxe.strata.core.control.menu.CheckMenuItemImpl;
+import org.inspirenxe.strata.core.control.menu.FlyoutImpl;
 import org.inspirenxe.strata.core.control.menu.MenuBarImpl;
 import org.inspirenxe.strata.core.control.menu.MenuImpl;
 import org.inspirenxe.strata.core.control.menu.MenuItemImpl;
@@ -318,6 +322,11 @@ public final class ComponentFactoryImpl implements ComponentFactory {
     }
 
     @Override
+    public DropDownButton dropDownButton(final Text text) {
+        return new DropDownButtonImpl(this, text);
+    }
+
+    @Override
     public CheckBox checkBox(final Text text) {
         return new CheckBoxImpl(this, text);
     }
@@ -426,6 +435,11 @@ public final class ComponentFactoryImpl implements ComponentFactory {
     @Override
     public MenuBar menuBar() {
         return new MenuBarImpl(this);
+    }
+
+    @Override
+    public Flyout flyout() {
+        return new FlyoutImpl(this);
     }
 
     @Override
