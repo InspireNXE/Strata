@@ -197,20 +197,22 @@ public interface TableView<T> extends Component<TableView<T>>, HasCursor<TableVi
      *
      * @param title the header title
      * @param width how wide the column is
-     * @param text returns the text for an item
+     * @param text returns what to show for an item: a {@link Text}, or any other value, shown by its appearance's
+     *     name
      * @return this table
      */
-    TableView<T> addTextColumn(Text title, GridLength width, Function<? super T, String> text);
+    TableView<T> addTextColumn(Text title, GridLength width, Function<? super T, ?> text);
 
     /**
      * Does the same as {@link #addTextColumn(Text, GridLength, Function)} with literal text.
      *
      * @param title the header title
      * @param width how wide the column is
-     * @param text returns the text for an item
+     * @param text returns what to show for an item: a {@link Text}, or any other value, shown by its appearance's
+     *     name
      * @return this table
      */
-    default TableView<T> addTextColumn(final String title, final GridLength width, final Function<? super T, String> text) {
+    default TableView<T> addTextColumn(final String title, final GridLength width, final Function<? super T, ?> text) {
         return this.addTextColumn(Text.of(title), width, text);
     }
 

@@ -15,6 +15,7 @@
  */
 package org.inspirenxe.strata.api;
 
+import org.inspirenxe.strata.api.appearance.Appearances;
 import org.inspirenxe.strata.api.text.TextFactory;
 
 import java.util.List;
@@ -42,6 +43,16 @@ public final class Strata {
     }
 
     /**
+     * Returns the appearances registered for the process.
+     *
+     * @return the registry
+     * @throws IllegalStateException if Strata's core is not on the class path, or more than one provider is
+     */
+    public static Appearances appearances() {
+        return Strata.provider().appearances();
+    }
+
+    /**
      * What Strata's core provides, listed in its {@code META-INF/services}. Do not implement this interface.
      */
     public interface Provider {
@@ -51,6 +62,13 @@ public final class Strata {
          * @return the factory, the same one every time
          */
         TextFactory texts();
+
+        /**
+         * Returns the appearance registry.
+         *
+         * @return the registry, the same one every time
+         */
+        Appearances appearances();
     }
 
     private static Provider provider() {

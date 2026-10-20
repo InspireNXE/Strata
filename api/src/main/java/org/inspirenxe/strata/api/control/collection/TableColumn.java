@@ -68,13 +68,14 @@ public interface TableColumn<T> extends Titled<TableColumn<T>>, CellSource<T, Ta
     /**
      * Sets the cells to text: each cell is a one-line {@link org.inspirenxe.strata.api.control.display.Label} 4 units
      * in from the column's edges, cut short with {@code ...} when too long. It also makes the column sortable by that
-     * text, ignoring case; set another comparator afterwards to sort differently. A new column shows
-     * {@link String#valueOf(Object)} of each item this way, without sorting.
+     * text, ignoring case; set another comparator afterwards to sort differently. A new column shows each item's
+     * appearance name this way, without sorting.
      *
-     * @param text returns the text for an item
+     * @param text returns what to show for an item: a {@link org.inspirenxe.strata.api.text.Text}, or any other value,
+     *     shown by its appearance's name
      * @return this column
      */
-    TableColumn<T> setCellText(Function<? super T, String> text);
+    TableColumn<T> setCellText(Function<? super T, ?> text);
 
     /**
      * Sets what builds the cell for an item, called when the item's row comes into view.

@@ -164,7 +164,7 @@ public final class TableViewImpl<T> extends CustomComposite<TableView<T>> implem
     }
 
     @Override
-    public TableView<T> addTextColumn(final Text title, final GridLength width, final Function<? super T, String> text) {
+    public TableView<T> addTextColumn(final Text title, final GridLength width, final Function<? super T, ?> text) {
         return this.addColumn(new TableColumnImpl<T>(this.ui, title).setWidth(width).setCellText(text));
     }
 

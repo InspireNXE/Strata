@@ -32,14 +32,14 @@ import org.inspirenxe.strata.api.input.KeyAction;
 import org.inspirenxe.strata.api.input.MouseButton;
 import org.inspirenxe.strata.api.layout.Anchor;
 import org.inspirenxe.strata.api.overlay.Overlay;
+import org.inspirenxe.strata.api.text.Text;
 import org.inspirenxe.strata.api.text.TextMetrics;
 import org.inspirenxe.strata.api.text.TextOverflow;
-import org.inspirenxe.strata.api.text.TextSpan;
 import org.inspirenxe.strata.api.text.TextStyle;
 import org.inspirenxe.strata.api.theme.Paint;
 import org.inspirenxe.strata.api.theme.Theme;
-import org.inspirenxe.strata.core.text.RichText;
 import org.inspirenxe.strata.core.node.ComponentFactoryImpl;
+import org.inspirenxe.strata.core.text.TextLine;
 
 import java.util.List;
 import java.util.Objects;
@@ -72,7 +72,7 @@ public final class ComboBoxImpl<T> extends CustomComponent<ComboBox<T>> implemen
 
     private final ComponentFactory ui;
     private List<T> options;
-    private Function<? super T, String> labelFunction;
+    private Function<? super T, ?> labelFunction;
     private Function<? super T, ?> keyFunction;
     private int selectedIndex;
     private int maxVisible;
@@ -90,11 +90,11 @@ public final class ComboBoxImpl<T> extends CustomComponent<ComboBox<T>> implemen
     // Computed during measure
     private float lineHeight;
 
-    // Shortened caption for the last bounds width
-    private String shownFor;
+    // Shortened caption for the selected index and bounds width it was made for; -2 when it must be made again
+    private int shownIndex;
     private float shownForWidth;
-    private TextSpan shown;
-    private TextSpan shownDisabled;
+    private TextLine shown;
+    private TextLine shownDisabled;
 
     /**
      * Creates a box with no options.
@@ -103,7 +103,7 @@ public final class ComboBoxImpl<T> extends CustomComponent<ComboBox<T>> implemen
      * @param labelFunction returns the text for an option
      */
     @SuppressWarnings("this-escape")
-    public ComboBoxImpl(final ComponentFactory ui, final Function<? super T, String> labelFunction) {
+    public ComboBoxImpl(final ComponentFactory ui, final Function<? super T, ?> labelFunction) {
         super(ui);
         this.ui = ui;
         this.options = List.of();
@@ -117,7 +117,10 @@ public final class ComboBoxImpl<T> extends CustomComponent<ComboBox<T>> implemen
         this.popupPaint = Paint.NONE;
         this.textStyle = TextStyle.DEFAULT;
         this.disabledTextStyle = TextStyle.DEFAULT;
+        this.shownIndex = -2;
         this.shownForWidth = Float.NaN;
+        this.shown = TextLine.EMPTY;
+        this.shownDisabled = TextLine.EMPTY;
         this.setCursor(CursorKind.HAND);
     }
 
@@ -146,7 +149,7 @@ public final class ComboBoxImpl<T> extends CustomComponent<ComboBox<T>> implemen
         }
         this.close();
         this.selectedIndex = index;
-        this.shownFor = null;
+        this.shownIndex = -2;
         this.invalidateLayout();
         if (index != beforeIndex || !this.selected().equals(before)) {
             this.report(SELECTED, index, beforeIndex);
@@ -156,7 +159,7 @@ public final class ComboBoxImpl<T> extends CustomComponent<ComboBox<T>> implemen
 
     @Override
     public ComboBox<T> refresh() {
-        this.shownFor = null;
+        this.shownIndex = -2;
         this.invalidateLayout();
         if (this.list != null) {
             this.list.refresh();
@@ -187,7 +190,7 @@ public final class ComboBoxImpl<T> extends CustomComponent<ComboBox<T>> implemen
     }
 
     @Override
-    public ComboBox<T> setLabelFunction(final Function<? super T, String> labelFunction) {
+    public ComboBox<T> setLabelFunction(final Function<? super T, ?> labelFunction) {
         this.labelFunction = Objects.requireNonNull(labelFunction, "labelFunction");
         this.invalidateLayout();
         return this;
@@ -211,7 +214,7 @@ public final class ComboBoxImpl<T> extends CustomComponent<ComboBox<T>> implemen
         final int previous = this.selectedIndex;
         if (index != previous) {
             this.selectedIndex = index;
-            this.shownFor = null;
+            this.shownIndex = -2;
             this.report(SELECTED, index, previous);
         }
         return this;
@@ -311,7 +314,7 @@ public final class ComboBoxImpl<T> extends CustomComponent<ComboBox<T>> implemen
     }
 
     private Label cell(final T option) {
-        final Label label = this.ui.label(this.labelFunction.apply(option)).setStyle(this.textStyle);
+        final Label label = this.ui.label(this.ui.appearances().nameOf(this.labelFunction.apply(option))).setStyle(this.textStyle);
         label.setMargin(PADDING, 0f);
         label.setOverflow(TextOverflow.ELLIPSIS);
         label.setAnchor(Anchor.MIDDLE_LEFT);
@@ -326,8 +329,8 @@ public final class ComboBoxImpl<T> extends CustomComponent<ComboBox<T>> implemen
         return this;
     }
 
-    private String label(final int index) {
-        return index < 0 ? "" : this.labelFunction.apply(this.options.get(index));
+    private Text label(final int index) {
+        return index < 0 ? Text.empty() : this.ui.appearances().nameOf(this.labelFunction.apply(this.options.get(index)));
     }
 
     // ------------------------------------------------------------------
@@ -347,18 +350,21 @@ public final class ComboBoxImpl<T> extends CustomComponent<ComboBox<T>> implemen
         this.popupPaint = theme.paintOr(STYLE_POPUP, Paint.NONE);
         this.textStyle = theme.textStyleOr(STYLE_TEXT, TextStyle.DEFAULT);
         this.disabledTextStyle = theme.textStyleOr(STYLE_TEXT_DISABLED, this.textStyle);
-        this.shownFor = null;
+        this.shownIndex = -2;
     }
 
     @Override
     protected Size measure(final MeasureContext context, final float availableWidth, final float availableHeight) {
         final TextMetrics metrics = context.text();
         float widest = 0f;
+        float height = Math.max(metrics.lineHeight(this.textStyle), metrics.lineHeight(this.disabledTextStyle));
         for (int i = 0; i < this.options.size(); i++) {
-            widest = Math.max(widest, metrics.width(new TextSpan(this.label(i), this.textStyle)));
+            final TextLine line = TextLine.of(this.label(i), this.textStyle, metrics);
+            widest = Math.max(widest, line.width());
+            height = Math.max(height, line.height());
         }
-        this.lineHeight = Math.max(metrics.lineHeight(this.textStyle), metrics.lineHeight(this.disabledTextStyle));
-        this.shownFor = null;
+        this.lineHeight = height;
+        this.shownIndex = -2;
         return new Size(PADDING + widest + PADDING + ARROW_WIDTH + PADDING, this.lineHeight + 6f);
     }
 
@@ -375,17 +381,18 @@ public final class ComboBoxImpl<T> extends CustomComponent<ComboBox<T>> implemen
         }
         face.paint(painter, bounds);
 
-        final String text = this.label(this.selectedIndex);
         final float textWidth = bounds.width() - PADDING * 3f - ARROW_WIDTH;
-        if (!text.equals(this.shownFor) || textWidth != this.shownForWidth) {
+        if (this.selectedIndex != this.shownIndex || textWidth != this.shownForWidth) {
             final TextMetrics metrics = this.environment().text();
-            this.shown = shorten(new TextSpan(text, this.textStyle), textWidth, metrics);
-            this.shownDisabled = shorten(new TextSpan(text, this.disabledTextStyle), textWidth, metrics);
-            this.shownFor = text;
+            final Text text = this.label(this.selectedIndex);
+            this.shown = TextLine.of(text, this.textStyle, metrics).ellipsize(textWidth, this.textStyle, metrics);
+            this.shownDisabled = TextLine.of(text, this.disabledTextStyle, metrics)
+                    .ellipsize(textWidth, this.disabledTextStyle, metrics);
+            this.shownIndex = this.selectedIndex;
             this.shownForWidth = textWidth;
         }
         final float textY = bounds.y() + (bounds.height() - this.lineHeight) * 0.5f;
-        painter.text(enabled ? this.shown : this.shownDisabled, bounds.x() + PADDING, textY);
+        (enabled ? this.shown : this.shownDisabled).draw(painter, bounds.x() + PADDING, textY);
 
         // A down arrow from four shrinking lines
         final int color = (enabled ? this.textStyle : this.disabledTextStyle).color();
@@ -394,11 +401,6 @@ public final class ComboBoxImpl<T> extends CustomComponent<ComboBox<T>> implemen
         for (int i = 0; i < 4; i++) {
             painter.fill(new Rect(arrowX + i, arrowY + i, ARROW_WIDTH - i * 2f, 1f), color);
         }
-    }
-
-    private static TextSpan shorten(final TextSpan span, final float width, final TextMetrics metrics) {
-        final List<TextSpan> line = RichText.ellipsize(List.of(span), width, metrics);
-        return line.isEmpty() ? new TextSpan("", span.style()) : line.getFirst();
     }
 
     // ------------------------------------------------------------------

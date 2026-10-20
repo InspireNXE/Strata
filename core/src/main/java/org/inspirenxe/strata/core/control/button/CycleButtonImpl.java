@@ -16,6 +16,7 @@
 package org.inspirenxe.strata.core.control.button;
 
 import org.inspirenxe.strata.api.ComponentFactory;
+import org.inspirenxe.strata.api.Strata;
 import org.inspirenxe.strata.api.component.CursorKind;
 import org.inspirenxe.strata.api.control.button.Button;
 import org.inspirenxe.strata.api.control.button.CycleButton;
@@ -60,7 +61,7 @@ public final class CycleButtonImpl<T> extends CustomComponent<CycleButton<T>> im
     private Text text;
     private boolean textEmpty;
     private List<T> items;
-    private Function<? super T, String> valueLabelFunction;
+    private Function<? super T, ?> valueLabelFunction;
     private Function<? super T, ?> keyFunction;
     private int selectedIndex;
 
@@ -89,7 +90,7 @@ public final class CycleButtonImpl<T> extends CustomComponent<CycleButton<T>> im
      */
     @SuppressWarnings("this-escape")
     public CycleButtonImpl(final ComponentFactory ui, final Text text,
-            final Function<? super T, String> valueLabelFunction) {
+            final Function<? super T, ?> valueLabelFunction) {
         super(ui);
         this.text = Objects.requireNonNull(text, "text");
         this.valueLabelFunction = Objects.requireNonNull(valueLabelFunction, "valueLabelFunction");
@@ -128,7 +129,7 @@ public final class CycleButtonImpl<T> extends CustomComponent<CycleButton<T>> im
     }
 
     @Override
-    public CycleButton<T> setValueLabelFunction(final Function<? super T, String> valueLabelFunction) {
+    public CycleButton<T> setValueLabelFunction(final Function<? super T, ?> valueLabelFunction) {
         this.valueLabelFunction = Objects.requireNonNull(valueLabelFunction, "valueLabelFunction");
         this.shownIndex = -2;
         this.invalidateLayout();
@@ -263,18 +264,18 @@ public final class CycleButtonImpl<T> extends CustomComponent<CycleButton<T>> im
         }
     }
 
-    private String valueLabel(final int index) {
-        return index < 0 ? "" : this.valueLabelFunction.apply(this.items.get(index));
+    private Text valueLabel(final int index) {
+        return index < 0 ? Text.empty() : Strata.appearances().nameOf(this.valueLabelFunction.apply(this.items.get(index)));
     }
 
     /**
      * Joins the label and a value as shown: {@code label: value}, or whichever of them is not empty.
      */
-    private Text join(final String value) {
+    private Text join(final Text value) {
         if (this.textEmpty) {
-            return Text.of(value);
+            return value;
         }
-        return value.isEmpty() ? this.text : this.text.append(": " + value);
+        return value.isEmpty() ? this.text : this.text.append(": ").append(value);
     }
 
     // ------------------------------------------------------------------
@@ -302,7 +303,7 @@ public final class CycleButtonImpl<T> extends CustomComponent<CycleButton<T>> im
     protected Size measure(final MeasureContext context, final float availableWidth, final float availableHeight) {
         final TextMetrics metrics = context.text();
         this.textEmpty = this.text.isEmpty();
-        float widest = TextLine.of(this.join(""), this.textStyle, metrics).width();
+        float widest = TextLine.of(this.join(Text.empty()), this.textStyle, metrics).width();
         float height = Math.max(metrics.lineHeight(this.textStyle), metrics.lineHeight(this.disabledTextStyle));
         for (int i = 0; i < this.items.size(); i++) {
             final Text joined = this.join(this.valueLabel(i));

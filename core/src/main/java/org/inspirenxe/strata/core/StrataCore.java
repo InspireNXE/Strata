@@ -15,9 +15,11 @@
  */
 package org.inspirenxe.strata.core;
 
+import org.inspirenxe.strata.api.appearance.Appearance;
 import org.inspirenxe.strata.api.text.Text;
 import org.inspirenxe.strata.api.theme.Theme;
 import org.inspirenxe.strata.api.theme.ThemeRef;
+import org.inspirenxe.strata.core.appearance.AppearancesImpl;
 import org.inspirenxe.strata.core.host.ScreenHostImpl;
 import org.inspirenxe.strata.core.host.ScreenStackImpl;
 import org.inspirenxe.strata.core.text.TextFactoryImpl;
@@ -47,6 +49,18 @@ public final class StrataCore {
      */
     public static void setTranslator(final Translator translator) {
         Translations.setTranslator(translator);
+    }
+
+    /**
+     * Registers an engine type's default appearance, beneath anything a mod registers for the type, whenever either
+     * happens. Adapters call this when they start, for the engine objects their visuals and text can show.
+     *
+     * @param <T> the type
+     * @param type the engine type
+     * @param appearance the appearance
+     */
+    public static <T> void registerDefaultAppearance(final Class<T> type, final Appearance<? super T> appearance) {
+        AppearancesImpl.INSTANCE.registerDefault(type, appearance);
     }
 
     /**

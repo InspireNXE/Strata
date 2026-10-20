@@ -50,7 +50,7 @@ public final class TableColumnImpl<T> implements TableColumn<T> {
         this.ui = Objects.requireNonNull(ui, "ui");
         this.title = Objects.requireNonNull(title, "title");
         this.width = GridLength.weighted(1f);
-        this.cellFactory = this.textCells(String::valueOf);
+        this.cellFactory = this.textCells(Function.identity());
     }
 
     @Override
@@ -78,16 +78,15 @@ public final class TableColumnImpl<T> implements TableColumn<T> {
     }
 
     @Override
-    public TableColumn<T> setCellText(final Function<? super T, String> text) {
+    public TableColumn<T> setCellText(final Function<? super T, ?> text) {
         Objects.requireNonNull(text, "text");
         this.setCellFactory(this.textCells(text));
-        return this.setComparator(Comparator.comparing(text, String.CASE_INSENSITIVE_ORDER));
+        return this.setComparator(Comparator.comparing(item -> this.ui.appearances().nameOf(text.apply(item)).plain(),
+                String.CASE_INSENSITIVE_ORDER));
     }
 
-    private Function<T, Component<?>> textCells(final Function<? super T, String> text) {
-        return item -> {
-            return this.ui.cellLabel(text.apply(item));
-        };
+    private Function<T, Component<?>> textCells(final Function<? super T, ?> text) {
+        return item -> this.ui.cellLabel(this.ui.appearances().nameOf(text.apply(item)));
     }
 
     @Override

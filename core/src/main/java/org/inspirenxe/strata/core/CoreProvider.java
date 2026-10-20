@@ -16,7 +16,9 @@
 package org.inspirenxe.strata.core;
 
 import org.inspirenxe.strata.api.Strata;
+import org.inspirenxe.strata.api.appearance.Appearances;
 import org.inspirenxe.strata.api.text.TextFactory;
+import org.inspirenxe.strata.core.appearance.AppearancesImpl;
 import org.inspirenxe.strata.core.text.TextFactoryImpl;
 
 /**
@@ -34,5 +36,10 @@ public final class CoreProvider implements Strata.Provider {
     @Override
     public TextFactory texts() {
         return TextFactoryImpl.INSTANCE;
+    }
+
+    @Override
+    public Appearances appearances() {
+        return AppearancesImpl.INSTANCE;
     }
 }

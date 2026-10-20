@@ -152,10 +152,11 @@ public interface ComboBox<T> extends Component<ComboBox<T>>, Focusable<ComboBox<
     /**
      * Sets how options are drawn.
      *
-     * @param labelFunction returns the text for an option
+     * @param labelFunction returns what to show for an option: a {@link org.inspirenxe.strata.api.text.Text}, or any
+     *     other value, shown by its appearance's name; the option itself by default
      * @return this box
      */
-    ComboBox<T> setLabelFunction(Function<? super T, String> labelFunction);
+    ComboBox<T> setLabelFunction(Function<? super T, ?> labelFunction);
 
     /**
      * Returns the selected option.

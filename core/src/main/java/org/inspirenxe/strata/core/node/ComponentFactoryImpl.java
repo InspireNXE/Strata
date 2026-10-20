@@ -260,12 +260,12 @@ public final class ComponentFactoryImpl implements ComponentFactory {
     }
 
     @Override
-    public <T> CycleButton<T> cycleButton(final Text text, final Function<? super T, String> valueLabelFunction) {
+    public <T> CycleButton<T> cycleButton(final Text text, final Function<? super T, ?> valueLabelFunction) {
         return new CycleButtonImpl<>(this, text, valueLabelFunction);
     }
 
     @Override
-    public <T> ComboBox<T> comboBox(final Function<? super T, String> labelFunction) {
+    public <T> ComboBox<T> comboBox(final Function<? super T, ?> labelFunction) {
         return new ComboBoxImpl<>(this, labelFunction);
     }
 

@@ -15,6 +15,7 @@
  */
 package org.inspirenxe.strata.api;
 
+import org.inspirenxe.strata.api.appearance.Appearances;
 import org.inspirenxe.strata.api.component.Component;
 import org.inspirenxe.strata.api.control.button.Button;
 import org.inspirenxe.strata.api.control.button.CheckBox;
@@ -50,6 +51,7 @@ import org.inspirenxe.strata.api.control.pane.Tab;
 import org.inspirenxe.strata.api.control.pane.TabBar;
 import org.inspirenxe.strata.api.control.window.MessageBox;
 import org.inspirenxe.strata.api.control.window.Window;
+import org.inspirenxe.strata.api.event.input.InputEvents;
 import org.inspirenxe.strata.api.extension.CustomComponent;
 import org.inspirenxe.strata.api.extension.peer.ComponentHooks;
 import org.inspirenxe.strata.api.extension.peer.ComponentPeer;
@@ -69,6 +71,7 @@ import org.inspirenxe.strata.api.theme.SpriteId;
 import org.inspirenxe.strata.api.theme.Theme;
 import org.inspirenxe.strata.api.visual.Visual;
 
+import java.util.Optional;
 import java.util.function.Function;
 
 /**
@@ -221,6 +224,39 @@ public interface ComponentFactory {
     }
 
     /**
+     * Returns the appearances registered for the process, the same registry as
+     * {@link Strata#appearances()}.
+     *
+     * @return the registry
+     */
+    default Appearances appearances() {
+        return Strata.appearances();
+    }
+
+    /**
+     * Makes the row a list, tree or grid shows for a value by default: the value's icon, if its appearance has one,
+     * and its name in a {@linkplain #cellLabel(Text) cell label}. The row shows the value's tooltip, asked anew each
+     * time the pointer arrives.
+     *
+     * @param value the value
+     * @return a new row
+     */
+    default Component<?> cell(final Object value) {
+        final Appearances appearances = this.appearances();
+        final Label name = this.cellLabel(appearances.nameOf(value));
+        final Optional<Visual> icon = appearances.iconOf(value);
+        if (icon.isEmpty()) {
+            name.setTooltip(appearances.tooltipOf(value).orElse(null));
+            return name.onEvent(InputEvents.POINTER_ENTER, event -> name.setTooltip(appearances.tooltipOf(value).orElse(null)));
+        }
+        final StackPanel row = this.stackPanel(Orientation.HORIZONTAL)
+                .add(this.image(icon.get()).setAnchor(Anchor.MIDDLE_LEFT).setMargin(CELL_PADDING, 0f, 0f, 0f))
+                .add(name);
+        row.setTooltip(appearances.tooltipOf(value).orElse(null));
+        return row.onEvent(InputEvents.POINTER_ENTER, event -> row.setTooltip(appearances.tooltipOf(value).orElse(null)));
+    }
+
+    /**
      * Makes an {@link Image} that draws nothing until it is given a {@linkplain Image#setSprite sprite} or a
      * {@linkplain Image#setVisual visual}, 16 by 16 units until {@linkplain Image#setImageSize resized}.
      *
@@ -243,6 +279,16 @@ public interface ComponentFactory {
      * @return a new image
      */
     Image image(Visual visual);
+
+    /**
+     * Makes an {@link Image} of a value's icon, with the value's tooltip; see {@link Image#setValue}.
+     *
+     * @param value the value
+     * @return a new image
+     */
+    default Image image(final Object value) {
+        return this.image().setValue(value);
+    }
 
     /**
      * Makes a {@link Button} with no caption, as {@code button("")} does.
@@ -313,14 +359,14 @@ public interface ComponentFactory {
     TextBox textBox();
 
     /**
-     * Makes an empty {@link ListView} whose cells are labels showing {@link String#valueOf(Object)} of each item. Set
-     * other cells with {@code setCellFactory}.
+     * Makes an empty {@link ListView} whose rows show each item's {@linkplain #cell(Object) appearance}. Set other
+     * cells with {@code setCellFactory}.
      *
      * @param <T> the type of the items
      * @return a new list
      */
     default <T> ListView<T> listView() {
-        return this.listView(item -> this.cellLabel(String.valueOf(item)));
+        return this.listView(this::cell);
     }
 
     /**
@@ -333,23 +379,24 @@ public interface ComponentFactory {
     <T> ListView<T> listView(Function<? super T, ? extends Component<?>> cellFactory);
 
     /**
-     * Makes a {@link ComboBox} with no options that shows each option as {@link String#valueOf(Object)}.
+     * Makes a {@link ComboBox} with no options that shows each option by its appearance's name.
      *
      * @param <T> the type of the options
      * @return a new combo box
      */
     default <T> ComboBox<T> comboBox() {
-        return this.comboBox(String::valueOf);
+        return this.comboBox(Function.identity());
     }
 
     /**
      * Makes a {@link ComboBox} with no options.
      *
      * @param <T> the type of the options
-     * @param labelFunction returns the text for an option
+     * @param labelFunction returns what to show for an option: a {@link Text}, or any other value, shown by its
+     *     appearance's name
      * @return a new combo box
      */
-    <T> ComboBox<T> comboBox(Function<? super T, String> labelFunction);
+    <T> ComboBox<T> comboBox(Function<? super T, ?> labelFunction);
 
     /**
      * Makes an empty {@link Window} with no title, as {@code window("")} does.
@@ -565,7 +612,7 @@ public interface ComponentFactory {
      * @return a new tree
      */
     default <T> TreeView<T> treeView() {
-        return this.treeView(item -> this.cellLabel(String.valueOf(item)));
+        return this.treeView(this::cell);
     }
 
     /**
@@ -727,14 +774,14 @@ public interface ComponentFactory {
     SplitPane splitPane(Orientation orientation);
 
     /**
-     * Makes a {@link GridView} with no items, whose cells are labels showing {@link String#valueOf(Object)} of each
-     * item. Set other cells with {@code setCellFactory}.
+     * Makes a {@link GridView} with no items, whose cells show each item's {@linkplain #cell(Object) appearance}. Set
+     * other cells with {@code setCellFactory}.
      *
      * @param <T> the type of the items
      * @return a new grid
      */
     default <T> GridView<T> gridView() {
-        return this.gridView(item -> this.label(String.valueOf(item)));
+        return this.gridView(this::cell);
     }
 
     /**
@@ -765,7 +812,7 @@ public interface ComponentFactory {
      * @return a new cycle button
      */
     default <T> CycleButton<T> cycleButton(final Text text) {
-        return this.cycleButton(text, String::valueOf);
+        return this.cycleButton(text, Function.identity());
     }
 
     /**
@@ -784,20 +831,22 @@ public interface ComponentFactory {
      *
      * @param <T> the type of the values
      * @param text the label shown before the value
-     * @param valueLabelFunction returns the text for a value
+     * @param valueLabelFunction returns what to show for a value: a {@link Text}, or any other value, shown by its
+     *     appearance's name
      * @return a new cycle button
      */
-    <T> CycleButton<T> cycleButton(Text text, Function<? super T, String> valueLabelFunction);
+    <T> CycleButton<T> cycleButton(Text text, Function<? super T, ?> valueLabelFunction);
 
     /**
      * Does the same as {@link #cycleButton(Text, Function)} with literal text.
      *
      * @param <T> the type of the values
      * @param text the label shown before the value
-     * @param valueLabelFunction returns the text for a value
+     * @param valueLabelFunction returns what to show for a value: a {@link Text}, or any other value, shown by its
+     *     appearance's name
      * @return a new cycle button
      */
-    default <T> CycleButton<T> cycleButton(final String text, final Function<? super T, String> valueLabelFunction) {
+    default <T> CycleButton<T> cycleButton(final String text, final Function<? super T, ?> valueLabelFunction) {
         return this.cycleButton(Text.of(text), valueLabelFunction);
     }
 

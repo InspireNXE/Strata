@@ -16,7 +16,10 @@
 package org.inspirenxe.strata.core.control.display;
 
 import org.inspirenxe.strata.api.ComponentFactory;
+import org.inspirenxe.strata.api.Strata;
+import org.inspirenxe.strata.api.component.Tooltip;
 import org.inspirenxe.strata.api.control.display.Image;
+import org.inspirenxe.strata.api.event.input.PointerEvent;
 import org.inspirenxe.strata.api.extension.CustomComponent;
 import org.inspirenxe.strata.api.extension.MeasureContext;
 import org.inspirenxe.strata.api.extension.Painter;
@@ -40,6 +43,10 @@ public final class ImageImpl extends CustomComponent<Image> implements Image {
     private float imageWidth;
     private float imageHeight;
     private Scaling scaling;
+    // The value shown through its appearance, and the tooltip it last set, which is refreshed on hover while it is
+    // still the image's tooltip
+    private Object value;
+    private Tooltip valueTooltip;
 
     /**
      * Creates an image that draws nothing, 16 by 16 units.
@@ -93,6 +100,7 @@ public final class ImageImpl extends CustomComponent<Image> implements Image {
     public Image setSprite(final SpriteId sprite) {
         this.sprite = Objects.requireNonNull(sprite, "sprite");
         this.visual = null;
+        this.value = null;
         return this;
     }
 
@@ -105,7 +113,43 @@ public final class ImageImpl extends CustomComponent<Image> implements Image {
     public Image setVisual(final Visual visual) {
         this.visual = Objects.requireNonNull(visual, "visual");
         this.sprite = null;
+        this.value = null;
         return this.setImageSize(visual.size().width(), visual.size().height());
+    }
+
+    @Override
+    public Object value() {
+        return this.value;
+    }
+
+    @Override
+    public Image setValue(final Object value) {
+        final Visual icon = value == null ? null : Strata.appearances().iconOf(value).orElse(null);
+        this.sprite = null;
+        this.visual = icon;
+        if (icon != null) {
+            this.setImageSize(icon.size().width(), icon.size().height());
+        }
+        this.value = value;
+        this.valueTooltip = this.tooltip();
+        this.refreshTooltip();
+        return this;
+    }
+
+    /**
+     * Shows the value's tooltip, unless a tooltip was set since the value's was.
+     */
+    private void refreshTooltip() {
+        if (this.value == null || this.tooltip() != this.valueTooltip && this.tooltip() != null) {
+            return;
+        }
+        this.valueTooltip = Strata.appearances().tooltipOf(this.value).orElse(null);
+        this.setTooltip(this.valueTooltip);
+    }
+
+    @Override
+    protected void onPointerEnter(final PointerEvent event) {
+        this.refreshTooltip();
     }
 
     @Override

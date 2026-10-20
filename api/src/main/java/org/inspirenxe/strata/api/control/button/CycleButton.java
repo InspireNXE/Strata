@@ -96,10 +96,11 @@ public interface CycleButton<T> extends Component<CycleButton<T>>, Focusable<Cyc
     /**
      * Sets how a value is turned into the text shown after the label. A new layout runs.
      *
-     * @param valueLabelFunction returns the text for a value; {@link String#valueOf(Object)} by default
+     * @param valueLabelFunction returns what to show for a value: a {@link Text}, or any other value, shown by its
+     *     appearance's name; the value itself by default
      * @return this button
      */
-    CycleButton<T> setValueLabelFunction(Function<? super T, String> valueLabelFunction);
+    CycleButton<T> setValueLabelFunction(Function<? super T, ?> valueLabelFunction);
 
     /**
      * Moves the selection by a number of steps, wrapping at the ends, as a click does for the user. Fires

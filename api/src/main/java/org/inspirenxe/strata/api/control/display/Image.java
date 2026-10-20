@@ -76,6 +76,24 @@ public interface Image extends Component<Image>, HasCursor<Image>, HasTooltip<Im
     Image setVisual(Visual visual);
 
     /**
+     * Returns the value shown.
+     *
+     * @return the value set with {@link #setValue}, or {@code null} if none is
+     */
+    Object value();
+
+    /**
+     * Shows a value through its {@linkplain org.inspirenxe.strata.api.appearance.Appearances appearance}: its icon, at
+     * the icon's natural size, or nothing if it has none, and its tooltip, asked anew each time the pointer arrives.
+     * Setting a tooltip afterwards replaces the value's until the next {@code setValue}. Setting a sprite or a visual
+     * clears the value.
+     *
+     * @param value the value, or {@code null} to show nothing
+     * @return this image
+     */
+    Image setValue(Object value);
+
+    /**
      * Returns the tint.
      *
      * @return the ARGB color multiplied with the sprite; {@code 0xFFFFFFFF} by default
