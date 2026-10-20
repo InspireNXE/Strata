@@ -14,12 +14,14 @@
  * limitations under the License.
  */
 /**
- * Controls that show something and take no input: {@link org.inspirenxe.strata.api.control.display.Label},
+ * Controls that show something: {@link org.inspirenxe.strata.api.control.display.Label},
  * {@link org.inspirenxe.strata.api.control.display.Image},
  * {@link org.inspirenxe.strata.api.control.display.Avatar},
+ * {@link org.inspirenxe.strata.api.control.display.InfoBar},
  * {@link org.inspirenxe.strata.api.control.display.ProgressBar},
  * {@link org.inspirenxe.strata.api.control.display.BusyIndicator} and
- * {@link org.inspirenxe.strata.api.control.display.Separator}.
+ * {@link org.inspirenxe.strata.api.control.display.Separator}. Only the info bar takes input, through its close
+ * button and its action.
  *
  * <p>Make them with a {@link org.inspirenxe.strata.api.ComponentFactory}. Each control lists the theme style
  * keys it reads as {@code STYLE_*} constants and says which are required, and its events as constants too:

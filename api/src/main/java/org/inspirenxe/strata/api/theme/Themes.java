@@ -27,6 +27,7 @@ import org.inspirenxe.strata.api.control.collection.TableView;
 import org.inspirenxe.strata.api.control.collection.TreeView;
 import org.inspirenxe.strata.api.control.display.Avatar;
 import org.inspirenxe.strata.api.control.display.BusyIndicator;
+import org.inspirenxe.strata.api.control.display.InfoBar;
 import org.inspirenxe.strata.api.control.display.Label;
 import org.inspirenxe.strata.api.control.display.ProgressBar;
 import org.inspirenxe.strata.api.control.display.Separator;
@@ -207,6 +208,11 @@ public final class Themes {
                 .textStyle(BusyIndicator.STYLE_TEXT, TextStyle.DEFAULT.withColor(0xFFE0E0E0))
                 .paint(Avatar.STYLE_BACKGROUND, Paint.solid(0xFF3C3F44))
                 .textStyle(Avatar.STYLE_INITIALS, TextStyle.DEFAULT.withColor(0xFFF0F0F0))
+                .paint(InfoBar.STYLE_BACKGROUND, Paint.solid(0xFF24262A))
+                .paint(InfoBar.STYLE_ACCENT_INFO, Paint.solid(0xFF4C86E0))
+                .paint(InfoBar.STYLE_ACCENT_SUCCESS, Paint.solid(0xFF43A047))
+                .paint(InfoBar.STYLE_ACCENT_WARNING, Paint.solid(0xFFE8A33D))
+                .paint(InfoBar.STYLE_ACCENT_ERROR, Paint.solid(0xFFE05050))
                 .build();
     }
 }

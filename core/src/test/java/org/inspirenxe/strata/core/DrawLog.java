@@ -19,6 +19,7 @@ import org.inspirenxe.strata.api.component.CursorKind;
 import org.inspirenxe.strata.api.geometry.Insets;
 import org.inspirenxe.strata.api.geometry.Rect;
 import org.inspirenxe.strata.api.text.TextSpan;
+import org.inspirenxe.strata.api.text.TextStyle;
 import org.inspirenxe.strata.api.theme.SpriteId;
 import org.inspirenxe.strata.api.visual.Visual;
 import org.inspirenxe.strata.spi.Canvas;
@@ -34,6 +35,7 @@ import java.util.Locale;
  */
 public final class DrawLog implements Canvas {
     private final List<String> lines = new ArrayList<>();
+    private final List<TextStyle> textStyles = new ArrayList<>();
 
     /**
      * Returns every line written so far.
@@ -52,6 +54,15 @@ public final class DrawLog implements Canvas {
      */
     public List<String> lines(final String prefix) {
         return this.lines.stream().filter(line -> line.startsWith(prefix)).toList();
+    }
+
+    /**
+     * Returns the style of every text drawn so far.
+     *
+     * @return the styles, in drawing order
+     */
+    public List<TextStyle> textStyles() {
+        return this.textStyles;
     }
 
     /**
@@ -95,6 +106,7 @@ public final class DrawLog implements Canvas {
 
     @Override
     public void text(final TextSpan span, final float x, final float y) {
+        this.textStyles.add(span.style());
         this.lines.add("text " + span.text() + " " + DrawLog.number(x) + "," + DrawLog.number(y) + " "
                 + DrawLog.color(span.style().color()));
     }

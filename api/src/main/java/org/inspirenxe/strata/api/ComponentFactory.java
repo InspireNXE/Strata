@@ -33,6 +33,7 @@ import org.inspirenxe.strata.api.control.collection.TreeView;
 import org.inspirenxe.strata.api.control.display.Avatar;
 import org.inspirenxe.strata.api.control.display.BusyIndicator;
 import org.inspirenxe.strata.api.control.display.Image;
+import org.inspirenxe.strata.api.control.display.InfoBar;
 import org.inspirenxe.strata.api.control.display.Label;
 import org.inspirenxe.strata.api.control.display.ProgressBar;
 import org.inspirenxe.strata.api.control.display.Separator;
@@ -306,6 +307,38 @@ public interface ComponentFactory {
      */
     default Avatar avatar(final Object value) {
         return this.avatar().setValue(value);
+    }
+
+    /**
+     * Makes an open {@link InfoBar} of {@link InfoBar.Severity#INFO} with no title, message or action, and a close
+     * button.
+     *
+     * @return a new info bar
+     */
+    InfoBar infoBar();
+
+    /**
+     * Makes an open {@link InfoBar} with a close button.
+     *
+     * @param severity the severity
+     * @param title the title, or {@link Text#empty()} for none
+     * @param message the message, or {@link Text#empty()} for none
+     * @return a new info bar
+     */
+    default InfoBar infoBar(final InfoBar.Severity severity, final Text title, final Text message) {
+        return this.infoBar().setSeverity(severity).setTitle(title).setText(message);
+    }
+
+    /**
+     * Does the same as {@link #infoBar(InfoBar.Severity, Text, Text)} with literal text.
+     *
+     * @param severity the severity
+     * @param title the title, or an empty string for none
+     * @param message the message, or an empty string for none
+     * @return a new info bar
+     */
+    default InfoBar infoBar(final InfoBar.Severity severity, final String title, final String message) {
+        return this.infoBar(severity, Text.of(title), Text.of(message));
     }
 
     /**

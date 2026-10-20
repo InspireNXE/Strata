@@ -33,6 +33,7 @@ import org.inspirenxe.strata.api.control.collection.TreeView;
 import org.inspirenxe.strata.api.control.display.Avatar;
 import org.inspirenxe.strata.api.control.display.BusyIndicator;
 import org.inspirenxe.strata.api.control.display.Image;
+import org.inspirenxe.strata.api.control.display.InfoBar;
 import org.inspirenxe.strata.api.control.display.Label;
 import org.inspirenxe.strata.api.control.display.ProgressBar;
 import org.inspirenxe.strata.api.control.display.Separator;
@@ -98,6 +99,7 @@ import org.inspirenxe.strata.core.control.collection.TreeViewImpl;
 import org.inspirenxe.strata.core.control.display.AvatarImpl;
 import org.inspirenxe.strata.core.control.display.BusyIndicatorImpl;
 import org.inspirenxe.strata.core.control.display.ImageImpl;
+import org.inspirenxe.strata.core.control.display.InfoBarImpl;
 import org.inspirenxe.strata.core.control.display.LabelImpl;
 import org.inspirenxe.strata.core.control.display.ProgressBarImpl;
 import org.inspirenxe.strata.core.control.display.SeparatorImpl;
@@ -311,6 +313,11 @@ public final class ComponentFactoryImpl implements ComponentFactory {
     @Override
     public Avatar avatar() {
         return new AvatarImpl(this);
+    }
+
+    @Override
+    public InfoBar infoBar() {
+        return new InfoBarImpl(this);
     }
 
     @Override
