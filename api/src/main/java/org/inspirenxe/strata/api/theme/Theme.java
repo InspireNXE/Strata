@@ -39,18 +39,23 @@ import java.util.Set;
  *         .paint(Button.STYLE_NORMAL, Paint.solid(0xFF202020))
  *         .build();
  * }</pre>
+ *
+ * <p>A theme resolved from a {@link ThemeRef} also records which layer set each key, such as a pack's id or
+ * {@code code}, which {@link #layer} returns for debugging. A theme built in code records none.</p>
  */
 public final class Theme {
     private final String name;
     private final Map<String, Paint> paints;
     private final Map<String, TextStyle> textStyles;
     private final Map<String, Insets> insets;
+    private final Map<String, String> layers;
 
     private Theme(final Builder builder) {
         this.name = builder.name;
         this.paints = Map.copyOf(builder.paints);
         this.textStyles = Map.copyOf(builder.textStyles);
         this.insets = Map.copyOf(builder.insets);
+        this.layers = Map.copyOf(builder.layers);
     }
 
     /**
@@ -163,6 +168,26 @@ public final class Theme {
     }
 
     /**
+     * Returns the name of the layer that set a key, when the theme was resolved from a {@link ThemeRef}. Layers
+     * apply lowest first, and a key reports the highest layer that set any of its paint, text style or insets.
+     * The names are:
+     * <ul>
+     *     <li>{@code base} for a base theme built in code, {@link Themes#flat()} included;</li>
+     *     <li>the layer of the theme file that set it, which the engine adapter names, usually after the pack the
+     *     file came from;</li>
+     *     <li>{@code code} for keys set with {@link ThemeRegistry#override} or {@link ThemeRegistry#define};</li>
+     *     <li>{@code ref} for the ref's own overrides.</li>
+     * </ul>
+     *
+     * @param key the style key
+     * @return the layer's name, or empty if the theme does not define the key or recorded no layer for it, as
+     *     for every theme built with {@link #builder(String)}
+     */
+    public Optional<String> layer(final String key) {
+        return Optional.ofNullable(this.layers.get(key));
+    }
+
+    /**
      * Returns whether a key has a paint, a text style or insets.
      *
      * @param key the style key
@@ -189,7 +214,8 @@ public final class Theme {
     }
 
     /**
-     * Starts a builder holding all of this theme's keys and name, to make a variant.
+     * Starts a builder holding all of this theme's keys and name, to make a variant. The layers are not copied, so
+     * the variant reports none.
      *
      * @return a builder
      */
@@ -210,12 +236,14 @@ public final class Theme {
         private final Map<String, Paint> paints;
         private final Map<String, TextStyle> textStyles;
         private final Map<String, Insets> insets;
+        private final Map<String, String> layers;
 
         private Builder(final String name) {
             this.name = Objects.requireNonNull(name, "name");
             this.paints = new HashMap<>();
             this.textStyles = new HashMap<>();
             this.insets = new HashMap<>();
+            this.layers = new HashMap<>();
         }
 
         /**
@@ -251,6 +279,19 @@ public final class Theme {
          */
         public Builder insets(final String key, final Insets insets) {
             this.insets.put(Objects.requireNonNull(key, "key"), Objects.requireNonNull(insets, "insets"));
+            return this;
+        }
+
+        /**
+         * Records the layer that set a key, which {@link Theme#layer} returns. Theme resolvers call this; a theme
+         * built in code has no need to.
+         *
+         * @param key the style key
+         * @param layer the layer's name
+         * @return this builder
+         */
+        public Builder layer(final String key, final String layer) {
+            this.layers.put(Objects.requireNonNull(key, "key"), Objects.requireNonNull(layer, "layer"));
             return this;
         }
 

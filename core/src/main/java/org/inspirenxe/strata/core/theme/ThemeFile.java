@@ -33,13 +33,14 @@ import java.util.Set;
 /**
  * One parsed theme file. The format is described on {@link ThemeResolver}.
  *
+ * @param layer the layer the file makes, from its document
  * @param parent the theme the file builds on, if it names one
  * @param paints the paints it sets
  * @param text the text style changes it makes, applied over the inherited style of each key
  * @param insets the insets it sets
  */
-record ThemeFile(Optional<ThemeId> parent, Map<String, Paint> paints, Map<String, TextPatch> text,
-                 Map<String, Insets> insets) {
+record ThemeFile(String layer, Optional<ThemeId> parent, Map<String, Paint> paints,
+                 Map<String, TextPatch> text, Map<String, Insets> insets) {
     private static final Set<String> TOP_KEYS = Set.of("parent", "paints", "text", "insets");
     private static final Set<String> SPRITE_KEYS = Set.of("sprite", "tint");
     private static final Set<String> NINE_SLICE_KEYS = Set.of("nine_slice", "border", "tint", "size", "tiled");
@@ -80,7 +81,7 @@ record ThemeFile(Optional<ThemeId> parent, Map<String, Paint> paints, Map<String
                     insets.put(entry.getKey(), insets(entry.getValue(), "insets." + entry.getKey()));
                 }
             }
-            return new ThemeFile(parent, paints, text, insets);
+            return new ThemeFile(document.layer(), parent, paints, text, insets);
         } catch (final IllegalArgumentException e) {
             throw new ThemeException("Theme file " + document.origin() + " is invalid: " + e.getMessage());
         }

@@ -29,6 +29,7 @@ import org.inspirenxe.strata.spi.Platform;
 import org.inspirenxe.strata.spi.ScreenHost;
 import org.inspirenxe.strata.spi.ScreenStack;
 import org.inspirenxe.strata.spi.TextSource;
+import org.inspirenxe.strata.spi.ThemeSource;
 import org.inspirenxe.strata.spi.Translator;
 
 /**
@@ -140,8 +141,8 @@ public final class StrataCore {
     }
 
     /**
-     * Resolves a theme ref against a platform's theme source once, without a host. The format and the merge are
-     * described on {@link ThemeResolver}.
+     * Resolves a theme ref against a platform's theme source once, without a host, with the themes and overrides
+     * added in code. The format, the layers and the merge are described on {@link ThemeResolver}.
      *
      * @param platform the engine's platform
      * @param theme the ref
@@ -149,6 +150,19 @@ public final class StrataCore {
      * @throws org.inspirenxe.strata.api.theme.ThemeException if the ref cannot be resolved
      */
     public static Theme resolveTheme(final Platform platform, final ThemeRef theme) {
-        return new ThemeResolver(platform.themes()).resolve(theme);
+        return StrataCore.resolveTheme(platform.themes(), theme);
+    }
+
+    /**
+     * Resolves a theme ref against a theme source once, without a host or a platform, with the themes and overrides
+     * added in code. The format, the layers and the merge are described on {@link ThemeResolver}.
+     *
+     * @param source where to find base themes and theme files
+     * @param theme the ref
+     * @return the theme
+     * @throws org.inspirenxe.strata.api.theme.ThemeException if the ref cannot be resolved
+     */
+    public static Theme resolveTheme(final ThemeSource source, final ThemeRef theme) {
+        return new ThemeResolver(source).resolve(theme);
     }
 }

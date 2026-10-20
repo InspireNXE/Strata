@@ -22,7 +22,8 @@ import java.util.Objects;
  * {@link ThemeRef#of} to get a theme that the engine's packs can restyle and that follows them when they reload.
  *
  * <p>Strata registers {@link Themes#FLAT} everywhere. Adapters register their engine themes under ids of their
- * own. Any other id names a theme made only from theme files, which the adapter finds in its asset roots.</p>
+ * own, and code can define more with {@link ThemeRegistry#define}. Any other id names a theme made only from theme
+ * files, which the adapter finds in its asset roots.</p>
  *
  * @param namespace the owner, usually a mod or game id; not empty
  * @param path the theme's name within the namespace; not empty

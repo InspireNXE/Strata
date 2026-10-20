@@ -31,6 +31,7 @@ import org.inspirenxe.strata.core.node.ComponentFactoryImpl;
 import org.inspirenxe.strata.core.node.Node;
 import org.inspirenxe.strata.core.node.Root;
 import org.inspirenxe.strata.core.text.Translations;
+import org.inspirenxe.strata.core.theme.ThemeRegistryImpl;
 import org.inspirenxe.strata.core.theme.ThemeResolver;
 import org.inspirenxe.strata.spi.Canvas;
 import org.inspirenxe.strata.spi.Platform;
@@ -44,9 +45,10 @@ import java.util.Optional;
  * The core {@link ScreenHost}. It owns one factory and one {@link Root}, and passes engine input and frames to the
  * root. Opening a screen closes the one before it, so components from different screens never share a tree.
  *
- * <p>A host given a {@link ThemeRef} compares the platform's {@link ThemeSource#version()} at the start of every
- * layout and render, and resolves the ref again when it changed. If that fails, or the new theme lacks keys the
- * open tree needs, the host logs a warning and keeps its theme until the next change.</p>
+ * <p>A host given a {@link ThemeRef} compares the platform's {@link ThemeSource#version()} and the version of the
+ * themes and overrides added in code ({@link ThemeRegistryImpl#version()}) at the start of every layout and render,
+ * and resolves the ref again when either changed. If that fails, or the new theme lacks keys the open tree needs,
+ * the host logs a warning and keeps its theme until the next change.</p>
  */
 public final class ScreenHostImpl implements ScreenHost {
     private static final System.Logger LOGGER = System.getLogger(ScreenHostImpl.class.getName());
@@ -59,6 +61,7 @@ public final class ScreenHostImpl implements ScreenHost {
     private Theme theme;
     private ThemeRef themeRef;
     private long themeVersion;
+    private long registryVersion;
     private long textVersion = Translations.version();
     private Screen screen;
     private boolean rebuild;
@@ -91,9 +94,14 @@ public final class ScreenHostImpl implements ScreenHost {
      * @throws ThemeException if the ref cannot be resolved
      */
     public ScreenHostImpl(final Platform platform, final ThemeRef theme, final Runnable closeRequested) {
-        this(platform, new ThemeResolver(platform.themes()).resolve(theme), closeRequested);
-        this.themeRef = theme;
-        this.themeVersion = this.themes.version();
+        this(platform, Resolution.of(new ThemeResolver(platform.themes()), platform.themes(), theme), closeRequested);
+    }
+
+    private ScreenHostImpl(final Platform platform, final Resolution resolution, final Runnable closeRequested) {
+        this(platform, resolution.theme(), closeRequested);
+        this.themeRef = resolution.ref();
+        this.themeVersion = resolution.sourceVersion();
+        this.registryVersion = resolution.registryVersion();
     }
 
     /**
@@ -150,13 +158,12 @@ public final class ScreenHostImpl implements ScreenHost {
 
     @Override
     public void setTheme(final ThemeRef theme) {
-        Objects.requireNonNull(theme, "theme");
-        final long version = this.themes.version();
-        final Theme resolved = this.resolver.resolve(theme);
-        this.root.setTheme(resolved);
-        this.theme = resolved;
+        final Resolution resolution = Resolution.of(this.resolver, this.themes, Objects.requireNonNull(theme, "theme"));
+        this.root.setTheme(resolution.theme());
+        this.theme = resolution.theme();
         this.themeRef = theme;
-        this.themeVersion = version;
+        this.themeVersion = resolution.sourceVersion();
+        this.registryVersion = resolution.registryVersion();
     }
 
     @Override
@@ -165,17 +172,19 @@ public final class ScreenHostImpl implements ScreenHost {
     }
 
     /**
-     * Resolves the ref again if the theme source changed since the last time.
+     * Resolves the ref again if the theme source or the registry changed since the last time.
      */
     private void refreshTheme() {
         if (this.themeRef == null) {
             return;
         }
         final long version = this.themes.version();
-        if (version == this.themeVersion) {
+        final long registry = ThemeRegistryImpl.INSTANCE.version();
+        if (version == this.themeVersion && registry == this.registryVersion) {
             return;
         }
         this.themeVersion = version;
+        this.registryVersion = registry;
         try {
             final Theme resolved = this.resolver.resolve(this.themeRef);
             this.root.setTheme(resolved);
@@ -303,6 +312,22 @@ public final class ScreenHostImpl implements ScreenHost {
         @Override
         public ComponentFactory factory() {
             return ScreenHostImpl.this.ui;
+        }
+    }
+
+    /**
+     * A ref resolved, with the versions read before resolving, so a change made while it resolved is seen next time.
+     *
+     * @param ref the ref
+     * @param theme the theme it resolved to
+     * @param sourceVersion the theme source's version
+     * @param registryVersion the registry's version
+     */
+    private record Resolution(ThemeRef ref, Theme theme, long sourceVersion, long registryVersion) {
+        private static Resolution of(final ThemeResolver resolver, final ThemeSource source, final ThemeRef ref) {
+            final long sourceVersion = source.version();
+            final long registryVersion = ThemeRegistryImpl.INSTANCE.version();
+            return new Resolution(ref, resolver.resolve(ref), sourceVersion, registryVersion);
         }
     }
 }

@@ -23,16 +23,18 @@ import java.util.Map;
 import java.util.Objects;
 
 /**
- * A theme named by id, plus keys the developer sets on top of it. Hosts given a ref resolve it when they open and
- * again whenever the engine reloads its assets, so the screen follows the player's packs and keeps the
- * developer's overrides.
+ * A theme named by id, plus keys the developer sets on top of it for one screen. Hosts given a ref resolve it when
+ * they open, and again whenever the engine reloads its assets or the overrides in {@link ThemeRegistry} change, so
+ * the screen follows the player's packs and keeps the developer's overrides.
  *
- * <p>Resolving starts from the theme registered under {@link #id()}, or from the theme its files name as parent,
- * applies the theme files the engine finds for the id in pack order, and then applies the overrides held here.
- * Overrides always win over packs.</p>
+ * <p>A theme resolves from layers, lowest first. It starts from the id's base: a theme the engine adapter builds
+ * in code, the adapter's base files, a theme defined with {@link ThemeRegistry#define}, or the theme the id's files
+ * name as {@code parent}. Next come the theme files the engine finds for the id, in the order the adapter gives
+ * them, then the overrides added with {@link ThemeRegistry#override} in the order they were added, and last the
+ * overrides held here. The ref's overrides always win.</p>
  *
- * <p>A ref is immutable. {@link #override(String, Paint)}, {@link #override(String, TextStyle)} and
- * {@link #override(String, Insets)} return a new ref.</p>
+ * <p>A ref is immutable. {@link #override(String, Paint)}, {@link #override(String, TextStyle)},
+ * {@link #override(String, Insets)} and {@link #override(ThemeOverrides)} return a new ref.</p>
  *
  * @param id the theme to start from
  * @param paints paint overrides by style key; copied
@@ -112,5 +114,22 @@ public record ThemeRef(ThemeId id, Map<String, Paint> paints, Map<String, TextSt
         final Map<String, Insets> all = new HashMap<>(this.insets);
         all.put(Objects.requireNonNull(key, "key"), Objects.requireNonNull(insets, "insets"));
         return new ThemeRef(this.id, this.paints, this.textStyles, all);
+    }
+
+    /**
+     * Returns a copy of this ref that sets every key of some overrides after the packs and the overrides in
+     * {@link ThemeRegistry} are applied. A key this ref already overrides is replaced.
+     *
+     * @param overrides the keys to set
+     * @return the new ref
+     */
+    public ThemeRef override(final ThemeOverrides overrides) {
+        final Map<String, Paint> paints = new HashMap<>(this.paints);
+        paints.putAll(overrides.paints());
+        final Map<String, TextStyle> styles = new HashMap<>(this.textStyles);
+        styles.putAll(overrides.textStyles());
+        final Map<String, Insets> all = new HashMap<>(this.insets);
+        all.putAll(overrides.insets());
+        return new ThemeRef(this.id, paints, styles, all);
     }
 }

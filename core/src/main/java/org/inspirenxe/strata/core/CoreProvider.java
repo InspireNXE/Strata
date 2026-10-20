@@ -18,8 +18,10 @@ package org.inspirenxe.strata.core;
 import org.inspirenxe.strata.api.Strata;
 import org.inspirenxe.strata.api.appearance.Appearances;
 import org.inspirenxe.strata.api.text.TextFactory;
+import org.inspirenxe.strata.api.theme.ThemeRegistry;
 import org.inspirenxe.strata.core.appearance.AppearancesImpl;
 import org.inspirenxe.strata.core.text.TextFactoryImpl;
+import org.inspirenxe.strata.core.theme.ThemeRegistryImpl;
 
 /**
  * Core's {@link Strata.Provider}, listed in {@code META-INF/services} so {@link Strata} finds it. The JDK's service
@@ -41,5 +43,10 @@ public final class CoreProvider implements Strata.Provider {
     @Override
     public Appearances appearances() {
         return AppearancesImpl.INSTANCE;
+    }
+
+    @Override
+    public ThemeRegistry themes() {
+        return ThemeRegistryImpl.INSTANCE;
     }
 }

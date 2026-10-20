@@ -26,5 +26,10 @@
  *
  * <p>Every component in one host shares the host's theme. Change it on the host; components re-read their keys and
  * a new layout runs.</p>
+ *
+ * <p>A {@link org.inspirenxe.strata.api.theme.ThemeRef} names a theme by id, so the engine's packs can restyle it.
+ * {@link org.inspirenxe.strata.api.theme.ThemeRegistry}, from {@link org.inspirenxe.strata.api.Strata#themes()},
+ * changes such a theme for every screen, or defines a new one on top of another, with
+ * {@link org.inspirenxe.strata.api.theme.ThemeOverrides}.</p>
  */
 package org.inspirenxe.strata.api.theme;

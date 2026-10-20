@@ -20,15 +20,28 @@ import java.util.Objects;
 /**
  * One theme file, read by a {@link ThemeSource}.
  *
- * @param origin where the file came from, such as a pack name and path; used only in error messages
+ * @param origin where the file came from, such as a pack name and path; used only in messages
  * @param content the file's JSON text
+ * @param layer the name of the layer the file makes, usually the id of the pack it came from; a resolved theme
+ *     reports it for each key the file set, through {@link org.inspirenxe.strata.api.theme.Theme#layer}
  */
-public record ThemeDocument(String origin, String content) {
+public record ThemeDocument(String origin, String content, String layer) {
     /**
      * Checks the arguments.
      */
     public ThemeDocument {
         Objects.requireNonNull(origin, "origin");
         Objects.requireNonNull(content, "content");
+        Objects.requireNonNull(layer, "layer");
+    }
+
+    /**
+     * Creates a document whose layer is named after its origin.
+     *
+     * @param origin where the file came from, such as a pack name and path; also the layer's name
+     * @param content the file's JSON text
+     */
+    public ThemeDocument(final String origin, final String content) {
+        this(origin, content, origin);
     }
 }

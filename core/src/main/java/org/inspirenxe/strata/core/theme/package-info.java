@@ -14,7 +14,8 @@
  * limitations under the License.
  */
 /**
- * Resolves theme refs: the theme file format, the parent chain and the per-key merge. See
- * {@link org.inspirenxe.strata.core.theme.ThemeResolver}.
+ * Resolves theme refs: the theme file format, the parent chain, the layers and the per-key merge, and the
+ * registry of themes and overrides added in code. See {@link org.inspirenxe.strata.core.theme.ThemeResolver} and
+ * {@link org.inspirenxe.strata.core.theme.ThemeRegistryImpl}.
  */
 package org.inspirenxe.strata.core.theme;

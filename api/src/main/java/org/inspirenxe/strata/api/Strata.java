@@ -17,6 +17,7 @@ package org.inspirenxe.strata.api;
 
 import org.inspirenxe.strata.api.appearance.Appearances;
 import org.inspirenxe.strata.api.text.TextFactory;
+import org.inspirenxe.strata.api.theme.ThemeRegistry;
 
 import java.util.List;
 import java.util.ServiceLoader;
@@ -53,6 +54,16 @@ public final class Strata {
     }
 
     /**
+     * Returns the themes and theme overrides added in code for the process.
+     *
+     * @return the registry
+     * @throws IllegalStateException if Strata's core is not on the class path, or more than one provider is
+     */
+    public static ThemeRegistry themes() {
+        return Strata.provider().themes();
+    }
+
+    /**
      * What Strata's core provides, listed in its {@code META-INF/services}. Do not implement this interface.
      */
     public interface Provider {
@@ -69,6 +80,13 @@ public final class Strata {
          * @return the registry, the same one every time
          */
         Appearances appearances();
+
+        /**
+         * Returns the theme registry.
+         *
+         * @return the registry, the same one every time
+         */
+        ThemeRegistry themes();
     }
 
     private static Provider provider() {
