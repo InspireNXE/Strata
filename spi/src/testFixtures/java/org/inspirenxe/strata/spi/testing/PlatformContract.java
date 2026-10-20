@@ -118,7 +118,11 @@ public abstract class PlatformContract {
             assertTrue(now >= previous, "clock went backward");
             previous = now;
         }
-        assertEquals(clock.nanoTime() / 1_000_000L, clock.millis(), 1L, "millis is nanoTime in milliseconds");
+        // Compared as longs: assertEquals with a delta has no long form and would round both through float
+        final long expected = clock.nanoTime() / 1_000_000L;
+        final long millis = clock.millis();
+        assertTrue(Math.abs(millis - expected) <= 1L,
+                () -> "millis is nanoTime in milliseconds: expected " + expected + " but was " + millis);
     }
 
     @Test
