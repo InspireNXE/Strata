@@ -17,6 +17,7 @@ package org.inspirenxe.strata.core.control.collection;
 
 import org.inspirenxe.strata.api.ComponentFactory;
 import org.inspirenxe.strata.api.component.Component;
+import org.inspirenxe.strata.api.control.attribute.item.SelectionMode;
 import org.inspirenxe.strata.api.control.collection.ListView;
 import org.inspirenxe.strata.api.event.input.DragEvent;
 import org.inspirenxe.strata.api.event.input.KeyEvent;
@@ -29,6 +30,7 @@ import org.inspirenxe.strata.api.extension.MeasureContext;
 import org.inspirenxe.strata.api.extension.Painter;
 import org.inspirenxe.strata.api.geometry.Rect;
 import org.inspirenxe.strata.api.geometry.Size;
+import org.inspirenxe.strata.api.input.Key;
 import org.inspirenxe.strata.api.input.KeyAction;
 import org.inspirenxe.strata.api.input.MouseButton;
 import org.inspirenxe.strata.api.layout.ScrollPanel;
@@ -39,13 +41,17 @@ import org.inspirenxe.strata.api.theme.Theme;
 import org.inspirenxe.strata.core.layout.ScrollTrack;
 import org.inspirenxe.strata.core.text.TextLine;
 
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
+import java.util.TreeSet;
 import java.util.function.Function;
 import java.util.function.IntConsumer;
 
@@ -73,6 +79,10 @@ public final class ListViewImpl<T> extends CustomComposite<ListView<T>> implemen
     private float rowHeight;
     private float rowSpacing;
     private int selectedIndex;
+    // The selected set, which is the current row alone, or nothing, in SINGLE mode
+    private final TreeSet<Integer> chosen;
+    private SelectionMode mode;
+    private int anchor;
     private boolean deselectable;
     private boolean activateOnClick;
     private Text placeholder;
@@ -109,6 +119,8 @@ public final class ListViewImpl<T> extends CustomComposite<ListView<T>> implemen
     private IntConsumer selectRoute;
     private IntConsumer activateRoute;
     private SelectionReport selectedRoute;
+    private ManyRequest selectManyRoute;
+    private ManyReport selectedManyRoute;
 
     /**
      * Creates an empty list.
@@ -127,6 +139,9 @@ public final class ListViewImpl<T> extends CustomComposite<ListView<T>> implemen
         this.keyFunction = Function.identity();
         this.rowHeight = DEFAULT_ROW_HEIGHT;
         this.selectedIndex = -1;
+        this.chosen = new TreeSet<>();
+        this.mode = SelectionMode.SINGLE;
+        this.anchor = -1;
         this.reveal = -1;
         this.viewport = Rect.ZERO;
         this.background = Paint.NONE;
@@ -152,20 +167,39 @@ public final class ListViewImpl<T> extends CustomComposite<ListView<T>> implemen
     public ListView<T> setItems(final List<? extends T> items) {
         final Optional<T> before = this.selected();
         final int beforeIndex = this.selectedIndex;
+        final List<Integer> beforeSet = List.copyOf(this.chosen);
+        final List<T> beforeItems = this.selectedItems();
+        final Set<Object> keys = new HashSet<>();
+        for (final T item : beforeItems) {
+            keys.add(this.keyFunction.apply(item));
+        }
+        final Object currentKey = before.map(this.keyFunction).orElse(null);
         this.items = List.copyOf(items);
         int index = -1;
-        if (before.isPresent()) {
-            final Object key = this.keyFunction.apply(before.get());
-            for (int i = 0; i < this.items.size(); i++) {
-                if (Objects.equals(key, this.keyFunction.apply(this.items.get(i)))) {
-                    index = i;
-                    break;
-                }
+        this.chosen.clear();
+        for (int i = 0; i < this.items.size(); i++) {
+            final Object key = this.keyFunction.apply(this.items.get(i));
+            if (keys.contains(key)) {
+                this.chosen.add(i);
+            }
+            if (index < 0 && before.isPresent() && Objects.equals(currentKey, key)) {
+                index = i;
             }
         }
+        if (index < 0 && !this.chosen.isEmpty()) {
+            index = this.chosen.last();
+        }
+        if (index >= 0 && this.mode == SelectionMode.SINGLE) {
+            this.chosen.clear();
+            this.chosen.add(index);
+        }
         this.selectedIndex = index;
+        this.anchor = index;
         this.rowsStale = true;
         this.invalidateLayout();
+        if (!beforeSet.equals(List.copyOf(this.chosen)) || !beforeItems.equals(this.selectedItems())) {
+            this.manyChanged(beforeSet);
+        }
         if (index != beforeIndex || !this.selected().equals(before)) {
             this.selectionChanged(beforeIndex);
         }
@@ -234,15 +268,171 @@ public final class ListViewImpl<T> extends CustomComposite<ListView<T>> implemen
         if (index != -1) {
             Objects.checkIndex(index, this.items.size());
         }
-        final int previous = this.selectedIndex;
-        if (index != previous) {
-            this.selectedIndex = index;
-            this.selectionChanged(previous);
-        }
+        this.setSelection(index < 0 ? List.of() : List.of(index), index);
+        this.anchor = index;
         if (index >= 0) {
             this.scrollToIndex(index);
         }
         return this;
+    }
+
+    @Override
+    public SelectionMode selectionMode() {
+        return this.mode;
+    }
+
+    @Override
+    public ListView<T> setSelectionMode(final SelectionMode mode) {
+        this.mode = Objects.requireNonNull(mode, "mode");
+        if (mode == SelectionMode.SINGLE && this.chosen.size() > 1) {
+            this.setSelection(this.selectedIndex < 0 ? List.of() : List.of(this.selectedIndex), this.selectedIndex);
+        }
+        return this;
+    }
+
+    @Override
+    public List<Integer> selectedIndexes() {
+        return List.copyOf(this.chosen);
+    }
+
+    @Override
+    public List<T> selectedItems() {
+        final List<T> selected = new ArrayList<>(this.chosen.size());
+        for (final int index : this.chosen) {
+            selected.add(this.items.get(index));
+        }
+        return selected;
+    }
+
+    @Override
+    public ListView<T> selectIndexes(final Collection<Integer> indexes) {
+        final TreeSet<Integer> set = new TreeSet<>();
+        for (final Integer index : indexes) {
+            set.add(Objects.checkIndex(Objects.requireNonNull(index, "index"), this.items.size()));
+        }
+        if (this.mode == SelectionMode.SINGLE && set.size() > 1) {
+            throw new IllegalArgumentException("A list in SINGLE mode selects at most one row: " + set);
+        }
+        final int current = this.currentFor(set, this.selectedIndex);
+        this.setSelection(set, current);
+        this.anchor = current;
+        return this;
+    }
+
+    @Override
+    public ListView<T> selectAll() {
+        if (this.mode == SelectionMode.MULTIPLE && !this.items.isEmpty()) {
+            final List<Integer> all = new ArrayList<>(this.items.size());
+            for (int i = 0; i < this.items.size(); i++) {
+                all.add(i);
+            }
+            this.selectIndexes(all);
+        }
+        return this;
+    }
+
+    /**
+     * The current row for a new set: the wanted one if it is in the set, else the set's last row, else none.
+     */
+    private int currentFor(final Collection<Integer> set, final int wanted) {
+        if (set.contains(wanted)) {
+            return wanted;
+        }
+        int last = -1;
+        for (final int index : set) {
+            last = Math.max(last, index);
+        }
+        return last;
+    }
+
+    /**
+     * Replaces the selected set and the current row, reporting the set first and then the current row, each only if
+     * it changed.
+     */
+    private void setSelection(final Collection<Integer> set, final int current) {
+        final List<Integer> before = List.copyOf(this.chosen);
+        final int previous = this.selectedIndex;
+        this.chosen.clear();
+        this.chosen.addAll(set);
+        this.selectedIndex = current;
+        if (!before.equals(List.copyOf(this.chosen))) {
+            this.manyChanged(before);
+        }
+        if (current != previous) {
+            this.selectionChanged(previous);
+        }
+    }
+
+    /**
+     * Applies a set the user's request ended with, ignoring rows the list does not show. The current row is the wanted
+     * one if it is still in the set. A null value is ignored.
+     *
+     * @param indexes the rows to select, or null
+     * @param wanted the row the user's action made current
+     */
+    public void applyMany(final List<Integer> indexes, final int wanted) {
+        if (indexes == null) {
+            return;
+        }
+        final TreeSet<Integer> set = new TreeSet<>();
+        for (final Integer index : indexes) {
+            if (index != null && index >= 0 && index < this.items.size()) {
+                set.add(index);
+            }
+        }
+        final int current = this.currentFor(set, wanted);
+        this.setSelection(set, current);
+        if (current >= 0) {
+            this.scrollToIndex(current);
+        }
+    }
+
+    /**
+     * Runs a change of the set by the user through the owner's route, or asks with {@link ListView#SELECT_MANY}.
+     */
+    private void userSelectMany(final Collection<Integer> set, final int current) {
+        final List<Integer> wanted = List.copyOf(new TreeSet<>(set));
+        if (wanted.equals(List.copyOf(this.chosen)) && current == this.selectedIndex) {
+            if (current >= 0) {
+                this.scrollToIndex(current);
+            }
+            return;
+        }
+        if (this.selectManyRoute != null) {
+            this.selectManyRoute.request(wanted, current);
+        } else {
+            this.request(SELECT_MANY, wanted, indexes -> this.applyMany(indexes, current));
+        }
+    }
+
+    /**
+     * Picks a row with the pointer or the keys in MULTIPLE mode: alone, added or removed with Control, or as the
+     * range from the anchor with Shift.
+     */
+    private void userPick(final int index, final boolean control, final boolean shift, final boolean single) {
+        if (shift) {
+            final int from = this.anchor >= 0 ? this.anchor : index;
+            final List<Integer> range = new ArrayList<>();
+            for (int i = Math.min(from, index); i <= Math.max(from, index); i++) {
+                range.add(i);
+            }
+            this.anchor = from;
+            this.userSelectMany(range, index);
+        } else if (control) {
+            final TreeSet<Integer> set = new TreeSet<>(this.chosen);
+            final boolean added = set.add(index);
+            if (!added) {
+                set.remove(index);
+            }
+            this.anchor = index;
+            this.userSelectMany(set, added ? index : this.currentFor(set, this.selectedIndex));
+        } else if (single && this.deselectable && this.chosen.equals(Set.of(index))) {
+            this.anchor = -1;
+            this.userSelectMany(List.of(), -1);
+        } else {
+            this.anchor = index;
+            this.userSelectMany(List.of(index), index);
+        }
     }
 
     @Override
@@ -309,6 +499,32 @@ public final class ListViewImpl<T> extends CustomComposite<ListView<T>> implemen
         } else {
             this.report(SELECTED, this.selectedIndex, previous);
         }
+    }
+
+    /**
+     * Reports a change of the selected set: to the owner if one {@linkplain #routeMany routed} it, or as
+     * {@link ListView#SELECTED_MANY}.
+     */
+    private void manyChanged(final List<Integer> previous) {
+        final List<Integer> now = List.copyOf(this.chosen);
+        if (this.selectedManyRoute != null) {
+            this.selectedManyRoute.selected(now, previous);
+        } else {
+            this.report(SELECTED_MANY, now, previous);
+        }
+    }
+
+    /**
+     * Sends this list's changes of the selected set to the control that owns it, as {@link #route} does for the
+     * current row.
+     *
+     * @param select takes a set the user is about to select, with the row the action makes current; the owner applies
+     *               it with {@link #applyMany}
+     * @param selected told the new and previous set after every change
+     */
+    public void routeMany(final ManyRequest select, final ManyReport selected) {
+        this.selectManyRoute = Objects.requireNonNull(select, "select");
+        this.selectedManyRoute = Objects.requireNonNull(selected, "selected");
     }
 
     /**
@@ -418,6 +634,34 @@ public final class ListViewImpl<T> extends CustomComposite<ListView<T>> implemen
             return -1;
         }
         return index;
+    }
+
+    /**
+     * Asked before the user changes the selected set of a routed list.
+     */
+    @FunctionalInterface
+    public interface ManyRequest {
+        /**
+         * Asked before the user changes the selected set.
+         *
+         * @param indexes the rows about to be selected, in order
+         * @param current the row the action makes current, or -1
+         */
+        void request(List<Integer> indexes, int current);
+    }
+
+    /**
+     * Told after the selected set of a routed list changed.
+     */
+    @FunctionalInterface
+    public interface ManyReport {
+        /**
+         * Told after the selected set changed.
+         *
+         * @param indexes the selected rows, in order
+         * @param previous the rows before
+         */
+        void selected(List<Integer> indexes, List<Integer> previous);
     }
 
     /**
@@ -563,7 +807,7 @@ public final class ListViewImpl<T> extends CustomComposite<ListView<T>> implemen
         final float offset = Math.round(this.scrollY);
         for (final Integer index : this.rows.keySet()) {
             final Paint paint;
-            if (index == this.selectedIndex) {
+            if (this.chosen.contains(index)) {
                 paint = this.rowSelected;
             } else if (index == hoveredRow) {
                 paint = this.rowHovered;
@@ -614,7 +858,9 @@ public final class ListViewImpl<T> extends CustomComposite<ListView<T>> implemen
         if (index < 0) {
             return;
         }
-        if (this.deselectable && index == this.selectedIndex && event.clicks() == 1) {
+        if (this.mode == SelectionMode.MULTIPLE) {
+            this.userPick(index, event.modifiers().control(), event.modifiers().shift(), event.clicks() == 1);
+        } else if (this.deselectable && index == this.selectedIndex && event.clicks() == 1) {
             this.userSelect(-1);
         } else if (index != this.selectedIndex) {
             this.userSelect(index);
@@ -663,7 +909,18 @@ public final class ListViewImpl<T> extends CustomComposite<ListView<T>> implemen
 
     @Override
     protected void onKey(final KeyEvent event) {
-        if (!event.action().isDown() || event.modifiers().control() || event.modifiers().alt() || this.items.isEmpty()) {
+        if (!event.action().isDown() || event.modifiers().alt() || this.items.isEmpty()) {
+            return;
+        }
+        if (event.modifiers().control()) {
+            if (this.mode == SelectionMode.MULTIPLE && event.key() == Key.A && event.action() == KeyAction.PRESS) {
+                final List<Integer> all = new ArrayList<>(this.items.size());
+                for (int i = 0; i < this.items.size(); i++) {
+                    all.add(i);
+                }
+                this.userSelectMany(all, this.selectedIndex >= 0 ? this.selectedIndex : 0);
+                event.consume();
+            }
             return;
         }
         final int page = Math.max(1, (int) Math.floor(this.viewport.height() / this.step()));
@@ -678,7 +935,10 @@ public final class ListViewImpl<T> extends CustomComposite<ListView<T>> implemen
             case END -> last;
             default -> -2;
         };
-        if (next >= 0) {
+        if (next >= 0 && this.mode == SelectionMode.MULTIPLE) {
+            this.userPick(next, false, event.modifiers().shift(), false);
+            event.consume();
+        } else if (next >= 0) {
             this.keySelect(next);
             event.consume();
         } else if (event.key().isEnter() && event.action() == KeyAction.PRESS && current >= 0) {

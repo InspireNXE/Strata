@@ -21,7 +21,9 @@ import org.inspirenxe.strata.api.component.HasTooltip;
 import org.inspirenxe.strata.api.control.attribute.item.Activatable;
 import org.inspirenxe.strata.api.control.attribute.item.ItemSource;
 import org.inspirenxe.strata.api.control.attribute.item.RowView;
-import org.inspirenxe.strata.api.control.attribute.item.SingleSelection;
+import org.inspirenxe.strata.api.control.attribute.item.MultiSelection;
+import org.inspirenxe.strata.api.control.attribute.item.Selection;
+import org.inspirenxe.strata.api.control.attribute.item.SelectionMode;
 import org.inspirenxe.strata.api.event.EventType;
 import org.inspirenxe.strata.api.event.control.ValueEvent;
 import org.inspirenxe.strata.api.event.control.ValueRequestEvent;
@@ -56,12 +58,12 @@ import java.util.function.Function;
  *
  * <h2>Events</h2>
  * <ul>
- *     <li>{@link SingleSelection#SELECT}: Asked before the user changes the selection: a press on a row, or the Up,
+ *     <li>{@link Selection#SELECT}: Asked before the user changes the selection: a press on a row, or the Up,
  *     Down, Page Up, Page Down, Home and End keys while focus is in the table. It fires only when the selection would
  *     change. The value is the row of {@link #shownItems()} about to be selected. The user never clears the selection,
  *     but a handler may rewrite the value to -1 to clear it, or to another row; the table then selects as
  *     {@link #select} does and ignores any other index outside the rows. Fires only for the user's actions.</li>
- *     <li>{@link SingleSelection#SELECTED}: Told after the selected row changed. The value is the selected row of
+ *     <li>{@link Selection#SELECTED}: Told after the selected row changed. The value is the selected row of
  *     {@link #shownItems()}, or -1 when nothing is selected, and the previous value is the row before. A sort or
  *     {@link #setItems} that moves the selected item to another row fires it too, and so does {@link #setItems} when
  *     the item kept selected is no longer equal to the one before, in which case the value can equal the previous
@@ -101,7 +103,7 @@ import java.util.function.Function;
  */
 public interface TableView<T> extends Component<TableView<T>>, HasCursor<TableView<T>>, HasTooltip<TableView<T>>,
         ItemSource<T, TableView<T>>,
-        SingleSelection<T, TableView<T>>, Activatable<TableView<T>>, RowView<TableView<T>> {
+        MultiSelection<T, TableView<T>>, Activatable<TableView<T>>, RowView<TableView<T>> {
     /**
      * Style key for the header behind each title (paint, required).
      */

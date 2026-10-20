@@ -17,6 +17,7 @@ package org.inspirenxe.strata.core.control.collection;
 
 import org.inspirenxe.strata.api.ComponentFactory;
 import org.inspirenxe.strata.api.component.Component;
+import org.inspirenxe.strata.api.control.attribute.item.SelectionMode;
 import org.inspirenxe.strata.api.control.collection.ListView;
 import org.inspirenxe.strata.api.control.collection.TreeView;
 import org.inspirenxe.strata.api.event.input.KeyEvent;
@@ -35,6 +36,7 @@ import org.inspirenxe.strata.api.theme.Theme;
 import org.inspirenxe.strata.core.control.Rings;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
@@ -95,6 +97,12 @@ public final class TreeViewImpl<T> extends CustomComposite<TreeView<T>> implemen
                 this.report(SELECTED, index, previous);
             }
         });
+        this.list.routeMany((indexes, current) -> this.request(SELECT_MANY, indexes, set -> this.list.applyMany(set, current)),
+                (indexes, previous) -> {
+                    if (!this.quiet) {
+                        this.report(SELECTED_MANY, indexes, previous);
+                    }
+                });
         this.addChild(this.list);
     }
 
@@ -168,11 +176,17 @@ public final class TreeViewImpl<T> extends CustomComposite<TreeView<T>> implemen
         }
         final int beforeIndex = this.list.selectedIndex();
         final Optional<T> before = this.selected();
+        final List<Integer> beforeSet = this.list.selectedIndexes();
+        final List<T> beforeItems = this.selectedItems();
         this.quiet = true;
         try {
             change.run();
         } finally {
             this.quiet = false;
+        }
+        final List<Integer> set = this.list.selectedIndexes();
+        if (!set.equals(beforeSet) || !this.selectedItems().equals(beforeItems)) {
+            this.report(SELECTED_MANY, set, beforeSet);
         }
         final int index = this.list.selectedIndex();
         if (index != beforeIndex || !this.selected().equals(before)) {
@@ -248,7 +262,8 @@ public final class TreeViewImpl<T> extends CustomComposite<TreeView<T>> implemen
                     }
                 }
                 this.expanded.remove(key);
-                if (inside) {
+                // With several selected, hidden rows just leave the selection when the rows are rebuilt
+                if (inside && this.list.selectionMode() == SelectionMode.SINGLE) {
                     this.list.select(at);
                 }
             }
@@ -303,7 +318,7 @@ public final class TreeViewImpl<T> extends CustomComposite<TreeView<T>> implemen
             while (selected > 0 && this.entries.get(selected).depth > 0) {
                 selected--;
             }
-            if (selected != this.list.selectedIndex()) {
+            if (selected != this.list.selectedIndex() && this.list.selectionMode() == SelectionMode.SINGLE) {
                 this.list.select(selected);
             }
             this.expanded.clear();
@@ -428,6 +443,43 @@ public final class TreeViewImpl<T> extends CustomComposite<TreeView<T>> implemen
     @Override
     public int selectedIndex() {
         return this.list.selectedIndex();
+    }
+
+    @Override
+    public List<T> selectedItems() {
+        final List<T> items = new ArrayList<>();
+        for (final Entry<T> entry : this.list.selectedItems()) {
+            items.add(entry.item);
+        }
+        return items;
+    }
+
+    @Override
+    public SelectionMode selectionMode() {
+        return this.list.selectionMode();
+    }
+
+    @Override
+    public TreeView<T> setSelectionMode(final SelectionMode mode) {
+        this.list.setSelectionMode(mode);
+        return this;
+    }
+
+    @Override
+    public List<Integer> selectedIndexes() {
+        return this.list.selectedIndexes();
+    }
+
+    @Override
+    public TreeView<T> selectIndexes(final Collection<Integer> indexes) {
+        this.list.selectIndexes(indexes);
+        return this;
+    }
+
+    @Override
+    public TreeView<T> selectAll() {
+        this.list.selectAll();
+        return this;
     }
 
     @Override

@@ -22,7 +22,9 @@ import org.inspirenxe.strata.api.control.attribute.item.Activatable;
 import org.inspirenxe.strata.api.control.attribute.item.CellSource;
 import org.inspirenxe.strata.api.control.attribute.item.ItemSource;
 import org.inspirenxe.strata.api.control.attribute.item.RowView;
-import org.inspirenxe.strata.api.control.attribute.item.SingleSelection;
+import org.inspirenxe.strata.api.control.attribute.item.MultiSelection;
+import org.inspirenxe.strata.api.control.attribute.item.Selection;
+import org.inspirenxe.strata.api.control.attribute.item.SelectionMode;
 import org.inspirenxe.strata.api.event.EventType;
 import org.inspirenxe.strata.api.event.control.ValueEvent;
 import org.inspirenxe.strata.api.event.control.ValueRequestEvent;
@@ -54,13 +56,13 @@ import java.util.function.Function;
  *
  * <h2>Events</h2>
  * <ul>
- *     <li>{@link SingleSelection#SELECT}: Asked before the user changes the selection: a press on a row, the Up, Down,
+ *     <li>{@link Selection#SELECT}: Asked before the user changes the selection: a press on a row, the Up, Down,
  *     Page Up, Page Down, Home and End keys while focus is in the tree, Right while an expanded item is selected, which
  *     moves to its first child, or Left while an item that is not expanded is selected, which moves to its parent. It
  *     fires only when the selection would change. The value is the row of {@link #shownItems()} about to be selected.
  *     The user never clears the selection, but a handler may rewrite the value to -1 to clear it, or to another row;
  *     any other index outside the rows is ignored. Fires only for the user's actions.</li>
- *     <li>{@link SingleSelection#SELECTED}: Told after the selected row changed. The value is the selected row of
+ *     <li>{@link Selection#SELECTED}: Told after the selected row changed. The value is the selected row of
  *     {@link #shownItems()}, or -1 when nothing is selected, and the previous value is the row before. It fires once
  *     per change, also when expanding or collapsing moves the selected item to another row, and when the rows are
  *     worked out again and the item kept selected is no longer equal to the one before, in which case the value can
@@ -92,7 +94,7 @@ import java.util.function.Function;
  */
 public interface TreeView<T> extends Component<TreeView<T>>, HasCursor<TreeView<T>>, HasTooltip<TreeView<T>>,
         ItemSource<T, TreeView<T>>, CellSource<T, TreeView<T>>,
-        SingleSelection<T, TreeView<T>>, Activatable<TreeView<T>>, RowView<TreeView<T>> {
+        MultiSelection<T, TreeView<T>>, Activatable<TreeView<T>>, RowView<TreeView<T>> {
     /**
      * Style key for the expand arrows (paint, optional).
      */

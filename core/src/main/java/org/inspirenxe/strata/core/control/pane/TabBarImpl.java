@@ -15,11 +15,10 @@
  */
 package org.inspirenxe.strata.core.control.pane;
 
-import java.util.Optional;
 import org.inspirenxe.strata.api.ComponentFactory;
+import org.inspirenxe.strata.api.component.CursorKind;
 import org.inspirenxe.strata.api.component.HasCursor;
 import org.inspirenxe.strata.api.component.HasTooltip;
-import org.inspirenxe.strata.api.component.CursorKind;
 import org.inspirenxe.strata.api.control.pane.Tab;
 import org.inspirenxe.strata.api.control.pane.TabBar;
 import org.inspirenxe.strata.api.event.input.KeyEvent;
@@ -43,6 +42,7 @@ import org.inspirenxe.strata.core.text.TextLine;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 
 /**

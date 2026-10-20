@@ -18,6 +18,7 @@ package org.inspirenxe.strata.core;
 import org.inspirenxe.strata.api.ComponentFactory;
 import org.inspirenxe.strata.api.component.Component;
 import org.inspirenxe.strata.api.control.attribute.item.Activatable;
+import org.inspirenxe.strata.api.control.attribute.item.Selection;
 import org.inspirenxe.strata.api.control.attribute.item.SingleSelection;
 import org.inspirenxe.strata.api.control.attribute.popup.Openable;
 import org.inspirenxe.strata.api.control.collection.ComboBox;
@@ -186,8 +187,8 @@ class CollectionEventsTest {
         void anAncestorCanRefuseAndHear() {
             this.show();
             final AbsolutePanel panel = CollectionEventsTest.this.panel;
-            final List<SingleSelection<?, ?>> heard = new ArrayList<>();
-            panel.onEvent(SingleSelection.SELECTED, e -> heard.add(e.control()));
+            final List<Selection<?, ?>> heard = new ArrayList<>();
+            panel.onEvent(Selection.SELECTED, e -> heard.add(e.control()));
             panel.onEvent(SingleSelection.SELECT, e -> e.cancel());
             CollectionEventsTest.this.test.click(10, 45);
             assertEquals(-1, this.list.selectedIndex());

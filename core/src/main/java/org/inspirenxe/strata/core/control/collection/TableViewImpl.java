@@ -15,11 +15,11 @@
  */
 package org.inspirenxe.strata.core.control.collection;
 
-import java.util.Optional;
 import org.inspirenxe.strata.api.ComponentFactory;
-import org.inspirenxe.strata.api.component.HasCursor;
 import org.inspirenxe.strata.api.component.Component;
 import org.inspirenxe.strata.api.component.CursorKind;
+import org.inspirenxe.strata.api.component.HasCursor;
+import org.inspirenxe.strata.api.control.attribute.item.SelectionMode;
 import org.inspirenxe.strata.api.control.collection.ListView;
 import org.inspirenxe.strata.api.control.collection.TableColumn;
 import org.inspirenxe.strata.api.control.collection.TableView;
@@ -45,6 +45,7 @@ import org.inspirenxe.strata.core.node.ComponentFactoryImpl;
 import org.inspirenxe.strata.core.text.TextLine;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
@@ -116,6 +117,8 @@ public final class TableViewImpl<T> extends CustomComposite<TableView<T>> implem
         this.list = new ListViewImpl<>(ui, item -> new Row<>(this.ui, this, item));
         this.list.setAnchor(Anchor.FILL);
         this.list.route(this::userSelect, this::userActivate, (index, previous) -> this.report(SELECTED, index, previous));
+        this.list.routeMany((indexes, current) -> this.request(SELECT_MANY, indexes, set -> this.list.applyMany(set, current)),
+                (indexes, previous) -> this.report(SELECTED_MANY, indexes, previous));
         this.addChild(this.header);
         this.addChild(this.list);
     }
@@ -432,6 +435,39 @@ public final class TableViewImpl<T> extends CustomComposite<TableView<T>> implem
     @Override
     public TableView<T> selectItem(final T item) {
         this.list.selectItem(item);
+        return this;
+    }
+
+    @Override
+    public List<T> selectedItems() {
+        return this.list.selectedItems();
+    }
+
+    @Override
+    public SelectionMode selectionMode() {
+        return this.list.selectionMode();
+    }
+
+    @Override
+    public TableView<T> setSelectionMode(final SelectionMode mode) {
+        this.list.setSelectionMode(mode);
+        return this;
+    }
+
+    @Override
+    public List<Integer> selectedIndexes() {
+        return this.list.selectedIndexes();
+    }
+
+    @Override
+    public TableView<T> selectIndexes(final Collection<Integer> indexes) {
+        this.list.selectIndexes(indexes);
+        return this;
+    }
+
+    @Override
+    public TableView<T> selectAll() {
+        this.list.selectAll();
         return this;
     }
 

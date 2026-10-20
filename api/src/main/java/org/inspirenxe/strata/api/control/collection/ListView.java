@@ -23,7 +23,9 @@ import org.inspirenxe.strata.api.control.attribute.item.Activatable;
 import org.inspirenxe.strata.api.control.attribute.item.CellSource;
 import org.inspirenxe.strata.api.control.attribute.item.ItemSource;
 import org.inspirenxe.strata.api.control.attribute.item.RowView;
-import org.inspirenxe.strata.api.control.attribute.item.SingleSelection;
+import org.inspirenxe.strata.api.control.attribute.item.MultiSelection;
+import org.inspirenxe.strata.api.control.attribute.item.Selection;
+import org.inspirenxe.strata.api.control.attribute.item.SelectionMode;
 import org.inspirenxe.strata.api.text.Text;
 
 import java.util.List;
@@ -60,21 +62,21 @@ import java.util.function.Function;
  * refreshed from the server keeps the row the user picked. If no item has that key, nothing is selected.</p>
  *
  * <p>The events carry row indexes, so read the item from the list: {@code list.items().get(e.value())}. Handle
- * {@link SingleSelection#SELECT} or {@link Activatable#ACTIVATE} to refuse or change what the user does, and
- * {@link SingleSelection#SELECTED} or {@link Activatable#ACTIVATED} to react.</p>
+ * {@link Selection#SELECT} or {@link Activatable#ACTIVATE} to refuse or change what the user does, and
+ * {@link Selection#SELECTED} or {@link Activatable#ACTIVATED} to react.</p>
  *
  * <p>The list is focusable and tabbable. It asks for the width of its widest built row, at least 40 units, and the
  * height of all its rows, but no more height than it is offered; give it a height or stretch it to scroll.</p>
  *
  * <h2>Events</h2>
  * <ul>
- *     <li>{@link SingleSelection#SELECT}: Asked before the user changes the selection: a press on a row, a press on the
+ *     <li>{@link Selection#SELECT}: Asked before the user changes the selection: a press on a row, a press on the
  *     selected row of a {@linkplain #setDeselectable deselectable} list, which clears it, or the Up, Down, Page Up,
  *     Page Down, Home and End keys while the list has focus. It fires only when the selection would change. The value
  *     is the index of the row about to be selected, or -1 when the user clears the selection. A handler may rewrite it
  *     to another index or to -1; the list then selects that row and scrolls it into view, as {@link #select} does, and
  *     ignores any other index outside the items. Fires only for the user's actions.</li>
- *     <li>{@link SingleSelection#SELECTED}: Told after the selection changed. The value is the selected index, or -1
+ *     <li>{@link Selection#SELECTED}: Told after the selection changed. The value is the selected index, or -1
  *     when nothing is selected, and the previous value is the index before. It also fires when {@link #setItems} keeps
  *     the selection at the same index but on an item that is no longer equal to the one before, so the value can equal
  *     the previous value. Fires for changes made from code too, including {@link #setItems}.</li>
@@ -114,7 +116,7 @@ import java.util.function.Function;
  */
 public interface ListView<T> extends Component<ListView<T>>, Focusable<ListView<T>>, HasCursor<ListView<T>>,
         HasTooltip<ListView<T>>, ItemSource<T, ListView<T>>, CellSource<T, ListView<T>>,
-        SingleSelection<T, ListView<T>>, Activatable<ListView<T>>, RowView<ListView<T>> {
+        MultiSelection<T, ListView<T>>, Activatable<ListView<T>>, RowView<ListView<T>> {
     /**
      * Style key for the list's area behind its rows (paint, optional).
      */
