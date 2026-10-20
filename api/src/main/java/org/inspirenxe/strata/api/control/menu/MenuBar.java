@@ -57,6 +57,8 @@ import java.util.Optional;
  *     <li>{@value #STYLE_ITEM_HOVERED} (paint, optional): behind the title under the pointer or with its menu
  *     open. Falls back to {@value Menu#STYLE_ITEM_HOVERED}.</li>
  *     <li>{@value #STYLE_TEXT} (text style, optional): the titles. Falls back to {@value Menu#STYLE_TEXT}.</li>
+ *     <li>{@value #STYLE_TITLE_PADDING} (insets, optional): the space around each title. Defaults to 8 at the
+ *     sides and 3 at the top and bottom.</li>
  * </ul>
  *
  * <pre>{@code
@@ -82,6 +84,11 @@ public interface MenuBar extends Component<MenuBar>, HasCursor<MenuBar>, HasTool
      * Style key for the titles (text style, optional).
      */
     String STYLE_TEXT = "menubar.text";
+    /**
+     * Style key for the space around each title (insets, optional). Defaults to 8 at the sides and 3 at the
+     * top and bottom.
+     */
+    String STYLE_TITLE_PADDING = "menubar.title.padding";
 
     /**
      * Returns the titles, left to right.

@@ -137,6 +137,15 @@ public interface ListView<T> extends Component<ListView<T>>, Focusable<ListView<
      * Style key for the placeholder text (text style, optional).
      */
     String STYLE_PLACEHOLDER = "list.placeholder";
+    /**
+     * Style key for the margin around the default cell of lists, trees and tables, the cells
+     * {@link org.inspirenxe.strata.api.ComponentFactory#cell(Object)} and
+     * {@link org.inspirenxe.strata.api.ComponentFactory#cellLabel(String)} make, and the rows of a combo box's
+     * or a text box's list (insets, optional). Defaults to
+     * {@value org.inspirenxe.strata.api.ComponentFactory#CELL_PADDING} at the sides and none at the top and
+     * bottom.
+     */
+    String STYLE_CELL_PADDING = "list.cell.padding";
 
     /**
      * Returns the items.

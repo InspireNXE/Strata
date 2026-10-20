@@ -27,6 +27,7 @@ import org.inspirenxe.strata.api.event.input.PointerEvent;
 import org.inspirenxe.strata.api.extension.CustomComponent;
 import org.inspirenxe.strata.api.extension.MeasureContext;
 import org.inspirenxe.strata.api.extension.Painter;
+import org.inspirenxe.strata.api.geometry.Insets;
 import org.inspirenxe.strata.api.geometry.Rect;
 import org.inspirenxe.strata.api.geometry.Size;
 import org.inspirenxe.strata.api.input.Key;
@@ -63,9 +64,10 @@ public final class MenuImpl extends CustomComponent<Menu> implements Menu {
      */
     public static final float EDGE = 2f;
     /**
-     * The room at each side of an item for the check mark and the submenu arrow, in UI units.
+     * The space around an item's text when the theme sets no {@value #STYLE_ITEM_PADDING}: 14 at the sides, which
+     * hold the check mark and the submenu arrow, and 3 at the top and bottom.
      */
-    public static final float GUTTER = 14f;
+    public static final Insets DEFAULT_ITEM_PADDING = Insets.of(14f, 3f);
     /**
      * The least space between an item's text and its shortcut, in UI units.
      */
@@ -100,6 +102,7 @@ public final class MenuImpl extends CustomComponent<Menu> implements Menu {
 
     // Computed during measure
     private float itemHeight;
+    private Insets itemPadding = DEFAULT_ITEM_PADDING;
     private float lineHeight;
     private float[] itemTop;
 
@@ -460,13 +463,14 @@ public final class MenuImpl extends CustomComponent<Menu> implements Menu {
         this.textStyle = theme.textStyleOr(STYLE_TEXT, TextStyle.DEFAULT);
         this.disabledTextStyle = theme.textStyleOr(STYLE_TEXT_DISABLED, this.textStyle);
         this.shortcutStyle = theme.textStyleOr(STYLE_SHORTCUT, this.disabledTextStyle);
+        this.itemPadding = theme.insetsOr(STYLE_ITEM_PADDING, DEFAULT_ITEM_PADDING);
     }
 
     @Override
     protected Size measure(final MeasureContext context, final float availableWidth, final float availableHeight) {
         final TextMetrics metrics = context.text();
         this.lineHeight = Math.max(metrics.lineHeight(this.textStyle), metrics.lineHeight(this.disabledTextStyle));
-        this.itemHeight = this.lineHeight + 6f;
+        this.itemHeight = this.lineHeight + this.itemPadding.vertical();
         if (this.itemTop.length != this.items.size()) {
             this.itemTop = new float[this.items.size()];
         }
@@ -488,7 +492,8 @@ public final class MenuImpl extends CustomComponent<Menu> implements Menu {
             shortcutWidth = Math.max(shortcutWidth, item.shortcutWidth);
             y += this.itemHeight;
         }
-        final float width = EDGE * 2f + GUTTER * 2f + textWidth + (shortcutWidth > 0f ? SHORTCUT_GAP + shortcutWidth : 0f);
+        final float width = EDGE * 2f + this.itemPadding.horizontal() + textWidth
+                + (shortcutWidth > 0f ? SHORTCUT_GAP + shortcutWidth : 0f);
         return new Size(Math.max(MIN_WIDTH, width), y + EDGE);
     }
 
@@ -507,18 +512,19 @@ public final class MenuImpl extends CustomComponent<Menu> implements Menu {
             if (i == this.highlighted) {
                 this.itemHovered.paint(painter, new Rect(left, top, width, this.itemHeight));
             }
-            final float textY = top + (this.itemHeight - this.lineHeight) * 0.5f;
-            (item.usable() ? item.span : item.disabledSpan).draw(painter, left + GUTTER, textY);
+            final Insets padding = this.itemPadding;
+            final float textY = top + padding.top() + (this.itemHeight - padding.vertical() - this.lineHeight) * 0.5f;
+            (item.usable() ? item.span : item.disabledSpan).draw(painter, left + padding.left(), textY);
             final int color = (item.usable() ? this.textStyle : this.disabledTextStyle).color();
             if (item.checked()) {
-                painter.fill(new Rect(left + (GUTTER - CHECK_SIZE) * 0.5f, top + (this.itemHeight - CHECK_SIZE) * 0.5f,
+                painter.fill(new Rect(left + (padding.left() - CHECK_SIZE) * 0.5f, top + (this.itemHeight - CHECK_SIZE) * 0.5f,
                         CHECK_SIZE, CHECK_SIZE), color);
             }
             if (!item.shortcutSpan.isEmpty()) {
-                item.shortcutSpan.draw(painter, left + width - GUTTER - item.shortcutWidth, textY);
+                item.shortcutSpan.draw(painter, left + width - padding.right() - item.shortcutWidth, textY);
             }
             if (item instanceof SubmenuItemImpl) {
-                Rings.right(painter, color, left + width - (GUTTER + Rings.ARROW_SHORT) * 0.5f,
+                Rings.right(painter, color, left + width - (padding.right() + Rings.ARROW_SHORT) * 0.5f,
                         top + (this.itemHeight - Rings.ARROW_LONG) * 0.5f);
             }
         }

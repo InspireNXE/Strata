@@ -96,6 +96,11 @@ public final class TextBoxImpl extends CustomComponent<TextBox> implements TextB
      * The width, in UI units, the box asks for when measured.
      */
     public static final float DEFAULT_WIDTH = 120f;
+    /**
+     * The padding around the text when the theme sets no {@value #STYLE_PADDING}: 4 at the sides and 5 at the top
+     * and bottom.
+     */
+    public static final Insets DEFAULT_PADDING = Insets.of(4f, 5f);
     private static final Set<String> REQUIRED = Set.of(STYLE_NORMAL, STYLE_FOCUSED, STYLE_DISABLED);
     private static final Paint DEFAULT_SELECTION = Paint.solid(0x806A9FFF);
     private static final Paint DEFAULT_CARET = Paint.solid(0xFFE0E0E0);
@@ -106,7 +111,10 @@ public final class TextBoxImpl extends CustomComponent<TextBox> implements TextB
     private int maxLength;
     private boolean password;
     private int maskCodePoint;
+    // The padding in use: the one set, else the theme's
     private Insets textPadding;
+    private Insets setPadding;
+    private Insets themePadding;
     private UnaryOperator<String> filter;
     private boolean readOnly;
     private boolean selectAllOnFocus;
@@ -190,7 +198,8 @@ public final class TextBoxImpl extends CustomComponent<TextBox> implements TextB
         this.drawContent = this::drawContent;
         this.maxLength = Integer.MAX_VALUE;
         this.maskCodePoint = '*';
-        this.textPadding = Insets.of(4f, 5f);
+        this.textPadding = DEFAULT_PADDING;
+        this.themePadding = DEFAULT_PADDING;
         this.maxVisibleSuggestions = DEFAULT_MAX_VISIBLE_SUGGESTIONS;
         this.suggestions = List.of();
         this.normal = Paint.NONE;
@@ -300,7 +309,8 @@ public final class TextBoxImpl extends CustomComponent<TextBox> implements TextB
 
     @Override
     public TextBox setTextPadding(final Insets padding) {
-        this.textPadding = Objects.requireNonNull(padding, "padding");
+        this.setPadding = padding;
+        this.textPadding = padding != null ? padding : this.themePadding;
         this.invalidateLayout();
         return this;
     }
@@ -473,8 +483,8 @@ public final class TextBoxImpl extends CustomComponent<TextBox> implements TextB
     }
 
     private Label suggestionCell(final Suggestion suggestion) {
-        final Label label = this.ui.label(suggestion.text()).setStyle(this.suggestionTextStyle);
-        label.setMargin(4f, 0f);
+        final Label label = ((ComponentFactoryImpl) this.ui).cellPadded(
+                this.ui.label(suggestion.text()).setStyle(this.suggestionTextStyle), false);
         label.setOverflow(TextOverflow.ELLIPSIS);
         label.setAnchor(Anchor.MIDDLE_LEFT);
         return label;
@@ -603,6 +613,10 @@ public final class TextBoxImpl extends CustomComponent<TextBox> implements TextB
 
     @Override
     protected void onApplyTheme(final Theme theme) {
+        this.themePadding = theme.insetsOr(STYLE_PADDING, DEFAULT_PADDING);
+        if (this.setPadding == null) {
+            this.textPadding = this.themePadding;
+        }
         this.normal = theme.paintOr(STYLE_NORMAL, Paint.NONE);
         this.focusedPaint = theme.paintOr(STYLE_FOCUSED, this.normal);
         this.disabledPaint = theme.paintOr(STYLE_DISABLED, this.normal);

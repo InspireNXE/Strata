@@ -47,13 +47,14 @@ import java.util.Set;
  * a one-unit focus ring when the theme has one. The caption is centered.
  *
  * <p>The button is focusable and tabbable, shows a hand cursor, and is at least 20 by 20 units. Its desired size is
- * the caption plus 8 units of padding on the left and right and 5 on the top and bottom, unless that padding is
- * changed. Measuring takes the widest of the normal, hovered and disabled captions, so enabling, disabling or
- * hovering it needs no relayout.</p>
+ * the caption plus its padding: the one set with {@link #setTextPadding}, or else the theme's
+ * {@value #STYLE_PADDING}, or else {@link #DEFAULT_PADDING}. Measuring takes the widest of the normal, hovered and
+ * disabled captions, so enabling, disabling or hovering it needs no relayout.</p>
  *
- * <p>An icon is drawn {@link #ICON_GAP} units before the caption, and the two are centered together. The icon is
- * tinted half-bright gray while the button is disabled. With an icon and no caption the default padding is 2 units
- * on every side and the line height does not count, so a 16 by 16 icon gives 20 by 20.</p>
+ * <p>An icon is drawn {@link #ICON_GAP} units before the caption, and the two are centered together in the button
+ * less its padding. The icon is tinted half-bright gray while the button is disabled. With an icon and no caption
+ * the padding is the theme's {@value #STYLE_PADDING_ICON}, or else {@link #DEFAULT_ICON_PADDING}, and the line
+ * height does not count, so a 16 by 16 icon gives 20 by 20.</p>
  *
  * <p>A link draws no face and no focus ring, has no default padding and no minimum size, and draws its caption in
  * the link text style. That is the hovered one while the link is hovered or focused, or else the link text with an
@@ -64,11 +65,24 @@ public final class ButtonImpl extends CustomComponent<Button> implements Button 
      * The space between the icon and the caption, in UI units.
      */
     public static final float ICON_GAP = 4f;
+    /**
+     * The padding around a caption when the theme sets no {@value #STYLE_PADDING}: 8 at the sides and 5 at the top
+     * and bottom.
+     */
+    public static final Insets DEFAULT_PADDING = Insets.of(8f, 5f);
+    /**
+     * The padding around an icon with no caption when the theme sets no {@value #STYLE_PADDING_ICON}: 2 on every
+     * side.
+     */
+    public static final Insets DEFAULT_ICON_PADDING = Insets.of(2f);
     private static final int DISABLED_ICON_TINT = 0xFF808080;
     private static final Set<String> REQUIRED = Set.of(STYLE_NORMAL, STYLE_HOVERED, STYLE_PRESSED, STYLE_DISABLED);
 
     private Text text;
+    // Set with setTextPadding; null follows the theme
     private Insets textPadding;
+    private Insets themePadding = DEFAULT_PADDING;
+    private Insets themeIconPadding = DEFAULT_ICON_PADDING;
     private SpriteId iconSprite;
     private Visual iconVisual;
     private float iconWidth;
@@ -136,7 +150,7 @@ public final class ButtonImpl extends CustomComponent<Button> implements Button 
 
     @Override
     public Button setTextPadding(final Insets padding) {
-        this.textPadding = Objects.requireNonNull(padding, "padding");
+        this.textPadding = padding;
         this.invalidateLayout();
         return this;
     }
@@ -226,7 +240,7 @@ public final class ButtonImpl extends CustomComponent<Button> implements Button 
         if (this.link) {
             return Insets.NONE;
         }
-        return this.hasIcon() && this.caption.isEmpty() ? Insets.of(2f, 2f) : Insets.of(8f, 5f);
+        return this.hasIcon() && this.caption.isEmpty() ? this.themeIconPadding : this.themePadding;
     }
 
     @Override
@@ -263,6 +277,8 @@ public final class ButtonImpl extends CustomComponent<Button> implements Button 
         this.linkTextStyle = theme.textStyleOr(STYLE_LINK_TEXT, this.textStyle);
         this.linkHoveredTextStyle = theme.textStyleOr(STYLE_LINK_TEXT_HOVERED, this.linkTextStyle.withUnderline(true));
         this.linkDisabledTextStyle = theme.textStyleOr(STYLE_LINK_TEXT_DISABLED, this.disabledTextStyle);
+        this.themePadding = theme.insetsOr(STYLE_PADDING, DEFAULT_PADDING);
+        this.themeIconPadding = theme.insetsOr(STYLE_PADDING_ICON, DEFAULT_ICON_PADDING);
     }
 
     @Override
@@ -316,9 +332,13 @@ public final class ButtonImpl extends CustomComponent<Button> implements Button 
         final boolean hasText = !this.caption.isEmpty();
         final float contentWidth = (icon ? this.iconWidth : 0f) + (icon && hasText ? ICON_GAP : 0f)
                 + (hasText ? this.captionWidth : 0f);
-        float x = bounds.x() + (bounds.width() - contentWidth) * 0.5f;
+        // Centered in the button less its padding, which is the whole button when the padding is even
+        final Insets padding = this.padding();
+        final float innerY = bounds.y() + padding.top();
+        final float innerHeight = bounds.height() - padding.vertical();
+        float x = bounds.x() + padding.left() + (bounds.width() - padding.horizontal() - contentWidth) * 0.5f;
         if (icon) {
-            final Rect iconRect = new Rect(x, bounds.y() + (bounds.height() - this.iconHeight) * 0.5f, this.iconWidth,
+            final Rect iconRect = new Rect(x, innerY + (innerHeight - this.iconHeight) * 0.5f, this.iconWidth,
                     this.iconHeight);
             final int tint = enabled ? 0xFFFFFFFF : DISABLED_ICON_TINT;
             if (this.iconVisual != null) {
@@ -337,7 +357,7 @@ public final class ButtonImpl extends CustomComponent<Button> implements Button 
             } else {
                 shown = this.caption;
             }
-            shown.draw(painter, x, bounds.y() + (bounds.height() - this.captionHeight) * 0.5f);
+            shown.draw(painter, x, innerY + (innerHeight - this.captionHeight) * 0.5f);
         }
     }
 

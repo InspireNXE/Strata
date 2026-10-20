@@ -62,6 +62,11 @@ public interface Overlays {
      */
     String STYLE_TOAST_TEXT = "toast.text";
     /**
+     * Style key for the space between a text toast's edges and its text (insets, optional). Defaults to 6 on
+     * every side.
+     */
+    String STYLE_TOAST_PADDING = "toast.padding";
+    /**
      * How long a toast shows unless told otherwise, in milliseconds.
      */
     long DEFAULT_TOAST_MILLIS = 3000L;

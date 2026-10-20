@@ -57,6 +57,7 @@ import org.inspirenxe.strata.core.paint.CanvasPainter;
 import java.util.Objects;
 import java.util.Set;
 import java.util.function.Consumer;
+import java.util.function.Function;
 
 /**
  * Core's half of every component: state, layout bookkeeping and event routing. The public object is the
@@ -106,6 +107,10 @@ public class Node implements ComponentPeer {
 
     // Layout inputs
     private Insets margin;
+    // Set by setMargin; the theme's margin applies until then
+    private boolean marginSet;
+    private Function<Theme, Insets> themeMargin;
+    private static final Theme NO_THEME = Theme.builder("strata:none").build();
     private float minWidth;
     private float maxWidth;
     private float minHeight;
@@ -607,6 +612,9 @@ public class Node implements ComponentPeer {
      */
     public final void applyTheme(final Theme theme) {
         this.theme = Objects.requireNonNull(theme, "theme");
+        if (this.themeMargin != null && !this.marginSet) {
+            this.margin = this.themeMargin.apply(theme);
+        }
         this.hooks.applyTheme(theme);
         this.invalidateLayout();
     }
@@ -804,7 +812,23 @@ public class Node implements ComponentPeer {
     @Override
     public final void setMargin(final Insets margin) {
         this.margin = Objects.requireNonNull(margin, "margin");
+        this.marginSet = true;
         this.invalidateLayout();
+    }
+
+    /**
+     * Makes the margin follow each theme the node gets, until {@link #setMargin} is called. The margin is read now,
+     * from an empty theme while the node has none, so a detached node shows its default, and again whenever
+     * {@link #applyTheme} runs.
+     *
+     * @param margin reads the margin from a theme
+     */
+    public final void setThemeMargin(final Function<Theme, Insets> margin) {
+        this.themeMargin = Objects.requireNonNull(margin, "margin");
+        if (!this.marginSet) {
+            this.margin = margin.apply(this.theme != null ? this.theme : NO_THEME);
+            this.invalidateLayout();
+        }
     }
 
     @Override

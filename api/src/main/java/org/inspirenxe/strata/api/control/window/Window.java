@@ -127,6 +127,16 @@ public interface Window extends Container<Window>, Titled<Window>, Closable<Wind
      */
     String STYLE_GRIP_HOVERED = "window.grip.hovered";
     /**
+     * Style key for the space around the title in the title bar (insets, optional). Defaults to
+     * {@value #TITLE_PADDING} on every side.
+     */
+    String STYLE_TITLE_PADDING = "window.title.padding";
+    /**
+     * Style key for the space between the window's edges, below the title bar, and its content (insets,
+     * optional). Defaults to 3 on every side. Padding set with {@link #setPadding} wins over it.
+     */
+    String STYLE_PADDING = "window.padding";
+    /**
      * The space above and below the title in the title bar, in UI units.
      */
     float TITLE_PADDING = 3f;

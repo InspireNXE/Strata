@@ -127,6 +127,11 @@ public interface ComboBox<T> extends Component<ComboBox<T>>, Focusable<ComboBox<
      */
     String STYLE_TEXT_DISABLED = "combobox.text.disabled";
     /**
+     * Style key for the space between the box's edges and its shown value on the left and its arrow on the
+     * right (insets, optional). Defaults to 4 at the sides and 3 at the top and bottom.
+     */
+    String STYLE_PADDING = "combobox.padding";
+    /**
      * How many rows the open list shows by default before it scrolls.
      */
     int DEFAULT_MAX_VISIBLE_OPTIONS = 8;

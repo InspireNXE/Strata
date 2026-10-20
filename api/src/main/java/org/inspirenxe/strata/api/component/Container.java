@@ -74,15 +74,17 @@ public interface Container<T extends Container<T>> extends Component<T>, HasCurs
     /**
      * Returns the padding.
      *
-     * @return the space between the container's edges and its children; {@link Insets#NONE} by default
+     * @return the space between the container's edges and its children; {@link Insets#NONE} by default, and the
+     *     theme's for a window
      */
     Insets padding();
 
     /**
      * Sets the space between the container's edges and its children. Padding is inside the bounds, so the
-     * container's background covers it.
+     * container's background covers it. Padding set here stays through theme changes.
      *
-     * @param padding the padding
+     * @param padding the padding, or {@code null} to go back to the container's default: none, or the theme's for a
+     *     container that reads one, such as a window
      * @return this container
      */
     T setPadding(Insets padding);

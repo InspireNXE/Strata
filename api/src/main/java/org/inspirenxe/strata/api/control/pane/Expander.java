@@ -77,6 +77,11 @@ public interface Expander extends Component<Expander>, Focusable<Expander>, HasC
      * Style key for the title and arrow when disabled (text style, optional).
      */
     String STYLE_TEXT_DISABLED = "expander.text.disabled";
+    /**
+     * Style key for the space between the header's edges and its arrow and text (insets, optional). Defaults
+     * to 4 at the sides and 3 at the top and bottom.
+     */
+    String STYLE_HEADER_PADDING = "expander.header.padding";
 
     /**
      * Fired when the user flips the expander by click or key, before it changes. The value is the state it is about

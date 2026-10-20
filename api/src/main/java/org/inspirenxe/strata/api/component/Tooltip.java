@@ -29,8 +29,8 @@ import java.util.function.Function;
  * {@value #DEFAULT_DELAY_MILLIS} milliseconds unless the adapter sets another, or at once when the pointer moves
  * straight from another component's tooltip. It moves with the pointer: 12 units
  * right of and 12 units above the pointer, flipped to the left side when it would leave the host on the right, and
- * kept inside the host. Tooltips take no input. Text tooltips draw on the {@value #STYLE_BACKGROUND} paint with 4
- * units of padding. Their plain parts are drawn in the {@value #STYLE_TEXT} text style, and styled parts change
+ * kept inside the host. Tooltips take no input. Text tooltips draw on the {@value #STYLE_BACKGROUND} paint inside
+ * the {@value #STYLE_PADDING} insets, 4 units on every side by default. Their plain parts are drawn in the {@value #STYLE_TEXT} text style, and styled parts change
  * it; see {@link Text}.</p>
  *
  * <p>The {@link Lines} kind is drawn by Strata. Engine adapters can offer factory methods that
@@ -46,6 +46,11 @@ public sealed interface Tooltip {
      * Style key for the text of a {@link Lines} tooltip (text style, optional). Falls back to the default style.
      */
     String STYLE_TEXT = "tooltip.text";
+    /**
+     * Style key for the space between a text tooltip's edges and its text (insets, optional). Defaults to 4 on
+     * every side.
+     */
+    String STYLE_PADDING = "tooltip.padding";
     /**
      * How long, in milliseconds, the pointer rests on a component before its tooltip shows, unless the adapter sets
      * another delay.

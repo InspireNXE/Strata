@@ -114,6 +114,11 @@ public interface Menu extends Component<Menu>, Focusable<Menu>, HasCursor<Menu>,
      * Style key for separator lines (paint, optional).
      */
     String STYLE_SEPARATOR = "menu.separator";
+    /**
+     * Style key for the space around a menu item's text (insets, optional). The left side also holds the check
+     * mark and the right side the submenu arrow. Defaults to 14 at the sides and 3 at the top and bottom.
+     */
+    String STYLE_ITEM_PADDING = "menu.item.padding";
 
     /**
      * Requested when the user chooses an entry: a click on it, or Enter, keypad Enter or Space while it is

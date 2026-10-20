@@ -203,6 +203,11 @@ public interface TextBox extends Component<TextBox>, Focusable<TextBox>, HasCurs
      */
     String STYLE_PLACEHOLDER = "textbox.placeholder";
     /**
+     * Style key for the space between a text box's edges and its text (insets, optional). Defaults to 4 at the
+     * sides and 5 at the top and bottom. A spinner's field reads it, and a text area falls back to it.
+     */
+    String STYLE_PADDING = "textbox.padding";
+    /**
      * How many suggestions show before the list scrolls, unless told otherwise.
      */
     int DEFAULT_MAX_VISIBLE_SUGGESTIONS = 8;

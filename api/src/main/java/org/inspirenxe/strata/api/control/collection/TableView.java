@@ -121,6 +121,11 @@ public interface TableView<T> extends Component<TableView<T>>, HasCursor<TableVi
      */
     String STYLE_GRID = "table.grid";
     /**
+     * Style key for the space between a column's edges and its title and sort arrow (insets, optional).
+     * Defaults to 4 at the sides and none at the top and bottom.
+     */
+    String STYLE_HEADER_PADDING = "table.header.padding";
+    /**
      * Asked before the user sorts the rows: a click on the title of a sortable column. The first click on a column
      * sorts ascending and each further click flips the direction. The value is the sort about to apply. A handler
      * may rewrite it to another sort; the table then sorts as {@link #sortBy} does, and ignores a sort whose column

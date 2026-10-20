@@ -24,6 +24,7 @@ import org.inspirenxe.strata.api.event.input.PointerEvent;
 import org.inspirenxe.strata.api.extension.CustomComponent;
 import org.inspirenxe.strata.api.extension.MeasureContext;
 import org.inspirenxe.strata.api.extension.Painter;
+import org.inspirenxe.strata.api.geometry.Insets;
 import org.inspirenxe.strata.api.geometry.Rect;
 import org.inspirenxe.strata.api.geometry.Size;
 import org.inspirenxe.strata.api.input.MouseButton;
@@ -46,9 +47,10 @@ import java.util.Optional;
  */
 public final class MenuBarImpl extends CustomComponent<MenuBar> implements MenuBar {
     /**
-     * The space on each side of a title, in UI units.
+     * The space around each title when the theme sets no {@value #STYLE_TITLE_PADDING}: 8 at the sides and 3 at
+     * the top and bottom.
      */
-    public static final float TITLE_PADDING = 8f;
+    public static final Insets DEFAULT_TITLE_PADDING = Insets.of(8f, 3f);
 
     private final List<SubmenuItemImpl> entries;
     private int openIndex;
@@ -66,6 +68,7 @@ public final class MenuBarImpl extends CustomComponent<MenuBar> implements MenuB
     private float[] titleWidth;
     private TextLine[] spans;
     private float lineHeight;
+    private Insets titlePadding = DEFAULT_TITLE_PADDING;
 
     /**
      * Creates a bar with no menus.
@@ -270,6 +273,7 @@ public final class MenuBarImpl extends CustomComponent<MenuBar> implements MenuB
         this.hovered = theme.paintOr(STYLE_ITEM_HOVERED, theme.paintOr(Menu.STYLE_ITEM_HOVERED, Paint.NONE));
         this.textStyle = theme.textStyleOr(STYLE_TEXT, theme.textStyleOr(Menu.STYLE_TEXT, TextStyle.DEFAULT));
         this.disabledTextStyle = theme.textStyleOr(Menu.STYLE_TEXT_DISABLED, this.textStyle);
+        this.titlePadding = theme.insetsOr(STYLE_TITLE_PADDING, DEFAULT_TITLE_PADDING);
     }
 
     @Override
@@ -286,11 +290,11 @@ public final class MenuBarImpl extends CustomComponent<MenuBar> implements MenuB
             final SubmenuItemImpl entry = this.entries.get(i);
             this.spans[i] = TextLine.of(entry.text(), entry.usable() ? this.textStyle : this.disabledTextStyle, metrics);
             this.titleX[i] = x;
-            this.titleWidth[i] = this.spans[i].width() + TITLE_PADDING * 2f;
+            this.titleWidth[i] = this.spans[i].width() + this.titlePadding.horizontal();
             x += this.titleWidth[i];
         }
         this.lineHeight = metrics.lineHeight(this.textStyle);
-        return new Size(x, this.lineHeight + 6f);
+        return new Size(x, this.lineHeight + this.titlePadding.vertical());
     }
 
     private int titleAt(final float x) {
@@ -307,12 +311,13 @@ public final class MenuBarImpl extends CustomComponent<MenuBar> implements MenuB
     protected void paint(final Painter painter, final Rect bounds) {
         this.background.paint(painter, bounds);
         final int hover = this.isHovered() ? this.titleAt(this.pointerX) : -1;
-        final float textY = bounds.y() + (bounds.height() - this.lineHeight) * 0.5f;
+        final Insets padding = this.titlePadding;
+        final float textY = bounds.y() + padding.top() + (bounds.height() - padding.vertical() - this.lineHeight) * 0.5f;
         for (int i = 0; i < this.spans.length; i++) {
             if (i == hover || i == this.openIndex) {
                 this.hovered.paint(painter, new Rect(bounds.x() + this.titleX[i], bounds.y(), this.titleWidth[i], bounds.height()));
             }
-            this.spans[i].draw(painter, bounds.x() + this.titleX[i] + TITLE_PADDING, textY);
+            this.spans[i].draw(painter, bounds.x() + this.titleX[i] + padding.left(), textY);
         }
     }
 

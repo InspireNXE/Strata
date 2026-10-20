@@ -119,6 +119,16 @@ public interface Button extends Component<Button>, Focusable<Button>, HasCursor<
      * Style key for the caption of a link when disabled (text style, optional).
      */
     String STYLE_LINK_TEXT_DISABLED = "button.link.text.disabled";
+    /**
+     * Style key for the space between a button's edges and its caption, or its icon and caption (insets,
+     * optional). Defaults to 8 at the sides and 5 at the top and bottom. A cycle button reads it too.
+     */
+    String STYLE_PADDING = "button.padding";
+    /**
+     * Style key for the space around the icon of a button with an icon and no caption (insets, optional).
+     * Defaults to 2 on every side.
+     */
+    String STYLE_PADDING_ICON = "button.padding.icon";
 
     /**
      * Fired when the user presses the button by click or key, before it is pressed. Canceling it refuses the press,
@@ -147,9 +157,11 @@ public interface Button extends Component<Button>, Focusable<Button>, HasCursor<
 
     /**
      * Sets the space between the caption and the button's edges, which with the caption gives the desired size.
+     * Padding set here stays through theme changes.
      *
-     * @param padding the padding; by default 8 left and right and 5 top and bottom, 2 on every side for a button
-     *     with an icon and no caption, and none for a link
+     * @param padding the padding, or {@code null} to go back to the default: the theme's {@value #STYLE_PADDING}
+     *     (8 left and right and 5 top and bottom without it), its {@value #STYLE_PADDING_ICON} (2 on every side)
+     *     for a button with an icon and no caption, and none for a link
      * @return this button
      */
     Button setTextPadding(Insets padding);

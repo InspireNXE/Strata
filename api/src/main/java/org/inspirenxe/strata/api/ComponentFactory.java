@@ -51,13 +51,11 @@ import org.inspirenxe.strata.api.control.pane.Tab;
 import org.inspirenxe.strata.api.control.pane.TabBar;
 import org.inspirenxe.strata.api.control.window.MessageBox;
 import org.inspirenxe.strata.api.control.window.Window;
-import org.inspirenxe.strata.api.event.input.InputEvents;
 import org.inspirenxe.strata.api.extension.CustomComponent;
 import org.inspirenxe.strata.api.extension.peer.ComponentHooks;
 import org.inspirenxe.strata.api.extension.peer.ComponentPeer;
 import org.inspirenxe.strata.api.extension.peer.ContainerPeer;
 import org.inspirenxe.strata.api.layout.AbsolutePanel;
-import org.inspirenxe.strata.api.layout.Anchor;
 import org.inspirenxe.strata.api.layout.AnchorPanel;
 import org.inspirenxe.strata.api.layout.GridPanel;
 import org.inspirenxe.strata.api.layout.Orientation;
@@ -66,12 +64,10 @@ import org.inspirenxe.strata.api.layout.Spacer;
 import org.inspirenxe.strata.api.layout.StackPanel;
 import org.inspirenxe.strata.api.overlay.Overlays;
 import org.inspirenxe.strata.api.text.Text;
-import org.inspirenxe.strata.api.text.TextOverflow;
 import org.inspirenxe.strata.api.theme.SpriteId;
 import org.inspirenxe.strata.api.theme.Theme;
 import org.inspirenxe.strata.api.visual.Visual;
 
-import java.util.Optional;
 import java.util.function.Function;
 
 /**
@@ -89,7 +85,9 @@ import java.util.function.Function;
  */
 public interface ComponentFactory {
     /**
-     * The margin, in UI units, on each side of the text in a row's default cell; see {@link #cellLabel(String)}.
+     * The margin, in UI units, on each side of the text in a row's default cell when the theme sets no
+     * {@value org.inspirenxe.strata.api.control.collection.ListView#STYLE_CELL_PADDING}; see
+     * {@link #cellLabel(String)}.
      */
     float CELL_PADDING = 4f;
 
@@ -199,19 +197,17 @@ public interface ComponentFactory {
     }
 
     /**
-     * Makes the label a list, tree or table row shows for text by default: {@value #CELL_PADDING} units
-     * of margin on each side, vertically centered, and cut short with an ellipsis when it does not fit. Use it in
-     * your own cell factories so text rows line up with the built-in ones.
+     * Makes the label a list, tree or table row shows for text by default: vertically centered, cut short with an
+     * ellipsis when it does not fit, and with the theme's
+     * {@value org.inspirenxe.strata.api.control.collection.ListView#STYLE_CELL_PADDING} as its margin, or
+     * {@value #CELL_PADDING} units on the left and right without it. The margin follows the theme until
+     * {@link Label#setMargin} is called. Use it in your own cell factories so text rows line up with the built-in
+     * ones.
      *
      * @param text the text
      * @return a new label
      */
-    default Label cellLabel(final Text text) {
-        final Label label = this.label(text)
-                .setOverflow(TextOverflow.ELLIPSIS)
-                .setAnchor(Anchor.MIDDLE_LEFT);
-        return label.setMargin(CELL_PADDING, 0f);
-    }
+    Label cellLabel(Text text);
 
     /**
      * Does the same as {@link #cellLabel(Text)} with literal text.
@@ -235,26 +231,14 @@ public interface ComponentFactory {
 
     /**
      * Makes the row a list, tree or grid shows for a value by default: the value's icon, if its appearance has one,
-     * and its name in a {@linkplain #cellLabel(Text) cell label}. The row shows the value's tooltip, asked anew each
-     * time the pointer arrives.
+     * and its name in a {@linkplain #cellLabel(Text) cell label}. The icon's margin is the left, top and bottom of
+     * the cell padding the label uses, so the two line up. The row shows the value's tooltip, asked anew each time
+     * the pointer arrives.
      *
      * @param value the value
      * @return a new row
      */
-    default Component<?> cell(final Object value) {
-        final Appearances appearances = this.appearances();
-        final Label name = this.cellLabel(appearances.nameOf(value));
-        final Optional<Visual> icon = appearances.iconOf(value);
-        if (icon.isEmpty()) {
-            name.setTooltip(appearances.tooltipOf(value).orElse(null));
-            return name.onEvent(InputEvents.POINTER_ENTER, event -> name.setTooltip(appearances.tooltipOf(value).orElse(null)));
-        }
-        final StackPanel row = this.stackPanel(Orientation.HORIZONTAL)
-                .add(this.image(icon.get()).setAnchor(Anchor.MIDDLE_LEFT).setMargin(CELL_PADDING, 0f, 0f, 0f))
-                .add(name);
-        row.setTooltip(appearances.tooltipOf(value).orElse(null));
-        return row.onEvent(InputEvents.POINTER_ENTER, event -> row.setTooltip(appearances.tooltipOf(value).orElse(null)));
-    }
+    Component<?> cell(Object value);
 
     /**
      * Makes an {@link Image} that draws nothing until it is given a {@linkplain Image#setSprite sprite} or a

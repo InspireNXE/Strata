@@ -61,7 +61,8 @@ import java.util.Objects;
  *
  * <h2>Theme keys</h2>
  * <p>A text area reads the {@link TextBox} keys, so the two look alike, and the {@link
- * org.inspirenxe.strata.api.layout.ScrollPanel} keys for its scroll bar.</p>
+ * org.inspirenxe.strata.api.layout.ScrollPanel} keys for its scroll bar. Its own {@value #STYLE_PADDING} sets the
+ * space around its text.</p>
  *
  * <pre>{@code
  * TextArea notes = factory.textArea().setText(item.notes()).setMaxLength(500)
@@ -81,6 +82,11 @@ public interface TextArea extends Component<TextArea>, Focusable<TextArea>, HasC
      * How many lines a text area asks room for unless {@linkplain #setVisibleLines told} otherwise.
      */
     int DEFAULT_VISIBLE_LINES = 4;
+    /**
+     * Style key for the space between a text area's edges and its text (insets, optional). Falls back to
+     * {@value TextBox#STYLE_PADDING}, and defaults to 4 on every side without either.
+     */
+    String STYLE_PADDING = "textarea.padding";
 
     /**
      * Returns the text.

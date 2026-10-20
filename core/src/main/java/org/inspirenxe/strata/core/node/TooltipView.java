@@ -20,6 +20,7 @@ import org.inspirenxe.strata.api.component.Tooltip;
 import org.inspirenxe.strata.api.extension.CustomComponent;
 import org.inspirenxe.strata.api.extension.MeasureContext;
 import org.inspirenxe.strata.api.extension.Painter;
+import org.inspirenxe.strata.api.geometry.Insets;
 import org.inspirenxe.strata.api.geometry.Rect;
 import org.inspirenxe.strata.api.geometry.Size;
 import org.inspirenxe.strata.api.text.Text;
@@ -44,7 +45,7 @@ final class TooltipView extends CustomComponent<TooltipView> {
     /**
      * The space between the text and the box's edge, in UI units.
      */
-    static final float PADDING = 4f;
+    static final Insets PADDING = Insets.of(4f);
     /**
      * Extra space between lines, in UI units.
      */
@@ -56,6 +57,7 @@ final class TooltipView extends CustomComponent<TooltipView> {
     private final List<List<TextSpan>> lines;
     private final List<Float> lineHeights;
     private TextStyle textStyle;
+    private Insets padding = PADDING;
 
     TooltipView(final ComponentFactory factory, final Tooltip tooltip) {
         super(factory);
@@ -73,6 +75,7 @@ final class TooltipView extends CustomComponent<TooltipView> {
         this.setBackground(themed.orElse(FALLBACK_BACKGROUND));
         this.setBorder(themed.isPresent() ? Border.NONE : FALLBACK_EDGE);
         this.textStyle = theme.textStyleOr(Tooltip.STYLE_TEXT, TextStyle.DEFAULT);
+        this.padding = theme.insetsOr(Tooltip.STYLE_PADDING, PADDING);
     }
 
     @Override
@@ -97,15 +100,15 @@ final class TooltipView extends CustomComponent<TooltipView> {
             height += lineHeight;
         }
         height += LINE_GAP * Math.max(0, this.lines.size() - 1);
-        return new Size(width + PADDING * 2f, height + PADDING * 2f);
+        return new Size(width + this.padding.horizontal(), height + this.padding.vertical());
     }
 
     @Override
     protected void paint(final Painter painter, final Rect bounds) {
         final TextMetrics metrics = this.environment().text();
-        float y = bounds.y() + PADDING;
+        float y = bounds.y() + this.padding.top();
         for (int i = 0; i < this.lines.size(); i++) {
-            float x = bounds.x() + PADDING;
+            float x = bounds.x() + this.padding.left();
             for (final TextSpan span : this.lines.get(i)) {
                 painter.text(span, x, y);
                 x += metrics.width(span);

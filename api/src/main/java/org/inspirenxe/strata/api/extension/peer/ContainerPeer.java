@@ -71,7 +71,7 @@ public interface ContainerPeer extends ComponentPeer {
     /**
      * See {@link org.inspirenxe.strata.api.component.Container#setPadding(Insets)}.
      *
-     * @param padding the padding
+     * @param padding the padding, or {@code null} for the container's default
      */
     void setPadding(Insets padding);
 

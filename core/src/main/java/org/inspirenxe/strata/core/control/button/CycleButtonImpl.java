@@ -25,6 +25,7 @@ import org.inspirenxe.strata.api.event.input.PointerButtonEvent;
 import org.inspirenxe.strata.api.extension.CustomComponent;
 import org.inspirenxe.strata.api.extension.MeasureContext;
 import org.inspirenxe.strata.api.extension.Painter;
+import org.inspirenxe.strata.api.geometry.Insets;
 import org.inspirenxe.strata.api.geometry.Rect;
 import org.inspirenxe.strata.api.geometry.Size;
 import org.inspirenxe.strata.api.input.Key;
@@ -49,7 +50,8 @@ import java.util.function.Function;
  * otherwise, plus the focus ring when the theme has one. The text is {@code label: value}, centered.
  *
  * <p>The button is focusable and tabbable, shows a hand cursor, and is at least 20 by 20 units. Its desired size is
- * the widest text over all items, with 8 units of padding on the left and right and 5 on the top and bottom. A new
+ * the widest text over all items, with the theme's {@value Button#STYLE_PADDING} around it, or else
+ * {@link ButtonImpl#DEFAULT_PADDING}. A new
  * button has no items and shows only its label.</p>
  *
  * @param <T> the type of the values
@@ -75,6 +77,7 @@ public final class CycleButtonImpl<T> extends CustomComponent<CycleButton<T>> im
 
     // Computed during measure
     private float lineHeight;
+    private Insets padding = ButtonImpl.DEFAULT_PADDING;
 
     // The joined text last painted, for the selected index it was made for; -2 when it must be made again
     private int shownIndex;
@@ -296,6 +299,7 @@ public final class CycleButtonImpl<T> extends CustomComponent<CycleButton<T>> im
         this.focusRing = theme.paintOr(Button.STYLE_FOCUS, Paint.NONE);
         this.textStyle = theme.textStyleOr(Button.STYLE_TEXT, TextStyle.DEFAULT);
         this.disabledTextStyle = theme.textStyleOr(Button.STYLE_TEXT_DISABLED, this.textStyle);
+        this.padding = theme.insetsOr(Button.STYLE_PADDING, ButtonImpl.DEFAULT_PADDING);
         this.shownIndex = -2;
     }
 
@@ -314,7 +318,7 @@ public final class CycleButtonImpl<T> extends CustomComponent<CycleButton<T>> im
         }
         this.lineHeight = height;
         this.shownIndex = -2;
-        return new Size(widest + 16f, this.lineHeight + 10f);
+        return new Size(widest + this.padding.horizontal(), this.lineHeight + this.padding.vertical());
     }
 
     @Override
@@ -347,8 +351,9 @@ public final class CycleButtonImpl<T> extends CustomComponent<CycleButton<T>> im
             this.shownIndex = this.selectedIndex;
         }
         final TextLine line = enabled ? this.shown : this.shownDisabled;
-        line.draw(painter, bounds.x() + (bounds.width() - line.width()) * 0.5f,
-                bounds.y() + (bounds.height() - this.lineHeight) * 0.5f);
+        final Insets padding = this.padding;
+        line.draw(painter, bounds.x() + padding.left() + (bounds.width() - padding.horizontal() - line.width()) * 0.5f,
+                bounds.y() + padding.top() + (bounds.height() - padding.vertical() - this.lineHeight) * 0.5f);
     }
 
     // ------------------------------------------------------------------

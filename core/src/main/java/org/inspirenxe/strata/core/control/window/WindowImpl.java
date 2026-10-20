@@ -42,6 +42,7 @@ import org.inspirenxe.strata.api.text.TextStyle;
 import org.inspirenxe.strata.api.theme.Paint;
 import org.inspirenxe.strata.api.theme.Theme;
 import org.inspirenxe.strata.core.node.ComponentFactoryImpl;
+import org.inspirenxe.strata.core.node.ContainerNode;
 import org.inspirenxe.strata.core.node.Node;
 import org.inspirenxe.strata.core.text.TextLine;
 
@@ -64,6 +65,11 @@ public final class WindowImpl extends CustomContainer<Window> implements Window 
      * The width of the close button's area, in UI units.
      */
     public static final float CLOSE_WIDTH = 12f;
+    /**
+     * The space between the window's edges, below the title bar, and its content when the theme sets no
+     * {@value #STYLE_PADDING}: 3 on every side.
+     */
+    public static final Insets DEFAULT_PADDING = Insets.of(3f);
     private static final Set<String> REQUIRED = Set.of(STYLE_BACKGROUND);
     private static final int LEFT = 1;
     private static final int TOP = 2;
@@ -100,6 +106,7 @@ public final class WindowImpl extends CustomContainer<Window> implements Window 
 
     // Computed during measure
     private float titleHeight;
+    private Insets titlePadding = Insets.of(TITLE_PADDING);
     private TextLine titleSpan;
     private float titleWidth;
     private TextSpan closeSpan;
@@ -140,7 +147,7 @@ public final class WindowImpl extends CustomContainer<Window> implements Window 
         this.titleSpan = TextLine.EMPTY;
         this.closeSpan = TextSpan.of("x");
         this.closeHoveredSpan = this.closeSpan;
-        this.setPadding(3f);
+        this.containerNode().setDefaultPadding(DEFAULT_PADDING);
         this.setAnchor(Anchor.CENTER);
     }
 
@@ -419,6 +426,8 @@ public final class WindowImpl extends CustomContainer<Window> implements Window 
         this.background = theme.paintOr(STYLE_BACKGROUND, Paint.NONE);
         this.titleBar = theme.paintOr(STYLE_TITLE_BAR, Paint.NONE);
         this.titleStyle = theme.textStyleOr(STYLE_TITLE_TEXT, TextStyle.DEFAULT);
+        this.titlePadding = theme.insetsOr(STYLE_TITLE_PADDING, Insets.of(TITLE_PADDING));
+        this.containerNode().setDefaultPadding(theme.insetsOr(STYLE_PADDING, DEFAULT_PADDING));
         this.closeStyle = theme.textStyleOr(STYLE_CLOSE, this.titleStyle);
         this.closeHoveredStyle = theme.textStyleOr(STYLE_CLOSE_HOVERED, this.closeStyle);
         this.gripPaint = theme.paintOr(STYLE_GRIP, Paint.NONE);
@@ -430,7 +439,7 @@ public final class WindowImpl extends CustomContainer<Window> implements Window 
         final TextMetrics metrics = context.text();
         this.titleSpan = TextLine.of(this.title, this.titleStyle, metrics);
         this.titleWidth = this.titleSpan.width();
-        this.titleHeight = this.titleSpan.height() + TITLE_PADDING * 2f;
+        this.titleHeight = this.titleSpan.height() + this.titlePadding.vertical();
         this.closeSpan = new TextSpan("x", this.closeStyle);
         this.closeHoveredSpan = new TextSpan("x", this.closeHoveredStyle);
         this.closeWidth = metrics.width(this.closeSpan);
@@ -491,8 +500,10 @@ public final class WindowImpl extends CustomContainer<Window> implements Window 
         this.background.paint(painter, bounds);
         final Rect bar = this.titleBarRect(bounds);
         this.titleBar.paint(painter, bar);
-        final float textY = bounds.y() + TITLE_PADDING;
-        this.titleSpan.draw(painter, bounds.x() + (bounds.width() - this.titleWidth) * 0.5f, textY);
+        final Insets padding = this.titlePadding;
+        final float textY = bounds.y() + padding.top();
+        this.titleSpan.draw(painter, bounds.x() + padding.left()
+                + (bounds.width() - padding.horizontal() - this.titleWidth) * 0.5f, textY);
         if (this.closable) {
             final Rect close = this.closeRect(bounds);
             painter.text(this.closeHovered ? this.closeHoveredSpan : this.closeSpan,
@@ -645,5 +656,9 @@ public final class WindowImpl extends CustomContainer<Window> implements Window 
     @Override
     public Window setOffset(final float offsetX, final float offsetY) {
         return super.setOffset(offsetX, offsetY);
+    }
+
+    private ContainerNode containerNode() {
+        return (ContainerNode) ((ComponentFactoryImpl) this.ui).nodeOf(this);
     }
 }

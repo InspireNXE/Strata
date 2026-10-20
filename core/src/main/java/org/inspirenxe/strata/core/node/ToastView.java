@@ -20,6 +20,7 @@ import org.inspirenxe.strata.api.component.Tooltip;
 import org.inspirenxe.strata.api.extension.CustomComponent;
 import org.inspirenxe.strata.api.extension.MeasureContext;
 import org.inspirenxe.strata.api.extension.Painter;
+import org.inspirenxe.strata.api.geometry.Insets;
 import org.inspirenxe.strata.api.geometry.Rect;
 import org.inspirenxe.strata.api.geometry.Size;
 import org.inspirenxe.strata.api.overlay.Overlays;
@@ -37,7 +38,8 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * Draws a text toast: the message wrapped at a third of the width offered, inside {@link #PADDING} units of padding.
+ * Draws a text toast: the message wrapped at a third of the width offered, inside the theme's toast padding or
+ * {@link #PADDING}.
  * It uses the toast keys when the theme has them and the tooltip keys otherwise, and without either background a
  * dark box with a light one-unit edge.
  */
@@ -45,7 +47,7 @@ final class ToastView extends CustomComponent<ToastView> {
     /**
      * The space between the text and the box's edge, in UI units.
      */
-    static final float PADDING = 6f;
+    static final Insets PADDING = Insets.of(6f);
     private static final Paint FALLBACK_BACKGROUND = Paint.solid(0xF0100010);
     private static final Border FALLBACK_EDGE = Border.of(0x805000FF, 1f);
 
@@ -53,6 +55,7 @@ final class ToastView extends CustomComponent<ToastView> {
     private final List<List<TextSpan>> lines;
     private TextStyle textStyle;
     private float lineHeight;
+    private Insets padding = PADDING;
 
     ToastView(final ComponentFactory factory, final Text message) {
         super(factory);
@@ -69,13 +72,14 @@ final class ToastView extends CustomComponent<ToastView> {
         this.setBackground(themed.orElse(FALLBACK_BACKGROUND));
         this.setBorder(themed.isPresent() ? Border.NONE : FALLBACK_EDGE);
         this.textStyle = theme.textStyleOr(Overlays.STYLE_TOAST_TEXT, theme.textStyleOr(Tooltip.STYLE_TEXT, TextStyle.DEFAULT));
+        this.padding = theme.insetsOr(Overlays.STYLE_TOAST_PADDING, PADDING);
     }
 
     @Override
     protected Size measure(final MeasureContext context, final float availableWidth, final float availableHeight) {
         final TextMetrics metrics = context.text();
         this.lines.clear();
-        final float wrapAt = Float.isInfinite(availableWidth) ? availableWidth : Math.max(1f, availableWidth / 3f - PADDING * 2f);
+        final float wrapAt = Float.isInfinite(availableWidth) ? availableWidth : Math.max(1f, availableWidth / 3f - this.padding.horizontal());
         final List<TextSpan> spans = this.message.resolve(this.textStyle);
         this.lines.addAll(RichText.wrap(spans, wrapAt, metrics));
         float lineHeight = metrics.lineHeight(this.textStyle);
@@ -87,15 +91,15 @@ final class ToastView extends CustomComponent<ToastView> {
         for (final List<TextSpan> line : this.lines) {
             width = Math.max(width, RichText.width(line, metrics));
         }
-        return new Size(width + PADDING * 2f, this.lines.size() * this.lineHeight + PADDING * 2f);
+        return new Size(width + this.padding.horizontal(), this.lines.size() * this.lineHeight + this.padding.vertical());
     }
 
     @Override
     protected void paint(final Painter painter, final Rect bounds) {
         final TextMetrics metrics = this.environment().text();
-        float y = bounds.y() + PADDING;
+        float y = bounds.y() + this.padding.top();
         for (final List<TextSpan> line : this.lines) {
-            float x = bounds.x() + PADDING;
+            float x = bounds.x() + this.padding.left();
             for (final TextSpan span : line) {
                 painter.text(span, x, y);
                 x += metrics.width(span);

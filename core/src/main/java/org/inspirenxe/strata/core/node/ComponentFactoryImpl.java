@@ -16,6 +16,7 @@
 package org.inspirenxe.strata.core.node;
 
 import org.inspirenxe.strata.api.ComponentFactory;
+import org.inspirenxe.strata.api.appearance.Appearances;
 import org.inspirenxe.strata.api.component.Component;
 import org.inspirenxe.strata.api.control.button.Button;
 import org.inspirenxe.strata.api.control.button.CheckBox;
@@ -51,12 +52,15 @@ import org.inspirenxe.strata.api.control.pane.Tab;
 import org.inspirenxe.strata.api.control.pane.TabBar;
 import org.inspirenxe.strata.api.control.window.MessageBox;
 import org.inspirenxe.strata.api.control.window.Window;
+import org.inspirenxe.strata.api.event.input.InputEvents;
 import org.inspirenxe.strata.api.extension.CustomComponent;
 import org.inspirenxe.strata.api.extension.Environment;
 import org.inspirenxe.strata.api.extension.peer.ComponentHooks;
 import org.inspirenxe.strata.api.extension.peer.ComponentPeer;
 import org.inspirenxe.strata.api.extension.peer.ContainerPeer;
+import org.inspirenxe.strata.api.geometry.Insets;
 import org.inspirenxe.strata.api.layout.AbsolutePanel;
+import org.inspirenxe.strata.api.layout.Anchor;
 import org.inspirenxe.strata.api.layout.AnchorPanel;
 import org.inspirenxe.strata.api.layout.GridPanel;
 import org.inspirenxe.strata.api.layout.Orientation;
@@ -65,6 +69,7 @@ import org.inspirenxe.strata.api.layout.Spacer;
 import org.inspirenxe.strata.api.layout.StackPanel;
 import org.inspirenxe.strata.api.overlay.Overlays;
 import org.inspirenxe.strata.api.text.Text;
+import org.inspirenxe.strata.api.text.TextOverflow;
 import org.inspirenxe.strata.api.theme.SpriteId;
 import org.inspirenxe.strata.api.theme.Theme;
 import org.inspirenxe.strata.api.visual.Visual;
@@ -111,6 +116,7 @@ import org.inspirenxe.strata.core.layout.StackPanelImpl;
 import org.inspirenxe.strata.spi.Platform;
 
 import java.util.Objects;
+import java.util.Optional;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
@@ -119,6 +125,12 @@ import java.util.function.Supplier;
  * back into its node, and it rejects any component Strata did not make, or that another host's factory made.
  */
 public final class ComponentFactoryImpl implements ComponentFactory {
+    /**
+     * The cell padding when the theme sets no {@link ListView#STYLE_CELL_PADDING}: {@value ComponentFactory#CELL_PADDING} units
+     * at the sides.
+     */
+    public static final Insets DEFAULT_CELL_PADDING = new Insets(CELL_PADDING, 0f, CELL_PADDING, 0f);
+
     private final Supplier<Theme> theme;
     private final Environment environment;
     private Root root;
@@ -217,6 +229,47 @@ public final class ComponentFactoryImpl implements ComponentFactory {
     @Override
     public Label label(final Text text) {
         return new LabelImpl(this, text);
+    }
+
+    @Override
+    public Label cellLabel(final Text text) {
+        final Label label = this.label(text)
+                .setOverflow(TextOverflow.ELLIPSIS)
+                .setAnchor(Anchor.MIDDLE_LEFT);
+        return this.cellPadded(label, false);
+    }
+
+    @Override
+    public Component<?> cell(final Object value) {
+        final Appearances appearances = this.appearances();
+        final Label name = this.cellLabel(appearances.nameOf(value));
+        final Optional<Visual> icon = appearances.iconOf(value);
+        if (icon.isEmpty()) {
+            name.setTooltip(appearances.tooltipOf(value).orElse(null));
+            return name.onEvent(InputEvents.POINTER_ENTER, event -> name.setTooltip(appearances.tooltipOf(value).orElse(null)));
+        }
+        final StackPanel row = this.stackPanel(Orientation.HORIZONTAL)
+                .add(this.cellPadded(this.image(icon.get()).setAnchor(Anchor.MIDDLE_LEFT), true))
+                .add(name);
+        row.setTooltip(appearances.tooltipOf(value).orElse(null));
+        return row.onEvent(InputEvents.POINTER_ENTER, event -> row.setTooltip(appearances.tooltipOf(value).orElse(null)));
+    }
+
+    /**
+     * Gives a component the theme's cell padding as its margin, {@link ListView#STYLE_CELL_PADDING} or
+     * {@link #DEFAULT_CELL_PADDING}, until its margin is set.
+     *
+     * @param component the label or icon of a cell
+     * @param icon true for an icon before a label, which takes no right margin
+     * @param <C> the component's type
+     * @return the component
+     */
+    public <C extends Component<?>> C cellPadded(final C component, final boolean icon) {
+        this.nodeOf(component).setThemeMargin(theme -> {
+            final Insets padding = theme.insetsOr(ListView.STYLE_CELL_PADDING, DEFAULT_CELL_PADDING);
+            return icon ? new Insets(padding.left(), padding.top(), 0f, padding.bottom()) : padding;
+        });
+        return component;
     }
 
     @Override

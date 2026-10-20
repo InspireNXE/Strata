@@ -30,6 +30,7 @@ import org.inspirenxe.strata.api.extension.CustomComponent;
 import org.inspirenxe.strata.api.extension.CustomComposite;
 import org.inspirenxe.strata.api.extension.MeasureContext;
 import org.inspirenxe.strata.api.extension.Painter;
+import org.inspirenxe.strata.api.geometry.Insets;
 import org.inspirenxe.strata.api.geometry.Rect;
 import org.inspirenxe.strata.api.geometry.Size;
 import org.inspirenxe.strata.api.input.MouseButton;
@@ -63,16 +64,19 @@ import java.util.function.Function;
  */
 public final class TableViewImpl<T> extends CustomComposite<TableView<T>> implements TableView<T> {
     /**
-     * The space between a title or a text cell and its column's edges, in UI units.
+     * The space between a title and its column's edges when the theme sets no {@value #STYLE_HEADER_PADDING}:
+     * {@value ComponentFactory#CELL_PADDING} at the sides.
      */
-    public static final float CELL_PADDING = ComponentFactory.CELL_PADDING;
+    public static final Insets DEFAULT_HEADER_PADDING = new Insets(ComponentFactory.CELL_PADDING, 0f,
+            ComponentFactory.CELL_PADDING, 0f);
     /**
-     * The room a sort arrow takes at the right of a sortable title, in UI units.
+     * The room a sort arrow takes at the right of a sortable title, in UI units: the arrow and 4 units before it.
      */
-    public static final float ARROW_ROOM = Rings.ARROW_LONG + CELL_PADDING;
+    public static final float ARROW_ROOM = Rings.ARROW_LONG + 4f;
     private static final Set<String> REQUIRED = Set.of(STYLE_HEADER);
 
     private final ComponentFactory ui;
+    private Insets headerPadding = DEFAULT_HEADER_PADDING;
     private final List<TableColumnImpl<T>> columns;
     private final ListViewImpl<T> list;
     private final Header header;
@@ -486,11 +490,12 @@ public final class TableViewImpl<T> extends CustomComposite<TableView<T>> implem
         this.headerHovered = theme.paintOr(STYLE_HEADER_HOVERED, this.headerPaint);
         this.grid = theme.paintOr(STYLE_GRID, Paint.NONE);
         this.headerText = theme.textStyleOr(STYLE_HEADER_TEXT, TextStyle.DEFAULT);
+        this.headerPadding = theme.insetsOr(STYLE_HEADER_PADDING, DEFAULT_HEADER_PADDING);
     }
 
     private float autoWidth(final TextMetrics metrics, final int column) {
         final TableColumnImpl<T> definition = this.columns.get(column);
-        return TextLine.of(definition.title(), this.headerText, metrics).width() + CELL_PADDING * 2f
+        return TextLine.of(definition.title(), this.headerText, metrics).width() + this.headerPadding.horizontal()
                 + (definition.isSortable() ? ARROW_ROOM : 0f);
     }
 
@@ -550,7 +555,7 @@ public final class TableViewImpl<T> extends CustomComposite<TableView<T>> implem
             }
             this.columnX[i] = x;
             x += this.columnWidth[i];
-            final float room = this.columnWidth[i] - CELL_PADDING * 2f - (this.isSortable(i) ? ARROW_ROOM : 0f);
+            final float room = this.columnWidth[i] - this.headerPadding.horizontal() - (this.isSortable(i) ? ARROW_ROOM : 0f);
             this.titles[i] = TextLine.of(this.columns.get(i).title(), this.headerText, metrics)
                     .ellipsize(room, this.headerText, metrics);
         }
@@ -599,16 +604,17 @@ public final class TableViewImpl<T> extends CustomComposite<TableView<T>> implem
         protected void paint(final Painter painter, final Rect bounds) {
             this.table.headerPaint.paint(painter, bounds);
             final int hovered = this.isHovered() ? this.columnAt(this.pointerX) : -1;
-            final float textY = bounds.y() + (bounds.height() - this.lineHeight) * 0.5f;
+            final Insets padding = this.table.headerPadding;
+            final float textY = bounds.y() + padding.top() + (bounds.height() - padding.vertical() - this.lineHeight) * 0.5f;
             for (int i = 0; i < this.table.titles.length; i++) {
                 final Rect cell = new Rect(this.table.rowsX + this.table.columnX[i], bounds.y(), this.table.columnWidth[i],
                         bounds.height());
                 if (i == hovered && this.table.isSortable(i)) {
                     this.table.headerHovered.paint(painter, cell);
                 }
-                this.table.titles[i].draw(painter, cell.x() + CELL_PADDING, textY);
+                this.table.titles[i].draw(painter, cell.x() + padding.left(), textY);
                 if (this.table.sortColumn != null && this.table.columns.get(i) == this.table.sortColumn) {
-                    final float arrowX = cell.right() - CELL_PADDING - Rings.ARROW_LONG;
+                    final float arrowX = cell.right() - padding.right() - Rings.ARROW_LONG;
                     final float arrowY = cell.y() + (cell.height() - Rings.ARROW_SHORT) * 0.5f;
                     if (this.table.ascending) {
                         Rings.up(painter, this.table.headerText.color(), arrowX, arrowY);

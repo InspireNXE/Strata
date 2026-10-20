@@ -26,6 +26,7 @@ import org.inspirenxe.strata.api.extension.ArrangeContext;
 import org.inspirenxe.strata.api.extension.CustomComposite;
 import org.inspirenxe.strata.api.extension.MeasureContext;
 import org.inspirenxe.strata.api.extension.Painter;
+import org.inspirenxe.strata.api.geometry.Insets;
 import org.inspirenxe.strata.api.geometry.Rect;
 import org.inspirenxe.strata.api.geometry.Size;
 import org.inspirenxe.strata.api.input.Key;
@@ -47,9 +48,16 @@ import java.util.Objects;
  */
 public final class ExpanderImpl extends CustomComposite<Expander> implements Expander {
     /**
-     * The space at the left of the arrow and between the arrow and the title, in UI units.
+     * The space around the header's arrow and title when the theme sets no {@value #STYLE_HEADER_PADDING}: 4 at
+     * the sides and 3 at the top and bottom.
      */
-    public static final float PADDING = 4f;
+    public static final Insets DEFAULT_HEADER_PADDING = Insets.of(4f, 3f);
+    /**
+     * The space between the arrow and the title, in UI units.
+     */
+    public static final float ARROW_GAP = 4f;
+
+    private Insets headerPadding = DEFAULT_HEADER_PADDING;
 
     private Text title;
     private Component<?> content;
@@ -170,6 +178,7 @@ public final class ExpanderImpl extends CustomComposite<Expander> implements Exp
         this.headerHovered = theme.paintOr(STYLE_HEADER_HOVERED, this.header);
         this.textStyle = theme.textStyleOr(STYLE_TEXT, TextStyle.DEFAULT);
         this.disabledTextStyle = theme.textStyleOr(STYLE_TEXT_DISABLED, this.textStyle);
+        this.headerPadding = theme.insetsOr(STYLE_HEADER_PADDING, DEFAULT_HEADER_PADDING);
     }
 
     @Override
@@ -178,9 +187,9 @@ public final class ExpanderImpl extends CustomComposite<Expander> implements Exp
         this.span = TextLine.of(this.title, this.textStyle, metrics);
         this.disabledSpan = TextLine.of(this.title, this.disabledTextStyle, metrics);
         this.lineHeight = Math.max(this.span.height(), this.disabledSpan.height());
-        this.headerHeight = this.lineHeight + 6f;
-        final float headerWidth = PADDING + Rings.ARROW_LONG + PADDING
-                + Math.max(this.span.width(), this.disabledSpan.width()) + PADDING;
+        this.headerHeight = this.lineHeight + this.headerPadding.vertical();
+        final float headerWidth = this.headerPadding.left() + Rings.ARROW_LONG + ARROW_GAP
+                + Math.max(this.span.width(), this.disabledSpan.width()) + this.headerPadding.right();
         if (!this.expanded || this.content == null) {
             return new Size(headerWidth, this.headerHeight);
         }
@@ -204,15 +213,18 @@ public final class ExpanderImpl extends CustomComposite<Expander> implements Exp
         (lit ? this.headerHovered : this.header).paint(painter, head);
         final boolean enabled = this.isEnabled();
         final int color = (enabled ? this.textStyle : this.disabledTextStyle).color();
-        final float arrowX = head.x() + PADDING;
+        final Insets padding = this.headerPadding;
+        final float innerY = head.y() + padding.top();
+        final float innerHeight = head.height() - padding.vertical();
+        final float arrowX = head.x() + padding.left();
         if (this.expanded) {
-            Rings.down(painter, color, arrowX, head.y() + (head.height() - Rings.ARROW_SHORT) * 0.5f);
+            Rings.down(painter, color, arrowX, innerY + (innerHeight - Rings.ARROW_SHORT) * 0.5f);
         } else {
             Rings.right(painter, color, arrowX + (Rings.ARROW_LONG - Rings.ARROW_SHORT) * 0.5f,
-                    head.y() + (head.height() - Rings.ARROW_LONG) * 0.5f);
+                    innerY + (innerHeight - Rings.ARROW_LONG) * 0.5f);
         }
-        (enabled ? this.span : this.disabledSpan).draw(painter, arrowX + Rings.ARROW_LONG + PADDING,
-                head.y() + (head.height() - this.lineHeight) * 0.5f);
+        (enabled ? this.span : this.disabledSpan).draw(painter, arrowX + Rings.ARROW_LONG + ARROW_GAP,
+                innerY + (innerHeight - this.lineHeight) * 0.5f);
     }
 
     private boolean overHeader(final float y) {

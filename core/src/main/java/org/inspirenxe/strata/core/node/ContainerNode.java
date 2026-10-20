@@ -40,6 +40,9 @@ public final class ContainerNode extends Node implements ContainerPeer {
     private final List<Component<?>> children;
     private final List<Component<?>> childrenView;
     private Insets padding;
+    // The padding the container has while no padding is set; a window's comes from its theme
+    private Insets defaultPadding;
+    private boolean paddingSet;
     private boolean clipChildren;
 
     /**
@@ -55,6 +58,7 @@ public final class ContainerNode extends Node implements ContainerPeer {
         this.children = new ArrayList<>();
         this.childrenView = Collections.unmodifiableList(this.children);
         this.padding = Insets.NONE;
+        this.defaultPadding = Insets.NONE;
         this.clipChildren = true;
     }
 
@@ -132,8 +136,23 @@ public final class ContainerNode extends Node implements ContainerPeer {
 
     @Override
     public void setPadding(final Insets padding) {
-        this.padding = Objects.requireNonNull(padding, "padding");
+        this.paddingSet = padding != null;
+        this.padding = padding != null ? padding : this.defaultPadding;
         this.invalidateLayout();
+    }
+
+    /**
+     * Sets the padding the container has while none is set with {@link #setPadding}, as a window does from its
+     * theme. It takes effect now unless a padding is set.
+     *
+     * @param padding the default padding
+     */
+    public void setDefaultPadding(final Insets padding) {
+        this.defaultPadding = Objects.requireNonNull(padding, "padding");
+        if (!this.paddingSet && !this.padding.equals(padding)) {
+            this.padding = padding;
+            this.invalidateLayout();
+        }
     }
 
     @Override

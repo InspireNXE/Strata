@@ -25,6 +25,7 @@ import org.inspirenxe.strata.api.event.input.PointerButtonEvent;
 import org.inspirenxe.strata.api.extension.CustomComponent;
 import org.inspirenxe.strata.api.extension.MeasureContext;
 import org.inspirenxe.strata.api.extension.Painter;
+import org.inspirenxe.strata.api.geometry.Insets;
 import org.inspirenxe.strata.api.geometry.Rect;
 import org.inspirenxe.strata.api.geometry.Size;
 import org.inspirenxe.strata.api.input.Key;
@@ -54,16 +55,22 @@ import java.util.function.Function;
  * {@code SELECT} request. Its rows are one line plus 4 units tall,
  * with the option text 4 units in from the left.
  *
- * <p>The box draws its text {@link #PADDING} units in from the left, cut short with {@code ...} if it does not fit,
- * and a small down arrow {@link #PADDING} units in from the right.</p>
+ * <p>The box draws its text inside its padding on the left, cut short with {@code ...} if it does not fit, and a
+ * small down arrow inside its padding on the right, {@link #ARROW_GAP} units after the text. The padding is the
+ * theme's {@value #STYLE_PADDING}, or else {@link #DEFAULT_PADDING}, and the box is a line tall plus its top and
+ * bottom.</p>
  *
  * @param <T> the type of the options
  */
 public final class ComboBoxImpl<T> extends CustomComponent<ComboBox<T>> implements ComboBox<T> {
     /**
-     * The space between the box's edge and its text or arrow, in UI units.
+     * The padding when the theme sets no {@value #STYLE_PADDING}: 4 at the sides and 3 at the top and bottom.
      */
-    public static final float PADDING = 4f;
+    public static final Insets DEFAULT_PADDING = Insets.of(4f, 3f);
+    /**
+     * The least space between the text and the arrow, in UI units.
+     */
+    public static final float ARROW_GAP = 4f;
     /**
      * The width of the arrow, in UI units.
      */
@@ -71,6 +78,7 @@ public final class ComboBoxImpl<T> extends CustomComponent<ComboBox<T>> implemen
     private static final Set<String> REQUIRED = Set.of(STYLE_NORMAL, STYLE_POPUP);
 
     private final ComponentFactory ui;
+    private Insets padding = DEFAULT_PADDING;
     private List<T> options;
     private Function<? super T, ?> labelFunction;
     private Function<? super T, ?> keyFunction;
@@ -314,8 +322,8 @@ public final class ComboBoxImpl<T> extends CustomComponent<ComboBox<T>> implemen
     }
 
     private Label cell(final T option) {
-        final Label label = this.ui.label(this.ui.appearances().nameOf(this.labelFunction.apply(option))).setStyle(this.textStyle);
-        label.setMargin(PADDING, 0f);
+        final Label label = ((ComponentFactoryImpl) this.ui).cellPadded(
+                this.ui.label(this.ui.appearances().nameOf(this.labelFunction.apply(option))).setStyle(this.textStyle), false);
         label.setOverflow(TextOverflow.ELLIPSIS);
         label.setAnchor(Anchor.MIDDLE_LEFT);
         return label;
@@ -347,6 +355,7 @@ public final class ComboBoxImpl<T> extends CustomComponent<ComboBox<T>> implemen
         this.normal = theme.paintOr(STYLE_NORMAL, Paint.NONE);
         this.hoveredPaint = theme.paintOr(STYLE_HOVERED, this.normal);
         this.disabledPaint = theme.paintOr(STYLE_DISABLED, this.normal);
+        this.padding = theme.insetsOr(STYLE_PADDING, DEFAULT_PADDING);
         this.popupPaint = theme.paintOr(STYLE_POPUP, Paint.NONE);
         this.textStyle = theme.textStyleOr(STYLE_TEXT, TextStyle.DEFAULT);
         this.disabledTextStyle = theme.textStyleOr(STYLE_TEXT_DISABLED, this.textStyle);
@@ -365,7 +374,9 @@ public final class ComboBoxImpl<T> extends CustomComponent<ComboBox<T>> implemen
         }
         this.lineHeight = height;
         this.shownIndex = -2;
-        return new Size(PADDING + widest + PADDING + ARROW_WIDTH + PADDING, this.lineHeight + 6f);
+        final Insets padding = this.padding;
+        return new Size(padding.left() + widest + ARROW_GAP + ARROW_WIDTH + padding.right(),
+                this.lineHeight + padding.vertical());
     }
 
     @Override
@@ -381,7 +392,8 @@ public final class ComboBoxImpl<T> extends CustomComponent<ComboBox<T>> implemen
         }
         face.paint(painter, bounds);
 
-        final float textWidth = bounds.width() - PADDING * 3f - ARROW_WIDTH;
+        final Insets padding = this.padding;
+        final float textWidth = bounds.width() - padding.horizontal() - ARROW_GAP - ARROW_WIDTH;
         if (this.selectedIndex != this.shownIndex || textWidth != this.shownForWidth) {
             final TextMetrics metrics = this.environment().text();
             final Text text = this.label(this.selectedIndex);
@@ -391,13 +403,15 @@ public final class ComboBoxImpl<T> extends CustomComponent<ComboBox<T>> implemen
             this.shownIndex = this.selectedIndex;
             this.shownForWidth = textWidth;
         }
-        final float textY = bounds.y() + (bounds.height() - this.lineHeight) * 0.5f;
-        (enabled ? this.shown : this.shownDisabled).draw(painter, bounds.x() + PADDING, textY);
+        final float innerY = bounds.y() + padding.top();
+        final float innerHeight = bounds.height() - padding.vertical();
+        final float textY = innerY + (innerHeight - this.lineHeight) * 0.5f;
+        (enabled ? this.shown : this.shownDisabled).draw(painter, bounds.x() + padding.left(), textY);
 
         // A down arrow from four shrinking lines
         final int color = (enabled ? this.textStyle : this.disabledTextStyle).color();
-        final float arrowX = bounds.right() - PADDING - ARROW_WIDTH;
-        final float arrowY = bounds.y() + (bounds.height() - 4f) * 0.5f;
+        final float arrowX = bounds.right() - padding.right() - ARROW_WIDTH;
+        final float arrowY = innerY + (innerHeight - 4f) * 0.5f;
         for (int i = 0; i < 4; i++) {
             painter.fill(new Rect(arrowX + i, arrowY + i, ARROW_WIDTH - i * 2f, 1f), color);
         }
