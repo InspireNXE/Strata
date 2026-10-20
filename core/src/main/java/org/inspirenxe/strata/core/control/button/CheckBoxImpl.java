@@ -197,7 +197,8 @@ public final class CheckBoxImpl extends CustomComponent<CheckBox> implements Che
         this.caption = TextLine.of(this.text, this.textStyle, metrics);
         this.disabledCaption = TextLine.of(this.text, this.disabledTextStyle, metrics);
         this.captionHeight = Math.max(this.caption.height(), this.disabledCaption.height());
-        this.boxSize = Float.isNaN(this.fixedBoxSize) ? this.captionHeight + BOX_PADDING : this.fixedBoxSize;
+        // Whole units, so the mark, inset by whole units too, is centered exactly
+        this.boxSize = Float.isNaN(this.fixedBoxSize) ? Math.round(this.captionHeight + BOX_PADDING) : this.fixedBoxSize;
         final float captionWidth = Math.max(this.caption.width(), this.disabledCaption.width());
         final float width = this.caption.isEmpty() ? this.boxSize : this.boxSize + GAP + captionWidth;
         return new Size(width, Math.max(this.boxSize, this.captionHeight));
@@ -221,7 +222,7 @@ public final class CheckBoxImpl extends CustomComponent<CheckBox> implements Che
         face.paint(painter, box);
 
         if (this.checked) {
-            (enabled ? this.mark : this.markDisabled).paint(painter, box.shrink(Insets.of(this.boxSize * 0.2f)));
+            (enabled ? this.mark : this.markDisabled).paint(painter, box.shrink(Insets.of(Math.round(this.boxSize * 0.2f))));
         }
         if (this.isFocused() && this.focusRing != Paint.NONE) {
             this.focusRing.paint(painter, new Rect(box.x(), box.y(), box.width(), 1f));
