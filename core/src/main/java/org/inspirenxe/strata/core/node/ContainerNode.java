@@ -16,8 +16,6 @@
 package org.inspirenxe.strata.core.node;
 
 import org.inspirenxe.strata.api.component.Component;
-import org.inspirenxe.strata.api.extension.CustomComponent;
-import org.inspirenxe.strata.api.extension.peer.ComponentHooks;
 import org.inspirenxe.strata.api.extension.peer.ContainerPeer;
 import org.inspirenxe.strata.api.geometry.Insets;
 import org.inspirenxe.strata.api.geometry.Rect;
@@ -44,16 +42,21 @@ public final class ContainerNode extends Node implements ContainerPeer {
     private Insets defaultPadding;
     private boolean paddingSet;
     private boolean clipChildren;
+    private final boolean composite;
 
     /**
-     * Creates the node behind a container. Only {@link ComponentFactoryImpl#createContainerPeer} calls this.
+     * Creates the node behind a container or composite. {@link ComponentFactoryImpl#createContainerPeer} and
+     * {@link BuiltInComposite} call this.
      *
      * @param ui the factory that owns the container
      * @param facade the public container this node implements
      * @param hooks the container's protected hooks
+     * @param composite true if the children are private parts, false if callers add and remove them
      */
-    public ContainerNode(final ComponentFactoryImpl ui, final CustomComponent<?> facade, final ComponentHooks hooks) {
+    ContainerNode(final ComponentFactoryImpl ui, final Component<?> facade, final NodeHooks hooks,
+                  final boolean composite) {
         super(ui, facade, hooks);
+        this.composite = composite;
         this.childNodes = new ArrayList<>();
         this.children = new ArrayList<>();
         this.childrenView = Collections.unmodifiableList(this.children);
@@ -69,6 +72,11 @@ public final class ContainerNode extends Node implements ContainerPeer {
      */
     public List<Node> childNodes() {
         return Collections.unmodifiableList(this.childNodes);
+    }
+
+    @Override
+    public boolean isComposite() {
+        return this.composite;
     }
 
     @Override

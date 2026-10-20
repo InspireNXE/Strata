@@ -15,13 +15,11 @@
  */
 package org.inspirenxe.strata.core.control.button;
 
-import org.inspirenxe.strata.api.ComponentFactory;
 import org.inspirenxe.strata.api.component.CursorKind;
 import org.inspirenxe.strata.api.control.button.RadioButton;
 import org.inspirenxe.strata.api.control.button.RadioGroup;
 import org.inspirenxe.strata.api.event.input.KeyEvent;
 import org.inspirenxe.strata.api.event.input.PointerButtonEvent;
-import org.inspirenxe.strata.api.extension.CustomComponent;
 import org.inspirenxe.strata.api.extension.MeasureContext;
 import org.inspirenxe.strata.api.extension.Painter;
 import org.inspirenxe.strata.api.geometry.Insets;
@@ -36,6 +34,8 @@ import org.inspirenxe.strata.api.text.TextStyle;
 import org.inspirenxe.strata.api.theme.Paint;
 import org.inspirenxe.strata.api.theme.Theme;
 import org.inspirenxe.strata.core.control.Rings;
+import org.inspirenxe.strata.core.node.BuiltInComponent;
+import org.inspirenxe.strata.core.node.ComponentFactoryImpl;
 import org.inspirenxe.strata.core.text.TextLine;
 
 import java.util.Objects;
@@ -47,7 +47,7 @@ import java.util.Set;
  * paint inset by three tenths of the box size, and a focused box a one-unit focus ring. Its group holds the
  * selection.
  */
-public final class RadioButtonImpl extends CustomComponent<RadioButton> implements RadioButton {
+public final class RadioButtonImpl extends BuiltInComponent<RadioButton> implements RadioButton {
     private static final Set<String> REQUIRED = Set.of(STYLE_NORMAL, STYLE_HOVERED, STYLE_SELECTED, STYLE_SELECTED_HOVERED);
 
     private final RadioGroupImpl<?> group;
@@ -79,7 +79,7 @@ public final class RadioButtonImpl extends CustomComponent<RadioButton> implemen
      * @param text the caption
      */
     @SuppressWarnings("this-escape")
-    RadioButtonImpl(final ComponentFactory ui, final RadioGroupImpl<?> group, final Text text) {
+    RadioButtonImpl(final ComponentFactoryImpl ui, final RadioGroupImpl<?> group, final Text text) {
         super(ui);
         this.group = group;
         this.text = Objects.requireNonNull(text, "text");

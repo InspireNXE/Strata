@@ -15,12 +15,10 @@
  */
 package org.inspirenxe.strata.core.control.button;
 
-import org.inspirenxe.strata.api.ComponentFactory;
 import org.inspirenxe.strata.api.component.CursorKind;
 import org.inspirenxe.strata.api.control.button.ToggleSwitch;
 import org.inspirenxe.strata.api.event.input.KeyEvent;
 import org.inspirenxe.strata.api.event.input.PointerButtonEvent;
-import org.inspirenxe.strata.api.extension.CustomComponent;
 import org.inspirenxe.strata.api.extension.MeasureContext;
 import org.inspirenxe.strata.api.extension.Painter;
 import org.inspirenxe.strata.api.geometry.Insets;
@@ -35,6 +33,8 @@ import org.inspirenxe.strata.api.text.TextStyle;
 import org.inspirenxe.strata.api.theme.Paint;
 import org.inspirenxe.strata.api.theme.Theme;
 import org.inspirenxe.strata.core.control.Rings;
+import org.inspirenxe.strata.core.node.BuiltInComponent;
+import org.inspirenxe.strata.core.node.ComponentFactoryImpl;
 import org.inspirenxe.strata.core.text.TextLine;
 
 import java.util.Objects;
@@ -44,7 +44,7 @@ import java.util.Set;
  * The core {@link ToggleSwitch}. The track sits at the left edge, vertically centered, and the caption
  * {@link #GAP} units to its right. The knob jumps between its two ends; there is no animation.
  */
-public final class ToggleSwitchImpl extends CustomComponent<ToggleSwitch> implements ToggleSwitch {
+public final class ToggleSwitchImpl extends BuiltInComponent<ToggleSwitch> implements ToggleSwitch {
     /**
      * The gap between the track and the caption, in UI units.
      */
@@ -90,7 +90,7 @@ public final class ToggleSwitchImpl extends CustomComponent<ToggleSwitch> implem
      * @param text the caption
      */
     @SuppressWarnings("this-escape")
-    public ToggleSwitchImpl(final ComponentFactory ui, final Text text) {
+    public ToggleSwitchImpl(final ComponentFactoryImpl ui, final Text text) {
         super(ui);
         this.text = Objects.requireNonNull(text, "text");
         this.track = Paint.NONE;

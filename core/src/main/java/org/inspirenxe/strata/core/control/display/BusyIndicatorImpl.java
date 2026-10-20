@@ -15,9 +15,7 @@
  */
 package org.inspirenxe.strata.core.control.display;
 
-import org.inspirenxe.strata.api.ComponentFactory;
 import org.inspirenxe.strata.api.control.display.BusyIndicator;
-import org.inspirenxe.strata.api.extension.CustomComponent;
 import org.inspirenxe.strata.api.extension.MeasureContext;
 import org.inspirenxe.strata.api.extension.Painter;
 import org.inspirenxe.strata.api.geometry.Rect;
@@ -26,6 +24,8 @@ import org.inspirenxe.strata.api.text.Text;
 import org.inspirenxe.strata.api.text.TextStyle;
 import org.inspirenxe.strata.api.theme.Paint;
 import org.inspirenxe.strata.api.theme.Theme;
+import org.inspirenxe.strata.core.node.BuiltInComponent;
+import org.inspirenxe.strata.core.node.ComponentFactoryImpl;
 import org.inspirenxe.strata.core.text.TextLine;
 
 import java.util.Objects;
@@ -36,7 +36,7 @@ import java.util.Set;
  * {@link BusyIndicator#FRAME_MILLIS} milliseconds of the environment's clock. The caption is measured during layout
  * and the dots' rectangles are worked out again only when the bounds change, so painting allocates nothing.
  */
-public final class BusyIndicatorImpl extends CustomComponent<BusyIndicator> implements BusyIndicator {
+public final class BusyIndicatorImpl extends BuiltInComponent<BusyIndicator> implements BusyIndicator {
     private static final Set<String> REQUIRED = Set.of(STYLE_DOT, STYLE_DOT_ACTIVE);
     private static final int[] FRAMES = {0, 1, 2, 1};
     private static final int DOT_COUNT = 3;
@@ -57,7 +57,7 @@ public final class BusyIndicatorImpl extends CustomComponent<BusyIndicator> impl
      *
      * @param ui the factory that owns the indicator
      */
-    public BusyIndicatorImpl(final ComponentFactory ui) {
+    public BusyIndicatorImpl(final ComponentFactoryImpl ui) {
         super(ui);
         this.dots = new Rect[DOT_COUNT];
         this.dotBounds = null;

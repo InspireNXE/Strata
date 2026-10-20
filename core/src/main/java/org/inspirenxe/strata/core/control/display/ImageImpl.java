@@ -15,18 +15,18 @@
  */
 package org.inspirenxe.strata.core.control.display;
 
-import org.inspirenxe.strata.api.ComponentFactory;
 import org.inspirenxe.strata.api.Strata;
 import org.inspirenxe.strata.api.component.Tooltip;
 import org.inspirenxe.strata.api.control.display.Image;
 import org.inspirenxe.strata.api.event.input.PointerEvent;
-import org.inspirenxe.strata.api.extension.CustomComponent;
 import org.inspirenxe.strata.api.extension.MeasureContext;
 import org.inspirenxe.strata.api.extension.Painter;
 import org.inspirenxe.strata.api.geometry.Rect;
 import org.inspirenxe.strata.api.geometry.Size;
 import org.inspirenxe.strata.api.theme.SpriteId;
 import org.inspirenxe.strata.api.visual.Visual;
+import org.inspirenxe.strata.core.node.BuiltInComponent;
+import org.inspirenxe.strata.core.node.ComponentFactoryImpl;
 
 import java.util.Objects;
 
@@ -36,7 +36,7 @@ import java.util.Objects;
  * the image size's aspect ratio that fits, centered. An image size of zero on either axis draws nothing with
  * {@code FIT}.
  */
-public final class ImageImpl extends CustomComponent<Image> implements Image {
+public final class ImageImpl extends BuiltInComponent<Image> implements Image {
     private SpriteId sprite;
     private Visual visual;
     private int tint;
@@ -53,7 +53,7 @@ public final class ImageImpl extends CustomComponent<Image> implements Image {
      *
      * @param ui the factory that owns the image
      */
-    public ImageImpl(final ComponentFactory ui) {
+    public ImageImpl(final ComponentFactoryImpl ui) {
         super(ui);
         this.tint = 0xFFFFFFFF;
         this.imageWidth = 16f;
@@ -67,7 +67,7 @@ public final class ImageImpl extends CustomComponent<Image> implements Image {
      * @param ui the factory that owns the image
      * @param sprite the sprite to draw
      */
-    public ImageImpl(final ComponentFactory ui, final SpriteId sprite) {
+    public ImageImpl(final ComponentFactoryImpl ui, final SpriteId sprite) {
         super(ui);
         this.sprite = Objects.requireNonNull(sprite, "sprite");
         this.tint = 0xFFFFFFFF;
@@ -82,7 +82,7 @@ public final class ImageImpl extends CustomComponent<Image> implements Image {
      * @param ui the factory that owns the image
      * @param visual the visual to draw
      */
-    public ImageImpl(final ComponentFactory ui, final Visual visual) {
+    public ImageImpl(final ComponentFactoryImpl ui, final Visual visual) {
         super(ui);
         this.visual = Objects.requireNonNull(visual, "visual");
         this.tint = 0xFFFFFFFF;

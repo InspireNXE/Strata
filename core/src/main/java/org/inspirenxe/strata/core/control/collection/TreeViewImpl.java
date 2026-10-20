@@ -15,7 +15,6 @@
  */
 package org.inspirenxe.strata.core.control.collection;
 
-import org.inspirenxe.strata.api.ComponentFactory;
 import org.inspirenxe.strata.api.component.Component;
 import org.inspirenxe.strata.api.control.attribute.item.SelectionMode;
 import org.inspirenxe.strata.api.control.collection.ListView;
@@ -23,7 +22,6 @@ import org.inspirenxe.strata.api.control.collection.TreeView;
 import org.inspirenxe.strata.api.event.input.KeyEvent;
 import org.inspirenxe.strata.api.event.input.PointerButtonEvent;
 import org.inspirenxe.strata.api.extension.ArrangeContext;
-import org.inspirenxe.strata.api.extension.CustomComposite;
 import org.inspirenxe.strata.api.extension.MeasureContext;
 import org.inspirenxe.strata.api.extension.Painter;
 import org.inspirenxe.strata.api.geometry.Rect;
@@ -34,6 +32,8 @@ import org.inspirenxe.strata.api.text.Text;
 import org.inspirenxe.strata.api.theme.Paint;
 import org.inspirenxe.strata.api.theme.Theme;
 import org.inspirenxe.strata.core.control.Rings;
+import org.inspirenxe.strata.core.node.BuiltInComposite;
+import org.inspirenxe.strata.core.node.ComponentFactoryImpl;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -54,10 +54,10 @@ import java.util.function.Function;
  *
  * @param <T> the type of the items
  */
-public final class TreeViewImpl<T> extends CustomComposite<TreeView<T>> implements TreeView<T> {
+public final class TreeViewImpl<T> extends BuiltInComposite<TreeView<T>> implements TreeView<T> {
     private static final Paint DEFAULT_ARROW = Paint.solid(0xFFA0A0A0);
 
-    private final ComponentFactory ui;
+    private final ComponentFactoryImpl ui;
     private final ListViewImpl<Entry<T>> list;
     private final Set<Object> expanded;
     private List<T> roots;
@@ -77,7 +77,7 @@ public final class TreeViewImpl<T> extends CustomComposite<TreeView<T>> implemen
      * @param cellFactory makes the component for an item's row
      */
     @SuppressWarnings("this-escape")
-    public TreeViewImpl(final ComponentFactory ui, final Function<? super T, ? extends Component<?>> cellFactory) {
+    public TreeViewImpl(final ComponentFactoryImpl ui, final Function<? super T, ? extends Component<?>> cellFactory) {
         super(ui);
         this.ui = ui;
         this.expanded = new HashSet<>();
@@ -653,13 +653,13 @@ public final class TreeViewImpl<T> extends CustomComposite<TreeView<T>> implemen
     /**
      * One row: the indent, the arrow column and the user's cell, which fills the rest.
      */
-    private static final class Row<T> extends CustomComposite<Row<T>> {
+    private static final class Row<T> extends BuiltInComposite<Row<T>> {
         private final TreeViewImpl<T> tree;
         private final Entry<T> entry;
         private final Component<?> cell;
 
         @SuppressWarnings("this-escape")
-        Row(final ComponentFactory ui, final TreeViewImpl<T> tree, final Entry<T> entry) {
+        Row(final ComponentFactoryImpl ui, final TreeViewImpl<T> tree, final Entry<T> entry) {
             super(ui);
             this.tree = tree;
             this.entry = entry;

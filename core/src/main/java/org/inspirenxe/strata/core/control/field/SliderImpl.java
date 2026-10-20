@@ -15,13 +15,11 @@
  */
 package org.inspirenxe.strata.core.control.field;
 
-import org.inspirenxe.strata.api.ComponentFactory;
 import org.inspirenxe.strata.api.component.CursorKind;
 import org.inspirenxe.strata.api.control.field.Slider;
 import org.inspirenxe.strata.api.event.input.DragEvent;
 import org.inspirenxe.strata.api.event.input.KeyEvent;
 import org.inspirenxe.strata.api.event.input.PointerButtonEvent;
-import org.inspirenxe.strata.api.extension.CustomComponent;
 import org.inspirenxe.strata.api.extension.MeasureContext;
 import org.inspirenxe.strata.api.extension.Painter;
 import org.inspirenxe.strata.api.geometry.Insets;
@@ -34,6 +32,8 @@ import org.inspirenxe.strata.api.text.TextSpan;
 import org.inspirenxe.strata.api.text.TextStyle;
 import org.inspirenxe.strata.api.theme.Paint;
 import org.inspirenxe.strata.api.theme.Theme;
+import org.inspirenxe.strata.core.node.BuiltInComponent;
+import org.inspirenxe.strata.core.node.ComponentFactoryImpl;
 
 import java.util.Objects;
 import java.util.Set;
@@ -52,7 +52,7 @@ import java.util.function.DoubleFunction;
  * <p>A press, drag or key that would change the value fires {@link Slider#CHANGE}, and the final value is set as
  * {@link #setValue} sets it. A press, drag or key that leaves the value as it is fires nothing.</p>
  */
-public final class SliderImpl extends CustomComponent<Slider> implements Slider {
+public final class SliderImpl extends BuiltInComponent<Slider> implements Slider {
     /**
      * The thumb's length along the track: its width on a horizontal slider, its height on a vertical one.
      */
@@ -105,7 +105,7 @@ public final class SliderImpl extends CustomComponent<Slider> implements Slider 
      * @param ui the factory that owns the slider
      */
     @SuppressWarnings("this-escape")
-    public SliderImpl(final ComponentFactory ui) {
+    public SliderImpl(final ComponentFactoryImpl ui) {
         super(ui);
         this.drawLabel = this::drawLabel;
         this.min = 0d;

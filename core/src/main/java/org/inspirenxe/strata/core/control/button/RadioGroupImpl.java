@@ -15,7 +15,6 @@
  */
 package org.inspirenxe.strata.core.control.button;
 
-import org.inspirenxe.strata.api.ComponentFactory;
 import org.inspirenxe.strata.api.control.button.RadioButton;
 import org.inspirenxe.strata.api.control.button.RadioGroup;
 import org.inspirenxe.strata.api.event.Event;
@@ -25,6 +24,7 @@ import org.inspirenxe.strata.api.event.Subscription;
 import org.inspirenxe.strata.api.text.Text;
 import org.inspirenxe.strata.core.event.EventDispatcher;
 import org.inspirenxe.strata.core.event.ValueEventImpl;
+import org.inspirenxe.strata.core.node.ComponentFactoryImpl;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -40,7 +40,7 @@ import java.util.Optional;
  * @param <T> the type of the values the buttons stand for
  */
 public final class RadioGroupImpl<T> implements RadioGroup<T> {
-    private final ComponentFactory ui;
+    private final ComponentFactoryImpl ui;
     private final List<RadioButtonImpl> buttons;
     private final List<RadioButton> view;
     private final List<T> values;
@@ -52,7 +52,7 @@ public final class RadioGroupImpl<T> implements RadioGroup<T> {
      *
      * @param ui the factory that makes the group's buttons
      */
-    public RadioGroupImpl(final ComponentFactory ui) {
+    public RadioGroupImpl(final ComponentFactoryImpl ui) {
         this.ui = Objects.requireNonNull(ui, "ui");
         this.buttons = new ArrayList<>();
         this.view = Collections.unmodifiableList(this.buttons);

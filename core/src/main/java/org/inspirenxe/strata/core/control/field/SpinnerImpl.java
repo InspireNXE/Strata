@@ -15,7 +15,6 @@
  */
 package org.inspirenxe.strata.core.control.field;
 
-import org.inspirenxe.strata.api.ComponentFactory;
 import org.inspirenxe.strata.api.component.CursorKind;
 import org.inspirenxe.strata.api.control.button.Button;
 import org.inspirenxe.strata.api.control.field.Spinner;
@@ -26,7 +25,6 @@ import org.inspirenxe.strata.api.event.input.PointerButtonEvent;
 import org.inspirenxe.strata.api.event.input.PointerEvent;
 import org.inspirenxe.strata.api.event.input.ScrollEvent;
 import org.inspirenxe.strata.api.extension.ArrangeContext;
-import org.inspirenxe.strata.api.extension.CustomComposite;
 import org.inspirenxe.strata.api.extension.MeasureContext;
 import org.inspirenxe.strata.api.extension.Painter;
 import org.inspirenxe.strata.api.geometry.Rect;
@@ -37,6 +35,8 @@ import org.inspirenxe.strata.api.text.TextStyle;
 import org.inspirenxe.strata.api.theme.Paint;
 import org.inspirenxe.strata.api.theme.Theme;
 import org.inspirenxe.strata.core.control.Rings;
+import org.inspirenxe.strata.core.node.BuiltInComposite;
+import org.inspirenxe.strata.core.node.ComponentFactoryImpl;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -57,7 +57,7 @@ import java.util.regex.Pattern;
  * in the range. The spinner is a composite and not a container, so the field's {@link TextBox} events stop at the
  * spinner.</p>
  */
-public final class SpinnerImpl extends CustomComposite<Spinner> implements Spinner {
+public final class SpinnerImpl extends BuiltInComposite<Spinner> implements Spinner {
     private final TextBoxImpl field;
     private double value;
     private double min;
@@ -81,7 +81,7 @@ public final class SpinnerImpl extends CustomComposite<Spinner> implements Spinn
      * @param ui the factory that owns the spinner
      */
     @SuppressWarnings("this-escape")
-    public SpinnerImpl(final ComponentFactory ui) {
+    public SpinnerImpl(final ComponentFactoryImpl ui) {
         super(ui);
         this.max = 100.0;
         this.step = 1.0;

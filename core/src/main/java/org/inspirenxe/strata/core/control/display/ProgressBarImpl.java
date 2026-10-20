@@ -15,9 +15,7 @@
  */
 package org.inspirenxe.strata.core.control.display;
 
-import org.inspirenxe.strata.api.ComponentFactory;
 import org.inspirenxe.strata.api.control.display.ProgressBar;
-import org.inspirenxe.strata.api.extension.CustomComponent;
 import org.inspirenxe.strata.api.extension.MeasureContext;
 import org.inspirenxe.strata.api.extension.Painter;
 import org.inspirenxe.strata.api.geometry.Insets;
@@ -27,6 +25,8 @@ import org.inspirenxe.strata.api.text.Text;
 import org.inspirenxe.strata.api.text.TextStyle;
 import org.inspirenxe.strata.api.theme.Paint;
 import org.inspirenxe.strata.api.theme.Theme;
+import org.inspirenxe.strata.core.node.BuiltInComponent;
+import org.inspirenxe.strata.core.node.ComponentFactoryImpl;
 import org.inspirenxe.strata.core.text.TextLine;
 
 import java.util.Objects;
@@ -41,7 +41,7 @@ import java.util.Set;
  * rectangle, already cut to the bounds, is worked out once when the bounds change, so painting picks one and
  * allocates nothing.</p>
  */
-public final class ProgressBarImpl extends CustomComponent<ProgressBar> implements ProgressBar {
+public final class ProgressBarImpl extends BuiltInComponent<ProgressBar> implements ProgressBar {
     /**
      * The width the bar asks for, in UI units.
      */
@@ -87,7 +87,7 @@ public final class ProgressBarImpl extends CustomComponent<ProgressBar> implemen
      *
      * @param ui the factory that owns the bar
      */
-    public ProgressBarImpl(final ComponentFactory ui) {
+    public ProgressBarImpl(final ComponentFactoryImpl ui) {
         super(ui);
         this.max = 1.0;
         this.text = Text.empty();

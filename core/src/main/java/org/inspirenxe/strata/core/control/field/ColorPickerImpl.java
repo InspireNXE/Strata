@@ -15,7 +15,6 @@
  */
 package org.inspirenxe.strata.core.control.field;
 
-import org.inspirenxe.strata.api.ComponentFactory;
 import org.inspirenxe.strata.api.component.CursorKind;
 import org.inspirenxe.strata.api.control.field.ColorPicker;
 import org.inspirenxe.strata.api.control.field.TextBox;
@@ -23,7 +22,6 @@ import org.inspirenxe.strata.api.event.input.DragEvent;
 import org.inspirenxe.strata.api.component.Focusable;
 import org.inspirenxe.strata.api.event.input.PointerButtonEvent;
 import org.inspirenxe.strata.api.extension.ArrangeContext;
-import org.inspirenxe.strata.api.extension.CustomComposite;
 import org.inspirenxe.strata.api.extension.MeasureContext;
 import org.inspirenxe.strata.api.extension.Painter;
 import org.inspirenxe.strata.api.geometry.Insets;
@@ -33,6 +31,8 @@ import org.inspirenxe.strata.api.input.MouseButton;
 import org.inspirenxe.strata.api.layout.Anchor;
 import org.inspirenxe.strata.api.theme.Paint;
 import org.inspirenxe.strata.api.theme.Theme;
+import org.inspirenxe.strata.core.node.BuiltInComposite;
+import org.inspirenxe.strata.core.node.ComponentFactoryImpl;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -49,7 +49,7 @@ import java.util.Locale;
  * {@value #CHECKER}-unit cells. Columns, segments, checker cells and markers are worked out during arrange or after a
  * change, never while painting.</p>
  */
-public final class ColorPickerImpl extends CustomComposite<ColorPicker> implements ColorPicker {
+public final class ColorPickerImpl extends BuiltInComposite<ColorPicker> implements ColorPicker {
     /**
      * The side of each checkerboard cell behind translucent colors, in UI units.
      */
@@ -99,7 +99,7 @@ public final class ColorPickerImpl extends CustomComposite<ColorPicker> implemen
      * @param ui the factory that owns the picker
      */
     @SuppressWarnings("this-escape")
-    public ColorPickerImpl(final ComponentFactory ui) {
+    public ColorPickerImpl(final ComponentFactoryImpl ui) {
         super(ui);
         this.color = 0xFFFFFFFF;
         this.alpha = 0xFF;

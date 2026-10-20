@@ -15,7 +15,6 @@
  */
 package org.inspirenxe.strata.core.control.pane;
 
-import org.inspirenxe.strata.api.ComponentFactory;
 import org.inspirenxe.strata.api.component.HasCursor;
 import org.inspirenxe.strata.api.component.Component;
 import org.inspirenxe.strata.api.component.CursorKind;
@@ -24,8 +23,6 @@ import org.inspirenxe.strata.api.control.pane.SplitPane;
 import org.inspirenxe.strata.api.event.input.DragEvent;
 import org.inspirenxe.strata.api.event.input.PointerButtonEvent;
 import org.inspirenxe.strata.api.extension.ArrangeContext;
-import org.inspirenxe.strata.api.extension.CustomComponent;
-import org.inspirenxe.strata.api.extension.CustomComposite;
 import org.inspirenxe.strata.api.extension.MeasureContext;
 import org.inspirenxe.strata.api.extension.Painter;
 import org.inspirenxe.strata.api.geometry.Rect;
@@ -35,6 +32,9 @@ import org.inspirenxe.strata.api.layout.Anchor;
 import org.inspirenxe.strata.api.layout.Orientation;
 import org.inspirenxe.strata.api.theme.Paint;
 import org.inspirenxe.strata.api.theme.Theme;
+import org.inspirenxe.strata.core.node.BuiltInComponent;
+import org.inspirenxe.strata.core.node.BuiltInComposite;
+import org.inspirenxe.strata.core.node.ComponentFactoryImpl;
 
 import java.util.Objects;
 
@@ -42,7 +42,7 @@ import java.util.Objects;
  * The core {@link SplitPane}. The divider is a private child component, so it can show its own cursor and receive
  * the drag. Each side is arranged in its whole part, where its own alignment places it.
  */
-public final class SplitPaneImpl extends CustomComposite<SplitPane> implements SplitPane {
+public final class SplitPaneImpl extends BuiltInComposite<SplitPane> implements SplitPane {
     private Orientation orientation;
     private final Divider divider;
     private Component<?> first;
@@ -60,7 +60,7 @@ public final class SplitPaneImpl extends CustomComposite<SplitPane> implements S
      * @param orientation the direction of the split
      */
     @SuppressWarnings("this-escape")
-    public SplitPaneImpl(final ComponentFactory ui, final Orientation orientation) {
+    public SplitPaneImpl(final ComponentFactoryImpl ui, final Orientation orientation) {
         super(ui);
         this.orientation = Objects.requireNonNull(orientation, "orientation");
         this.position = 0.5f;
@@ -243,7 +243,7 @@ public final class SplitPaneImpl extends CustomComposite<SplitPane> implements S
     /**
      * The divider. A drag moves it by the pointer, keeping the point grabbed under the pointer.
      */
-    private static final class Divider extends CustomComponent<Divider> implements HasCursor<Divider> {
+    private static final class Divider extends BuiltInComponent<Divider> implements HasCursor<Divider> {
         private final SplitPaneImpl pane;
         private Paint paint;
         private Paint hovered;
@@ -251,7 +251,7 @@ public final class SplitPaneImpl extends CustomComposite<SplitPane> implements S
         private boolean dragging;
 
         @SuppressWarnings("this-escape")
-        Divider(final ComponentFactory ui, final SplitPaneImpl pane) {
+        Divider(final ComponentFactoryImpl ui, final SplitPaneImpl pane) {
             super(ui);
             this.pane = pane;
             this.paint = Paint.NONE;

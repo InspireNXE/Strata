@@ -15,9 +15,7 @@
  */
 package org.inspirenxe.strata.core.node;
 
-import org.inspirenxe.strata.api.ComponentFactory;
 import org.inspirenxe.strata.api.component.Tooltip;
-import org.inspirenxe.strata.api.extension.CustomComponent;
 import org.inspirenxe.strata.api.extension.MeasureContext;
 import org.inspirenxe.strata.api.extension.Painter;
 import org.inspirenxe.strata.api.geometry.Insets;
@@ -43,7 +41,7 @@ import java.util.Optional;
  * It uses the toast keys when the theme has them and the tooltip keys otherwise, and without either background a
  * dark box with a light one-unit edge.
  */
-final class ToastView extends CustomComponent<ToastView> {
+final class ToastView extends BuiltInComponent<ToastView> {
     /**
      * The space between the text and the box's edge, in UI units.
      */
@@ -57,7 +55,7 @@ final class ToastView extends CustomComponent<ToastView> {
     private float lineHeight;
     private Insets padding = PADDING;
 
-    ToastView(final ComponentFactory factory, final Text message) {
+    ToastView(final ComponentFactoryImpl factory, final Text message) {
         super(factory);
         this.message = message;
         this.lines = new ArrayList<>();

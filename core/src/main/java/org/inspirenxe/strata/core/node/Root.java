@@ -244,8 +244,8 @@ public final class Root {
     /**
      * Replaces the tree, closing every overlay and the tooltip first. The theme is checked against every node of the
      * new tree before anything changes, so a theme that lacks a required key fails first. The old tree is detached,
-     * which clears its hover, press and focus state, and then every {@link SecretHolder} in it that the new tree did
-     * not take is wiped.
+     * which clears its hover, press and focus state, and then every component in it that the new tree did not take
+     * hears {@link BuiltInComponent#onReleased()}.
      *
      * @param content the new top node, or {@code null} to empty the root
      * @throws IllegalArgumentException if {@code content} is already in a container or another root
@@ -270,7 +270,7 @@ public final class Root {
             this.attachTree(content);
         }
         if (previous != null) {
-            wipeSecrets(previous);
+            release(previous);
         }
         this.requestLayout();
     }
@@ -366,12 +366,13 @@ public final class Root {
     }
 
     /**
-     * Wipes every {@link SecretHolder} in a tree this root let go of, skipping any that is attached again.
+     * Tells every component in a tree this root let go of that it was released, skipping any that is attached
+     * again, so a component holding secret text forgets it.
      */
-    private static void wipeSecrets(final Node subtree) {
+    private static void release(final Node subtree) {
         visit(subtree, node -> {
-            if (node.root() == null && node.facade() instanceof SecretHolder holder) {
-                holder.wipe();
+            if (node.root() == null) {
+                node.released();
             }
         });
     }
@@ -1244,7 +1245,7 @@ public final class Root {
             this.open = false;
             Root.this.layers.remove(this);
             Root.this.detachTree(this.node);
-            wipeSecrets(this.node);
+            release(this.node);
             Root.this.requestLayout();
             if (this.modal && this.previousFocus != null && Root.this.canFocus(this.previousFocus)) {
                 Root.this.changeFocus(this.previousFocus);

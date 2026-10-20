@@ -15,28 +15,28 @@
  */
 package org.inspirenxe.strata.core.layout;
 
-import org.inspirenxe.strata.api.ComponentFactory;
 import org.inspirenxe.strata.api.component.Component;
 import org.inspirenxe.strata.api.extension.ArrangeContext;
-import org.inspirenxe.strata.api.extension.CustomContainer;
 import org.inspirenxe.strata.api.extension.MeasureContext;
 import org.inspirenxe.strata.api.geometry.Insets;
 import org.inspirenxe.strata.api.geometry.Rect;
 import org.inspirenxe.strata.api.geometry.Size;
 import org.inspirenxe.strata.api.layout.AnchorPanel;
+import org.inspirenxe.strata.core.node.BuiltInContainer;
+import org.inspirenxe.strata.core.node.ComponentFactoryImpl;
 
 /**
  * The core {@link AnchorPanel}. Every child is measured with the content area and arranged into all of it, where
  * the child's alignment places it. The panel's desired size is that of its largest child on each axis, plus padding.
  */
-public final class AnchorPanelImpl extends CustomContainer<AnchorPanel> implements AnchorPanel {
+public final class AnchorPanelImpl extends BuiltInContainer<AnchorPanel> implements AnchorPanel {
 
     /**
      * Creates an empty panel.
      *
      * @param ui the factory that owns the panel
      */
-    public AnchorPanelImpl(final ComponentFactory ui) {
+    public AnchorPanelImpl(final ComponentFactoryImpl ui) {
         super(ui);
     }
 

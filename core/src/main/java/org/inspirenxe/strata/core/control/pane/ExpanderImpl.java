@@ -15,7 +15,6 @@
  */
 package org.inspirenxe.strata.core.control.pane;
 
-import org.inspirenxe.strata.api.ComponentFactory;
 import org.inspirenxe.strata.api.component.Component;
 import org.inspirenxe.strata.api.component.CursorKind;
 import org.inspirenxe.strata.api.control.pane.Expander;
@@ -23,7 +22,6 @@ import org.inspirenxe.strata.api.event.input.KeyEvent;
 import org.inspirenxe.strata.api.event.input.PointerButtonEvent;
 import org.inspirenxe.strata.api.event.input.PointerEvent;
 import org.inspirenxe.strata.api.extension.ArrangeContext;
-import org.inspirenxe.strata.api.extension.CustomComposite;
 import org.inspirenxe.strata.api.extension.MeasureContext;
 import org.inspirenxe.strata.api.extension.Painter;
 import org.inspirenxe.strata.api.geometry.Insets;
@@ -38,6 +36,8 @@ import org.inspirenxe.strata.api.text.TextStyle;
 import org.inspirenxe.strata.api.theme.Paint;
 import org.inspirenxe.strata.api.theme.Theme;
 import org.inspirenxe.strata.core.control.Rings;
+import org.inspirenxe.strata.core.node.BuiltInComposite;
+import org.inspirenxe.strata.core.node.ComponentFactoryImpl;
 import org.inspirenxe.strata.core.text.TextLine;
 
 import java.util.Objects;
@@ -46,7 +46,7 @@ import java.util.Objects;
  * The core {@link Expander}. The content is a child only while expanded. The expander shows the hand cursor while
  * the pointer is over the header, and no cursor of its own elsewhere.
  */
-public final class ExpanderImpl extends CustomComposite<Expander> implements Expander {
+public final class ExpanderImpl extends BuiltInComposite<Expander> implements Expander {
     /**
      * The space around the header's arrow and title when the theme sets no {@value #STYLE_HEADER_PADDING}: 4 at
      * the sides and 3 at the top and bottom.
@@ -83,7 +83,7 @@ public final class ExpanderImpl extends CustomComposite<Expander> implements Exp
      * @param title the header's title
      */
     @SuppressWarnings("this-escape")
-    public ExpanderImpl(final ComponentFactory ui, final Text title) {
+    public ExpanderImpl(final ComponentFactoryImpl ui, final Text title) {
         super(ui);
         this.title = Objects.requireNonNull(title, "title");
         this.header = Paint.NONE;

@@ -15,14 +15,12 @@
  */
 package org.inspirenxe.strata.core.control.button;
 
-import org.inspirenxe.strata.api.ComponentFactory;
 import org.inspirenxe.strata.api.Strata;
 import org.inspirenxe.strata.api.component.CursorKind;
 import org.inspirenxe.strata.api.control.button.Button;
 import org.inspirenxe.strata.api.control.button.CycleButton;
 import org.inspirenxe.strata.api.event.input.KeyEvent;
 import org.inspirenxe.strata.api.event.input.PointerButtonEvent;
-import org.inspirenxe.strata.api.extension.CustomComponent;
 import org.inspirenxe.strata.api.extension.MeasureContext;
 import org.inspirenxe.strata.api.extension.Painter;
 import org.inspirenxe.strata.api.geometry.Insets;
@@ -36,6 +34,8 @@ import org.inspirenxe.strata.api.text.TextMetrics;
 import org.inspirenxe.strata.api.text.TextStyle;
 import org.inspirenxe.strata.api.theme.Paint;
 import org.inspirenxe.strata.api.theme.Theme;
+import org.inspirenxe.strata.core.node.BuiltInComponent;
+import org.inspirenxe.strata.core.node.ComponentFactoryImpl;
 import org.inspirenxe.strata.core.text.TextLine;
 
 import java.util.List;
@@ -56,7 +56,7 @@ import java.util.function.Function;
  *
  * @param <T> the type of the values
  */
-public final class CycleButtonImpl<T> extends CustomComponent<CycleButton<T>> implements CycleButton<T> {
+public final class CycleButtonImpl<T> extends BuiltInComponent<CycleButton<T>> implements CycleButton<T> {
     private static final Set<String> REQUIRED = Set.of(Button.STYLE_NORMAL, Button.STYLE_HOVERED,
             Button.STYLE_PRESSED, Button.STYLE_DISABLED);
 
@@ -92,7 +92,7 @@ public final class CycleButtonImpl<T> extends CustomComponent<CycleButton<T>> im
      * @param valueLabelFunction returns the text for a value
      */
     @SuppressWarnings("this-escape")
-    public CycleButtonImpl(final ComponentFactory ui, final Text text,
+    public CycleButtonImpl(final ComponentFactoryImpl ui, final Text text,
             final Function<? super T, ?> valueLabelFunction) {
         super(ui);
         this.text = Objects.requireNonNull(text, "text");

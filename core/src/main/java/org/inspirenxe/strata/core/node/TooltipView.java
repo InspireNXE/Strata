@@ -15,9 +15,7 @@
  */
 package org.inspirenxe.strata.core.node;
 
-import org.inspirenxe.strata.api.ComponentFactory;
 import org.inspirenxe.strata.api.component.Tooltip;
-import org.inspirenxe.strata.api.extension.CustomComponent;
 import org.inspirenxe.strata.api.extension.MeasureContext;
 import org.inspirenxe.strata.api.extension.Painter;
 import org.inspirenxe.strata.api.geometry.Insets;
@@ -41,7 +39,7 @@ import java.util.Optional;
  * inside {@link #PADDING} units of padding, on the theme's tooltip background. Without that key it draws a dark box
  * with a light one-unit edge.
  */
-final class TooltipView extends CustomComponent<TooltipView> {
+final class TooltipView extends BuiltInComponent<TooltipView> {
     /**
      * The space between the text and the box's edge, in UI units.
      */
@@ -59,7 +57,7 @@ final class TooltipView extends CustomComponent<TooltipView> {
     private TextStyle textStyle;
     private Insets padding = PADDING;
 
-    TooltipView(final ComponentFactory factory, final Tooltip tooltip) {
+    TooltipView(final ComponentFactoryImpl factory, final Tooltip tooltip) {
         super(factory);
         this.tooltip = tooltip;
         this.lines = new ArrayList<>();

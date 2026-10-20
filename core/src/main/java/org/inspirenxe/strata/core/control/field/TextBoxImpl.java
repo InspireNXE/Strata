@@ -15,7 +15,6 @@
  */
 package org.inspirenxe.strata.core.control.field;
 
-import org.inspirenxe.strata.api.ComponentFactory;
 import org.inspirenxe.strata.api.component.CursorKind;
 import org.inspirenxe.strata.api.control.collection.ComboBox;
 import org.inspirenxe.strata.api.control.display.Label;
@@ -25,7 +24,6 @@ import org.inspirenxe.strata.api.event.input.DragEvent;
 import org.inspirenxe.strata.api.event.input.FocusEvent;
 import org.inspirenxe.strata.api.event.input.KeyEvent;
 import org.inspirenxe.strata.api.event.input.PointerButtonEvent;
-import org.inspirenxe.strata.api.extension.CustomComponent;
 import org.inspirenxe.strata.api.extension.Environment;
 import org.inspirenxe.strata.api.extension.MeasureContext;
 import org.inspirenxe.strata.api.extension.Painter;
@@ -47,6 +45,7 @@ import org.inspirenxe.strata.api.text.TextStyle;
 import org.inspirenxe.strata.api.theme.Paint;
 import org.inspirenxe.strata.api.theme.Theme;
 import org.inspirenxe.strata.core.control.collection.ListViewImpl;
+import org.inspirenxe.strata.core.node.BuiltInComponent;
 import org.inspirenxe.strata.core.node.ComponentFactoryImpl;
 import org.inspirenxe.strata.core.text.StyledText;
 import org.inspirenxe.strata.core.text.TextLine;
@@ -90,7 +89,7 @@ import java.util.function.UnaryOperator;
  *     <li>Double-clicking the first letter of a word selects that word. Wintergreen selected the word before it.</li>
  * </ul>
  */
-public final class TextBoxImpl extends CustomComponent<TextBox> implements TextBox {
+public final class TextBoxImpl extends BuiltInComponent<TextBox> implements TextBox {
     /**
      * How long, in milliseconds, the caret stays shown and then hidden. Each edit or caret move restarts the cycle
      * with the caret shown.
@@ -109,7 +108,7 @@ public final class TextBoxImpl extends CustomComponent<TextBox> implements TextB
     static final Paint DEFAULT_SELECTION = Paint.solid(0x806A9FFF);
     static final Paint DEFAULT_CARET = Paint.solid(0xFFE0E0E0);
 
-    private final ComponentFactory ui;
+    private final ComponentFactoryImpl ui;
     private final PlainBuffer buffer;
     private final LineEditor editor;
     private int maxLength;
@@ -168,7 +167,7 @@ public final class TextBoxImpl extends CustomComponent<TextBox> implements TextB
      * @param ui the factory that owns the box
      */
     @SuppressWarnings("this-escape")
-    public TextBoxImpl(final ComponentFactory ui) {
+    public TextBoxImpl(final ComponentFactoryImpl ui) {
         super(ui);
         this.ui = ui;
         this.buffer = new PlainBuffer();
@@ -400,7 +399,7 @@ public final class TextBoxImpl extends CustomComponent<TextBox> implements TextB
             list.setFocusable(false);
             list.setTabbable(false);
             list.setActivateOnClick(true);
-            ((ComponentFactoryImpl) this.ui).nodeOf(list).setBackground(this.suggestionsPaint);
+            this.nodeOf(list).setBackground(this.suggestionsPaint);
             list.setItems(found);
             this.suggestionList = list;
             final Overlay popup = this.ui.overlays().popup(list, this.bounds());
@@ -440,7 +439,7 @@ public final class TextBoxImpl extends CustomComponent<TextBox> implements TextB
     }
 
     private Label suggestionCell(final Suggestion suggestion) {
-        final Label label = ((ComponentFactoryImpl) this.ui).cellPadded(
+        final Label label = this.ui.cellPadded(
                 this.ui.label(suggestion.text()).setStyle(this.suggestionTextStyle), false);
         label.setOverflow(TextOverflow.ELLIPSIS);
         label.setAnchor(Anchor.MIDDLE_LEFT);
@@ -585,7 +584,7 @@ public final class TextBoxImpl extends CustomComponent<TextBox> implements TextB
         this.suggestionTextStyle = theme.textStyleOr(STYLE_SUGGESTION_TEXT, this.textStyle);
         this.placeholderStyle = theme.textStyleOr(STYLE_PLACEHOLDER, this.disabledTextStyle);
         if (this.suggestionList != null) {
-            ((ComponentFactoryImpl) this.ui).nodeOf(this.suggestionList).setBackground(this.suggestionsPaint);
+            this.nodeOf(this.suggestionList).setBackground(this.suggestionsPaint);
         }
         this.editor.invalidate();
     }
@@ -668,8 +667,7 @@ public final class TextBoxImpl extends CustomComponent<TextBox> implements TextB
             this.editor.moved();
             return;
         }
-        this.editor.focusGained(this.selectAllOnFocus,
-                ((ComponentFactoryImpl) this.ui).nodeOf(this).root().isFocusFromPress());
+        this.editor.focusGained(this.selectAllOnFocus, this.isFocusFromPress());
     }
 
     @Override
@@ -677,7 +675,7 @@ public final class TextBoxImpl extends CustomComponent<TextBox> implements TextB
         this.editor.focusLost();
         // A press on the list takes focus first; keep the list open for it
         if (this.suggestionList == null
-                || !((ComponentFactoryImpl) this.ui).nodeOf(this.suggestionList).isHoverWithin()) {
+                || !this.nodeOf(this.suggestionList).isHoverWithin()) {
             this.hideSuggestions();
         }
     }

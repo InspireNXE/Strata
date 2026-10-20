@@ -15,7 +15,6 @@
  */
 package org.inspirenxe.strata.core.layout;
 
-import org.inspirenxe.strata.api.ComponentFactory;
 import org.inspirenxe.strata.api.component.Component;
 import org.inspirenxe.strata.api.event.input.DragEvent;
 import org.inspirenxe.strata.api.event.input.KeyEvent;
@@ -23,7 +22,6 @@ import org.inspirenxe.strata.api.event.input.PointerButtonEvent;
 import org.inspirenxe.strata.api.event.input.PointerEvent;
 import org.inspirenxe.strata.api.event.input.ScrollEvent;
 import org.inspirenxe.strata.api.extension.ArrangeContext;
-import org.inspirenxe.strata.api.extension.CustomContainer;
 import org.inspirenxe.strata.api.extension.MeasureContext;
 import org.inspirenxe.strata.api.extension.Painter;
 import org.inspirenxe.strata.api.geometry.Insets;
@@ -33,6 +31,8 @@ import org.inspirenxe.strata.api.input.MouseButton;
 import org.inspirenxe.strata.api.layout.ScrollPanel;
 import org.inspirenxe.strata.api.theme.Paint;
 import org.inspirenxe.strata.api.theme.Theme;
+import org.inspirenxe.strata.core.node.BuiltInContainer;
+import org.inspirenxe.strata.core.node.ComponentFactoryImpl;
 
 import java.util.Objects;
 import java.util.Set;
@@ -42,7 +42,7 @@ import java.util.Set;
  * bar and again with it only if the first pass overflowed; arranging checks again against the real bounds and shows
  * the bar if the content overflows them. Offsets set before the first layout are kept and clamped by it.
  */
-public final class ScrollPanelImpl extends CustomContainer<ScrollPanel> implements ScrollPanel {
+public final class ScrollPanelImpl extends BuiltInContainer<ScrollPanel> implements ScrollPanel {
     private static final Set<String> REQUIRED = Set.of(STYLE_THUMB);
     private static final float GUTTER = BAR_WIDTH + BAR_GAP;
 
@@ -79,7 +79,7 @@ public final class ScrollPanelImpl extends CustomContainer<ScrollPanel> implemen
      *
      * @param ui the factory that owns the panel
      */
-    public ScrollPanelImpl(final ComponentFactory ui) {
+    public ScrollPanelImpl(final ComponentFactoryImpl ui) {
         super(ui);
         // Keys bubble here from focused content; the panel takes focus itself only when asked to
         this.setFocusable(false);

@@ -15,13 +15,11 @@
  */
 package org.inspirenxe.strata.core.control.menu;
 
-import org.inspirenxe.strata.api.ComponentFactory;
 import org.inspirenxe.strata.api.control.menu.Menu;
 import org.inspirenxe.strata.api.control.menu.MenuBar;
 import org.inspirenxe.strata.api.control.menu.SubmenuItem;
 import org.inspirenxe.strata.api.event.input.PointerButtonEvent;
 import org.inspirenxe.strata.api.event.input.PointerEvent;
-import org.inspirenxe.strata.api.extension.CustomComponent;
 import org.inspirenxe.strata.api.extension.MeasureContext;
 import org.inspirenxe.strata.api.extension.Painter;
 import org.inspirenxe.strata.api.geometry.Insets;
@@ -33,6 +31,8 @@ import org.inspirenxe.strata.api.text.TextMetrics;
 import org.inspirenxe.strata.api.text.TextStyle;
 import org.inspirenxe.strata.api.theme.Paint;
 import org.inspirenxe.strata.api.theme.Theme;
+import org.inspirenxe.strata.core.node.BuiltInComponent;
+import org.inspirenxe.strata.core.node.ComponentFactoryImpl;
 import org.inspirenxe.strata.core.text.TextLine;
 
 import java.util.ArrayList;
@@ -45,7 +45,7 @@ import java.util.Optional;
  * popup anchored to its title. Its titles are {@link SubmenuItemImpl}s; a disabled title, or one without a menu,
  * draws in the menu's disabled text style and opens nothing.
  */
-public final class MenuBarImpl extends CustomComponent<MenuBar> implements MenuBar {
+public final class MenuBarImpl extends BuiltInComponent<MenuBar> implements MenuBar {
     /**
      * The space around each title when the theme sets no {@value #STYLE_TITLE_PADDING}: 8 at the sides and 3 at
      * the top and bottom.
@@ -75,7 +75,7 @@ public final class MenuBarImpl extends CustomComponent<MenuBar> implements MenuB
      *
      * @param ui the factory that owns the bar
      */
-    public MenuBarImpl(final ComponentFactory ui) {
+    public MenuBarImpl(final ComponentFactoryImpl ui) {
         super(ui);
         this.entries = new ArrayList<>();
         this.openIndex = -1;

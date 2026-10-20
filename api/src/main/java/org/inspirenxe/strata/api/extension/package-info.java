@@ -31,6 +31,11 @@
  * <p>Do not implement the component interfaces ({@code Component}, {@code Button} and so on) directly. Such a class
  * has no Strata implementation behind it, and containers reject it.</p>
  *
+ * <p>Strata's own components are not built on these classes. A component that is an instance of
+ * {@link org.inspirenxe.strata.api.extension.CustomComponent} was written outside Strata, by you or another library,
+ * and everything {@link org.inspirenxe.strata.api.ComponentFactory} makes is Strata's. Both kinds share the same tree,
+ * layout and events, and either can hold the other.</p>
+ *
  * <p>The {@code peer} subpackage is plumbing between the base classes and Strata's implementation. Developers do
  * not use it.</p>
  */

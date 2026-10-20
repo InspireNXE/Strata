@@ -15,12 +15,10 @@
  */
 package org.inspirenxe.strata.core.control.button;
 
-import org.inspirenxe.strata.api.ComponentFactory;
 import org.inspirenxe.strata.api.component.CursorKind;
 import org.inspirenxe.strata.api.control.button.Button;
 import org.inspirenxe.strata.api.event.input.KeyEvent;
 import org.inspirenxe.strata.api.event.input.PointerButtonEvent;
-import org.inspirenxe.strata.api.extension.CustomComponent;
 import org.inspirenxe.strata.api.extension.MeasureContext;
 import org.inspirenxe.strata.api.extension.Painter;
 import org.inspirenxe.strata.api.geometry.Insets;
@@ -36,6 +34,8 @@ import org.inspirenxe.strata.api.theme.Paint;
 import org.inspirenxe.strata.api.theme.SpriteId;
 import org.inspirenxe.strata.api.theme.Theme;
 import org.inspirenxe.strata.api.visual.Visual;
+import org.inspirenxe.strata.core.node.BuiltInComponent;
+import org.inspirenxe.strata.core.node.ComponentFactoryImpl;
 import org.inspirenxe.strata.core.text.TextLine;
 
 import java.util.Objects;
@@ -60,7 +60,7 @@ import java.util.Set;
  * the link text style. That is the hovered one while the link is hovered or focused, or else the link text with an
  * underline when the theme has no hovered link style.</p>
  */
-public final class ButtonImpl extends CustomComponent<Button> implements Button {
+public final class ButtonImpl extends BuiltInComponent<Button> implements Button {
     /**
      * The space between the icon and the caption, in UI units.
      */
@@ -114,7 +114,7 @@ public final class ButtonImpl extends CustomComponent<Button> implements Button 
      * @param text the caption
      */
     @SuppressWarnings("this-escape")
-    public ButtonImpl(final ComponentFactory ui, final Text text) {
+    public ButtonImpl(final ComponentFactoryImpl ui, final Text text) {
         super(ui);
         this.text = Objects.requireNonNull(text, "text");
         this.iconWidth = 16f;

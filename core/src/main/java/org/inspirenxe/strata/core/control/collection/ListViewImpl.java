@@ -15,7 +15,6 @@
  */
 package org.inspirenxe.strata.core.control.collection;
 
-import org.inspirenxe.strata.api.ComponentFactory;
 import org.inspirenxe.strata.api.component.Component;
 import org.inspirenxe.strata.api.control.attribute.item.SelectionMode;
 import org.inspirenxe.strata.api.control.collection.ListView;
@@ -25,7 +24,6 @@ import org.inspirenxe.strata.api.event.input.PointerButtonEvent;
 import org.inspirenxe.strata.api.event.input.PointerEvent;
 import org.inspirenxe.strata.api.event.input.ScrollEvent;
 import org.inspirenxe.strata.api.extension.ArrangeContext;
-import org.inspirenxe.strata.api.extension.CustomComposite;
 import org.inspirenxe.strata.api.extension.MeasureContext;
 import org.inspirenxe.strata.api.extension.Painter;
 import org.inspirenxe.strata.api.geometry.Rect;
@@ -39,6 +37,8 @@ import org.inspirenxe.strata.api.text.TextStyle;
 import org.inspirenxe.strata.api.theme.Paint;
 import org.inspirenxe.strata.api.theme.Theme;
 import org.inspirenxe.strata.core.layout.ScrollTrack;
+import org.inspirenxe.strata.core.node.BuiltInComposite;
+import org.inspirenxe.strata.core.node.ComponentFactoryImpl;
 import org.inspirenxe.strata.core.text.TextLine;
 
 import java.util.ArrayList;
@@ -62,7 +62,7 @@ import java.util.function.IntConsumer;
  *
  * @param <T> the type of the items
  */
-public final class ListViewImpl<T> extends CustomComposite<ListView<T>> implements ListView<T> {
+public final class ListViewImpl<T> extends BuiltInComposite<ListView<T>> implements ListView<T> {
     /**
      * The narrowest a list asks to be, in UI units.
      */
@@ -129,7 +129,7 @@ public final class ListViewImpl<T> extends CustomComposite<ListView<T>> implemen
      * @param cellFactory makes the component for an item's row
      */
     @SuppressWarnings("this-escape")
-    public ListViewImpl(final ComponentFactory ui, final Function<? super T, ? extends Component<?>> cellFactory) {
+    public ListViewImpl(final ComponentFactoryImpl ui, final Function<? super T, ? extends Component<?>> cellFactory) {
         super(ui);
         this.rows = new HashMap<>();
         this.bar = new ScrollTrack(true);

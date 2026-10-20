@@ -15,13 +15,11 @@
  */
 package org.inspirenxe.strata.core.control.button;
 
-import org.inspirenxe.strata.api.ComponentFactory;
 import org.inspirenxe.strata.api.component.CursorKind;
 import org.inspirenxe.strata.api.control.button.CheckBox;
 import org.inspirenxe.strata.api.control.button.CheckState;
 import org.inspirenxe.strata.api.event.input.KeyEvent;
 import org.inspirenxe.strata.api.event.input.PointerButtonEvent;
-import org.inspirenxe.strata.api.extension.CustomComponent;
 import org.inspirenxe.strata.api.extension.MeasureContext;
 import org.inspirenxe.strata.api.extension.Painter;
 import org.inspirenxe.strata.api.geometry.Insets;
@@ -35,6 +33,8 @@ import org.inspirenxe.strata.api.text.TextMetrics;
 import org.inspirenxe.strata.api.text.TextStyle;
 import org.inspirenxe.strata.api.theme.Paint;
 import org.inspirenxe.strata.api.theme.Theme;
+import org.inspirenxe.strata.core.node.BuiltInComponent;
+import org.inspirenxe.strata.core.node.ComponentFactoryImpl;
 import org.inspirenxe.strata.core.text.TextLine;
 
 import java.util.Objects;
@@ -50,7 +50,7 @@ import java.util.Set;
  * <p>Measuring takes the wider and taller of the normal and disabled captions, so enabling or disabling it needs no
  * relayout. Without a fixed box size, the box is the caption's line height plus 8.</p>
  */
-public final class CheckBoxImpl extends CustomComponent<CheckBox> implements CheckBox {
+public final class CheckBoxImpl extends BuiltInComponent<CheckBox> implements CheckBox {
     /**
      * The gap between the box and the caption.
      */
@@ -93,7 +93,7 @@ public final class CheckBoxImpl extends CustomComponent<CheckBox> implements Che
      * @param text the caption
      */
     @SuppressWarnings("this-escape")
-    public CheckBoxImpl(final ComponentFactory ui, final Text text) {
+    public CheckBoxImpl(final ComponentFactoryImpl ui, final Text text) {
         super(ui);
         this.text = Objects.requireNonNull(text, "text");
         this.fixedBoxSize = Float.NaN;

@@ -57,7 +57,8 @@ import java.util.Set;
 import java.util.function.Consumer;
 
 /**
- * Base class for new kinds of component. Strata's own controls are built on it too.
+ * Base class for new kinds of component. Strata's own controls are not built on it, so a component that is an
+ * instance of this class was written outside Strata.
  *
  * <p>Subclass it, implement {@link #measure}, and override the other {@code protected} hooks you need. To let other
  * code see the component as a type of your own, declare an interface that extends {@link Component} and implement
@@ -811,7 +812,7 @@ public abstract class CustomComponent<T extends Component<T>> implements Compone
     /**
      * Moves the component from where its parent's layout puts it, along with everything inside it. Siblings and the
      * parent's size do not change, so this suits dragging, such as moving a window by its title bar. A subclass may
-     * make it public, as {@link org.inspirenxe.strata.api.control.window.Window} does.
+     * make it public, the way {@link org.inspirenxe.strata.api.control.window.Window} exposes its offset.
      *
      * @param offsetX the distance to move right, in UI units; negative moves left
      * @param offsetY the distance to move down, in UI units; negative moves up

@@ -15,7 +15,6 @@
  */
 package org.inspirenxe.strata.core.control.window;
 
-import org.inspirenxe.strata.api.ComponentFactory;
 import org.inspirenxe.strata.api.component.Component;
 import org.inspirenxe.strata.api.component.CursorKind;
 import org.inspirenxe.strata.api.control.window.Window;
@@ -24,7 +23,6 @@ import org.inspirenxe.strata.api.event.input.KeyEvent;
 import org.inspirenxe.strata.api.event.input.PointerButtonEvent;
 import org.inspirenxe.strata.api.event.input.PointerEvent;
 import org.inspirenxe.strata.api.extension.ArrangeContext;
-import org.inspirenxe.strata.api.extension.CustomContainer;
 import org.inspirenxe.strata.api.extension.MeasureContext;
 import org.inspirenxe.strata.api.extension.Painter;
 import org.inspirenxe.strata.api.geometry.Insets;
@@ -41,9 +39,8 @@ import org.inspirenxe.strata.api.text.TextSpan;
 import org.inspirenxe.strata.api.text.TextStyle;
 import org.inspirenxe.strata.api.theme.Paint;
 import org.inspirenxe.strata.api.theme.Theme;
+import org.inspirenxe.strata.core.node.BuiltInContainer;
 import org.inspirenxe.strata.core.node.ComponentFactoryImpl;
-import org.inspirenxe.strata.core.node.ContainerNode;
-import org.inspirenxe.strata.core.node.Node;
 import org.inspirenxe.strata.core.text.TextLine;
 
 import java.util.Objects;
@@ -60,7 +57,7 @@ import java.util.Set;
  * each move of the drag works out the size afresh rather than adding up steps. The grip's six squares are placed
  * during arrange, so painting allocates nothing.</p>
  */
-public final class WindowImpl extends CustomContainer<Window> implements Window {
+public final class WindowImpl extends BuiltInContainer<Window> implements Window {
     /**
      * The width of the close button's area, in UI units.
      */
@@ -76,7 +73,7 @@ public final class WindowImpl extends CustomContainer<Window> implements Window 
     private static final int RIGHT = 4;
     private static final int BOTTOM = 8;
 
-    private final ComponentFactory ui;
+    private final ComponentFactoryImpl ui;
     private Text title;
     private boolean closable;
     private boolean movable;
@@ -130,7 +127,7 @@ public final class WindowImpl extends CustomContainer<Window> implements Window 
      * @param title the title
      */
     @SuppressWarnings("this-escape")
-    public WindowImpl(final ComponentFactory ui, final Text title) {
+    public WindowImpl(final ComponentFactoryImpl ui, final Text title) {
         super(ui);
         this.ui = ui;
         this.title = Objects.requireNonNull(title, "title");
@@ -147,7 +144,7 @@ public final class WindowImpl extends CustomContainer<Window> implements Window 
         this.titleSpan = TextLine.EMPTY;
         this.closeSpan = TextSpan.of("x");
         this.closeHoveredSpan = this.closeSpan;
-        this.containerNode().setDefaultPadding(DEFAULT_PADDING);
+        this.node().setDefaultPadding(DEFAULT_PADDING);
         this.setAnchor(Anchor.CENTER);
     }
 
@@ -409,7 +406,7 @@ public final class WindowImpl extends CustomContainer<Window> implements Window 
     }
 
     private Rect slotInner() {
-        return ((ComponentFactoryImpl) this.ui).nodeOf(this).slot().shrink(this.margin());
+        return this.node().slot().shrink(this.margin());
     }
 
     // ------------------------------------------------------------------
@@ -427,7 +424,7 @@ public final class WindowImpl extends CustomContainer<Window> implements Window 
         this.titleBar = theme.paintOr(STYLE_TITLE_BAR, Paint.NONE);
         this.titleStyle = theme.textStyleOr(STYLE_TITLE_TEXT, TextStyle.DEFAULT);
         this.titlePadding = theme.insetsOr(STYLE_TITLE_PADDING, Insets.of(TITLE_PADDING));
-        this.containerNode().setDefaultPadding(theme.insetsOr(STYLE_PADDING, DEFAULT_PADDING));
+        this.node().setDefaultPadding(theme.insetsOr(STYLE_PADDING, DEFAULT_PADDING));
         this.closeStyle = theme.textStyleOr(STYLE_CLOSE, this.titleStyle);
         this.closeHoveredStyle = theme.textStyleOr(STYLE_CLOSE_HOVERED, this.closeStyle);
         this.gripPaint = theme.paintOr(STYLE_GRIP, Paint.NONE);
@@ -571,8 +568,7 @@ public final class WindowImpl extends CustomContainer<Window> implements Window 
         if (!this.dragging) {
             return;
         }
-        final Node node = ((ComponentFactoryImpl) this.ui).nodeOf(this);
-        final Rect slot = node.slot();
+        final Rect slot = this.node().slot();
         final Rect bounds = this.bounds();
         final float baseX = bounds.x() - this.offsetX();
         final float baseY = bounds.y() - this.offsetY();
@@ -656,9 +652,5 @@ public final class WindowImpl extends CustomContainer<Window> implements Window 
     @Override
     public Window setOffset(final float offsetX, final float offsetY) {
         return super.setOffset(offsetX, offsetY);
-    }
-
-    private ContainerNode containerNode() {
-        return (ContainerNode) ((ComponentFactoryImpl) this.ui).nodeOf(this);
     }
 }

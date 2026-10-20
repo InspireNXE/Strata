@@ -1,0 +1,952 @@
+/*
+ * Copyright (c) InspireNXE <https://github.com/InspireNXE>
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package org.inspirenxe.strata.core.node;
+
+import org.inspirenxe.strata.api.component.Component;
+import org.inspirenxe.strata.api.component.Container;
+import org.inspirenxe.strata.api.component.CursorKind;
+import org.inspirenxe.strata.api.component.Focusable;
+import org.inspirenxe.strata.api.component.HasCursor;
+import org.inspirenxe.strata.api.component.HasTooltip;
+import org.inspirenxe.strata.api.component.Tooltip;
+import org.inspirenxe.strata.api.event.Event;
+import org.inspirenxe.strata.api.event.EventHandler;
+import org.inspirenxe.strata.api.event.EventType;
+import org.inspirenxe.strata.api.event.Subscription;
+import org.inspirenxe.strata.api.event.control.ControlEvent;
+import org.inspirenxe.strata.api.event.control.RequestEvent;
+import org.inspirenxe.strata.api.event.control.ValueEvent;
+import org.inspirenxe.strata.api.event.control.ValueRequestEvent;
+import org.inspirenxe.strata.api.event.input.CharEvent;
+import org.inspirenxe.strata.api.event.input.DragEvent;
+import org.inspirenxe.strata.api.event.input.FocusEvent;
+import org.inspirenxe.strata.api.event.input.InputEvents;
+import org.inspirenxe.strata.api.event.input.KeyEvent;
+import org.inspirenxe.strata.api.event.input.PointerButtonEvent;
+import org.inspirenxe.strata.api.event.input.PointerEvent;
+import org.inspirenxe.strata.api.event.input.ScrollEvent;
+import org.inspirenxe.strata.api.extension.ArrangeContext;
+import org.inspirenxe.strata.api.extension.Environment;
+import org.inspirenxe.strata.api.extension.MeasureContext;
+import org.inspirenxe.strata.api.extension.Painter;
+import org.inspirenxe.strata.api.geometry.Insets;
+import org.inspirenxe.strata.api.geometry.Rect;
+import org.inspirenxe.strata.api.geometry.Size;
+import org.inspirenxe.strata.api.input.TextInputKind;
+import org.inspirenxe.strata.api.layout.HorizontalAlignment;
+import org.inspirenxe.strata.api.layout.VerticalAlignment;
+import org.inspirenxe.strata.api.theme.Border;
+import org.inspirenxe.strata.api.theme.Paint;
+import org.inspirenxe.strata.api.theme.Theme;
+
+import java.util.Objects;
+import java.util.Set;
+import java.util.function.Consumer;
+
+/**
+ * Base class of Strata's own leaf controls, the counterpart of the public
+ * {@link org.inspirenxe.strata.api.extension.CustomComponent} that developers extend. It offers the same hooks and
+ * helpers under the same names, so a control reads the same either way, and adds what only core may use: its own
+ * {@link #node()}, the nodes of other components through {@link #nodeOf}, the host's {@link #hostRoot()}, and the
+ * {@link #onDisabled()} and {@link #onReleased()} hooks.
+ *
+ * <p>The component holds no state of its own. Its constructor makes the {@link Node} behind it and hands it a private
+ * {@link NodeHooks} that calls the protected hooks here; every {@link Component} method is {@code final} and forwards
+ * to that node, the same node class a {@code CustomComponent}'s peer is. Nothing made from this class is an instance
+ * of {@code CustomComponent}, so code can tell Strata's components from a developer's.</p>
+ *
+ * <p>The methods of {@link Focusable}, {@link HasCursor} and {@link HasTooltip} are here too, and the node ignores
+ * them on a subclass that does not declare the interface. A subclass that implements {@link Focusable} starts out
+ * focusable and tabbable.</p>
+ *
+ * @param <T> the type callers see the component as
+ */
+public abstract class BuiltInComponent<T extends Component<T>> implements Component<T> {
+    private final Node node;
+
+    /**
+     * Creates the component and its node.
+     *
+     * @param factory the factory of the host that will show this component
+     */
+    protected BuiltInComponent(final ComponentFactoryImpl factory) {
+        this(factory, false, false);
+    }
+
+    /**
+     * Creates the component with a plain node, or with a {@link ContainerNode} for a composite or container.
+     *
+     * @param factory the factory of the host that will show this component
+     * @param container true to make a container node
+     * @param composite for a container node, true if its children are private parts that stop control events
+     */
+    @SuppressWarnings("this-escape")
+    BuiltInComponent(final ComponentFactoryImpl factory, final boolean container, final boolean composite) {
+        Objects.requireNonNull(factory, "factory");
+        final Hooks hooks = new Hooks();
+        this.node = container ? new ContainerNode(factory, this, hooks, composite) : new Node(factory, this, hooks);
+        if (this instanceof Focusable<?>) {
+            this.node.setFocusable(true);
+            this.node.setTabbable(true);
+        }
+    }
+
+    /**
+     * Returns the node behind this component. {@link ComponentFactoryImpl#nodeOf} reads it without a cast.
+     *
+     * @return the node
+     */
+    protected Node node() {
+        return this.node;
+    }
+
+    /**
+     * Returns the node behind another component of this host, for reaching state its public type does not show,
+     * such as the background of an inner list.
+     *
+     * @param component a component made by this component's factory or a developer's {@code CustomComponent}
+     * @return its node
+     * @throws IllegalArgumentException if the component has no node or belongs to another host
+     */
+    protected final Node nodeOf(final Component<?> component) {
+        return this.node.factory().nodeOf(component);
+    }
+
+    /**
+     * Returns the root of this component's host, which exists whether or not this component is attached.
+     *
+     * @return the root, or {@code null} before the host made it
+     */
+    protected final Root hostRoot() {
+        return this.node.factory().root();
+    }
+
+    /**
+     * Returns whether the focus change being reported comes from a pointer press, so a focus hook can tell a click
+     * from keyboard or code focus. See {@link Root#isFocusFromPress()}.
+     *
+     * @return true while a press moves focus to or from this component; false while it is detached
+     */
+    protected final boolean isFocusFromPress() {
+        final Root root = this.node.root();
+        return root != null && root.isFocusFromPress();
+    }
+
+    /**
+     * Returns this component as the type callers see, for returning from chaining setters.
+     *
+     * @return {@code this}
+     */
+    @SuppressWarnings("unchecked")
+    protected final T self() {
+        return (T) this;
+    }
+
+    /**
+     * Returns text measurement, time and the clipboard of the host. Works before the component is attached.
+     *
+     * @return the host's environment
+     */
+    protected final Environment environment() {
+        return this.node.environment();
+    }
+
+    // ------------------------------------------------------------------
+    // Hooks for subclasses
+    // ------------------------------------------------------------------
+
+    /**
+     * Returns the size the content needs within the given space, as {@code CustomComponent.measure} does.
+     *
+     * @param context text measurement and child measuring
+     * @param availableWidth the width offered, margin removed; may be {@link Float#POSITIVE_INFINITY}
+     * @param availableHeight the height offered, margin removed; may be {@link Float#POSITIVE_INFINITY}
+     * @return the natural size of the content
+     */
+    protected abstract Size measure(MeasureContext context, float availableWidth, float availableHeight);
+
+    /**
+     * Draws the component over its background and border and under its children. The default draws nothing.
+     *
+     * @param painter what to draw with; valid only during this call
+     * @param bounds the component's bounds
+     */
+    protected void paint(final Painter painter, final Rect bounds) {
+    }
+
+    /**
+     * Returns the style keys the host's theme must have to show this component. The default needs none.
+     *
+     * @return the required keys
+     */
+    protected Set<String> requiredStyleKeys() {
+        return Set.of();
+    }
+
+    /**
+     * Reads paints and text styles from the theme, on attach and after every theme change, before the next layout.
+     * The default does nothing.
+     *
+     * @param theme the host's theme
+     */
+    protected void onApplyTheme(final Theme theme) {
+    }
+
+    /**
+     * Returns whether focusing this component starts text input on the engine. The default is false.
+     *
+     * @return true if the component accepts typed text
+     */
+    protected boolean acceptsTextInput() {
+        return false;
+    }
+
+    /**
+     * Returns the kind of text the component takes, which the root passes to the engine when it starts text input.
+     * Read only while {@link #acceptsTextInput()} is true. The default is {@link TextInputKind#TEXT}.
+     *
+     * @return the kind of text
+     */
+    protected TextInputKind textInputKind() {
+        return TextInputKind.TEXT;
+    }
+
+    /**
+     * Called after this component itself was disabled, so it can hide what it shows. Disabling an ancestor instead
+     * takes focus from the component. The default does nothing.
+     */
+    protected void onDisabled() {
+    }
+
+    /**
+     * Called after the root let go of the tree this component is in and the component was not attached again: the
+     * old content after {@link Root#setContent} replaced it, which the host does after {@code Screen.closed()} and on
+     * a rebuild, and an overlay's content after the overlay closed. A component that holds secret text forgets it
+     * here. The default does nothing.
+     */
+    protected void onReleased() {
+    }
+
+    /**
+     * Default behavior for {@link InputEvents#POINTER_ENTER}. The default does nothing.
+     *
+     * @param event the event
+     */
+    protected void onPointerEnter(final PointerEvent event) {
+    }
+
+    /**
+     * Default behavior for {@link InputEvents#POINTER_EXIT}. The default does nothing.
+     *
+     * @param event the event
+     */
+    protected void onPointerExit(final PointerEvent event) {
+    }
+
+    /**
+     * Default behavior for {@link InputEvents#POINTER_MOVE}. The default does nothing.
+     *
+     * @param event the event
+     */
+    protected void onPointerMove(final PointerEvent event) {
+    }
+
+    /**
+     * Default behavior for {@link InputEvents#POINTER_PRESS}. The default does nothing.
+     *
+     * @param event the event
+     */
+    protected void onPointerPress(final PointerButtonEvent event) {
+    }
+
+    /**
+     * Default behavior for {@link InputEvents#POINTER_RELEASE}. The default does nothing.
+     *
+     * @param event the event
+     */
+    protected void onPointerRelease(final PointerButtonEvent event) {
+    }
+
+    /**
+     * Default behavior for {@link InputEvents#CLICK}. The default does nothing.
+     *
+     * @param event the event
+     */
+    protected void onClick(final PointerButtonEvent event) {
+    }
+
+    /**
+     * Default behavior for {@link InputEvents#DRAG_START}. The default does nothing.
+     *
+     * @param event the event
+     */
+    protected void onDragStart(final DragEvent event) {
+    }
+
+    /**
+     * Default behavior for {@link InputEvents#DRAG}. The default does nothing.
+     *
+     * @param event the event
+     */
+    protected void onDrag(final DragEvent event) {
+    }
+
+    /**
+     * Default behavior for {@link InputEvents#DRAG_END}. The default does nothing.
+     *
+     * @param event the event
+     */
+    protected void onDragEnd(final DragEvent event) {
+    }
+
+    /**
+     * Default behavior for {@link InputEvents#SCROLL}. The default does nothing.
+     *
+     * @param event the event
+     */
+    protected void onScroll(final ScrollEvent event) {
+    }
+
+    /**
+     * Default behavior for {@link InputEvents#KEY}. The default does nothing.
+     *
+     * @param event the event
+     */
+    protected void onKey(final KeyEvent event) {
+    }
+
+    /**
+     * Default behavior for {@link InputEvents#CHAR}. The default does nothing.
+     *
+     * @param event the event
+     */
+    protected void onChar(final CharEvent event) {
+    }
+
+    /**
+     * Default behavior for {@link Focusable#FOCUS_GAINED}. The default does nothing.
+     *
+     * @param event the event
+     */
+    protected void onFocusGained(final FocusEvent event) {
+    }
+
+    /**
+     * Default behavior for {@link Focusable#FOCUS_LOST}. The default does nothing.
+     *
+     * @param event the event
+     */
+    protected void onFocusLost(final FocusEvent event) {
+    }
+
+    /**
+     * Default behavior for event types other than those in {@link InputEvents} and the focus events. The default
+     * does nothing.
+     *
+     * @param type the event's type
+     * @param event the event
+     */
+    protected void onOtherEvent(final EventType<?> type, final Event event) {
+    }
+
+    /**
+     * Returns this component's own state for a snapshot, an immutable value without its children's state. Called
+     * only when an event with snapshots captures this component. The default returns null.
+     *
+     * @return the state, or null for none
+     */
+    protected Object snapshotState() {
+        return null;
+    }
+
+    // Overridden by BuiltInComposite
+    void arrangeHook(final ArrangeContext context, final Rect bounds) {
+    }
+
+    void childRemovedHook(final Component<?> child) {
+    }
+
+    Rect childClipHook() {
+        return this.bounds();
+    }
+
+    void paintOverChildrenHook(final Painter painter, final Rect bounds) {
+    }
+
+    void descendantFocusedHook(final Component<?> descendant) {
+    }
+
+    private void handleEvent(final EventType<?> type, final Event event) {
+        if (type == InputEvents.POINTER_ENTER) {
+            this.onPointerEnter((PointerEvent) event);
+        } else if (type == InputEvents.POINTER_EXIT) {
+            this.onPointerExit((PointerEvent) event);
+        } else if (type == InputEvents.POINTER_MOVE) {
+            this.onPointerMove((PointerEvent) event);
+        } else if (type == InputEvents.POINTER_PRESS) {
+            this.onPointerPress((PointerButtonEvent) event);
+        } else if (type == InputEvents.POINTER_RELEASE) {
+            this.onPointerRelease((PointerButtonEvent) event);
+        } else if (type == InputEvents.CLICK) {
+            this.onClick((PointerButtonEvent) event);
+        } else if (type == InputEvents.DRAG_START) {
+            this.onDragStart((DragEvent) event);
+        } else if (type == InputEvents.DRAG) {
+            this.onDrag((DragEvent) event);
+        } else if (type == InputEvents.DRAG_END) {
+            this.onDragEnd((DragEvent) event);
+        } else if (type == InputEvents.SCROLL) {
+            this.onScroll((ScrollEvent) event);
+        } else if (type == InputEvents.KEY) {
+            this.onKey((KeyEvent) event);
+        } else if (type == InputEvents.CHAR) {
+            this.onChar((CharEvent) event);
+        } else if (type == Focusable.FOCUS_GAINED) {
+            this.onFocusGained((FocusEvent) event);
+        } else if (type == Focusable.FOCUS_LOST) {
+            this.onFocusLost((FocusEvent) event);
+        } else {
+            this.onOtherEvent(type, event);
+        }
+    }
+
+    /**
+     * The node's way into the protected hooks. Private, so nothing else can call them.
+     */
+    private final class Hooks implements NodeHooks {
+        @Override
+        public Size measure(final MeasureContext context, final float availableWidth, final float availableHeight) {
+            return BuiltInComponent.this.measure(context, availableWidth, availableHeight);
+        }
+
+        @Override
+        public void arrange(final ArrangeContext context, final Rect bounds) {
+            BuiltInComponent.this.arrangeHook(context, bounds);
+        }
+
+        @Override
+        public void paint(final Painter painter, final Rect bounds) {
+            BuiltInComponent.this.paint(painter, bounds);
+        }
+
+        @Override
+        public Set<String> requiredStyleKeys() {
+            return BuiltInComponent.this.requiredStyleKeys();
+        }
+
+        @Override
+        public void applyTheme(final Theme theme) {
+            BuiltInComponent.this.onApplyTheme(theme);
+        }
+
+        @Override
+        public boolean acceptsTextInput() {
+            return BuiltInComponent.this.acceptsTextInput();
+        }
+
+        @Override
+        public TextInputKind textInputKind() {
+            return BuiltInComponent.this.textInputKind();
+        }
+
+        @Override
+        public void handle(final EventType<?> type, final Event event) {
+            BuiltInComponent.this.handleEvent(type, event);
+        }
+
+        @Override
+        public Object snapshotState() {
+            return BuiltInComponent.this.snapshotState();
+        }
+
+        @Override
+        public void childRemoved(final Component<?> child) {
+            BuiltInComponent.this.childRemovedHook(child);
+        }
+
+        @Override
+        public Rect childClip() {
+            return BuiltInComponent.this.childClipHook();
+        }
+
+        @Override
+        public void paintOverChildren(final Painter painter, final Rect bounds) {
+            BuiltInComponent.this.paintOverChildrenHook(painter, bounds);
+        }
+
+        @Override
+        public void descendantFocused(final Component<?> descendant) {
+            BuiltInComponent.this.descendantFocusedHook(descendant);
+        }
+
+        @Override
+        public void disabled() {
+            BuiltInComponent.this.onDisabled();
+        }
+
+        @Override
+        public void released() {
+            BuiltInComponent.this.onReleased();
+        }
+    }
+
+    // ------------------------------------------------------------------
+    // Component, forwarded to the node. Documented on Component.
+    // ------------------------------------------------------------------
+
+    @Override
+    public final Container<?> parent() {
+        return this.node.parent();
+    }
+
+    @Override
+    public final boolean isAttached() {
+        return this.node.isAttached();
+    }
+
+    @Override
+    public final boolean isVisible() {
+        return this.node.isVisible();
+    }
+
+    @Override
+    public final T setVisible(final boolean visible) {
+        this.node.setVisible(visible);
+        return this.self();
+    }
+
+    @Override
+    public final boolean isEnabled() {
+        return this.node.isEnabled();
+    }
+
+    @Override
+    public final T setEnabled(final boolean enabled) {
+        this.node.setEnabled(enabled);
+        return this.self();
+    }
+
+    @Override
+    public final Insets margin() {
+        return this.node.margin();
+    }
+
+    @Override
+    public final T setMargin(final Insets margin) {
+        this.node.setMargin(margin);
+        return this.self();
+    }
+
+    @Override
+    public final float minWidth() {
+        return this.node.minWidth();
+    }
+
+    @Override
+    public final float maxWidth() {
+        return this.node.maxWidth();
+    }
+
+    @Override
+    public final float minHeight() {
+        return this.node.minHeight();
+    }
+
+    @Override
+    public final float maxHeight() {
+        return this.node.maxHeight();
+    }
+
+    @Override
+    public final T setMinSize(final float minWidth, final float minHeight) {
+        this.node.setMinSize(minWidth, minHeight);
+        return this.self();
+    }
+
+    @Override
+    public final T setMaxSize(final float maxWidth, final float maxHeight) {
+        this.node.setMaxSize(maxWidth, maxHeight);
+        return this.self();
+    }
+
+    @Override
+    public final T setWidth(final float width) {
+        this.node.setWidth(width);
+        return this.self();
+    }
+
+    @Override
+    public final T setHeight(final float height) {
+        this.node.setHeight(height);
+        return this.self();
+    }
+
+    @Override
+    public final HorizontalAlignment horizontalAlignment() {
+        return this.node.horizontalAlignment();
+    }
+
+    @Override
+    public final VerticalAlignment verticalAlignment() {
+        return this.node.verticalAlignment();
+    }
+
+    @Override
+    public final T setAlignment(final HorizontalAlignment horizontal, final VerticalAlignment vertical) {
+        this.node.setAlignment(horizontal, vertical);
+        return this.self();
+    }
+
+    @Override
+    public final Rect bounds() {
+        return this.node.bounds();
+    }
+
+    @Override
+    public final float desiredWidth() {
+        return this.node.desiredWidth();
+    }
+
+    @Override
+    public final float desiredHeight() {
+        return this.node.desiredHeight();
+    }
+
+    @Override
+    public final <E extends Event> T onEvent(final EventType<E> type, final int priority,
+                                             final EventHandler<? super E> handler) {
+        this.node.subscribe(type, priority, handler);
+        return this.self();
+    }
+
+    @Override
+    public final <E extends Event> Subscription subscribe(final EventType<E> type, final int priority,
+                                                          final EventHandler<? super E> handler) {
+        return this.node.subscribe(type, priority, handler);
+    }
+
+    // ------------------------------------------------------------------
+    // Focusable, HasCursor and HasTooltip, for subclasses that declare them. The node ignores these on the rest.
+    // ------------------------------------------------------------------
+
+    /**
+     * Returns whether the component can take keyboard focus. See {@link Focusable#isFocusable()}.
+     *
+     * @return true if focusable; always false unless the subclass implements {@link Focusable}
+     */
+    public final boolean isFocusable() {
+        return this.node.isFocusable();
+    }
+
+    /**
+     * Sets whether the component can take keyboard focus. See {@link Focusable#setFocusable(boolean)}.
+     *
+     * @param focusable false to refuse focus
+     * @return this component
+     */
+    public final T setFocusable(final boolean focusable) {
+        this.node.setFocusable(focusable);
+        return this.self();
+    }
+
+    /**
+     * Returns whether Tab and Shift+Tab stop at this component. See {@link Focusable#isTabbable()}.
+     *
+     * @return true if tabbable
+     */
+    public final boolean isTabbable() {
+        return this.node.isTabbable();
+    }
+
+    /**
+     * Sets whether Tab and Shift+Tab stop at this component. See {@link Focusable#setTabbable(boolean)}.
+     *
+     * @param tabbable false to leave the component out of tab order
+     * @return this component
+     */
+    public final T setTabbable(final boolean tabbable) {
+        this.node.setTabbable(tabbable);
+        return this.self();
+    }
+
+    /**
+     * Returns the tab index. See {@link Focusable#tabIndex()}.
+     *
+     * @return the tab index; 0 by default
+     */
+    public final int tabIndex() {
+        return this.node.tabIndex();
+    }
+
+    /**
+     * Sets the tab index. See {@link Focusable#setTabIndex(int)}.
+     *
+     * @param tabIndex the tab index
+     * @return this component
+     */
+    public final T setTabIndex(final int tabIndex) {
+        this.node.setTabIndex(tabIndex);
+        return this.self();
+    }
+
+    /**
+     * Returns whether this component has keyboard focus. See {@link Focusable#isFocused()}.
+     *
+     * @return true while focused
+     */
+    public final boolean isFocused() {
+        return this.node.isFocused();
+    }
+
+    /**
+     * Asks the host to give this component keyboard focus. See {@link Focusable#requestFocus()}.
+     *
+     * @return true if the component now has focus; always false unless the subclass implements {@link Focusable}
+     */
+    public final boolean requestFocus() {
+        return this.node.requestFocus();
+    }
+
+    /**
+     * Returns the cursor shown over this component. See {@link HasCursor#cursor()}.
+     *
+     * @return the cursor, or {@code null} to use the nearest ancestor's
+     */
+    public final CursorKind cursor() {
+        return this.node.cursor();
+    }
+
+    /**
+     * Sets the cursor shown over this component. See {@link HasCursor#setCursor(CursorKind)}.
+     *
+     * @param cursor the cursor, or {@code null} to use the nearest ancestor's
+     * @return this component
+     */
+    public final T setCursor(final CursorKind cursor) {
+        this.node.setCursor(cursor);
+        return this.self();
+    }
+
+    /**
+     * Returns the tooltip. See {@link HasTooltip#tooltip()}.
+     *
+     * @return the tooltip, or {@code null} for none
+     */
+    public final Tooltip tooltip() {
+        return this.node.tooltip();
+    }
+
+    /**
+     * Sets the tooltip. See {@link HasTooltip#setTooltip(Tooltip)}.
+     *
+     * @param tooltip the tooltip, or {@code null} for none
+     * @return this component
+     */
+    public final T setTooltip(final Tooltip tooltip) {
+        this.node.setTooltip(tooltip);
+        return this.self();
+    }
+
+    // ------------------------------------------------------------------
+    // State for the subclass's own use
+    // ------------------------------------------------------------------
+
+    /**
+     * Returns the theme applied to this component, for reading styles outside {@link #onApplyTheme}.
+     *
+     * @return the host's theme, or {@code null} before the component is first attached
+     */
+    protected final Theme theme() {
+        return this.node.theme();
+    }
+
+    /**
+     * Returns whether the pointer is over this component and not over a child of it.
+     *
+     * @return true while hovered
+     */
+    protected final boolean isHovered() {
+        return this.node.isHovered();
+    }
+
+    /**
+     * Returns whether the pointer is over this component or any of its descendants.
+     *
+     * @return true while this component or a descendant is hovered
+     */
+    protected final boolean isHoverWithin() {
+        return this.node.isHoverWithin();
+    }
+
+    /**
+     * Returns whether a mouse button went down on this component and has not been released yet.
+     *
+     * @return true while pressed
+     */
+    protected final boolean isPressed() {
+        return this.node.isPressed();
+    }
+
+    /**
+     * Returns the horizontal offset.
+     *
+     * @return how far the component is moved right of where layout puts it; 0 by default
+     */
+    protected float offsetX() {
+        return this.node.offsetX();
+    }
+
+    /**
+     * Returns the vertical offset.
+     *
+     * @return how far the component is moved down from where layout puts it; 0 by default
+     */
+    protected float offsetY() {
+        return this.node.offsetY();
+    }
+
+    /**
+     * Moves the component from where its parent's layout puts it, along with everything inside it, and arranges it
+     * again. A subclass may make this public, as the window does.
+     *
+     * @param offsetX the distance to move right, in UI units
+     * @param offsetY the distance to move down, in UI units
+     * @return this component
+     */
+    protected T setOffset(final float offsetX, final float offsetY) {
+        this.node.setOffset(offsetX, offsetY);
+        return this.self();
+    }
+
+    /**
+     * Returns the background paint.
+     *
+     * @return the background; {@link Paint#NONE} by default
+     */
+    protected Paint background() {
+        return this.node.background();
+    }
+
+    /**
+     * Sets the paint drawn over the component's bounds before anything else of it.
+     *
+     * @param background the background, or {@link Paint#NONE} for none
+     * @return this component
+     */
+    protected T setBackground(final Paint background) {
+        this.node.setBackground(background);
+        return this.self();
+    }
+
+    /**
+     * Returns the border.
+     *
+     * @return the border; {@link Border#NONE} by default
+     */
+    protected Border border() {
+        return this.node.border();
+    }
+
+    /**
+     * Sets the lines drawn along the inside of the component's edges, over its background and under its content.
+     *
+     * @param border the border, or {@link Border#NONE} for none
+     * @return this component
+     */
+    protected T setBorder(final Border border) {
+        this.node.setBorder(border);
+        return this.self();
+    }
+
+    /**
+     * Schedules a new layout before the next frame. Call it whenever something that {@link #measure} reads changes.
+     */
+    protected final void invalidateLayout() {
+        this.node.invalidateLayout();
+    }
+
+    /**
+     * Fires a request without a value through this component's path, for the user's actions only. Fires nothing and
+     * returns true when no handler for the type is on the path.
+     *
+     * @param type the request type
+     * @return true if the component should go ahead, false if a handler canceled the request
+     * @throws IllegalArgumentException if the type carries a value
+     */
+    protected final boolean request(final EventType<? extends RequestEvent<?>> type) {
+        return this.node.request(type);
+    }
+
+    /**
+     * Fires a value request through this component's path, for the user's actions only, then applies the final
+     * value unless a handler canceled the request. Applies the value at once when no handler for the type is on the
+     * path.
+     *
+     * @param <V> the value type
+     * @param type the request type
+     * @param value the value the user's action produced
+     * @param apply makes the change with the final value; not called if the request was canceled
+     */
+    protected final <V> void request(final EventType<? extends ValueRequestEvent<?, V>> type, final V value,
+                                     final Consumer<? super V> apply) {
+        this.node.request(type, value, apply);
+    }
+
+    /**
+     * Fires a report without a value through this component's path, after the fact. Fires nothing when no handler
+     * for the type is on the path.
+     *
+     * @param type the report type
+     * @throws IllegalArgumentException if the type carries a value
+     */
+    protected final void report(final EventType<? extends ControlEvent<?>> type) {
+        this.node.report(type);
+    }
+
+    /**
+     * Fires a value report through this component's path, after the change. Fires nothing when no handler for the
+     * type is on the path.
+     *
+     * @param <V> the value type
+     * @param type the report type
+     * @param value the value after the change
+     * @param previous the value before the change
+     */
+    protected final <V> void report(final EventType<? extends ValueEvent<?, V>> type, final V value,
+                                    final V previous) {
+        this.node.report(type, value, previous);
+    }
+
+    /**
+     * Returns whether a handler for a type is on this component's path, so work only an event needs can be skipped.
+     *
+     * @param type the event type
+     * @return true if firing the type would reach a handler
+     */
+    protected final boolean isHandled(final EventType<?> type) {
+        return this.node.isHandled(type);
+    }
+
+    /**
+     * Returns the class name, for debugging.
+     *
+     * @return for example {@code ButtonImpl}
+     */
+    @Override
+    public String toString() {
+        return this.getClass().getSimpleName();
+    }
+}

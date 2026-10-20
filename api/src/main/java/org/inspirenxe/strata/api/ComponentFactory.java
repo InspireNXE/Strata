@@ -82,6 +82,9 @@ import java.util.function.Function;
  * <p>Each call returns a new component, detached and with default settings. Call factories on the UI thread
  * only.</p>
  *
+ * <p>What the factory makes is Strata's own and is never an instance of
+ * {@link org.inspirenxe.strata.api.extension.CustomComponent}; a component that is one was written outside Strata.</p>
+ *
  * <p>Strata provides the factory. Do not implement this interface.</p>
  */
 public interface ComponentFactory {

@@ -15,19 +15,19 @@
  */
 package org.inspirenxe.strata.core.layout;
 
-import org.inspirenxe.strata.api.ComponentFactory;
-import org.inspirenxe.strata.api.extension.CustomComponent;
 import org.inspirenxe.strata.api.extension.MeasureContext;
 import org.inspirenxe.strata.api.geometry.Size;
 import org.inspirenxe.strata.api.layout.Anchor;
 import org.inspirenxe.strata.api.layout.Spacer;
+import org.inspirenxe.strata.core.node.BuiltInComponent;
+import org.inspirenxe.strata.core.node.ComponentFactoryImpl;
 
 /**
  * The core {@link Spacer}. It measures as 0 by 0, so its fixed size, minimum size or slot decides how big it is, and
  * it paints nothing beyond the background and border every component has. It stretches on both axes by default, so
  * it fills a weighted share without being told to.
  */
-public final class SpacerImpl extends CustomComponent<Spacer> implements Spacer {
+public final class SpacerImpl extends BuiltInComponent<Spacer> implements Spacer {
 
     /**
      * Creates a stretched spacer with no size.
@@ -35,7 +35,7 @@ public final class SpacerImpl extends CustomComponent<Spacer> implements Spacer 
      * @param ui the factory that owns the spacer
      */
     @SuppressWarnings("this-escape")
-    public SpacerImpl(final ComponentFactory ui) {
+    public SpacerImpl(final ComponentFactoryImpl ui) {
         super(ui);
         this.setAnchor(Anchor.FILL);
     }

@@ -55,6 +55,8 @@ import org.inspirenxe.strata.api.control.window.MessageBox;
 import org.inspirenxe.strata.api.control.window.Window;
 import org.inspirenxe.strata.api.event.input.InputEvents;
 import org.inspirenxe.strata.api.extension.CustomComponent;
+import org.inspirenxe.strata.api.extension.CustomComposite;
+import org.inspirenxe.strata.api.extension.CustomContainer;
 import org.inspirenxe.strata.api.extension.Environment;
 import org.inspirenxe.strata.api.extension.peer.ComponentHooks;
 import org.inspirenxe.strata.api.extension.peer.ComponentPeer;
@@ -123,8 +125,10 @@ import java.util.function.Function;
 import java.util.function.Supplier;
 
 /**
- * The component factory for one host. It also guards the tree: {@link #nodeOf} is how core turns a public component
- * back into its node, and it rejects any component Strata did not make, or that another host's factory made.
+ * The component factory for one host. Everything it makes is a {@link BuiltInComponent}. It also guards the tree:
+ * {@link #nodeOf} is how core turns a public component back into its node, whether Strata made it or a developer
+ * wrote it on {@link CustomComponent}, and it rejects any component without a node, or that another host's factory
+ * made.
  */
 public final class ComponentFactoryImpl implements ComponentFactory {
     /**
@@ -455,18 +459,36 @@ public final class ComponentFactoryImpl implements ComponentFactory {
         return new ColorPickerImpl(this);
     }
 
+    /**
+     * Makes the node behind a developer's {@link CustomComponent}.
+     *
+     * @param owner the component
+     * @param hooks the component's hooks
+     * @return a new {@link Node}
+     */
     @Override
     public ComponentPeer createPeer(final CustomComponent<?> owner, final ComponentHooks hooks) {
-        return new Node(this, owner, hooks);
-    }
-
-    @Override
-    public ContainerPeer createContainerPeer(final CustomComponent<?> owner, final ComponentHooks hooks) {
-        return new ContainerNode(this, owner, hooks);
+        return new Node(this, owner, new ExtensionHooks(hooks));
     }
 
     /**
-     * Returns the node behind a component. Every core path that takes a public component goes through here.
+     * Makes the node behind a developer's {@link CustomComposite} or {@link CustomContainer}. The children of a
+     * composite that is not a container are private parts, whose control events stop at it.
+     *
+     * @param owner the component
+     * @param hooks the component's hooks
+     * @return a new {@link ContainerNode}
+     */
+    @Override
+    public ContainerPeer createContainerPeer(final CustomComponent<?> owner, final ComponentHooks hooks) {
+        return new ContainerNode(this, owner, new ExtensionHooks(hooks),
+                owner instanceof CustomComposite<?> && !(owner instanceof CustomContainer<?>));
+    }
+
+    /**
+     * Returns the node behind a component. Every core path that takes a public component goes through here. It
+     * accepts Strata's own components, which extend {@link BuiltInComponent}, and a developer's, which extend
+     * {@link CustomComponent} and have a node as their peer.
      *
      * @param component the component
      * @return its node
@@ -475,7 +497,12 @@ public final class ComponentFactoryImpl implements ComponentFactory {
      */
     public Node nodeOf(final Component<?> component) {
         Objects.requireNonNull(component, "component");
-        if (!(component instanceof CustomComponent<?> custom) || !(custom.peer() instanceof Node node)) {
+        final Node node;
+        if (component instanceof BuiltInComponent<?> builtIn) {
+            node = builtIn.node();
+        } else if (component instanceof CustomComponent<?> custom && custom.peer() instanceof Node peer) {
+            node = peer;
+        } else {
             throw new IllegalArgumentException(component.getClass().getName() + " has no Strata implementation behind it. "
                     + "Make components with ComponentFactory, or extend CustomComponent; do not implement component interfaces directly.");
         }

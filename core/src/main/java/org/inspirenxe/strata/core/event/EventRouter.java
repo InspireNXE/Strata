@@ -17,9 +17,6 @@ package org.inspirenxe.strata.core.event;
 
 import org.inspirenxe.strata.api.component.ComponentSnapshot;
 import org.inspirenxe.strata.api.event.EventType;
-import org.inspirenxe.strata.api.extension.CustomComponent;
-import org.inspirenxe.strata.api.extension.CustomComposite;
-import org.inspirenxe.strata.api.extension.CustomContainer;
 import org.inspirenxe.strata.core.node.Node;
 
 /**
@@ -86,7 +83,7 @@ public final class EventRouter {
      * @return the next node, or {@code null}
      */
     public static Node next(final Node node, final Node target, final boolean input) {
-        if (!input && node != target && EventRouter.isComposite(node) && !EventRouter.fromContent(target, node)) {
+        if (!input && node != target && node.isComposite() && !EventRouter.fromContent(target, node)) {
             return null;
         }
         return node.parentNode();
@@ -99,11 +96,6 @@ public final class EventRouter {
             }
         }
         return false;
-    }
-
-    private static boolean isComposite(final Node node) {
-        final CustomComponent<?> facade = node.facade();
-        return facade instanceof CustomComposite<?> && !(facade instanceof CustomContainer<?>);
     }
 
     private static void takeSnapshots(final EventType<?> type, final EventImpl event, final Node target) {

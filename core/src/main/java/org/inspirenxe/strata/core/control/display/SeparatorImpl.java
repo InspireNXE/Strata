@@ -15,9 +15,7 @@
  */
 package org.inspirenxe.strata.core.control.display;
 
-import org.inspirenxe.strata.api.ComponentFactory;
 import org.inspirenxe.strata.api.control.display.Separator;
-import org.inspirenxe.strata.api.extension.CustomComponent;
 import org.inspirenxe.strata.api.extension.MeasureContext;
 import org.inspirenxe.strata.api.extension.Painter;
 import org.inspirenxe.strata.api.geometry.Rect;
@@ -27,6 +25,8 @@ import org.inspirenxe.strata.api.layout.Orientation;
 import org.inspirenxe.strata.api.layout.VerticalAlignment;
 import org.inspirenxe.strata.api.theme.Paint;
 import org.inspirenxe.strata.api.theme.Theme;
+import org.inspirenxe.strata.core.node.BuiltInComponent;
+import org.inspirenxe.strata.core.node.ComponentFactoryImpl;
 
 import java.util.Objects;
 import java.util.Set;
@@ -34,7 +34,7 @@ import java.util.Set;
 /**
  * The core {@link Separator}. A new one stretches along its line and sits at the start of the other axis.
  */
-public final class SeparatorImpl extends CustomComponent<Separator> implements Separator {
+public final class SeparatorImpl extends BuiltInComponent<Separator> implements Separator {
     private static final Set<String> REQUIRED = Set.of(STYLE_LINE);
 
     private Orientation orientation;
@@ -48,7 +48,7 @@ public final class SeparatorImpl extends CustomComponent<Separator> implements S
      * @param orientation which way the line runs
      */
     @SuppressWarnings("this-escape")
-    public SeparatorImpl(final ComponentFactory ui, final Orientation orientation) {
+    public SeparatorImpl(final ComponentFactoryImpl ui, final Orientation orientation) {
         super(ui);
         this.thickness = 1f;
         this.line = Paint.NONE;

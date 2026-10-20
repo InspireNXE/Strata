@@ -15,7 +15,6 @@
  */
 package org.inspirenxe.strata.core.control.field;
 
-import org.inspirenxe.strata.api.ComponentFactory;
 import org.inspirenxe.strata.api.component.CursorKind;
 import org.inspirenxe.strata.api.control.field.TextArea;
 import org.inspirenxe.strata.api.control.field.TextBox;
@@ -24,7 +23,6 @@ import org.inspirenxe.strata.api.event.input.DragEvent;
 import org.inspirenxe.strata.api.event.input.KeyEvent;
 import org.inspirenxe.strata.api.event.input.PointerButtonEvent;
 import org.inspirenxe.strata.api.event.input.ScrollEvent;
-import org.inspirenxe.strata.api.extension.CustomComponent;
 import org.inspirenxe.strata.api.extension.MeasureContext;
 import org.inspirenxe.strata.api.extension.Painter;
 import org.inspirenxe.strata.api.geometry.Insets;
@@ -41,6 +39,8 @@ import org.inspirenxe.strata.api.text.TextStyle;
 import org.inspirenxe.strata.api.theme.Paint;
 import org.inspirenxe.strata.api.theme.Theme;
 import org.inspirenxe.strata.core.layout.ScrollTrack;
+import org.inspirenxe.strata.core.node.BuiltInComponent;
+import org.inspirenxe.strata.core.node.ComponentFactoryImpl;
 import org.inspirenxe.strata.core.text.StyledText;
 
 import java.util.Arrays;
@@ -72,7 +72,7 @@ import java.util.Set;
  * <p>The text is a {@code PlainBuffer}, and code point and word boundaries come from {@code TextBoundaries}, which
  * the text box and the password box share; the rows are the area's own.</p>
  */
-public final class TextAreaImpl extends CustomComponent<TextArea> implements TextArea {
+public final class TextAreaImpl extends BuiltInComponent<TextArea> implements TextArea {
     /**
      * How many lines one wheel notch scrolls.
      */
@@ -176,7 +176,7 @@ public final class TextAreaImpl extends CustomComponent<TextArea> implements Tex
      * @param ui the factory that owns the text area
      */
     @SuppressWarnings("this-escape")
-    public TextAreaImpl(final ComponentFactory ui) {
+    public TextAreaImpl(final ComponentFactoryImpl ui) {
         super(ui);
         this.buffer = new PlainBuffer();
         this.boundaries = new TextBoundaries(this.buffer, false);

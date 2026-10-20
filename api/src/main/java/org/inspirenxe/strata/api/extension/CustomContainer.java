@@ -26,9 +26,9 @@ import org.inspirenxe.strata.api.theme.Paint;
 import java.util.List;
 
 /**
- * Base class for new layouts: a {@link CustomComposite} whose children callers add and remove. Strata's
- * {@code AnchorPanel}, {@code StackPanel}, {@code GridPanel}, {@code AbsolutePanel} and {@code ScrollPanel} are
- * built on it.
+ * Base class for new layouts: a {@link CustomComposite} whose children callers add and remove, as they do with
+ * Strata's own {@code AnchorPanel}, {@code StackPanel}, {@code GridPanel}, {@code AbsolutePanel} and
+ * {@code ScrollPanel}.
  *
  * <pre>{@code
  * // Lays children out in a row from right to left

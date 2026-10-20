@@ -15,16 +15,16 @@
  */
 package org.inspirenxe.strata.core.layout;
 
-import org.inspirenxe.strata.api.ComponentFactory;
 import org.inspirenxe.strata.api.component.Component;
 import org.inspirenxe.strata.api.extension.ArrangeContext;
-import org.inspirenxe.strata.api.extension.CustomContainer;
 import org.inspirenxe.strata.api.extension.MeasureContext;
 import org.inspirenxe.strata.api.geometry.Insets;
 import org.inspirenxe.strata.api.geometry.Rect;
 import org.inspirenxe.strata.api.geometry.Size;
 import org.inspirenxe.strata.api.layout.GridLength;
 import org.inspirenxe.strata.api.layout.GridPanel;
+import org.inspirenxe.strata.core.node.BuiltInContainer;
+import org.inspirenxe.strata.core.node.ComponentFactoryImpl;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -48,7 +48,7 @@ import java.util.Objects;
  * definitions has one track on that axis, which fills the content box. A cell or span past the last track is
  * clamped to fit.</p>
  */
-public final class GridPanelImpl extends CustomContainer<GridPanel> implements GridPanel {
+public final class GridPanelImpl extends BuiltInContainer<GridPanel> implements GridPanel {
     private final List<GridLength> columns;
     private final List<GridLength> rows;
     private final Map<Component<?>, Cell> cells;
@@ -67,7 +67,7 @@ public final class GridPanelImpl extends CustomContainer<GridPanel> implements G
      *
      * @param ui the factory that owns the grid
      */
-    public GridPanelImpl(final ComponentFactory ui) {
+    public GridPanelImpl(final ComponentFactoryImpl ui) {
         super(ui);
         this.columns = new ArrayList<>();
         this.rows = new ArrayList<>();

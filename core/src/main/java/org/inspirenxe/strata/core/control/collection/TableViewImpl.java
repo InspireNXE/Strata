@@ -26,8 +26,6 @@ import org.inspirenxe.strata.api.control.collection.TableView;
 import org.inspirenxe.strata.api.event.input.PointerButtonEvent;
 import org.inspirenxe.strata.api.event.input.PointerEvent;
 import org.inspirenxe.strata.api.extension.ArrangeContext;
-import org.inspirenxe.strata.api.extension.CustomComponent;
-import org.inspirenxe.strata.api.extension.CustomComposite;
 import org.inspirenxe.strata.api.extension.MeasureContext;
 import org.inspirenxe.strata.api.extension.Painter;
 import org.inspirenxe.strata.api.geometry.Insets;
@@ -42,6 +40,8 @@ import org.inspirenxe.strata.api.text.TextStyle;
 import org.inspirenxe.strata.api.theme.Paint;
 import org.inspirenxe.strata.api.theme.Theme;
 import org.inspirenxe.strata.core.control.Rings;
+import org.inspirenxe.strata.core.node.BuiltInComponent;
+import org.inspirenxe.strata.core.node.BuiltInComposite;
 import org.inspirenxe.strata.core.node.ComponentFactoryImpl;
 import org.inspirenxe.strata.core.text.TextLine;
 
@@ -62,7 +62,7 @@ import java.util.function.Function;
  *
  * @param <T> the type of the items
  */
-public final class TableViewImpl<T> extends CustomComposite<TableView<T>> implements TableView<T> {
+public final class TableViewImpl<T> extends BuiltInComposite<TableView<T>> implements TableView<T> {
     /**
      * The space between a title and its column's edges when the theme sets no {@value #STYLE_HEADER_PADDING}:
      * {@value ComponentFactory#CELL_PADDING} at the sides.
@@ -75,7 +75,7 @@ public final class TableViewImpl<T> extends CustomComposite<TableView<T>> implem
     public static final float ARROW_ROOM = Rings.ARROW_LONG + 4f;
     private static final Set<String> REQUIRED = Set.of(STYLE_HEADER);
 
-    private final ComponentFactory ui;
+    private final ComponentFactoryImpl ui;
     private Insets headerPadding = DEFAULT_HEADER_PADDING;
     private final List<TableColumnImpl<T>> columns;
     private final ListViewImpl<T> list;
@@ -103,7 +103,7 @@ public final class TableViewImpl<T> extends CustomComposite<TableView<T>> implem
      * @param ui the factory that owns the table
      */
     @SuppressWarnings("this-escape")
-    public TableViewImpl(final ComponentFactory ui) {
+    public TableViewImpl(final ComponentFactoryImpl ui) {
         super(ui);
         this.ui = ui;
         this.columns = new ArrayList<>();
@@ -521,7 +521,7 @@ public final class TableViewImpl<T> extends CustomComposite<TableView<T>> implem
         final float headHeight = ListView.DEFAULT_ROW_HEIGHT;
         final Rect body = new Rect(bounds.x(), bounds.y() + headHeight, bounds.width(), Math.max(0f, bounds.height() - headHeight));
         this.layoutColumns(context.text(), this.list.rowWidthFor(body));
-        this.rowsX = body.x() + ((ComponentFactoryImpl) this.ui).nodeOf(this.list).border().widths().left();
+        this.rowsX = body.x() + this.nodeOf(this.list).border().widths().left();
         context.arrange(this.header, new Rect(bounds.x(), bounds.y(), bounds.width(), headHeight));
         context.arrange(this.list, body);
     }
@@ -574,12 +574,12 @@ public final class TableViewImpl<T> extends CustomComposite<TableView<T>> implem
     /**
      * The column titles. Sortable titles show the hand cursor while the pointer is over the header.
      */
-    private static final class Header extends CustomComponent<Header> implements HasCursor<Header> {
+    private static final class Header extends BuiltInComponent<Header> implements HasCursor<Header> {
         private final TableViewImpl<?> table;
         private float pointerX;
         private float lineHeight;
 
-        Header(final ComponentFactory ui, final TableViewImpl<?> table) {
+        Header(final ComponentFactoryImpl ui, final TableViewImpl<?> table) {
             super(ui);
             this.table = table;
             this.setAnchor(Anchor.FILL);
@@ -648,12 +648,12 @@ public final class TableViewImpl<T> extends CustomComposite<TableView<T>> implem
     /**
      * One body row: a cell per column, each in its column's span and the row's height.
      */
-    private static final class Row<T> extends CustomComposite<Row<T>> {
+    private static final class Row<T> extends BuiltInComposite<Row<T>> {
         private final TableViewImpl<T> table;
         private final List<Component<?>> cells;
 
         @SuppressWarnings("this-escape")
-        Row(final ComponentFactory ui, final TableViewImpl<T> table, final T item) {
+        Row(final ComponentFactoryImpl ui, final TableViewImpl<T> table, final T item) {
             super(ui);
             this.table = table;
             this.cells = new ArrayList<>();

@@ -15,16 +15,16 @@
  */
 package org.inspirenxe.strata.core.layout;
 
-import org.inspirenxe.strata.api.ComponentFactory;
 import org.inspirenxe.strata.api.component.Component;
 import org.inspirenxe.strata.api.extension.ArrangeContext;
-import org.inspirenxe.strata.api.extension.CustomContainer;
 import org.inspirenxe.strata.api.extension.MeasureContext;
 import org.inspirenxe.strata.api.geometry.Insets;
 import org.inspirenxe.strata.api.geometry.Rect;
 import org.inspirenxe.strata.api.geometry.Size;
 import org.inspirenxe.strata.api.layout.Orientation;
 import org.inspirenxe.strata.api.layout.StackPanel;
+import org.inspirenxe.strata.core.node.BuiltInContainer;
+import org.inspirenxe.strata.core.node.ComponentFactoryImpl;
 
 import java.util.IdentityHashMap;
 import java.util.Map;
@@ -39,7 +39,7 @@ import java.util.Objects;
  * spans the whole content box across the axis. Hidden children take no space and add no spacing. Spreading widens
  * the gaps only when no visible child has a weight.
  */
-public final class StackPanelImpl extends CustomContainer<StackPanel> implements StackPanel {
+public final class StackPanelImpl extends BuiltInContainer<StackPanel> implements StackPanel {
     private final Map<Component<?>, Float> weights;
     private Orientation orientation;
     private float spacing;
@@ -51,7 +51,7 @@ public final class StackPanelImpl extends CustomContainer<StackPanel> implements
      * @param ui the factory that owns the panel
      * @param orientation the stacking direction
      */
-    public StackPanelImpl(final ComponentFactory ui, final Orientation orientation) {
+    public StackPanelImpl(final ComponentFactoryImpl ui, final Orientation orientation) {
         super(ui);
         this.orientation = Objects.requireNonNull(orientation, "orientation");
         this.weights = new IdentityHashMap<>();

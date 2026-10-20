@@ -15,7 +15,6 @@
  */
 package org.inspirenxe.strata.core.control.pane;
 
-import org.inspirenxe.strata.api.ComponentFactory;
 import org.inspirenxe.strata.api.component.CursorKind;
 import org.inspirenxe.strata.api.component.HasCursor;
 import org.inspirenxe.strata.api.component.HasTooltip;
@@ -24,8 +23,6 @@ import org.inspirenxe.strata.api.control.pane.TabBar;
 import org.inspirenxe.strata.api.event.input.KeyEvent;
 import org.inspirenxe.strata.api.event.input.PointerButtonEvent;
 import org.inspirenxe.strata.api.extension.ArrangeContext;
-import org.inspirenxe.strata.api.extension.CustomComponent;
-import org.inspirenxe.strata.api.extension.CustomComposite;
 import org.inspirenxe.strata.api.extension.MeasureContext;
 import org.inspirenxe.strata.api.extension.Painter;
 import org.inspirenxe.strata.api.geometry.Insets;
@@ -38,6 +35,9 @@ import org.inspirenxe.strata.api.text.TextMetrics;
 import org.inspirenxe.strata.api.text.TextStyle;
 import org.inspirenxe.strata.api.theme.Paint;
 import org.inspirenxe.strata.api.theme.Theme;
+import org.inspirenxe.strata.core.node.BuiltInComponent;
+import org.inspirenxe.strata.core.node.BuiltInComposite;
+import org.inspirenxe.strata.core.node.ComponentFactoryImpl;
 import org.inspirenxe.strata.core.text.TextLine;
 
 import java.util.ArrayList;
@@ -52,14 +52,14 @@ import java.util.Set;
  * asks for its text plus 8 units on each side. Tabs stay enabled as components even when they cannot be selected,
  * so a disabled tab still shows its tooltip.
  */
-public final class TabBarImpl extends CustomComposite<TabBar> implements TabBar {
+public final class TabBarImpl extends BuiltInComposite<TabBar> implements TabBar {
     /**
      * The space around a tab's text, in UI units, when the theme sets no {@value #STYLE_PADDING}.
      */
     public static final Insets DEFAULT_PADDING = new Insets(8f, 4f, 8f, 3f);
     private static final Set<String> REQUIRED = Set.of(STYLE_NORMAL, STYLE_SELECTED);
 
-    private final ComponentFactory ui;
+    private final ComponentFactoryImpl ui;
     private final List<TabView> views;
     private int selectedIndex;
     private float spacing;
@@ -70,7 +70,7 @@ public final class TabBarImpl extends CustomComposite<TabBar> implements TabBar 
      * @param ui the factory that owns the bar
      */
     @SuppressWarnings("this-escape")
-    public TabBarImpl(final ComponentFactory ui) {
+    public TabBarImpl(final ComponentFactoryImpl ui) {
         super(ui);
         this.ui = ui;
         this.views = new ArrayList<>();
@@ -266,7 +266,7 @@ public final class TabBarImpl extends CustomComposite<TabBar> implements TabBar 
     /**
      * The component that draws one tab. It stretches over the slot the bar gives it.
      */
-    private static final class TabView extends CustomComponent<TabView> implements HasCursor<TabView>,
+    private static final class TabView extends BuiltInComponent<TabView> implements HasCursor<TabView>,
             HasTooltip<TabView> {
         private final TabBarImpl bar;
         private final TabImpl tab;
@@ -287,7 +287,7 @@ public final class TabBarImpl extends CustomComposite<TabBar> implements TabBar 
         private float textWidth;
 
         @SuppressWarnings("this-escape")
-        TabView(final ComponentFactory ui, final TabBarImpl bar, final TabImpl tab) {
+        TabView(final ComponentFactoryImpl ui, final TabBarImpl bar, final TabImpl tab) {
             super(ui);
             this.bar = bar;
             this.tab = tab;

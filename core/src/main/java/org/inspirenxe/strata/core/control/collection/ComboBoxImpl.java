@@ -15,14 +15,12 @@
  */
 package org.inspirenxe.strata.core.control.collection;
 
-import org.inspirenxe.strata.api.ComponentFactory;
 import org.inspirenxe.strata.api.component.CursorKind;
 import org.inspirenxe.strata.api.control.collection.ComboBox;
 import org.inspirenxe.strata.api.control.collection.ListView;
 import org.inspirenxe.strata.api.control.display.Label;
 import org.inspirenxe.strata.api.event.input.KeyEvent;
 import org.inspirenxe.strata.api.event.input.PointerButtonEvent;
-import org.inspirenxe.strata.api.extension.CustomComponent;
 import org.inspirenxe.strata.api.extension.MeasureContext;
 import org.inspirenxe.strata.api.extension.Painter;
 import org.inspirenxe.strata.api.geometry.Insets;
@@ -39,6 +37,7 @@ import org.inspirenxe.strata.api.text.TextOverflow;
 import org.inspirenxe.strata.api.text.TextStyle;
 import org.inspirenxe.strata.api.theme.Paint;
 import org.inspirenxe.strata.api.theme.Theme;
+import org.inspirenxe.strata.core.node.BuiltInComponent;
 import org.inspirenxe.strata.core.node.ComponentFactoryImpl;
 import org.inspirenxe.strata.core.text.TextLine;
 
@@ -62,7 +61,7 @@ import java.util.function.Function;
  *
  * @param <T> the type of the options
  */
-public final class ComboBoxImpl<T> extends CustomComponent<ComboBox<T>> implements ComboBox<T> {
+public final class ComboBoxImpl<T> extends BuiltInComponent<ComboBox<T>> implements ComboBox<T> {
     /**
      * The padding when the theme sets no {@value #STYLE_PADDING}: 4 at the sides and 3 at the top and bottom.
      */
@@ -77,7 +76,7 @@ public final class ComboBoxImpl<T> extends CustomComponent<ComboBox<T>> implemen
     public static final float ARROW_WIDTH = 7f;
     private static final Set<String> REQUIRED = Set.of(STYLE_NORMAL, STYLE_POPUP);
 
-    private final ComponentFactory ui;
+    private final ComponentFactoryImpl ui;
     private Insets padding = DEFAULT_PADDING;
     private List<T> options;
     private Function<? super T, ?> labelFunction;
@@ -111,7 +110,7 @@ public final class ComboBoxImpl<T> extends CustomComponent<ComboBox<T>> implemen
      * @param labelFunction returns the text for an option
      */
     @SuppressWarnings("this-escape")
-    public ComboBoxImpl(final ComponentFactory ui, final Function<? super T, ?> labelFunction) {
+    public ComboBoxImpl(final ComponentFactoryImpl ui, final Function<? super T, ?> labelFunction) {
         super(ui);
         this.ui = ui;
         this.options = List.of();
@@ -265,7 +264,7 @@ public final class ComboBoxImpl<T> extends CustomComponent<ComboBox<T>> implemen
         options.setRowHeight(rowHeight);
         options.setActivateOnClick(true);
         options.setItems(this.options);
-        ((ComponentFactoryImpl) this.ui).nodeOf(options).setBackground(this.popupPaint);
+        this.nodeOf(options).setBackground(this.popupPaint);
         options.setMinSize(this.bounds().width(), 0f);
         options.setHeight(rowHeight * Math.min(this.maxVisible, this.options.size()));
         if (this.selectedIndex >= 0) {
@@ -322,7 +321,7 @@ public final class ComboBoxImpl<T> extends CustomComponent<ComboBox<T>> implemen
     }
 
     private Label cell(final T option) {
-        final Label label = ((ComponentFactoryImpl) this.ui).cellPadded(
+        final Label label = this.ui.cellPadded(
                 this.ui.label(this.ui.appearances().nameOf(this.labelFunction.apply(option))).setStyle(this.textStyle), false);
         label.setOverflow(TextOverflow.ELLIPSIS);
         label.setAnchor(Anchor.MIDDLE_LEFT);

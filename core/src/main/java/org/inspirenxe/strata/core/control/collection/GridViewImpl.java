@@ -15,14 +15,12 @@
  */
 package org.inspirenxe.strata.core.control.collection;
 
-import org.inspirenxe.strata.api.ComponentFactory;
 import org.inspirenxe.strata.api.component.HasTooltip;
 import org.inspirenxe.strata.api.component.Component;
 import org.inspirenxe.strata.api.component.Tooltip;
 import org.inspirenxe.strata.api.control.collection.GridView;
 import org.inspirenxe.strata.api.event.input.PointerButtonEvent;
 import org.inspirenxe.strata.api.extension.ArrangeContext;
-import org.inspirenxe.strata.api.extension.CustomComposite;
 import org.inspirenxe.strata.api.extension.MeasureContext;
 import org.inspirenxe.strata.api.extension.Painter;
 import org.inspirenxe.strata.api.geometry.Insets;
@@ -31,6 +29,7 @@ import org.inspirenxe.strata.api.geometry.Size;
 import org.inspirenxe.strata.api.input.MouseButton;
 import org.inspirenxe.strata.api.theme.Paint;
 import org.inspirenxe.strata.api.theme.Theme;
+import org.inspirenxe.strata.core.node.BuiltInComposite;
 import org.inspirenxe.strata.core.node.ComponentFactoryImpl;
 
 import java.util.ArrayList;
@@ -47,7 +46,7 @@ import java.util.function.Function;
  *
  * @param <T> the type of the items
  */
-public final class GridViewImpl<T> extends CustomComposite<GridView<T>> implements GridView<T> {
+public final class GridViewImpl<T> extends BuiltInComposite<GridView<T>> implements GridView<T> {
     /**
      * How far a slot's content sits in from its edges when the theme sets no {@value #STYLE_CELL_PADDING}: 1 on
      * every side.
@@ -55,7 +54,7 @@ public final class GridViewImpl<T> extends CustomComposite<GridView<T>> implemen
     public static final Insets DEFAULT_CELL_PADDING = Insets.of(1f);
     private static final Set<String> REQUIRED = Set.of(STYLE_CELL);
 
-    private final ComponentFactory ui;
+    private final ComponentFactoryImpl ui;
     private final List<Slot<T>> slots;
     private List<T> items;
     private Function<? super T, ? extends Component<?>> cellFactory;
@@ -81,7 +80,7 @@ public final class GridViewImpl<T> extends CustomComposite<GridView<T>> implemen
      * @param cellFactory makes the component shown in a filled slot
      */
     @SuppressWarnings("this-escape")
-    public GridViewImpl(final ComponentFactory ui, final Function<? super T, ? extends Component<?>> cellFactory) {
+    public GridViewImpl(final ComponentFactoryImpl ui, final Function<? super T, ? extends Component<?>> cellFactory) {
         super(ui);
         this.ui = ui;
         this.slots = new ArrayList<>();
@@ -272,7 +271,7 @@ public final class GridViewImpl<T> extends CustomComposite<GridView<T>> implemen
     @Override
     public int hoveredIndex() {
         for (final Slot<T> slot : this.slots) {
-            if (((ComponentFactoryImpl) this.ui).nodeOf(slot).isHoverWithin()) {
+            if (this.nodeOf(slot).isHoverWithin()) {
                 return slot.index;
             }
         }
@@ -368,12 +367,12 @@ public final class GridViewImpl<T> extends CustomComposite<GridView<T>> implemen
     /**
      * One slot and its cell, if it holds an item.
      */
-    private static final class Slot<T> extends CustomComposite<Slot<T>> implements HasTooltip<Slot<T>> {
+    private static final class Slot<T> extends BuiltInComposite<Slot<T>> implements HasTooltip<Slot<T>> {
         private final GridViewImpl<T> grid;
         private final int index;
         private Component<?> content;
 
-        Slot(final ComponentFactory ui, final GridViewImpl<T> grid, final int index) {
+        Slot(final ComponentFactoryImpl ui, final GridViewImpl<T> grid, final int index) {
             super(ui);
             this.grid = grid;
             this.index = index;

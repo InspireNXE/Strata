@@ -15,7 +15,6 @@
  */
 package org.inspirenxe.strata.core.control.field;
 
-import org.inspirenxe.strata.api.ComponentFactory;
 import org.inspirenxe.strata.api.component.CursorKind;
 import org.inspirenxe.strata.api.component.HasCursor;
 import org.inspirenxe.strata.api.component.HasTooltip;
@@ -28,8 +27,6 @@ import org.inspirenxe.strata.api.event.input.FocusEvent;
 import org.inspirenxe.strata.api.event.input.KeyEvent;
 import org.inspirenxe.strata.api.event.input.PointerButtonEvent;
 import org.inspirenxe.strata.api.extension.ArrangeContext;
-import org.inspirenxe.strata.api.extension.CustomComponent;
-import org.inspirenxe.strata.api.extension.CustomComposite;
 import org.inspirenxe.strata.api.extension.Environment;
 import org.inspirenxe.strata.api.extension.MeasureContext;
 import org.inspirenxe.strata.api.extension.Painter;
@@ -48,8 +45,9 @@ import org.inspirenxe.strata.api.text.TextSpan;
 import org.inspirenxe.strata.api.text.TextStyle;
 import org.inspirenxe.strata.api.theme.Paint;
 import org.inspirenxe.strata.api.theme.Theme;
+import org.inspirenxe.strata.core.node.BuiltInComponent;
+import org.inspirenxe.strata.core.node.BuiltInComposite;
 import org.inspirenxe.strata.core.node.ComponentFactoryImpl;
-import org.inspirenxe.strata.core.node.SecretHolder;
 import org.inspirenxe.strata.core.text.TextLine;
 
 import java.util.Arrays;
@@ -80,16 +78,17 @@ import java.util.function.IntPredicate;
  * canceled, so the box never needs a second copy of its text to fall back to. Every change reports
  * {@link PasswordTextBox#MODIFIED} with the lengths. Core never logs the text or a typed code point.</p>
  *
- * <p>The root wipes the box through {@link SecretHolder} after the screen that holds it closes or rebuilds and after
- * the overlay that holds it closes, and the node tells it when it is disabled.</p>
+ * <p>The box wipes itself in {@link #onReleased()}, which the root calls after the screen that holds it closes or
+ * rebuilds and after the overlay that holds it closes, and hides its text in {@link #onDisabled()} when it is
+ * disabled.</p>
  */
-public final class PasswordTextBoxImpl extends CustomComposite<PasswordTextBox> implements PasswordTextBox, SecretHolder {
+public final class PasswordTextBoxImpl extends BuiltInComposite<PasswordTextBox> implements PasswordTextBox {
     /**
      * The space, in UI units, between the text and the eye.
      */
     public static final float REVEAL_GAP = 2f;
 
-    private final ComponentFactory ui;
+    private final ComponentFactoryImpl ui;
     private final SecretBuffer buffer;
     private final LineEditor editor;
     private final RevealEye eye;
@@ -135,7 +134,7 @@ public final class PasswordTextBoxImpl extends CustomComposite<PasswordTextBox> 
      * @param ui the factory that owns the box
      */
     @SuppressWarnings("this-escape")
-    public PasswordTextBoxImpl(final ComponentFactory ui) {
+    public PasswordTextBoxImpl(final ComponentFactoryImpl ui) {
         super(ui);
         this.ui = ui;
         this.buffer = new SecretBuffer();
@@ -259,7 +258,7 @@ public final class PasswordTextBoxImpl extends CustomComposite<PasswordTextBox> 
     }
 
     @Override
-    public void wipe() {
+    protected void onReleased() {
         this.buffer.clear();
         this.editor.place(0);
         this.fromCode = false;
@@ -269,7 +268,7 @@ public final class PasswordTextBoxImpl extends CustomComposite<PasswordTextBox> 
     }
 
     @Override
-    public void disabled() {
+    protected void onDisabled() {
         this.setRevealed(false);
         this.eye.sync();
     }
@@ -593,8 +592,7 @@ public final class PasswordTextBoxImpl extends CustomComposite<PasswordTextBox> 
 
     @Override
     protected void onFocusGained(final FocusEvent event) {
-        this.editor.focusGained(this.selectAllOnFocus,
-                ((ComponentFactoryImpl) this.ui).nodeOf(this).root().isFocusFromPress());
+        this.editor.focusGained(this.selectAllOnFocus, this.isFocusFromPress());
     }
 
     @Override
@@ -876,7 +874,7 @@ public final class PasswordTextBoxImpl extends CustomComposite<PasswordTextBox> 
      * The eye at the right end of the box: a private child, so it has its own hover, an arrow cursor and a tooltip.
      * It cannot take focus.
      */
-    private static final class RevealEye extends CustomComponent<RevealEye> implements HasCursor<RevealEye>,
+    private static final class RevealEye extends BuiltInComponent<RevealEye> implements HasCursor<RevealEye>,
             HasTooltip<RevealEye> {
         // An eye on a grid nine squares wide, as runs of {row, first column, column after the last}
         private static final int[][] EYE = {
@@ -906,7 +904,7 @@ public final class PasswordTextBoxImpl extends CustomComposite<PasswordTextBox> 
         private Rect[] slashRects;
 
         @SuppressWarnings("this-escape")
-        RevealEye(final ComponentFactory ui, final PasswordTextBoxImpl box) {
+        RevealEye(final ComponentFactoryImpl ui, final PasswordTextBoxImpl box) {
             super(ui);
             this.box = box;
             this.show = Tooltip.text(Text.translatable("strata.password.show"));

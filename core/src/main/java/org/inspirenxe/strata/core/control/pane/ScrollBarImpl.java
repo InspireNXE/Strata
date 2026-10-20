@@ -15,7 +15,6 @@
  */
 package org.inspirenxe.strata.core.control.pane;
 
-import org.inspirenxe.strata.api.ComponentFactory;
 import org.inspirenxe.strata.api.component.CursorKind;
 import org.inspirenxe.strata.api.control.pane.ScrollBar;
 import org.inspirenxe.strata.api.event.input.DragEvent;
@@ -23,7 +22,6 @@ import org.inspirenxe.strata.api.event.input.KeyEvent;
 import org.inspirenxe.strata.api.event.input.PointerButtonEvent;
 import org.inspirenxe.strata.api.event.input.PointerEvent;
 import org.inspirenxe.strata.api.event.input.ScrollEvent;
-import org.inspirenxe.strata.api.extension.CustomComponent;
 import org.inspirenxe.strata.api.extension.MeasureContext;
 import org.inspirenxe.strata.api.extension.Painter;
 import org.inspirenxe.strata.api.geometry.Rect;
@@ -34,6 +32,8 @@ import org.inspirenxe.strata.api.layout.ScrollPanel;
 import org.inspirenxe.strata.api.theme.Paint;
 import org.inspirenxe.strata.api.theme.Theme;
 import org.inspirenxe.strata.core.layout.ScrollTrack;
+import org.inspirenxe.strata.core.node.BuiltInComponent;
+import org.inspirenxe.strata.core.node.ComponentFactoryImpl;
 
 import java.util.Objects;
 import java.util.Set;
@@ -43,7 +43,7 @@ import java.util.Set;
  * and the text area use, so a standalone bar and theirs look alike. The thumb's rectangle is worked out again only
  * when the bounds, the range, the visible amount or the offset changed, so painting allocates nothing.
  */
-public final class ScrollBarImpl extends CustomComponent<ScrollBar> implements ScrollBar {
+public final class ScrollBarImpl extends BuiltInComponent<ScrollBar> implements ScrollBar {
     /**
      * The desired length along the bar, in UI units.
      */
@@ -85,7 +85,7 @@ public final class ScrollBarImpl extends CustomComponent<ScrollBar> implements S
      * @param ui the factory that owns the bar
      */
     @SuppressWarnings("this-escape")
-    public ScrollBarImpl(final ComponentFactory ui) {
+    public ScrollBarImpl(final ComponentFactoryImpl ui) {
         super(ui);
         // The content a bar scrolls usually takes the keys, so the bar takes focus only when asked to
         this.setFocusable(false);

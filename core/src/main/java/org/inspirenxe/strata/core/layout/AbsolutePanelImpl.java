@@ -15,15 +15,15 @@
  */
 package org.inspirenxe.strata.core.layout;
 
-import org.inspirenxe.strata.api.ComponentFactory;
 import org.inspirenxe.strata.api.component.Component;
 import org.inspirenxe.strata.api.extension.ArrangeContext;
-import org.inspirenxe.strata.api.extension.CustomContainer;
 import org.inspirenxe.strata.api.extension.MeasureContext;
 import org.inspirenxe.strata.api.geometry.Insets;
 import org.inspirenxe.strata.api.geometry.Rect;
 import org.inspirenxe.strata.api.geometry.Size;
 import org.inspirenxe.strata.api.layout.AbsolutePanel;
+import org.inspirenxe.strata.core.node.BuiltInContainer;
+import org.inspirenxe.strata.core.node.ComponentFactoryImpl;
 
 import java.util.IdentityHashMap;
 import java.util.Map;
@@ -33,7 +33,7 @@ import java.util.Map;
  * position. A child added without a position sits at the content box's origin. The panel's desired size reaches the
  * right and bottom edges of its farthest child, plus padding.
  */
-public final class AbsolutePanelImpl extends CustomContainer<AbsolutePanel> implements AbsolutePanel {
+public final class AbsolutePanelImpl extends BuiltInContainer<AbsolutePanel> implements AbsolutePanel {
     private static final Position ORIGIN = new Position(0f, 0f);
 
     private final Map<Component<?>, Position> positions;
@@ -43,7 +43,7 @@ public final class AbsolutePanelImpl extends CustomContainer<AbsolutePanel> impl
      *
      * @param ui the factory that owns the panel
      */
-    public AbsolutePanelImpl(final ComponentFactory ui) {
+    public AbsolutePanelImpl(final ComponentFactoryImpl ui) {
         super(ui);
         this.positions = new IdentityHashMap<>();
     }

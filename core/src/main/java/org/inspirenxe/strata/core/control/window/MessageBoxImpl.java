@@ -15,7 +15,6 @@
  */
 package org.inspirenxe.strata.core.control.window;
 
-import org.inspirenxe.strata.api.ComponentFactory;
 import org.inspirenxe.strata.api.component.Component;
 import org.inspirenxe.strata.api.control.attribute.popup.Closable;
 import org.inspirenxe.strata.api.control.button.Button;
@@ -24,7 +23,6 @@ import org.inspirenxe.strata.api.control.window.MessageBox;
 import org.inspirenxe.strata.api.control.window.Window;
 import org.inspirenxe.strata.api.event.input.KeyEvent;
 import org.inspirenxe.strata.api.extension.ArrangeContext;
-import org.inspirenxe.strata.api.extension.CustomComposite;
 import org.inspirenxe.strata.api.extension.MeasureContext;
 import org.inspirenxe.strata.api.geometry.Insets;
 import org.inspirenxe.strata.api.geometry.Rect;
@@ -37,6 +35,8 @@ import org.inspirenxe.strata.api.layout.VerticalAlignment;
 import org.inspirenxe.strata.api.overlay.Overlay;
 import org.inspirenxe.strata.api.text.Text;
 import org.inspirenxe.strata.api.theme.Theme;
+import org.inspirenxe.strata.core.node.BuiltInComposite;
+import org.inspirenxe.strata.core.node.ComponentFactoryImpl;
 
 import java.util.EnumMap;
 import java.util.Map;
@@ -47,7 +47,7 @@ import java.util.Objects;
  * of buttons, each {@link #BUTTON_WIDTH} units wide, 4 units apart. The box itself is centered and the window fills
  * it. An Escape press sent to the box itself, as when its dialog has nothing focused, counts as one on the window.
  */
-public final class MessageBoxImpl extends CustomComposite<MessageBox> implements MessageBox {
+public final class MessageBoxImpl extends BuiltInComposite<MessageBox> implements MessageBox {
     /**
      * The width of each button, in UI units.
      */
@@ -58,7 +58,7 @@ public final class MessageBoxImpl extends CustomComposite<MessageBox> implements
      */
     public static final Insets DEFAULT_PADDING = Insets.of(4f);
 
-    private final ComponentFactory ui;
+    private final ComponentFactoryImpl ui;
     private final WindowImpl window;
     private final Map<Result, Button> buttons;
     private final Map<Result, Text> captions;
@@ -77,7 +77,7 @@ public final class MessageBoxImpl extends CustomComposite<MessageBox> implements
      * @param buttonSet which buttons it has
      */
     @SuppressWarnings("this-escape")
-    public MessageBoxImpl(final ComponentFactory ui, final Text title, final Text message,
+    public MessageBoxImpl(final ComponentFactoryImpl ui, final Text title, final Text message,
                           final Buttons buttonSet) {
         super(ui);
         this.ui = ui;

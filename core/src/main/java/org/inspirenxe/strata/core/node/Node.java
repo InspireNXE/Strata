@@ -31,9 +31,7 @@ import org.inspirenxe.strata.api.event.control.ControlEvent;
 import org.inspirenxe.strata.api.event.control.RequestEvent;
 import org.inspirenxe.strata.api.event.control.ValueEvent;
 import org.inspirenxe.strata.api.event.control.ValueRequestEvent;
-import org.inspirenxe.strata.api.extension.CustomComponent;
 import org.inspirenxe.strata.api.extension.Environment;
-import org.inspirenxe.strata.api.extension.peer.ComponentHooks;
 import org.inspirenxe.strata.api.extension.peer.ComponentPeer;
 import org.inspirenxe.strata.api.geometry.Insets;
 import org.inspirenxe.strata.api.geometry.Rect;
@@ -62,8 +60,9 @@ import java.util.function.Function;
 
 /**
  * Core's half of every component: state, layout bookkeeping and event routing. The public object is the
- * {@link #facade()}, a {@link CustomComponent} whose {@code final} methods delegate here. Core reaches the facade's
- * protected hooks only through {@link ComponentHooks}.
+ * {@link #facade()}, whose {@code final} {@link Component} methods forward here: a {@link BuiltInComponent} for
+ * Strata's own components, or a developer's {@code CustomComponent}, for which this node is the peer. Core reaches the
+ * facade's protected hooks only through the hooks object the facade hands its node.
  *
  * <p>A new node is visible, enabled, not focusable and not tabbable, with tab index 0, no cursor, no margin, no
  * size limits, no fixed size, left and top alignment, no offset, no background, no border and no tooltip.</p>
@@ -82,9 +81,8 @@ public class Node implements ComponentPeer {
     protected static final float UNSET = Float.NaN;
 
     private final ComponentFactoryImpl ui;
-    private final CustomComponent<?> facade;
-    private final ComponentHooks hooks;
-    @SuppressWarnings("rawtypes")
+    private final Component<?> facade;
+    private final NodeHooks hooks;
 
     private ContainerNode parent;
     private Root root;
@@ -137,13 +135,14 @@ public class Node implements ComponentPeer {
     private Rect lastSlot;
 
     /**
-     * Creates the node behind a component. Only {@link ComponentFactoryImpl#createPeer} and subclasses call this.
+     * Creates the node behind a component. {@link ComponentFactoryImpl#createPeer}, {@link BuiltInComponent} and
+     * {@link ContainerNode} call this.
      *
      * @param ui the factory that owns the component
      * @param facade the public component this node implements
      * @param hooks the component's protected hooks
      */
-    public Node(final ComponentFactoryImpl ui, final CustomComponent<?> facade, final ComponentHooks hooks) {
+    Node(final ComponentFactoryImpl ui, final Component<?> facade, final NodeHooks hooks) {
         this.ui = Objects.requireNonNull(ui, "ui");
         this.facade = Objects.requireNonNull(facade, "facade");
         this.hooks = Objects.requireNonNull(hooks, "hooks");
@@ -181,7 +180,7 @@ public class Node implements ComponentPeer {
      *
      * @return the component
      */
-    public final CustomComponent<?> facade() {
+    public final Component<?> facade() {
         return this.facade;
     }
 
@@ -190,8 +189,18 @@ public class Node implements ComponentPeer {
      *
      * @return the hooks
      */
-    protected final ComponentHooks hooks() {
+    final NodeHooks hooks() {
         return this.hooks;
+    }
+
+    /**
+     * Returns whether this node's children are a composite's private parts, whose control events stop here unless
+     * they came out of content. See {@link org.inspirenxe.strata.core.event.EventRouter#next}.
+     *
+     * @return false for a leaf; {@link ContainerNode} answers for itself
+     */
+    public boolean isComposite() {
+        return false;
     }
 
     // ------------------------------------------------------------------
@@ -534,8 +543,9 @@ public class Node implements ComponentPeer {
     }
 
     /**
-     * Records the component's current state, its own only, with the component's
-     * {@code CustomComponent.snapshotState} as the {@linkplain ComponentSnapshot#state() state}. {@link EventRouter} calls this before an event that has snapshots reaches any handler.
+     * Records the component's current state, its own only, with the component's {@code snapshotState} hook as the
+     * {@linkplain ComponentSnapshot#state() state}. {@link EventRouter} calls this before an event that has snapshots
+     * reaches any handler.
      *
      * @return a new snapshot
      */
@@ -548,7 +558,7 @@ public class Node implements ComponentPeer {
 
     /**
      * Returns whether this node was added to its parent as content, which control events from inside it carry past
-     * every composite above. See {@code CustomComposite.addContent}.
+     * every composite above. See {@link BuiltInComposite#addContent} and {@code CustomComposite.addContent}.
      *
      * @return true if added as content
      */
@@ -582,8 +592,7 @@ public class Node implements ComponentPeer {
     }
 
     /**
-     * Runs this component's default behavior for an input event: the matching {@code on...} hook of its
-     * {@code CustomComponent}.
+     * Runs this component's default behavior for an input event: the matching {@code on...} hook of its facade.
      *
      * @param type the event type
      * @param event the event, of the class that {@code type} describes
@@ -671,6 +680,13 @@ public class Node implements ComponentPeer {
         if (root.theme() != null) {
             this.applyTheme(root.theme());
         }
+    }
+
+    /**
+     * Tells the component that the root let go of its tree for good. See {@link BuiltInComponent#onReleased()}.
+     */
+    final void released() {
+        this.hooks.released();
     }
 
     final void detach() {
@@ -769,8 +785,8 @@ public class Node implements ComponentPeer {
         if (this.enabled != enabled) {
             this.enabled = enabled;
             this.treeChanged();
-            if (!enabled && this.facade instanceof SecretHolder holder) {
-                holder.disabled();
+            if (!enabled) {
+                this.hooks.disabled();
             }
         }
     }

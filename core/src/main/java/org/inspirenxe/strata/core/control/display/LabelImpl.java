@@ -15,9 +15,7 @@
  */
 package org.inspirenxe.strata.core.control.display;
 
-import org.inspirenxe.strata.api.ComponentFactory;
 import org.inspirenxe.strata.api.control.display.Label;
-import org.inspirenxe.strata.api.extension.CustomComponent;
 import org.inspirenxe.strata.api.extension.MeasureContext;
 import org.inspirenxe.strata.api.extension.Painter;
 import org.inspirenxe.strata.api.geometry.Rect;
@@ -29,6 +27,8 @@ import org.inspirenxe.strata.api.text.TextOverflow;
 import org.inspirenxe.strata.api.text.TextSpan;
 import org.inspirenxe.strata.api.text.TextStyle;
 import org.inspirenxe.strata.api.theme.Theme;
+import org.inspirenxe.strata.core.node.BuiltInComponent;
+import org.inspirenxe.strata.core.node.ComponentFactoryImpl;
 import org.inspirenxe.strata.core.text.RichText;
 import org.inspirenxe.strata.core.text.TextWrap;
 
@@ -45,7 +45,7 @@ import java.util.Objects;
  * <p>With {@link TextOverflow#ELLIPSIS}, the shortened lines are worked out when the bounds' width changes and kept
  * until the next change, so painting allocates nothing in between.</p>
  */
-public final class LabelImpl extends CustomComponent<Label> implements Label {
+public final class LabelImpl extends BuiltInComponent<Label> implements Label {
     private Text text;
     private TextStyle explicitStyle;
     private TextStyle themeStyle;
@@ -75,7 +75,7 @@ public final class LabelImpl extends CustomComponent<Label> implements Label {
      * @param ui the factory that owns the label
      * @param text the text, with {@code \n} for line breaks
      */
-    public LabelImpl(final ComponentFactory ui, final Text text) {
+    public LabelImpl(final ComponentFactoryImpl ui, final Text text) {
         super(ui);
         this.text = Objects.requireNonNull(text, "text");
         this.themeStyle = TextStyle.DEFAULT;

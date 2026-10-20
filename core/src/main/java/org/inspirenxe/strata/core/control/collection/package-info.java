@@ -15,7 +15,7 @@
  */
 /**
  * The implementations of the controls in {@link org.inspirenxe.strata.api.control.collection}. Each one extends
- * {@link org.inspirenxe.strata.api.extension.CustomComponent} or one of its subclasses and reaches the node tree
- * only through the public extension hooks, the same ones a developer's own component gets.
+ * {@link org.inspirenxe.strata.core.node.BuiltInComponent} or one of its subclasses, core's counterparts of the
+ * public extension bases, which give it the same hooks a developer's component gets and direct access to its node.
  */
 package org.inspirenxe.strata.core.control.collection;

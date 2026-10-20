@@ -22,8 +22,6 @@ import org.inspirenxe.strata.api.control.field.Spinner;
 import org.inspirenxe.strata.api.control.field.TextArea;
 import org.inspirenxe.strata.api.control.field.TextBox;
 import org.inspirenxe.strata.api.event.control.ValueRequestEvent;
-import org.inspirenxe.strata.api.extension.CustomComposite;
-import org.inspirenxe.strata.api.extension.CustomContainer;
 import org.inspirenxe.strata.api.input.Key;
 import org.inspirenxe.strata.api.input.KeyAction;
 import org.inspirenxe.strata.api.input.Modifier;
@@ -31,6 +29,8 @@ import org.inspirenxe.strata.api.input.Modifiers;
 import org.inspirenxe.strata.api.input.MouseButton;
 import org.inspirenxe.strata.api.input.ScrollKind;
 import org.inspirenxe.strata.api.layout.AbsolutePanel;
+import org.inspirenxe.strata.core.node.BuiltInComposite;
+import org.inspirenxe.strata.core.node.BuiltInContainer;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
@@ -534,8 +534,8 @@ class FieldEventsTest {
             assertEquals(3d, this.spinner.value());
             assertEquals(List.of("changed 9.0", "changed 3.0"), outside);
             assertEquals(List.of("", "9", "3"), composite);
-            assertInstanceOf(CustomComposite.class, this.spinner);
-            assertFalse(this.spinner instanceof CustomContainer<?>);
+            assertInstanceOf(BuiltInComposite.class, this.spinner);
+            assertFalse(this.spinner instanceof BuiltInContainer<?>);
         }
     }
 }
