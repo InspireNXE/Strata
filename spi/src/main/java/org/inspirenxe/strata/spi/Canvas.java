@@ -76,6 +76,37 @@ public interface Canvas {
     void sprite(SpriteId sprite, Rect rect, int tint);
 
     /**
+     * Draws part of a sprite stretched over a rectangle. The part is given in fractions of the whole image, from 0
+     * at its left or top edge to 1 at its right or bottom edge, so callers need not know its pixel size. The host
+     * draws sized nine-slices and tiled sprites from these calls when the engine stores no slicing with its
+     * images.
+     *
+     * <p>The default draws the whole sprite with {@link #sprite}, scaled and moved so the part lands on the
+     * rectangle, inside a clip of the rectangle. Override it when the engine can draw part of an image directly:
+     * at scales that are not whole numbers, pixels next to the part can show at the clip's edge, and pieces drawn
+     * side by side then show seams.</p>
+     *
+     * @param sprite the sprite
+     * @param rect the area
+     * @param u0 the left edge of the part, from 0 to 1
+     * @param v0 the top edge of the part, from 0 to 1
+     * @param u1 the right edge of the part, greater than {@code u0}
+     * @param v1 the bottom edge of the part, greater than {@code v0}
+     * @param tint an ARGB color multiplied with the sprite's pixels
+     */
+    default void spriteRegion(final SpriteId sprite, final Rect rect, final float u0, final float v0,
+                              final float u1, final float v1, final int tint) {
+        final float scaleX = rect.width() / (u1 - u0);
+        final float scaleY = rect.height() / (v1 - v0);
+        this.pushClip(rect);
+        try {
+            this.sprite(sprite, new Rect(rect.x() - u0 * scaleX, rect.y() - v0 * scaleY, scaleX, scaleY), tint);
+        } finally {
+            this.popClip();
+        }
+    }
+
+    /**
      * Draws a sprite as a nine-slice over a rectangle: the corners at their native size, the edges stretched along
      * their length, and the center stretched both ways. An engine that knows the sprite's slicing natively
      * (stored with the image, for example) may use that and ignore {@code border}. If the rectangle is smaller than the

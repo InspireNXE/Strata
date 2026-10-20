@@ -31,9 +31,8 @@ import org.inspirenxe.strata.spi.Canvas;
  *
  * <p>Sized nine-slices and tiled sprites go to the canvas as they are when the engine
  * {@linkplain org.inspirenxe.strata.spi.Capabilities#slicesSprites() slices sprites} itself. Otherwise the painter
- * draws them from pieces: each piece is the whole sprite drawn with {@link Canvas#sprite}, scaled and moved so the
- * wanted part of the image lands on the piece, inside a clip of the piece. A row or column holds at most
- * {@value #MAX_COPIES} copies; past that, the part is stretched instead.</p>
+ * draws them from pieces, each one {@link Canvas#spriteRegion} call for the part of the image it shows. A row or
+ * column holds at most {@value #MAX_COPIES} copies; past that, the part is stretched instead.</p>
  */
 public final class CanvasPainter implements Painter {
     /** The most copies of a tile in one row or column, so a tiny tile cannot flood the canvas with calls. */
@@ -152,17 +151,16 @@ public final class CanvasPainter implements Painter {
             this.canvas.sprite(sprite, rect, tint);
             return;
         }
-        // Whole copies never overlap, so one clip crops the last row and column
-        this.canvas.pushClip(rect);
-        try {
-            for (int row = 0; row < rows; row++) {
-                for (int column = 0; column < columns; column++) {
-                    this.canvas.sprite(sprite, new Rect(rect.x() + column * size.width(),
-                            rect.y() + row * size.height(), size.width(), size.height()), tint);
-                }
+        for (int row = 0; row < rows; row++) {
+            for (int column = 0; column < columns; column++) {
+                final float x = rect.x() + column * size.width();
+                final float y = rect.y() + row * size.height();
+                // The last row and column show only as much of the image as fits
+                final float width = Math.min(size.width(), rect.right() - x);
+                final float height = Math.min(size.height(), rect.bottom() - y);
+                this.canvas.spriteRegion(sprite, new Rect(x, y, width, height), 0f, 0f, width / size.width(),
+                        height / size.height(), tint);
             }
-        } finally {
-            this.canvas.popClip();
         }
     }
 
@@ -188,15 +186,12 @@ public final class CanvasPainter implements Painter {
                 final float x = dest.x() + column * stepX;
                 final float y = dest.y() + row * stepY;
                 final Rect copy = Rect.ofEdges(x, y, Math.min(x + stepX, dest.right()), Math.min(y + stepY, dest.bottom()));
-                // The whole image, placed so the region lands on the copy; the clip hides the rest
-                final Rect image = new Rect(x - sx * scaleX, y - sy * scaleY, size.width() * scaleX,
-                        size.height() * scaleY);
-                this.canvas.pushClip(copy);
-                try {
-                    this.canvas.sprite(sprite, image, tint);
-                } finally {
-                    this.canvas.popClip();
-                }
+                // A cropped copy shows only the start of the region
+                final float u0 = sx / size.width();
+                final float v0 = sy / size.height();
+                final float u1 = (sx + copy.width() / scaleX) / size.width();
+                final float v1 = (sy + copy.height() / scaleY) / size.height();
+                this.canvas.spriteRegion(sprite, copy, u0, v0, u1, v1, tint);
             }
         }
     }

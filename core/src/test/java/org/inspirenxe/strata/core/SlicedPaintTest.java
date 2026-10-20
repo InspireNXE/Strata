@@ -35,7 +35,6 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class SlicedPaintTest {
     private static final SpriteId SPRITE = SpriteId.of("a", "b");
@@ -71,22 +70,17 @@ class SlicedPaintTest {
         }
 
         @Test
-        void aStretchedNineSliceDrawsNineClippedParts() {
+        void aStretchedNineSliceDrawsNineParts() {
             final Recording canvas = new Recording();
             // A 10 by 10 image with 2-unit borders over 30 by 20
             Paint.nineSlice(SPRITE, new Size(10, 10), Insets.of(2))
                     .paint(new CanvasPainter().begin(canvas), new Rect(0, 0, 30, 20));
-            assertEquals(9, canvas.sprites.size());
-            // The top left corner keeps its size: the whole image at its own size, clipped to 2 by 2
-            assertEquals(new Drawn(new Rect(0, 0, 10, 10), new Rect(0, 0, 2, 2)), canvas.sprites.get(0));
-            // The top edge stretches 6 units of image over 26: the image is drawn 26 / 6 times as wide
-            final Drawn top = canvas.sprites.get(1);
-            assertEquals(new Rect(2, 0, 26, 2), top.clip());
-            assertEquals(2 - 2 * 26f / 6f, top.image().x(), 1e-4);
-            assertEquals(10 * 26f / 6f, top.image().width(), 1e-4);
-            // The bottom right corner sits at the far corner
-            assertEquals(new Drawn(new Rect(20, 10, 10, 10), new Rect(28, 18, 2, 2)), canvas.sprites.get(8));
-            assertEquals(0, canvas.depth);
+            assertEquals(9, canvas.regions.size());
+            // The top left corner keeps its size and shows the image's first fifth each way
+            canvas.regions.get(0).check(new Rect(0, 0, 2, 2), 0, 0, 0.2f, 0.2f);
+            // The top edge stretches the middle of the image's top border over 26 units
+            canvas.regions.get(1).check(new Rect(2, 0, 26, 2), 0.2f, 0, 0.8f, 0.2f);
+            canvas.regions.get(8).check(new Rect(28, 18, 2, 2), 0.8f, 0.8f, 1, 1);
         }
 
         @Test
@@ -95,8 +89,8 @@ class SlicedPaintTest {
             Paint.nineSlice(SPRITE, new Size(200, 20), Insets.of(3))
                     .paint(new CanvasPainter().begin(canvas), new Rect(0, 0, 100, 20));
             // The corner is 3 units, whatever the image's pixels
-            assertEquals(new Rect(0, 0, 3, 3), canvas.sprites.get(0).clip());
-            assertEquals(new Rect(97, 17, 3, 3), canvas.sprites.get(8).clip());
+            assertEquals(new Rect(0, 0, 3, 3), canvas.regions.get(0).rect());
+            assertEquals(new Rect(97, 17, 3, 3), canvas.regions.get(8).rect());
         }
 
         @Test
@@ -105,15 +99,16 @@ class SlicedPaintTest {
             // 4 by 4 image, 1-unit borders: edges and center are 2 units long; the rectangle's middle is 5 by 2
             Paint.tiledNineSlice(SPRITE, new Size(4, 4), Insets.of(1))
                     .paint(new CanvasPainter().begin(canvas), new Rect(0, 0, 7, 4));
-            final List<Rect> topEdge = canvas.sprites.stream()
-                    .map(Drawn::clip)
-                    .filter(clip -> clip.y() == 0 && clip.x() >= 1 && clip.right() <= 6)
+            final List<Region> topEdge = canvas.regions.stream()
+                    .filter(region -> region.rect().y() == 0 && region.rect().x() >= 1 && region.rect().right() <= 6)
                     .toList();
-            assertEquals(List.of(new Rect(1, 0, 2, 1), new Rect(3, 0, 2, 1), new Rect(5, 0, 1, 1)), topEdge);
-            // Each copy is the image at its own size, shifted so its middle lands on the copy
-            assertTrue(canvas.sprites.contains(new Drawn(new Rect(2, 0, 4, 4), new Rect(3, 0, 2, 1))));
+            assertEquals(3, topEdge.size());
+            topEdge.get(0).check(new Rect(1, 0, 2, 1), 0.25f, 0, 0.75f, 0.25f);
+            topEdge.get(1).check(new Rect(3, 0, 2, 1), 0.25f, 0, 0.75f, 0.25f);
+            // The last copy is cropped to one unit, and shows the first half of the edge
+            topEdge.get(2).check(new Rect(5, 0, 1, 1), 0.25f, 0, 0.5f, 0.25f);
             // 4 corners, 3 copies on each of the top and bottom edges, 1 on each side and 3 in the center
-            assertEquals(4 + 3 + 3 + 1 + 1 + 3, canvas.sprites.size());
+            assertEquals(4 + 3 + 3 + 1 + 1 + 3, canvas.regions.size());
         }
 
         @Test
@@ -121,22 +116,19 @@ class SlicedPaintTest {
             final Recording canvas = new Recording();
             Paint.nineSlice(SPRITE, new Size(10, 10), Insets.of(4))
                     .paint(new CanvasPainter().begin(canvas), new Rect(0, 0, 4, 4));
-            assertEquals(new Rect(0, 0, 2, 2), canvas.sprites.get(0).clip());
-            assertEquals(new Rect(0, 0, 5, 5), canvas.sprites.get(0).image());
+            canvas.regions.get(0).check(new Rect(0, 0, 2, 2), 0, 0, 0.4f, 0.4f);
         }
 
         @Test
-        void aTiledSpriteRepeatsUnderOneClip() {
+        void aTiledSpriteRepeatsAndCropsTheLastRowAndColumn() {
             final Recording canvas = new Recording();
             Paint.tiled(SPRITE, new Size(16, 16)).paint(new CanvasPainter().begin(canvas), new Rect(10, 10, 40, 20));
-            assertEquals(List.of(
-                    new Drawn(new Rect(10, 10, 16, 16), new Rect(10, 10, 40, 20)),
-                    new Drawn(new Rect(26, 10, 16, 16), new Rect(10, 10, 40, 20)),
-                    new Drawn(new Rect(42, 10, 16, 16), new Rect(10, 10, 40, 20)),
-                    new Drawn(new Rect(10, 26, 16, 16), new Rect(10, 10, 40, 20)),
-                    new Drawn(new Rect(26, 26, 16, 16), new Rect(10, 10, 40, 20)),
-                    new Drawn(new Rect(42, 26, 16, 16), new Rect(10, 10, 40, 20))), canvas.sprites);
-            assertEquals(0, canvas.depth);
+            assertEquals(6, canvas.regions.size());
+            canvas.regions.get(0).check(new Rect(10, 10, 16, 16), 0, 0, 1, 1);
+            canvas.regions.get(1).check(new Rect(26, 10, 16, 16), 0, 0, 1, 1);
+            canvas.regions.get(2).check(new Rect(42, 10, 8, 16), 0, 0, 0.5f, 1);
+            canvas.regions.get(3).check(new Rect(10, 26, 16, 4), 0, 0, 1, 0.25f);
+            canvas.regions.get(5).check(new Rect(42, 26, 8, 4), 0, 0, 0.5f, 0.25f);
         }
 
         @Test
@@ -144,6 +136,18 @@ class SlicedPaintTest {
             final Recording canvas = new Recording();
             Paint.tiled(SPRITE, new Size(0.001f, 0.001f)).paint(new CanvasPainter().begin(canvas), new Rect(0, 0, 10, 10));
             assertEquals(List.of("sprite " + new Rect(0, 0, 10, 10)), canvas.calls);
+        }
+
+        @Test
+        void theDefaultRegionClipsTheWholeSprite() {
+            final Recording canvas = new Recording();
+            canvas.regionsFallBack = true;
+            canvas.spriteRegion(SPRITE, new Rect(2, 0, 26, 2), 0.2f, 0, 0.8f, 0.2f, -1);
+            final Drawn top = canvas.sprites.getFirst();
+            assertEquals(new Rect(2, 0, 26, 2), top.clip());
+            assertEquals(2 - 2 * 26f / 6f, top.image().x(), 1e-4);
+            assertEquals(10 * 26f / 6f, top.image().width(), 1e-4);
+            assertEquals(0, canvas.depth);
         }
     }
 
@@ -166,9 +170,24 @@ class SlicedPaintTest {
     private record Drawn(Rect image, Rect clip) {
     }
 
+    /**
+     * A part of a sprite drawn over {@code rect}.
+     */
+    private record Region(Rect rect, float u0, float v0, float u1, float v1) {
+        void check(final Rect expected, final float eu0, final float ev0, final float eu1, final float ev1) {
+            assertEquals(expected, this.rect);
+            assertEquals(eu0, this.u0, 1e-4);
+            assertEquals(ev0, this.v0, 1e-4);
+            assertEquals(eu1, this.u1, 1e-4);
+            assertEquals(ev1, this.v1, 1e-4);
+        }
+    }
+
     private static final class Recording implements Canvas {
         private final List<String> calls = new ArrayList<>();
         private final List<Drawn> sprites = new ArrayList<>();
+        private final List<Region> regions = new ArrayList<>();
+        private boolean regionsFallBack;
         private final Deque<Rect> clips = new ArrayDeque<>();
         private int depth;
 
@@ -186,6 +205,16 @@ class SlicedPaintTest {
                 this.calls.add("sprite " + rect);
             } else {
                 this.sprites.add(new Drawn(rect, this.clips.peek()));
+            }
+        }
+
+        @Override
+        public void spriteRegion(final SpriteId sprite, final Rect rect, final float u0, final float v0,
+                                 final float u1, final float v1, final int tint) {
+            if (this.regionsFallBack) {
+                Canvas.super.spriteRegion(sprite, rect, u0, v0, u1, v1, tint);
+            } else {
+                this.regions.add(new Region(rect, u0, v0, u1, v1));
             }
         }
 

@@ -33,9 +33,7 @@ package org.inspirenxe.strata.spi;
  *                      {@linkplain org.inspirenxe.strata.api.theme.Paint.NineSlice nine-slice} to {@code nineSlice}
  *                      and a {@linkplain org.inspirenxe.strata.api.theme.Paint.Tiled tiled} sprite to
  *                      {@code sprite}, and the engine's slicing decides how they look. When false, the host draws
- *                      both itself, each part being the whole sprite drawn with {@code sprite} inside a clip, so
- *                      the canvas must draw a sprite exactly over the rectangle it is given, even where the
- *                      rectangle reaches past the clip.
+ *                      both itself, each piece a {@link Canvas#spriteRegion} call.
  */
 public record Capabilities(boolean sendsKeyRepeat, boolean monospaceFont, boolean slicesSprites) {
     /**
