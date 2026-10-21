@@ -78,6 +78,10 @@ public final class ThemeRegistryImpl implements ThemeRegistry {
         if (id.equals(Themes.FLAT)) {
             throw new ThemeException("Theme " + id + " is built into Strata and cannot be defined in code");
         }
+        if (id.equals(Themes.PLATFORM)) {
+            throw new ThemeException("Theme " + id + " stands for the platform's default theme and cannot be"
+                    + " defined in code");
+        }
         if (this.definitions.containsKey(id)) {
             throw new ThemeException("Theme " + id + " is already defined in code, on "
                     + this.definitions.get(id).parent());

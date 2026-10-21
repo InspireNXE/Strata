@@ -17,6 +17,7 @@ package org.inspirenxe.strata.api.screen;
 
 import org.inspirenxe.strata.api.ComponentFactory;
 import org.inspirenxe.strata.api.component.Component;
+import org.inspirenxe.strata.api.text.Text;
 
 /**
  * One full screen of UI. Implement it to describe what the screen shows; a host calls it.
@@ -65,6 +66,16 @@ public interface Screen {
      * @return the root component, new and without a parent
      */
     Component<?> build(ComponentFactory factory);
+
+    /**
+     * Returns the screen's title, which engines show or read out, such as in a window's title bar or through a
+     * screen reader. Hosts read it when the screen opens. The default is {@link Text#empty()}.
+     *
+     * @return the title
+     */
+    default Text title() {
+        return Text.empty();
+    }
 
     /**
      * Called once the screen is open and its first tree is built. The default does nothing.

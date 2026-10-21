@@ -23,6 +23,7 @@ import org.inspirenxe.strata.api.input.Modifiers;
 import org.inspirenxe.strata.api.input.MouseButton;
 import org.inspirenxe.strata.api.input.ScrollKind;
 import org.inspirenxe.strata.api.screen.Screen;
+import org.inspirenxe.strata.api.screen.ScreenController;
 import org.inspirenxe.strata.api.screen.ScreenHandle;
 import org.inspirenxe.strata.api.theme.Theme;
 import org.inspirenxe.strata.api.theme.ThemeException;
@@ -45,6 +46,10 @@ import java.util.Optional;
  * The core {@link ScreenHost}. It owns one factory and one {@link Root}, and passes engine input and frames to the
  * root. Opening a screen closes the one before it, so components from different screens never share a tree.
  *
+ * <p>A screen's handle opens screens through the opener the adapter set with {@link #setOpener}, or else through
+ * the platform's controller in {@link PlatformScreens}. A handle whose opening has ended throws from
+ * {@code open}.</p>
+ *
  * <p>A host given a {@link ThemeRef} compares the platform's {@link ThemeSource#version()} and the version of the
  * themes and overrides added in code ({@link ThemeRegistryImpl#version()}) at the start of every layout and render,
  * and resolves the ref again when either changed. If that fails, or the new theme lacks keys the open tree needs,
@@ -64,6 +69,8 @@ public final class ScreenHostImpl implements ScreenHost {
     private long registryVersion;
     private long textVersion = Translations.version();
     private Screen screen;
+    private Handle handle;
+    private ScreenController opener;
     private boolean rebuild;
 
     /**
@@ -120,12 +127,27 @@ public final class ScreenHostImpl implements ScreenHost {
 
     @Override
     public void open(final Screen screen) {
+        this.openScreen(screen);
+    }
+
+    /**
+     * Opens a screen as {@link #open} does and returns its handle, which stays the screen's handle even if the
+     * screen closes again while it opens.
+     *
+     * @param screen the screen to show
+     * @return the handle passed to the screen's {@code opened}
+     * @throws ThemeException if the theme lacks keys the screen's tree needs; no screen is open afterwards
+     */
+    public ScreenHandle openScreen(final Screen screen) {
         Objects.requireNonNull(screen, "screen");
         this.close();
         this.root.setContent(this.ui.nodeOf(screen.build(this.ui)));
+        final Handle opened = new Handle(screen);
         this.screen = screen;
+        this.handle = opened;
         this.rebuild = false;
-        screen.opened(new Handle(screen));
+        screen.opened(opened);
+        return opened;
     }
 
     @Override
@@ -135,6 +157,7 @@ public final class ScreenHostImpl implements ScreenHost {
         }
         final Screen closing = this.screen;
         this.screen = null;
+        this.handle = null;
         closing.closed();
         this.root.setContent(null);
     }
@@ -142,6 +165,16 @@ public final class ScreenHostImpl implements ScreenHost {
     @Override
     public Optional<Screen> screen() {
         return Optional.ofNullable(this.screen);
+    }
+
+    @Override
+    public Optional<ScreenHandle> handle() {
+        return Optional.ofNullable(this.handle);
+    }
+
+    @Override
+    public void setOpener(final ScreenController opener) {
+        this.opener = opener;
     }
 
     @Override
@@ -289,7 +322,7 @@ public final class ScreenHostImpl implements ScreenHost {
     }
 
     /**
-     * Handed to one opened screen. Once that screen is closed or replaced, the handle does nothing.
+     * Handed to one opening of a screen. Once that opening ends, the handle does nothing, and {@link #open} throws.
      */
     private final class Handle implements ScreenHandle {
         private final Screen owner;
@@ -299,7 +332,7 @@ public final class ScreenHostImpl implements ScreenHost {
         }
 
         private boolean current() {
-            return ScreenHostImpl.this.screen == this.owner;
+            return ScreenHostImpl.this.handle == this;
         }
 
         @Override
@@ -319,6 +352,17 @@ public final class ScreenHostImpl implements ScreenHost {
         @Override
         public ComponentFactory factory() {
             return ScreenHostImpl.this.ui;
+        }
+
+        @Override
+        public ScreenHandle open(final Screen screen, final ThemeRef theme) {
+            Objects.requireNonNull(screen, "screen");
+            Objects.requireNonNull(theme, "theme");
+            if (!this.current()) {
+                throw new IllegalStateException("Screen " + this.owner + " has closed and cannot open another");
+            }
+            final ScreenController above = ScreenHostImpl.this.opener;
+            return (above != null ? above : PlatformScreens.get()).open(screen, theme);
         }
     }
 

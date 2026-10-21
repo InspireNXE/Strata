@@ -75,6 +75,20 @@ public record ThemeRef(ThemeId id, Map<String, Paint> paints, Map<String, TextSt
     }
 
     /**
+     * Returns a ref to the platform's default theme, {@link Themes#PLATFORM}, with no overrides. Screens opened
+     * without a theme use it. Start from it to change a few keys of the default look on one screen:
+     *
+     * <pre>{@code
+     * Strata.screens().open(screen, ThemeRef.platform().override(Label.STYLE_TEXT, TextStyle.DEFAULT.withColor(0xFFFFD700)));
+     * }</pre>
+     *
+     * @return the ref
+     */
+    public static ThemeRef platform() {
+        return ThemeRef.of(Themes.PLATFORM);
+    }
+
+    /**
      * Returns a copy of this ref that sets a paint after the packs are applied. A later override of the same key
      * replaces an earlier one.
      *

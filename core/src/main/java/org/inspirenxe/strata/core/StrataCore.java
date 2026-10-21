@@ -16,10 +16,12 @@
 package org.inspirenxe.strata.core;
 
 import org.inspirenxe.strata.api.appearance.Appearance;
+import org.inspirenxe.strata.api.screen.ScreenController;
 import org.inspirenxe.strata.api.text.Text;
 import org.inspirenxe.strata.api.theme.Theme;
 import org.inspirenxe.strata.api.theme.ThemeRef;
 import org.inspirenxe.strata.core.appearance.AppearancesImpl;
+import org.inspirenxe.strata.core.host.PlatformScreens;
 import org.inspirenxe.strata.core.host.ScreenHostImpl;
 import org.inspirenxe.strata.core.host.ScreenStackImpl;
 import org.inspirenxe.strata.core.text.TextFactoryImpl;
@@ -50,6 +52,21 @@ public final class StrataCore {
      */
     public static void setTranslator(final Translator translator) {
         Translations.setTranslator(translator);
+    }
+
+    /**
+     * Sets the platform's screen controller for the whole process: the one {@code Strata.screens()} returns, and the
+     * one handles open screens with when their host has no opener of its own ({@link ScreenHost#setOpener}).
+     * Adapters call this when they load, before any mod code can ask for it, and may call it again to replace the
+     * controller. The controller's {@code open(screen)} must use the default theme the adapter's
+     * {@link ThemeSource#defaultTheme()} names, which the interface's default method does by passing
+     * {@code ThemeRef.platform()}.
+     *
+     * @param controller the controller, or {@code null} to remove it, after which {@code Strata.screens()} throws
+     *     {@link IllegalStateException}
+     */
+    public static void setScreenController(final ScreenController controller) {
+        PlatformScreens.set(controller);
     }
 
     /**

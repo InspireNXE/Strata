@@ -16,6 +16,7 @@
 package org.inspirenxe.strata.api;
 
 import org.inspirenxe.strata.api.appearance.Appearances;
+import org.inspirenxe.strata.api.screen.ScreenController;
 import org.inspirenxe.strata.api.state.StateFactory;
 import org.inspirenxe.strata.api.text.TextFactory;
 import org.inspirenxe.strata.api.theme.ThemeRegistry;
@@ -75,6 +76,19 @@ public final class Strata {
     }
 
     /**
+     * Returns the platform's screen controller, which opens screens wherever the engine adapter shows them. The
+     * adapter hands its controller to Strata when it loads; on an engine without screens of its own, such as
+     * Swing, the panel marked as the default is the controller.
+     *
+     * @return the controller
+     * @throws IllegalStateException if Strata's core is not on the class path, more than one provider is, or no
+     *     adapter has handed over a controller yet
+     */
+    public static ScreenController screens() {
+        return Strata.provider().screens();
+    }
+
+    /**
      * What Strata's core provides, listed in its {@code META-INF/services}. Do not implement this interface.
      */
     public interface Provider {
@@ -105,6 +119,14 @@ public final class Strata {
          * @return the factory, the same one every time
          */
         StateFactory states();
+
+        /**
+         * Returns the controller the engine adapter handed over.
+         *
+         * @return the controller
+         * @throws IllegalStateException if no adapter has handed one over, with a message saying what to do
+         */
+        ScreenController screens();
     }
 
     private static Provider provider() {

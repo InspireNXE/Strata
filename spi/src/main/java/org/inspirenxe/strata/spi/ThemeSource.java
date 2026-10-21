@@ -17,6 +17,7 @@ package org.inspirenxe.strata.spi;
 
 import org.inspirenxe.strata.api.theme.Theme;
 import org.inspirenxe.strata.api.theme.ThemeId;
+import org.inspirenxe.strata.api.theme.Themes;
 
 import java.util.List;
 import java.util.Optional;
@@ -103,8 +104,22 @@ public interface ThemeSource {
     List<ThemeDocument> documents(ThemeId id);
 
     /**
-     * Returns a number that changes whenever {@link #base}, {@link #bases} or {@link #documents} may return
-     * something new.
+     * Returns the platform's default theme: the theme screens open in when no theme is given, which
+     * {@link Themes#PLATFORM} and {@code ThemeRef.platform()} stand for. Core reads it each time it resolves a ref
+     * to {@link Themes#PLATFORM}, so a change shows on open screens once {@link #version()} changes too.
+     *
+     * <p>It must name a theme that resolves against this source, and must not be {@link Themes#PLATFORM} itself,
+     * which core refuses with {@link org.inspirenxe.strata.api.theme.ThemeException}.</p>
+     *
+     * @return the default theme's id; {@link Themes#FLAT} by default
+     */
+    default ThemeId defaultTheme() {
+        return Themes.FLAT;
+    }
+
+    /**
+     * Returns a number that changes whenever {@link #base}, {@link #bases}, {@link #documents} or
+     * {@link #defaultTheme()} may return something new.
      *
      * @return the current version
      */

@@ -18,6 +18,8 @@ package org.inspirenxe.strata.spi;
 import org.inspirenxe.strata.api.ComponentFactory;
 import org.inspirenxe.strata.api.component.Component;
 import org.inspirenxe.strata.api.screen.Screen;
+import org.inspirenxe.strata.api.screen.ScreenController;
+import org.inspirenxe.strata.api.screen.ScreenHandle;
 import org.inspirenxe.strata.api.theme.Theme;
 import org.inspirenxe.strata.api.theme.ThemeRef;
 
@@ -68,6 +70,28 @@ public interface ScreenHost extends InputSink {
      * @return the open screen, or empty
      */
     Optional<Screen> screen();
+
+    /**
+     * Returns the handle of the open screen, the one passed to its {@link Screen#opened}.
+     *
+     * @return the handle, or empty if no screen is open
+     */
+    Optional<ScreenHandle> handle();
+
+    /**
+     * Sets what the open screen's handle opens screens with, through {@link ScreenHandle#open}. The adapter's
+     * controller must put the new screen above this host's screen and show this host's screen again, unchanged,
+     * when the new one closes. It is called on the UI thread with the screen and theme the handle was given, and
+     * its result is returned from the handle.
+     *
+     * <p>Until one is set, a handle opens screens through the platform's controller, the one
+     * {@code StrataCore.setScreenController} was given. A host inside a {@link ScreenStack} has the stack's own,
+     * which puts the new screen straight above this one.</p>
+     *
+     * @param opener what to open screens above this host's screen with, or {@code null} to use the platform's
+     *     controller
+     */
+    void setOpener(ScreenController opener);
 
     /**
      * Returns the theme every component in this host uses.

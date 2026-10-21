@@ -46,12 +46,13 @@ Do not implement the component interfaces directly. Strata rejects such a class 
 
 ## Showing it in Swing
 
-`StrataPanel` is a `JPanel` that shows a stack of screens. The last argument is the number of pixels per UI unit:
+`StrataPanel` is a `JPanel` that shows a stack of screens. The last argument is the number of pixels per UI unit. Mark it as the default panel, and `Strata.screens()` opens screens on it:
 
 ```java
 StrataPanel panel = new StrataPanel(new SwingPlatform(SwingTextMetrics.defaults()), Themes.flat(), 2f);
-panel.screens().push(new SettingsScreen());
+panel.setDefault();
 frame.setContentPane(panel);
+Strata.screens().open(new SettingsScreen());
 ```
 
 ## Building

@@ -22,6 +22,8 @@ import org.inspirenxe.strata.api.input.Modifiers;
 import org.inspirenxe.strata.api.input.MouseButton;
 import org.inspirenxe.strata.api.input.ScrollKind;
 import org.inspirenxe.strata.api.screen.Screen;
+import org.inspirenxe.strata.api.screen.ScreenController;
+import org.inspirenxe.strata.api.screen.ScreenHandle;
 import org.inspirenxe.strata.api.theme.Theme;
 import org.inspirenxe.strata.api.theme.ThemeRef;
 import org.inspirenxe.strata.core.theme.ThemeResolver;
@@ -38,10 +40,14 @@ import java.util.Optional;
  * The core {@link ScreenStack}. It keeps one {@link ScreenHostImpl} per stacked screen, so each screen has its own
  * tree, focus and factory. A screen that asks to close through its handle is removed from the stack, wherever it
  * is in it.
+ *
+ * <p>Pushed screens take the stack's theme and follow {@link #setTheme}. Screens opened with
+ * {@link #open(Screen, ThemeRef)}, or from a screen's handle, keep the theme they were opened in. A screen opened
+ * from a handle goes straight above the screen whose handle it was, so closing it shows that screen again.</p>
  */
 public final class ScreenStackImpl implements ScreenStack {
     private final Platform platform;
-    private final List<ScreenHostImpl> hosts;
+    private final List<Entry> entries;
     private Theme theme;
     private ThemeRef themeRef;
     private float width;
@@ -57,7 +63,7 @@ public final class ScreenStackImpl implements ScreenStack {
     public ScreenStackImpl(final Platform platform, final Theme theme) {
         this.platform = Objects.requireNonNull(platform, "platform");
         this.theme = Objects.requireNonNull(theme, "theme");
-        this.hosts = new ArrayList<>();
+        this.entries = new ArrayList<>();
     }
 
     /**
@@ -75,49 +81,88 @@ public final class ScreenStackImpl implements ScreenStack {
 
     @Override
     public void push(final Screen screen) {
+        this.insert(this.entries.size(), screen, null);
+    }
+
+    @Override
+    public ScreenHandle open(final Screen screen, final ThemeRef theme) {
+        return this.insert(this.entries.size(), screen, Objects.requireNonNull(theme, "theme"));
+    }
+
+    /**
+     * Opens a screen at a place in the stack.
+     *
+     * @param index where the screen goes, counted from the bottom
+     * @param screen the screen
+     * @param own the theme it keeps, or {@code null} for the stack's
+     * @return the screen's handle
+     */
+    private ScreenHandle insert(final int index, final Screen screen, final ThemeRef own) {
         Objects.requireNonNull(screen, "screen");
         final ScreenHostImpl[] self = new ScreenHostImpl[1];
         final Runnable close = () -> this.remove(self[0]);
-        final ScreenHostImpl host = this.themeRef != null
-                ? new ScreenHostImpl(this.platform, this.themeRef, close)
-                : new ScreenHostImpl(this.platform, this.theme, close);
+        final ScreenHostImpl host;
+        if (own != null) {
+            host = new ScreenHostImpl(this.platform, own, close);
+        } else if (this.themeRef != null) {
+            host = new ScreenHostImpl(this.platform, this.themeRef, close);
+        } else {
+            host = new ScreenHostImpl(this.platform, this.theme, close);
+        }
         self[0] = host;
+        host.setOpener(new Above(host));
         host.resize(this.width, this.height);
         host.setTooltipDelay(this.tooltipDelay);
-        host.open(screen);
-        this.hosts.add(host);
+        final Entry entry = new Entry(host, own != null);
+        // In the stack before it opens, so a screen can open another above itself from opened()
+        this.entries.add(index, entry);
+        try {
+            return host.openScreen(screen);
+        } catch (final RuntimeException e) {
+            this.entries.remove(entry);
+            throw e;
+        }
     }
 
     @Override
     public Optional<Screen> pop() {
-        if (this.hosts.isEmpty()) {
+        if (this.entries.isEmpty()) {
             return Optional.empty();
         }
-        final ScreenHostImpl host = this.hosts.removeLast();
+        final ScreenHostImpl host = this.entries.removeLast().host();
         final Optional<Screen> screen = host.screen();
         host.close();
         return screen;
     }
 
     private void remove(final ScreenHostImpl host) {
-        if (this.hosts.remove(host)) {
+        if (this.entries.removeIf(entry -> entry.host() == host)) {
             host.close();
         }
     }
 
+    private int indexOf(final ScreenHostImpl host) {
+        for (int i = 0; i < this.entries.size(); i++) {
+            if (this.entries.get(i).host() == host) {
+                return i;
+            }
+        }
+        return -1;
+    }
+
     @Override
     public Optional<Screen> top() {
-        return this.hosts.isEmpty() ? Optional.empty() : this.hosts.getLast().screen();
+        return this.entries.isEmpty() ? Optional.empty() : this.entries.getLast().host().screen();
     }
 
     @Override
     public boolean isEmpty() {
-        return this.hosts.isEmpty();
+        return this.entries.isEmpty();
     }
 
     @Override
     public void clear() {
-        while (!this.hosts.isEmpty()) {
+        while (!this.entries.isEmpty()) {
             this.pop();
         }
     }
@@ -126,16 +171,20 @@ public final class ScreenStackImpl implements ScreenStack {
     public void setTheme(final Theme theme) {
         this.theme = Objects.requireNonNull(theme, "theme");
         this.themeRef = null;
-        for (final ScreenHostImpl host : this.hosts) {
-            host.setTheme(theme);
+        for (final Entry entry : this.entries) {
+            if (!entry.ownTheme()) {
+                entry.host().setTheme(theme);
+            }
         }
     }
 
     @Override
     public void setTheme(final ThemeRef theme) {
         final Theme resolved = new ThemeResolver(this.platform.themes()).resolve(theme);
-        for (final ScreenHostImpl host : this.hosts) {
-            host.setTheme(theme);
+        for (final Entry entry : this.entries) {
+            if (!entry.ownTheme()) {
+                entry.host().setTheme(theme);
+            }
         }
         this.theme = resolved;
         this.themeRef = theme;
@@ -145,8 +194,8 @@ public final class ScreenStackImpl implements ScreenStack {
     public void resize(final float width, final float height) {
         this.width = width;
         this.height = height;
-        for (final ScreenHostImpl host : this.hosts) {
-            host.resize(width, height);
+        for (final Entry entry : this.entries) {
+            entry.host().resize(width, height);
         }
     }
 
@@ -156,37 +205,37 @@ public final class ScreenStackImpl implements ScreenStack {
             throw new IllegalArgumentException("Tooltip delay must not be negative: " + millis);
         }
         this.tooltipDelay = millis;
-        for (final ScreenHostImpl host : this.hosts) {
-            host.setTooltipDelay(millis);
+        for (final Entry entry : this.entries) {
+            entry.host().setTooltipDelay(millis);
         }
     }
 
     @Override
     public void flush() {
-        for (final ScreenHostImpl host : List.copyOf(this.hosts)) {
-            host.flush();
+        for (final Entry entry : List.copyOf(this.entries)) {
+            entry.host().flush();
         }
     }
 
     @Override
     public void render(final Canvas canvas) {
         int first = 0;
-        for (int i = this.hosts.size() - 1; i >= 0; i--) {
-            if (this.hosts.get(i).screen().map(Screen::hidesBackground).orElse(false)) {
+        for (int i = this.entries.size() - 1; i >= 0; i--) {
+            if (this.entries.get(i).host().screen().map(Screen::hidesBackground).orElse(false)) {
                 first = i;
                 break;
             }
         }
-        for (int i = first; i < this.hosts.size(); i++) {
+        for (int i = first; i < this.entries.size(); i++) {
             if (i > first) {
                 canvas.nextLayer();
             }
-            this.hosts.get(i).render(canvas);
+            this.entries.get(i).host().render(canvas);
         }
     }
 
     private Optional<ScreenHostImpl> input() {
-        return this.hosts.isEmpty() ? Optional.empty() : Optional.of(this.hosts.getLast());
+        return this.entries.isEmpty() ? Optional.empty() : Optional.of(this.entries.getLast().host());
     }
 
     @Override
@@ -219,5 +268,34 @@ public final class ScreenStackImpl implements ScreenStack {
     @Override
     public boolean charTyped(final int codePoint, final Modifiers modifiers) {
         return this.input().map(host -> host.charTyped(codePoint, modifiers)).orElse(false);
+    }
+
+    /**
+     * One stacked screen's host, and whether it keeps a theme of its own.
+     *
+     * @param host the host
+     * @param ownTheme true if the screen was opened in a theme of its own, which {@link #setTheme} leaves alone
+     */
+    private record Entry(ScreenHostImpl host, boolean ownTheme) {
+    }
+
+    /**
+     * What a stacked screen's handle opens screens with: straight above that screen.
+     */
+    private final class Above implements ScreenController {
+        private final ScreenHostImpl host;
+
+        Above(final ScreenHostImpl host) {
+            this.host = host;
+        }
+
+        @Override
+        public ScreenHandle open(final Screen screen, final ThemeRef theme) {
+            final int index = ScreenStackImpl.this.indexOf(this.host);
+            if (index < 0) {
+                throw new IllegalStateException("The screen has left the stack and cannot open another");
+            }
+            return ScreenStackImpl.this.insert(index + 1, screen, theme);
+        }
     }
 }

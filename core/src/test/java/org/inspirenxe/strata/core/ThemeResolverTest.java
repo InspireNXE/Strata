@@ -390,6 +390,12 @@ class ThemeResolverTest {
         private final Map<ThemeId, List<ThemeDocument>> baseFiles = new HashMap<>();
         private final Map<ThemeId, List<ThemeDocument>> files = new HashMap<>();
         private long version;
+        private ThemeId defaultTheme = Themes.FLAT;
+
+        MapSource defaultTheme(final ThemeId id) {
+            this.defaultTheme = id;
+            return this;
+        }
 
         MapSource base(final ThemeId id, final Theme theme) {
             this.bases.put(id, theme);
@@ -437,6 +443,11 @@ class ThemeResolverTest {
         @Override
         public List<ThemeDocument> documents(final ThemeId id) {
             return List.copyOf(this.files.getOrDefault(id, List.of()));
+        }
+
+        @Override
+        public ThemeId defaultTheme() {
+            return this.defaultTheme;
         }
 
         @Override

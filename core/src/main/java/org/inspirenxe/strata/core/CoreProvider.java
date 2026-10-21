@@ -17,10 +17,12 @@ package org.inspirenxe.strata.core;
 
 import org.inspirenxe.strata.api.Strata;
 import org.inspirenxe.strata.api.appearance.Appearances;
+import org.inspirenxe.strata.api.screen.ScreenController;
 import org.inspirenxe.strata.api.state.StateFactory;
 import org.inspirenxe.strata.api.text.TextFactory;
 import org.inspirenxe.strata.api.theme.ThemeRegistry;
 import org.inspirenxe.strata.core.appearance.AppearancesImpl;
+import org.inspirenxe.strata.core.host.PlatformScreens;
 import org.inspirenxe.strata.core.state.StateFactoryImpl;
 import org.inspirenxe.strata.core.text.TextFactoryImpl;
 import org.inspirenxe.strata.core.theme.ThemeRegistryImpl;
@@ -55,5 +57,17 @@ public final class CoreProvider implements Strata.Provider {
     @Override
     public StateFactory states() {
         return StateFactoryImpl.INSTANCE;
+    }
+
+    /**
+     * Returns the controller the adapter set with {@link StrataCore#setScreenController}.
+     *
+     * @return the controller
+     * @throws IllegalStateException if none is set, with a message that says how an adapter or a Swing application
+     *     sets one
+     */
+    @Override
+    public ScreenController screens() {
+        return PlatformScreens.get();
     }
 }

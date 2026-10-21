@@ -42,7 +42,10 @@ import java.util.Set;
  *
  * <p>A theme is built from layers, lowest first, each applied per key over the ones below it:</p>
  * <ol>
- *     <li>The base. {@link Themes#FLAT} starts from {@link Themes#flat()}. Any other id starts from the source's
+ *     <li>The base. {@link Themes#PLATFORM} resolves in full as the theme the source's
+ *     {@link ThemeSource#defaultTheme()} names, with the registry's overrides for {@link Themes#PLATFORM} on top,
+ *     and nothing else below the ref's overrides; no theme files are read for it. {@link Themes#FLAT} starts from
+ *     {@link Themes#flat()}. Any other id starts from the source's
  *     {@link ThemeSource#base base theme}, or from its {@link ThemeSource#bases base files}, which start from the
  *     theme the last of them to name a {@code parent} names, or from the theme defined in code with
  *     {@link ThemeRegistryImpl#define}, which starts from its parent. An id with none of these starts from the
@@ -135,8 +138,8 @@ public final class ThemeResolver {
      * @param ref the ref
      * @return the theme
      * @throws ThemeException if an id in the chain has no base and no files, the parents form a cycle, an id has a
-     *     base theme and base files both, an id defined in code also has a base from the source, or a base file
-     *     cannot be parsed
+     *     base theme and base files both, an id defined in code also has a base from the source, a base file
+     *     cannot be parsed, or the source's default theme is {@link Themes#PLATFORM}
      */
     public Theme resolve(final ThemeRef ref) {
         final Keys keys = this.resolve(ref.id(), new LinkedHashSet<>());
@@ -155,6 +158,9 @@ public final class ThemeResolver {
             visiting.forEach(seen -> chain.add(seen.toString()));
             chain.add(id.toString());
             throw new ThemeException("Theme parents form a cycle: " + String.join(" -> ", chain));
+        }
+        if (id.equals(Themes.PLATFORM)) {
+            return this.resolvePlatform(visiting);
         }
         final Optional<Theme> code = id.equals(Themes.FLAT) ? Optional.of(Themes.flat()) : this.source.base(id);
         final List<ThemeDocument> baseDocuments = this.source.bases(id);
@@ -199,6 +205,23 @@ public final class ThemeResolver {
             keys.set(overrides, CODE_LAYER);
         }
         visiting.remove(id);
+        return keys;
+    }
+
+    /**
+     * Resolves the platform's default theme with the overrides added for {@link Themes#PLATFORM} on top.
+     */
+    private Keys resolvePlatform(final Set<ThemeId> visiting) {
+        final ThemeId target = this.source.defaultTheme();
+        if (target.equals(Themes.PLATFORM)) {
+            throw new ThemeException("The platform's default theme cannot be " + Themes.PLATFORM
+                    + ", which stands for it");
+        }
+        final Keys keys = this.resolve(target, visiting);
+        for (final ThemeOverrides overrides : this.registry.overrides(Themes.PLATFORM)) {
+            keys.set(overrides, CODE_LAYER);
+        }
+        visiting.remove(Themes.PLATFORM);
         return keys;
     }
 

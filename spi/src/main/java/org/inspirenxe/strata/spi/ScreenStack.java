@@ -16,6 +16,8 @@
 package org.inspirenxe.strata.spi;
 
 import org.inspirenxe.strata.api.screen.Screen;
+import org.inspirenxe.strata.api.screen.ScreenController;
+import org.inspirenxe.strata.api.screen.ScreenHandle;
 import org.inspirenxe.strata.api.theme.Theme;
 import org.inspirenxe.strata.api.theme.ThemeRef;
 
@@ -30,9 +32,13 @@ import java.util.Optional;
  * screen above it in order, calling {@link Canvas#nextLayer()} between screens. Each screen has its own
  * {@link ScreenHost} inside, with its own factory, focus and hover.</p>
  *
+ * <p>A stack is also a {@link ScreenController}. {@link #open(Screen, ThemeRef)} puts a screen on top in a theme of
+ * its own, and a screen's {@link ScreenHandle#open} puts the new screen straight above that screen, so closing it
+ * shows that screen again.</p>
+ *
  * <p>The same requirements for callers apply as for {@link ScreenHost}.</p>
  */
-public interface ScreenStack extends InputSink {
+public interface ScreenStack extends InputSink, ScreenController {
 
     /**
      * Opens a screen on top of the stack, at the stack's current size and theme. A screen that asks to close
@@ -43,6 +49,20 @@ public interface ScreenStack extends InputSink {
      *                                                         screen is not pushed
      */
     void push(Screen screen);
+
+    /**
+     * Opens a screen on top of the stack, at the stack's current size, in a theme of its own that
+     * {@link #setTheme} leaves alone. A screen that asks to close through its handle is removed from wherever it is
+     * in the stack.
+     *
+     * @param screen the screen to open
+     * @param theme the theme for its components
+     * @return the screen's handle
+     * @throws org.inspirenxe.strata.api.theme.ThemeException if the ref cannot be resolved, or the theme lacks keys
+     *                                                         the screen's tree needs; the screen is not pushed
+     */
+    @Override
+    ScreenHandle open(Screen screen, ThemeRef theme);
 
     /**
      * Closes and removes the top screen.
@@ -71,7 +91,8 @@ public interface ScreenStack extends InputSink {
     void clear();
 
     /**
-     * Replaces the theme of every screen in the stack and of screens pushed later.
+     * Replaces the theme of every screen in the stack and of screens pushed later, except screens opened with a
+     * theme of their own.
      *
      * @param theme the new theme
      * @throws org.inspirenxe.strata.api.theme.ThemeException if the theme lacks keys a screen's tree needs
@@ -80,7 +101,8 @@ public interface ScreenStack extends InputSink {
 
     /**
      * Replaces the theme of every screen in the stack and of screens pushed later with one resolved from the
-     * platform's {@link ThemeSource}, as {@link ScreenHost#setTheme(ThemeRef)} does.
+     * platform's {@link ThemeSource}, as {@link ScreenHost#setTheme(ThemeRef)} does, except screens opened with a
+     * theme of their own.
      *
      * @param theme the theme to resolve
      * @throws org.inspirenxe.strata.api.theme.ThemeException if the ref cannot be resolved, or the result lacks

@@ -44,7 +44,8 @@ public interface ThemeRegistry {
      * in the order they were added, and a {@link ThemeRef}'s own overrides apply after all of them. The keys
      * report the layer {@code code} from {@link Theme#layer}.
      *
-     * <p>The id need not resolve yet; the overrides wait until it does.</p>
+     * <p>The id need not resolve yet; the overrides wait until it does. Overrides for {@link Themes#PLATFORM} apply
+     * to whichever theme is the platform's default, above that theme's own overrides.</p>
      *
      * @param id the theme to change
      * @param overrides the keys to set
@@ -65,8 +66,9 @@ public interface ThemeRegistry {
      * @param parent the theme it starts from
      * @param overrides the keys it sets on the parent
      * @return a subscription that removes the definition when closed, after which the id can be defined again
-     * @throws ThemeException if the id is already defined in code and that definition is still open, or is
-     *     {@link Themes#FLAT}, which Strata builds in code
+     * @throws ThemeException if the id is already defined in code and that definition is still open, is
+     *     {@link Themes#FLAT}, which Strata builds in code, or is {@link Themes#PLATFORM}, which stands for the
+     *     platform's default theme
      */
     Subscription define(ThemeId id, ThemeId parent, ThemeOverrides overrides);
 }

@@ -57,6 +57,15 @@ public final class Themes {
      */
     public static final ThemeId FLAT = ThemeId.of("strata", "flat");
 
+    /**
+     * Stands for the platform's default theme, the theme screens open in when no theme is given. Each engine adapter
+     * says which theme that is, and it is {@link #FLAT} where the adapter says none. A ref to this id resolves as
+     * the default theme, then applies the overrides added for this id with {@link ThemeRegistry#override}, then its
+     * own. Theme files can name it as their parent. It cannot be defined in code, and no theme files are read for
+     * it. {@link ThemeRef#platform()} returns a ref to it.
+     */
+    public static final ThemeId PLATFORM = ThemeId.of("strata", "platform");
+
     private Themes() {
     }
 
