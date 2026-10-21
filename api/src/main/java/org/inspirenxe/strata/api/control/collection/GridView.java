@@ -101,6 +101,16 @@ public interface GridView<T> extends Component<GridView<T>>, HasCursor<GridView<
      */
     String STYLE_CELL_HOVERED = "grid.cell.hovered";
     /**
+     * Style key drawn under the content of the cell under the pointer, over the cell's own paint (paint, optional).
+     * Defaults to none.
+     */
+    String STYLE_CELL_HOVERED_BACK = "grid.cell.hovered.back";
+    /**
+     * Style key for where the hovered and selected paints are drawn, as insets from the cell's edges (insets,
+     * optional). Defaults to none, which covers the whole cell.
+     */
+    String STYLE_CELL_HIGHLIGHT = "grid.cell.highlight";
+    /**
      * Style key drawn over the selected cell (paint, optional).
      */
     String STYLE_CELL_SELECTED = "grid.cell.selected";

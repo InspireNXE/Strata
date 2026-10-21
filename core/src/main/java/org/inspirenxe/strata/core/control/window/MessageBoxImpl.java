@@ -44,8 +44,10 @@ import java.util.Objects;
 
 /**
  * The core {@link MessageBox}: a {@link WindowImpl} holding a column of the wrapped message and a right-aligned row
- * of buttons, each {@link #BUTTON_WIDTH} units wide, 4 units apart. The box itself is centered and the window fills
- * it. An Escape press sent to the box itself, as when its dialog has nothing focused, counts as one on the window.
+ * of buttons, each {@link #BUTTON_WIDTH} units wide, 4 units apart, unless the theme's metrics say otherwise. With
+ * a button width of 0 the message is given its whole wrap width and the buttons split it evenly, less the gaps, each
+ * no wider than the theme's maximum, in a centered row. The box itself is centered and the window fills it. An Escape
+ * press sent to the box itself, as when its dialog has nothing focused, counts as one on the window.
  */
 public final class MessageBoxImpl extends BuiltInComposite<MessageBox> implements MessageBox {
     /**
@@ -67,6 +69,9 @@ public final class MessageBoxImpl extends BuiltInComposite<MessageBox> implement
     private final StackPanel column;
     private Buttons buttonSet;
     private boolean done;
+    private float messageWidth = MESSAGE_WIDTH;
+    private float buttonWidth = BUTTON_WIDTH;
+    private float buttonWidthMaximum;
 
     /**
      * Creates a message box.
@@ -116,6 +121,36 @@ public final class MessageBoxImpl extends BuiltInComposite<MessageBox> implement
     @Override
     protected void onApplyTheme(final Theme theme) {
         this.column.setPadding(theme.insetsOr(STYLE_PADDING, DEFAULT_PADDING));
+        this.column.setSpacing(Math.max(0f, theme.metricOr(STYLE_SPACING, 8f)));
+        this.messageWidth = Math.max(0f, theme.metricOr(STYLE_MESSAGE_WIDTH, MESSAGE_WIDTH));
+        this.buttonWidth = Math.max(0f, theme.metricOr(STYLE_BUTTON_WIDTH, BUTTON_WIDTH));
+        this.buttonWidthMaximum = Math.max(0f, theme.metricOr(STYLE_BUTTON_WIDTH_MAXIMUM, 0f));
+        this.row.setSpacing(Math.max(0f, theme.metricOr(STYLE_BUTTON_GAP, 4f)));
+        this.text.setTextAlignment(theme.metricOr(STYLE_MESSAGE_CENTER, 0f) != 0f
+                ? HorizontalAlignment.CENTER : HorizontalAlignment.LEFT);
+        this.window.setCloseButtonShown(theme.metricOr(STYLE_CLOSE, 1f) != 0f);
+        this.sizeButtons();
+    }
+
+    /**
+     * Sizes the message and the buttons for the theme's widths.
+     */
+    private void sizeButtons() {
+        final boolean share = this.buttonWidth <= 0f;
+        this.text.setMaxSize(this.messageWidth, Float.POSITIVE_INFINITY);
+        this.text.setMinSize(share ? this.messageWidth : 0f, 0f);
+        this.row.setAlignment(share ? HorizontalAlignment.CENTER : HorizontalAlignment.RIGHT, VerticalAlignment.TOP);
+        final int count = this.buttons.size();
+        float width = this.buttonWidth;
+        if (share && count > 0) {
+            width = (this.messageWidth - this.row.spacing() * (count - 1)) / count;
+            if (this.buttonWidthMaximum > 0f) {
+                width = Math.min(width, this.buttonWidthMaximum);
+            }
+        }
+        for (final Button button : this.buttons.values()) {
+            button.setWidth(Math.max(0f, (float) Math.floor(width)));
+        }
     }
 
     @Override
@@ -158,10 +193,10 @@ public final class MessageBoxImpl extends BuiltInComposite<MessageBox> implement
         for (final Result result : buttons.results()) {
             final Button button = this.ui.button(this.captions.getOrDefault(result, caption(result)))
                     .onEvent(Button.PRESSED, event -> this.answer(result));
-            button.setWidth(BUTTON_WIDTH);
             this.buttons.put(result, button);
             this.row.add(button);
         }
+        this.sizeButtons();
         return this;
     }
 

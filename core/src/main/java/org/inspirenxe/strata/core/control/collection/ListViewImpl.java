@@ -26,6 +26,7 @@ import org.inspirenxe.strata.api.event.input.ScrollEvent;
 import org.inspirenxe.strata.api.extension.ArrangeContext;
 import org.inspirenxe.strata.api.extension.MeasureContext;
 import org.inspirenxe.strata.api.extension.Painter;
+import org.inspirenxe.strata.api.geometry.Insets;
 import org.inspirenxe.strata.api.geometry.Rect;
 import org.inspirenxe.strata.api.geometry.Size;
 import org.inspirenxe.strata.api.input.Key;
@@ -36,6 +37,8 @@ import org.inspirenxe.strata.api.text.Text;
 import org.inspirenxe.strata.api.text.TextStyle;
 import org.inspirenxe.strata.api.theme.Paint;
 import org.inspirenxe.strata.api.theme.Theme;
+import org.inspirenxe.strata.core.control.Caption;
+import org.inspirenxe.strata.core.control.Rings;
 import org.inspirenxe.strata.core.layout.ScrollTrack;
 import org.inspirenxe.strata.core.node.BuiltInComposite;
 import org.inspirenxe.strata.core.node.ComponentFactoryImpl;
@@ -96,6 +99,9 @@ public final class ListViewImpl<T> extends BuiltInComposite<ListView<T>> impleme
     private boolean barShown;
     private Rect viewport;
     private float rowWidth;
+    private float rowX;
+    // Set for a list the factory made, which follows the theme's row width and edges
+    private boolean standalone;
 
     // Pointer
     private float pointerY;
@@ -107,6 +113,15 @@ public final class ListViewImpl<T> extends BuiltInComposite<ListView<T>> impleme
     private Paint row;
     private Paint rowHovered;
     private Paint rowSelected;
+    private Paint rowSelectedUnfocused;
+    private Paint ring;
+    private Paint ringUnfocused;
+    private Paint edge;
+    private Paint edgeOuter;
+    private float rowLimit;
+    private Insets padding = Insets.NONE;
+    private float barGap = ScrollPanel.BAR_GAP;
+    private float scrollRows = 1f;
     private Paint thumb;
     private Paint thumbHovered;
     private Paint track;
@@ -629,7 +644,8 @@ public final class ListViewImpl<T> extends BuiltInComposite<ListView<T>> impleme
 
     private float totalHeight() {
         final int count = this.items.size();
-        return count == 0 ? 0f : count * this.rowHeight + (count - 1) * this.rowSpacing;
+        return count == 0 ? 0f
+                : count * this.rowHeight + (count - 1) * this.rowSpacing + this.padding.top() + this.padding.bottom();
     }
 
     /**
@@ -641,11 +657,26 @@ public final class ListViewImpl<T> extends BuiltInComposite<ListView<T>> impleme
         return Math.max(0f, inner.width() - (this.totalHeight() > inner.height() ? GUTTER : 0f));
     }
 
+    /**
+     * Makes this list follow the theme's {@value ListView#STYLE_ROW_WIDTH} and {@value ListView#STYLE_PADDING} and draw its {@value ListView#STYLE_EDGE}
+     * lines, as a list the factory makes does. Lists inside other controls leave both out.
+     *
+     * @return this list
+     */
+    public ListViewImpl<T> standalone() {
+        this.standalone = true;
+        this.invalidateLayout();
+        return this;
+    }
+
     private int rowAt(final float y) {
         if (!this.viewport.contains(this.viewport.x(), y)) {
             return -1;
         }
-        final float along = y - this.viewport.y() + Math.round(this.scrollY);
+        final float along = y - this.viewport.y() + Math.round(this.scrollY) - this.padding.top();
+        if (along < 0f) {
+            return -1;
+        }
         final int index = (int) Math.floor(along / this.step());
         if (index < 0 || index >= this.items.size() || along - index * this.step() >= this.rowHeight) {
             return -1;
@@ -710,6 +741,15 @@ public final class ListViewImpl<T> extends BuiltInComposite<ListView<T>> impleme
         this.row = theme.paintOr(STYLE_ROW, Paint.NONE);
         this.rowHovered = theme.paintOr(STYLE_ROW_HOVERED, this.row);
         this.rowSelected = theme.paintOr(STYLE_ROW_SELECTED, Paint.NONE);
+        this.rowSelectedUnfocused = theme.paintOr(STYLE_ROW_SELECTED_UNFOCUSED, this.rowSelected);
+        this.ring = theme.paintOr(STYLE_ROW_RING, Paint.NONE);
+        this.ringUnfocused = theme.paintOr(STYLE_ROW_RING_UNFOCUSED, Paint.NONE);
+        this.edge = theme.paintOr(STYLE_EDGE, Paint.NONE);
+        this.edgeOuter = theme.paintOr(STYLE_EDGE_OUTER, Paint.NONE);
+        this.rowLimit = Math.max(0f, theme.metricOr(STYLE_ROW_WIDTH, 0f));
+        this.padding = this.standalone ? theme.insetsOr(STYLE_PADDING, Insets.NONE) : Insets.NONE;
+        this.barGap = Math.max(0f, theme.metricOr(STYLE_BAR_GAP, ScrollPanel.BAR_GAP));
+        this.scrollRows = Math.max(0f, theme.metricOr(STYLE_SCROLL_ROWS, 1f));
         this.thumb = theme.paintOr(ScrollPanel.STYLE_THUMB, Paint.NONE);
         this.thumbHovered = theme.paintOr(ScrollPanel.STYLE_THUMB_HOVERED, this.thumb);
         this.track = theme.paintOr(ScrollPanel.STYLE_TRACK, Paint.NONE);
@@ -740,11 +780,13 @@ public final class ListViewImpl<T> extends BuiltInComposite<ListView<T>> impleme
         final Rect inner = bounds.shrink(this.border().widths());
         final float total = this.totalHeight();
         this.barShown = total > inner.height();
-        this.viewport = new Rect(inner.x(), inner.y(), Math.max(0f, inner.width() - (this.barShown ? GUTTER : 0f)),
-                inner.height());
+        // A centered column keeps its bar beside it, so the rows stay centered in the whole list
+        final boolean column = this.standalone && this.rowLimit > 0f && this.rowLimit < inner.width();
+        this.viewport = new Rect(inner.x(), inner.y(),
+                Math.max(0f, inner.width() - (this.barShown && !column ? GUTTER : 0f)), inner.height());
         this.maxScrollY = Math.max(0f, total - this.viewport.height());
         if (this.reveal >= 0 && this.reveal < this.items.size()) {
-            final float top = this.reveal * this.step();
+            final float top = this.padding.top() + this.reveal * this.step();
             if (top < this.scrollY) {
                 this.scrollY = top;
             } else if (top + this.rowHeight > this.scrollY + this.viewport.height()) {
@@ -753,7 +795,8 @@ public final class ListViewImpl<T> extends BuiltInComposite<ListView<T>> impleme
         }
         this.reveal = -1;
         this.scrollY = Math.max(0f, Math.min(this.scrollY, this.maxScrollY));
-        this.rowWidth = this.viewport.width();
+        this.rowWidth = column ? this.rowLimit : this.viewport.width();
+        this.rowX = column ? Caption.center(this.viewport.x(), this.viewport.width(), this.rowWidth) : this.viewport.x();
 
         if (this.rowsStale) {
             this.rowsStale = false;
@@ -766,8 +809,9 @@ public final class ListViewImpl<T> extends BuiltInComposite<ListView<T>> impleme
             first = 0;
             last = -1;
         } else {
-            first = Math.max(0, (int) Math.floor(this.scrollY / this.step()));
-            last = Math.min(this.items.size() - 1, (int) Math.floor((this.scrollY + this.viewport.height()) / this.step()));
+            final float from = this.scrollY - this.padding.top();
+            first = Math.max(0, (int) Math.floor(from / this.step()));
+            last = Math.min(this.items.size() - 1, (int) Math.floor((from + this.viewport.height()) / this.step()));
         }
         for (final Iterator<Map.Entry<Integer, Component<?>>> it = this.rows.entrySet().iterator(); it.hasNext(); ) {
             final Map.Entry<Integer, Component<?>> entry = it.next();
@@ -785,10 +829,13 @@ public final class ListViewImpl<T> extends BuiltInComposite<ListView<T>> impleme
                 this.addContent(cell);
                 context.measure(cell, this.rowWidth, this.rowHeight);
             }
-            context.arrange(cell, new Rect(this.viewport.x(), this.viewport.y() + i * this.step() - offset,
+            context.arrange(cell, new Rect(this.rowX, this.viewport.y() + this.padding.top() + i * this.step() - offset,
                     this.rowWidth, this.rowHeight));
         }
-        this.bar.update(new Rect(inner.right() - ScrollPanel.BAR_WIDTH, inner.y(), ScrollPanel.BAR_WIDTH, inner.height()),
+        final float barX = column
+                ? this.rowX + this.rowWidth + this.barGap
+                : inner.right() - ScrollPanel.BAR_WIDTH;
+        this.bar.update(new Rect(barX, inner.y(), ScrollPanel.BAR_WIDTH, inner.height()),
                 this.viewport.height(), Math.max(total, this.viewport.height()));
     }
 
@@ -799,6 +846,12 @@ public final class ListViewImpl<T> extends BuiltInComposite<ListView<T>> impleme
 
     @Override
     protected void paint(final Painter painter, final Rect bounds) {
+        if (this.standalone) {
+            this.edge.paint(painter, new Rect(bounds.x(), bounds.y() - 1f, bounds.width(), 1f));
+            this.edge.paint(painter, new Rect(bounds.x(), bounds.bottom(), bounds.width(), 1f));
+            this.edgeOuter.paint(painter, new Rect(bounds.x(), bounds.y() - 2f, bounds.width(), 1f));
+            this.edgeOuter.paint(painter, new Rect(bounds.x(), bounds.bottom() + 1f, bounds.width(), 1f));
+        }
         this.background.paint(painter, bounds);
         if (this.items.isEmpty()) {
             final TextLine line = this.placeholderLine;
@@ -822,17 +875,19 @@ public final class ListViewImpl<T> extends BuiltInComposite<ListView<T>> impleme
     private void drawRows() {
         final int hoveredRow = this.isHoverWithin() ? this.rowAt(this.pointerY) : -1;
         final float offset = Math.round(this.scrollY);
+        final boolean focused = this.isFocused();
         for (final Integer index : this.rows.keySet()) {
-            final Paint paint;
+            final Rect rect = new Rect(this.rowX, this.viewport.y() + this.padding.top() + index * this.step() - offset, this.rowWidth,
+                    this.rowHeight);
             if (this.chosen.contains(index)) {
-                paint = this.rowSelected;
-            } else if (index == hoveredRow) {
-                paint = this.rowHovered;
+                (focused ? this.rowSelected : this.rowSelectedUnfocused).paint(this.painter, rect);
+                final Paint edge = focused ? this.ring : this.ringUnfocused;
+                if (edge != Paint.NONE) {
+                    Rings.paint(this.painter, edge, rect);
+                }
             } else {
-                paint = this.row;
+                (index == hoveredRow ? this.rowHovered : this.row).paint(this.painter, rect);
             }
-            paint.paint(this.painter, new Rect(this.viewport.x(), this.viewport.y() + index * this.step() - offset,
-                    this.rowWidth, this.rowHeight));
         }
     }
 
@@ -919,7 +974,7 @@ public final class ListViewImpl<T> extends BuiltInComposite<ListView<T>> impleme
 
     @Override
     protected void onScroll(final ScrollEvent event) {
-        if (this.scrollTo(this.scrollY - event.scrollY() * this.step())) {
+        if (this.scrollTo(this.scrollY - event.scrollY() * this.step() * this.scrollRows)) {
             event.consume();
         }
     }

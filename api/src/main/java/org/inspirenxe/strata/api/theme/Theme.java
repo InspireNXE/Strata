@@ -24,12 +24,14 @@ import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.OptionalDouble;
 import java.util.Set;
 
 /**
- * A set of style keys mapped to paints, text styles and insets. A key may have any of the three. Paints and text
- * styles say what a control looks like; insets, in UI units, say where it puts its content, such as the space
- * around a tab's text.
+ * A set of style keys mapped to paints, text styles, insets and metrics. A key may have any of the four. Paints
+ * and text styles say what a control looks like; insets, in UI units, say where it puts its content, such as the
+ * space around a tab's text; metrics are single numbers that tune how a control looks or behaves, such as how long
+ * the pointer rests before a tooltip shows. Each metric key states its unit.
  *
  * <p>Themes are immutable values; make one with {@link #builder(String)}, or derive a variant of an existing theme
  * with {@link #toBuilder()}:</p>
@@ -48,6 +50,7 @@ public final class Theme {
     private final Map<String, Paint> paints;
     private final Map<String, TextStyle> textStyles;
     private final Map<String, Insets> insets;
+    private final Map<String, Float> metrics;
     private final Map<String, String> layers;
 
     private Theme(final Builder builder) {
@@ -55,6 +58,7 @@ public final class Theme {
         this.paints = Map.copyOf(builder.paints);
         this.textStyles = Map.copyOf(builder.textStyles);
         this.insets = Map.copyOf(builder.insets);
+        this.metrics = Map.copyOf(builder.metrics);
         this.layers = Map.copyOf(builder.layers);
     }
 
@@ -141,6 +145,28 @@ public final class Theme {
     }
 
     /**
+     * Looks up a metric.
+     *
+     * @param key the style key
+     * @return the metric, or empty if the key has none
+     */
+    public OptionalDouble metric(final String key) {
+        final Float value = this.metrics.get(key);
+        return value != null ? OptionalDouble.of(value) : OptionalDouble.empty();
+    }
+
+    /**
+     * Looks up a metric, with a fallback.
+     *
+     * @param key the style key
+     * @param fallback returned if the key has no metric
+     * @return the metric, or {@code fallback}
+     */
+    public float metricOr(final String key, final float fallback) {
+        return this.metrics.getOrDefault(key, fallback);
+    }
+
+    /**
      * Returns every paint this theme sets, by style key.
      *
      * @return an immutable map
@@ -168,8 +194,18 @@ public final class Theme {
     }
 
     /**
+     * Returns every metric this theme sets, by style key.
+     *
+     * @return an immutable map
+     */
+    public Map<String, Float> metrics() {
+        return this.metrics;
+    }
+
+    /**
      * Returns the name of the layer that set a key, when the theme was resolved from a {@link ThemeRef}. Layers
-     * apply lowest first, and a key reports the highest layer that set any of its paint, text style or insets.
+     * apply lowest first, and a key reports the highest layer that set any of its paint, text style, insets or
+     * metric.
      * The names are:
      * <ul>
      *     <li>{@code base} for a base theme built in code, {@link Themes#flat()} included;</li>
@@ -188,13 +224,14 @@ public final class Theme {
     }
 
     /**
-     * Returns whether a key has a paint, a text style or insets.
+     * Returns whether a key has a paint, a text style, insets or a metric.
      *
      * @param key the style key
      * @return true if the theme defines the key
      */
     public boolean has(final String key) {
-        return this.paints.containsKey(key) || this.textStyles.containsKey(key) || this.insets.containsKey(key);
+        return this.paints.containsKey(key) || this.textStyles.containsKey(key) || this.insets.containsKey(key)
+                || this.metrics.containsKey(key);
     }
 
     /**
@@ -224,6 +261,7 @@ public final class Theme {
         builder.paints.putAll(this.paints);
         builder.textStyles.putAll(this.textStyles);
         builder.insets.putAll(this.insets);
+        builder.metrics.putAll(this.metrics);
         return builder;
     }
 
@@ -236,6 +274,7 @@ public final class Theme {
         private final Map<String, Paint> paints;
         private final Map<String, TextStyle> textStyles;
         private final Map<String, Insets> insets;
+        private final Map<String, Float> metrics;
         private final Map<String, String> layers;
 
         private Builder(final String name) {
@@ -243,6 +282,7 @@ public final class Theme {
             this.paints = new HashMap<>();
             this.textStyles = new HashMap<>();
             this.insets = new HashMap<>();
+            this.metrics = new HashMap<>();
             this.layers = new HashMap<>();
         }
 
@@ -279,6 +319,22 @@ public final class Theme {
          */
         public Builder insets(final String key, final Insets insets) {
             this.insets.put(Objects.requireNonNull(key, "key"), Objects.requireNonNull(insets, "insets"));
+            return this;
+        }
+
+        /**
+         * Sets a key's metric, replacing any earlier one.
+         *
+         * @param key the style key
+         * @param value the metric, in the unit its key states
+         * @return this builder
+         * @throws IllegalArgumentException if {@code value} is not finite
+         */
+        public Builder metric(final String key, final float value) {
+            if (!Float.isFinite(value)) {
+                throw new IllegalArgumentException("Metric " + key + " is not finite: " + value);
+            }
+            this.metrics.put(Objects.requireNonNull(key, "key"), value);
             return this;
         }
 

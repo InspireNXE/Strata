@@ -34,23 +34,46 @@ import java.util.Objects;
  * overrides held here. The ref's overrides always win.</p>
  *
  * <p>A ref is immutable. {@link #override(String, Paint)}, {@link #override(String, TextStyle)},
- * {@link #override(String, Insets)} and {@link #override(ThemeOverrides)} return a new ref.</p>
+ * {@link #override(String, Insets)}, {@link #override(String, float)} and {@link #override(ThemeOverrides)} return
+ * a new ref.</p>
  *
  * @param id the theme to start from
  * @param paints paint overrides by style key; copied
  * @param textStyles text style overrides by style key; copied
  * @param insets insets overrides by style key; copied
+ * @param metrics metric overrides by style key; copied
  */
 public record ThemeRef(ThemeId id, Map<String, Paint> paints, Map<String, TextStyle> textStyles,
-                       Map<String, Insets> insets) {
+                       Map<String, Insets> insets, Map<String, Float> metrics) {
     /**
      * Checks and copies the arguments.
+     *
+     * @throws IllegalArgumentException if a metric is not finite
      */
     public ThemeRef {
         Objects.requireNonNull(id, "id");
         paints = Map.copyOf(paints);
         textStyles = Map.copyOf(textStyles);
         insets = Map.copyOf(insets);
+        metrics = Map.copyOf(metrics);
+        metrics.forEach((key, value) -> {
+            if (!Float.isFinite(value)) {
+                throw new IllegalArgumentException("Metric " + key + " is not finite: " + value);
+            }
+        });
+    }
+
+    /**
+     * Creates a ref with paint, text style and insets overrides and no metric overrides.
+     *
+     * @param id the theme to start from
+     * @param paints paint overrides by style key; copied
+     * @param textStyles text style overrides by style key; copied
+     * @param insets insets overrides by style key; copied
+     */
+    public ThemeRef(final ThemeId id, final Map<String, Paint> paints, final Map<String, TextStyle> textStyles,
+                    final Map<String, Insets> insets) {
+        this(id, paints, textStyles, insets, Map.of());
     }
 
     /**
@@ -71,7 +94,7 @@ public record ThemeRef(ThemeId id, Map<String, Paint> paints, Map<String, TextSt
      * @return the ref
      */
     public static ThemeRef of(final ThemeId id) {
-        return new ThemeRef(id, Map.of(), Map.of(), Map.of());
+        return new ThemeRef(id, Map.of(), Map.of(), Map.of(), Map.of());
     }
 
     /**
@@ -99,7 +122,7 @@ public record ThemeRef(ThemeId id, Map<String, Paint> paints, Map<String, TextSt
     public ThemeRef override(final String key, final Paint paint) {
         final Map<String, Paint> paints = new HashMap<>(this.paints);
         paints.put(Objects.requireNonNull(key, "key"), Objects.requireNonNull(paint, "paint"));
-        return new ThemeRef(this.id, paints, this.textStyles, this.insets);
+        return new ThemeRef(this.id, paints, this.textStyles, this.insets, this.metrics);
     }
 
     /**
@@ -113,7 +136,7 @@ public record ThemeRef(ThemeId id, Map<String, Paint> paints, Map<String, TextSt
     public ThemeRef override(final String key, final TextStyle style) {
         final Map<String, TextStyle> styles = new HashMap<>(this.textStyles);
         styles.put(Objects.requireNonNull(key, "key"), Objects.requireNonNull(style, "style"));
-        return new ThemeRef(this.id, this.paints, styles, this.insets);
+        return new ThemeRef(this.id, this.paints, styles, this.insets, this.metrics);
     }
 
     /**
@@ -127,7 +150,22 @@ public record ThemeRef(ThemeId id, Map<String, Paint> paints, Map<String, TextSt
     public ThemeRef override(final String key, final Insets insets) {
         final Map<String, Insets> all = new HashMap<>(this.insets);
         all.put(Objects.requireNonNull(key, "key"), Objects.requireNonNull(insets, "insets"));
-        return new ThemeRef(this.id, this.paints, this.textStyles, all);
+        return new ThemeRef(this.id, this.paints, this.textStyles, all, this.metrics);
+    }
+
+    /**
+     * Returns a copy of this ref that sets a metric after the packs are applied. A later override of the same key
+     * replaces an earlier one.
+     *
+     * @param key the style key
+     * @param value the metric to use, in the unit its key states
+     * @return the new ref
+     * @throws IllegalArgumentException if {@code value} is not finite
+     */
+    public ThemeRef override(final String key, final float value) {
+        final Map<String, Float> all = new HashMap<>(this.metrics);
+        all.put(Objects.requireNonNull(key, "key"), value);
+        return new ThemeRef(this.id, this.paints, this.textStyles, this.insets, all);
     }
 
     /**
@@ -144,6 +182,8 @@ public record ThemeRef(ThemeId id, Map<String, Paint> paints, Map<String, TextSt
         styles.putAll(overrides.textStyles());
         final Map<String, Insets> all = new HashMap<>(this.insets);
         all.putAll(overrides.insets());
-        return new ThemeRef(this.id, paints, styles, all);
+        final Map<String, Float> metrics = new HashMap<>(this.metrics);
+        metrics.putAll(overrides.metrics());
+        return new ThemeRef(this.id, paints, styles, all, metrics);
     }
 }

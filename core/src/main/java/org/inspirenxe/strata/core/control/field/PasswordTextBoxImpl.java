@@ -45,6 +45,7 @@ import org.inspirenxe.strata.api.text.TextSpan;
 import org.inspirenxe.strata.api.text.TextStyle;
 import org.inspirenxe.strata.api.theme.Paint;
 import org.inspirenxe.strata.api.theme.Theme;
+import org.inspirenxe.strata.core.control.button.ButtonImpl;
 import org.inspirenxe.strata.core.node.BuiltInComponent;
 import org.inspirenxe.strata.core.node.BuiltInComposite;
 import org.inspirenxe.strata.core.node.ComponentFactoryImpl;
@@ -110,8 +111,7 @@ public final class PasswordTextBoxImpl extends BuiltInComposite<PasswordTextBox>
     private Paint normal;
     private Paint focusedPaint;
     private Paint disabledPaint;
-    private Paint selectionPaint;
-    private Paint caretPaint;
+    private FieldLook look;
     private TextStyle textStyle;
     private TextStyle disabledTextStyle;
     private TextStyle readOnlyTextStyle;
@@ -147,8 +147,7 @@ public final class PasswordTextBoxImpl extends BuiltInComposite<PasswordTextBox>
         this.normal = Paint.NONE;
         this.focusedPaint = Paint.NONE;
         this.disabledPaint = Paint.NONE;
-        this.selectionPaint = TextBoxImpl.DEFAULT_SELECTION;
-        this.caretPaint = TextBoxImpl.DEFAULT_CARET;
+        this.look = FieldLook.plain(TextBoxImpl.DEFAULT_SELECTION, TextBoxImpl.DEFAULT_CARET);
         this.textStyle = TextStyle.DEFAULT;
         this.disabledTextStyle = TextStyle.DEFAULT;
         this.readOnlyTextStyle = TextStyle.DEFAULT;
@@ -157,7 +156,7 @@ public final class PasswordTextBoxImpl extends BuiltInComposite<PasswordTextBox>
         this.placeholder = Text.empty();
         this.placeholderLine = TextLine.EMPTY;
         this.setCursor(CursorKind.TEXT);
-        this.setMinSize(20f, 20f);
+        this.setMinSize(20f, 0f);
         this.eye = new RevealEye(ui, this);
         this.addChild(this.eye);
         this.eye.sync();
@@ -490,8 +489,7 @@ public final class PasswordTextBoxImpl extends BuiltInComposite<PasswordTextBox>
         this.normal = theme.paintOr(TextBox.STYLE_NORMAL, Paint.NONE);
         this.focusedPaint = theme.paintOr(TextBox.STYLE_FOCUSED, this.normal);
         this.disabledPaint = theme.paintOr(TextBox.STYLE_DISABLED, this.normal);
-        this.selectionPaint = theme.paintOr(TextBox.STYLE_SELECTION, TextBoxImpl.DEFAULT_SELECTION);
-        this.caretPaint = theme.paintOr(TextBox.STYLE_CARET, TextBoxImpl.DEFAULT_CARET);
+        this.look = FieldLook.of(theme, TextBoxImpl.DEFAULT_SELECTION, TextBoxImpl.DEFAULT_CARET);
         this.textStyle = theme.textStyleOr(TextBox.STYLE_TEXT, TextStyle.DEFAULT);
         this.disabledTextStyle = theme.textStyleOr(TextBox.STYLE_TEXT_DISABLED, this.textStyle);
         this.readOnlyTextStyle = theme.textStyleOr(TextBox.STYLE_TEXT_READ_ONLY, this.disabledTextStyle);
@@ -507,7 +505,8 @@ public final class PasswordTextBoxImpl extends BuiltInComposite<PasswordTextBox>
                 Math.max(metrics.lineHeight(this.disabledTextStyle), metrics.lineHeight(this.maskStyle)));
         this.placeholderLine = TextLine.of(this.placeholder, this.placeholderStyle, metrics);
         context.measure(this.eye, this.lineHeight, this.lineHeight);
-        return new Size(TextBoxImpl.DEFAULT_WIDTH, this.lineHeight + this.textPadding.vertical());
+        return new Size(TextBoxImpl.DEFAULT_WIDTH,
+                Math.max(ButtonImpl.MIN_HEIGHT, this.lineHeight + this.textPadding.vertical()));
     }
 
     @Override
@@ -536,7 +535,7 @@ public final class PasswordTextBoxImpl extends BuiltInComposite<PasswordTextBox>
                         content.height())
                 : content;
         final float textY = content.y() + (content.height() - this.lineHeight) * 0.5f;
-        this.editor.paint(painter, text, textY, this.lineHeight, this.selectionPaint, this.caretPaint,
+        this.editor.paint(painter, text, textY, this.lineHeight, this.look, this.shownStyle(),
                 this.isFocused() && this.isEnabled() && !this.readOnly);
     }
 
@@ -771,16 +770,17 @@ public final class PasswordTextBoxImpl extends BuiltInComposite<PasswordTextBox>
         }
 
         @Override
-        public void drawText(final Painter painter, final float originX, final float left, final float y) {
+        public void drawText(final Painter painter, final float originX, final float left, final float y,
+                             final TextStyle style) {
             final PasswordTextBoxImpl box = PasswordTextBoxImpl.this;
             if (box.buffer.isEmpty()) {
-                if (!box.placeholderLine.isEmpty()) {
+                if (!box.placeholderLine.isEmpty() && !(box.look.hidePlaceholder() && box.isFocused())) {
                     box.placeholderLine.draw(painter, left, y);
                 }
                 return;
             }
             if (box.drawn != null) {
-                painter.text(box.drawn, originX, y);
+                painter.text(style == null ? box.drawn : new TextSpan(box.drawn.text(), style), originX, y);
             }
         }
 

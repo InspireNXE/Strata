@@ -24,6 +24,7 @@ import org.inspirenxe.strata.api.text.TextStyle;
 import org.inspirenxe.strata.spi.Capabilities;
 import org.inspirenxe.strata.spi.Clipboard;
 import org.inspirenxe.strata.spi.Clock;
+import org.inspirenxe.strata.spi.Conventions;
 import org.inspirenxe.strata.spi.Platform;
 import org.inspirenxe.strata.spi.TextInputSink;
 import org.inspirenxe.strata.spi.ThemeSource;
@@ -50,6 +51,7 @@ public final class TestPlatform implements Platform {
     private Rect textInputArea;
     private TextInputKind textInputKind;
     private ThemeSource themes = ThemeSource.NONE;
+    private Conventions conventions = Conventions.DEFAULT;
     private CauseStack causes;
     private Object user;
     private java.time.Clock wall = java.time.Clock.fixed(TODAY.toInstant(ZoneOffset.UTC), ZoneOffset.UTC);
@@ -165,6 +167,18 @@ public final class TestPlatform implements Platform {
     @Override
     public Capabilities capabilities() {
         return new Capabilities(this.sendsKeyRepeat, false);
+    }
+
+    /**
+     * Sets the conventions the platform reports, which are {@link Conventions#DEFAULT} until set.
+     */
+    public void setConventions(final Conventions conventions) {
+        this.conventions = conventions;
+    }
+
+    @Override
+    public Conventions conventions() {
+        return this.conventions;
     }
 
     public void setThemes(final ThemeSource themes) {

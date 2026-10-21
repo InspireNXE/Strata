@@ -72,6 +72,8 @@ public final class GridViewImpl<T> extends BuiltInComposite<GridView<T>> impleme
     private Insets cellPadding = DEFAULT_CELL_PADDING;
     private Paint hoveredPaint;
     private Paint selectedPaint;
+    private Paint hoveredBackPaint = Paint.NONE;
+    private Insets highlightInsets = Insets.NONE;
 
     /**
      * Creates a grid with no slots.
@@ -337,6 +339,8 @@ public final class GridViewImpl<T> extends BuiltInComposite<GridView<T>> impleme
         this.cellPaint = theme.paintOr(STYLE_CELL, Paint.NONE);
         this.hoveredPaint = theme.paintOr(STYLE_CELL_HOVERED, Paint.NONE);
         this.selectedPaint = theme.paintOr(STYLE_CELL_SELECTED, this.hoveredPaint);
+        this.hoveredBackPaint = theme.paintOr(STYLE_CELL_HOVERED_BACK, Paint.NONE);
+        this.highlightInsets = theme.insetsOr(STYLE_CELL_HIGHLIGHT, Insets.NONE);
         this.cellPadding = theme.insetsOr(STYLE_CELL_PADDING, DEFAULT_CELL_PADDING);
     }
 
@@ -411,14 +415,17 @@ public final class GridViewImpl<T> extends BuiltInComposite<GridView<T>> impleme
         @Override
         protected void paint(final Painter painter, final Rect bounds) {
             this.grid.cellPaint.paint(painter, bounds);
+            if (this.grid.hoveredBackPaint != Paint.NONE && this.isHoverWithin()) {
+                this.grid.hoveredBackPaint.paint(painter, bounds.shrink(this.grid.highlightInsets));
+            }
         }
 
         @Override
         protected void paintOverChildren(final Painter painter, final Rect bounds) {
             if (this.index == this.grid.selectedIndex) {
-                this.grid.selectedPaint.paint(painter, bounds);
+                this.grid.selectedPaint.paint(painter, bounds.shrink(this.grid.highlightInsets));
             } else if (this.isHoverWithin()) {
-                this.grid.hoveredPaint.paint(painter, bounds);
+                this.grid.hoveredPaint.paint(painter, bounds.shrink(this.grid.highlightInsets));
             }
         }
 

@@ -30,12 +30,15 @@ import java.util.Optional;
  * {@link SingleSelection#SELECTED} fires. Each tab is a {@link Tab}, which holds its text, whether it is enabled and
  * its tooltip.
  *
- * <p>Tabs share the bar's width equally, with {@linkplain #setSpacing the spacing} between them, and are one line
+ * <p>Tabs share the bar's width equally, with {@linkplain #setSpacing the spacing} between them; when the width
+ * left for them is a whole number, each tab is a whole number wide and the spare units go one each to the first
+ * tabs. They are one line
  * plus 7 units tall. A left click on an enabled tab selects it. While the bar has focus, Left and Right select the
  * previous and next enabled tab, without wrapping, and repeat while held; the bar consumes them even at the ends. Each tab can have its own tooltip, such as one that says why it is disabled. The
  * first tab added is selected; a bar with no tabs has none.</p>
  *
- * <p>The bar is focusable and tabbable, and each tab shows the hand cursor while enabled.</p>
+ * <p>The bar is focusable and tabbable, a click on an enabled tab gives it focus, and each tab shows the hand cursor
+ * while enabled.</p>
  *
  * <h2>Events</h2>
  * <ul>
@@ -123,6 +126,48 @@ public interface TabBar extends Component<TabBar>, Focusable<TabBar>, HasCursor<
      * Style key for the space around the selected tab's text (insets, optional).
      */
     String STYLE_PADDING_SELECTED = "tab.padding.selected";
+    /**
+     * Style key for the selected tab while hovered or while the bar has focus that the keyboard gave it or
+     * kept, not a click (paint, optional). Defaults to
+     * {@value #STYLE_SELECTED}.
+     */
+    String STYLE_SELECTED_HOVERED = "tab.selected.hovered";
+    /**
+     * Style key for a second layer drawn over the selected tab's face, inside {@value #STYLE_SELECTED_FILL_INSETS}
+     * (paint, optional). Defaults to none.
+     */
+    String STYLE_SELECTED_FILL = "tab.selected.fill";
+    /**
+     * Style key for where {@value #STYLE_SELECTED_FILL} is drawn, as insets from the tab's edges (insets,
+     * optional). Defaults to none.
+     */
+    String STYLE_SELECTED_FILL_INSETS = "tab.selected.fill.insets";
+    /**
+     * Style key for a line under the selected tab's text (paint, optional). The line is 1 unit tall, its bottom 1
+     * unit above the tab's bottom, as wide as the text but at most the tab less 2 units at each side, and centered.
+     * Defaults to none.
+     */
+    String STYLE_UNDERLINE = "tab.underline";
+    /**
+     * Style key for the line under the selected tab's text when the tab is disabled (paint, optional). Defaults
+     * to {@value #STYLE_UNDERLINE}.
+     */
+    String STYLE_UNDERLINE_DISABLED = "tab.underline.disabled";
+    /**
+     * Style key for where a tab's text is cut when too wide for the tab, as insets from the tab's edges (insets,
+     * optional). Defaults to the padding's left and right, and none at the top and bottom.
+     */
+    String STYLE_CLIP = "tab.clip";
+    /**
+     * Style key for how fast a tab's text too wide for the tab scrolls (metric, optional), in milliseconds per unit
+     * of overflow for one sweep there and back. Defaults to 0, which cuts the text instead.
+     */
+    String STYLE_TEXT_SCROLL = "tab.text.scroll";
+    /**
+     * Style key for the shortest sweep of a tab's scrolling text (metric, optional), in milliseconds. Defaults
+     * to 0.
+     */
+    String STYLE_TEXT_SCROLL_MINIMUM = "tab.text.scroll.minimum";
 
     /**
      * Returns the tabs, left to right.

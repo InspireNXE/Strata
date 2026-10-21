@@ -63,8 +63,8 @@ import java.util.function.Consumer;
  * {@link org.inspirenxe.strata.api.extension.CustomComponent} that developers extend. It offers the same hooks and
  * helpers under the same names, so a control reads the same either way, and adds what only core may use: its own
  * {@link #node()}, the nodes of other components through {@link #nodeOf}, the host's {@link #hostRoot()},
- * {@link #isFocusFromPress()}, and the {@link #onDisabled()}, {@link #onReleased()} and {@link #onPressWithin}
- * hooks.
+ * {@link #isFocusFromPress()}, {@link #activatesOnPress()}, and the {@link #onDisabled()}, {@link #onReleased()} and
+ * {@link #onPressWithin} hooks.
  *
  * <p>The component holds no state of its own. Its constructor makes the {@link Node} behind it and hands it a private
  * {@link NodeHooks} that calls the protected hooks here; every {@link Component} method is {@code final} and forwards
@@ -146,6 +146,17 @@ public abstract class BuiltInComponent<T extends Component<T>> implements Compon
     protected final boolean isFocusFromPress() {
         final Root root = this.node.root();
         return root != null && root.isFocusFromPress();
+    }
+
+    /**
+     * Returns whether buttons act as the pointer goes down rather than on the click after it, as the platform's
+     * {@link org.inspirenxe.strata.spi.Conventions#activateOnPress()} says. See {@link Root#activatesOnPress()}.
+     *
+     * @return true when buttons act on press; false while this component is detached
+     */
+    protected final boolean activatesOnPress() {
+        final Root root = this.node.root();
+        return root != null && root.activatesOnPress();
     }
 
     /**

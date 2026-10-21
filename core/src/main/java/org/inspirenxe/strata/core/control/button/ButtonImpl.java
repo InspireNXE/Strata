@@ -42,7 +42,8 @@ import java.util.Set;
  * pointer, the hovered paint while hovered or focused, and the normal paint otherwise. A focused button also draws
  * a one-unit focus ring when the theme has one. The caption is centered.
  *
- * <p>The button is focusable and tabbable, shows a hand cursor, and is at least 20 by 20 units. Its desired size is
+ * <p>The button is focusable and tabbable, shows a hand cursor, is at least 20 units wide, and measures at least 20
+ * tall, though a smaller height set on it applies. Its desired size is
  * the caption plus its padding: the one set with {@link #setTextPadding}, or else the theme's
  * {@value #STYLE_PADDING}, or else {@link #DEFAULT_PADDING}. Measuring takes the widest of the normal, hovered and
  * disabled captions, so enabling, disabling or hovering it needs no relayout.</p>
@@ -74,6 +75,11 @@ public final class ButtonImpl extends BuiltInComponent<Button> implements Button
      * side.
      */
     public static final Insets DEFAULT_ICON_PADDING = Insets.of(2f);
+    /**
+     * The least height a framed button, a cycle button, a drop-down button and the one-line text fields measure,
+     * in UI units. A smaller height set on one applies.
+     */
+    public static final float MIN_HEIGHT = 20f;
 
     private final ButtonContent content;
     private boolean link;
@@ -89,7 +95,7 @@ public final class ButtonImpl extends BuiltInComponent<Button> implements Button
         super(ui);
         this.content = new ButtonContent(text);
         this.setCursor(CursorKind.HAND);
-        this.setMinSize(20f, 20f);
+        this.setMinSize(20f, 0f);
     }
 
     @Override
@@ -170,7 +176,7 @@ public final class ButtonImpl extends BuiltInComponent<Button> implements Button
         if (link) {
             this.setMinSize(0f, 0f);
         } else {
-            this.setMinSize(20f, 20f);
+            this.setMinSize(20f, 0f);
         }
         this.invalidateLayout();
         return this;
@@ -207,8 +213,9 @@ public final class ButtonImpl extends BuiltInComponent<Button> implements Button
     protected Size measure(final MeasureContext context, final float availableWidth, final float availableHeight) {
         this.content.measure(context.text(), this.link);
         final Insets padding = this.content.padding(this.link);
+        final float height = this.content.contentHeight() + padding.vertical();
         return new Size(this.content.contentWidth() + padding.horizontal(),
-                this.content.contentHeight() + padding.vertical());
+                this.link ? height : Math.max(MIN_HEIGHT, height));
     }
 
     @Override
@@ -231,13 +238,27 @@ public final class ButtonImpl extends BuiltInComponent<Button> implements Button
             shown = content.caption;
         }
         // Centered in the button less its padding, which is the whole button when the padding is even
-        final Insets padding = content.padding(this.link);
-        content.paintContent(painter, bounds.x() + padding.left(), bounds.y() + padding.top(),
-                bounds.width() - padding.horizontal(), bounds.height() - padding.vertical(), enabled, shown);
+        content.paintContent(painter, bounds, content.padding(this.link), enabled, shown, this.environment().millis());
+    }
+
+    @Override
+    protected void onPointerPress(final PointerButtonEvent event) {
+        if (this.activatesOnPress()) {
+            this.clicked(event);
+        }
     }
 
     @Override
     protected void onClick(final PointerButtonEvent event) {
+        if (!this.activatesOnPress()) {
+            this.clicked(event);
+        }
+    }
+
+    /**
+     * Acts on a pointer press or click, whichever the platform's conventions say buttons act on.
+     */
+    private void clicked(final PointerButtonEvent event) {
         if (event.button() == MouseButton.LEFT) {
             this.userPress();
             event.consume();

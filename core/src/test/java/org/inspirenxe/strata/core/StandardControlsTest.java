@@ -287,7 +287,7 @@ class StandardControlsTest {
         @Test
         void enterInsertsANewLine() {
             this.show("ab");
-            assertEquals(0, this.area.caret());
+            assertEquals(2, this.area.caret());
             this.area.select(2, 2);
             StandardControlsTest.this.key(Key.ENTER);
             StandardControlsTest.this.type("c");

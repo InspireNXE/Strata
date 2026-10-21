@@ -77,7 +77,7 @@ public final class DropDownButtonImpl extends BuiltInComponent<DropDownButton> i
         this.content = new ButtonContent(text);
         this.arrow = Paint.NONE;
         this.setCursor(CursorKind.HAND);
-        this.setMinSize(20f, 20f);
+        this.setMinSize(20f, 0f);
     }
 
     // ------------------------------------------------------------------
@@ -264,7 +264,8 @@ public final class DropDownButtonImpl extends BuiltInComponent<DropDownButton> i
         this.content.measure(context.text(), false);
         final Insets padding = this.content.padding(false);
         return new Size(this.content.contentWidth() + ComboBoxImpl.ARROW_GAP + ComboBoxImpl.ARROW_WIDTH
-                + padding.horizontal(), Math.max(this.content.contentHeight(), Rings.ARROW_SHORT) + padding.vertical());
+                + padding.horizontal(), Math.max(ButtonImpl.MIN_HEIGHT,
+                Math.max(this.content.contentHeight(), Rings.ARROW_SHORT) + padding.vertical()));
     }
 
     @Override
@@ -279,9 +280,10 @@ public final class DropDownButtonImpl extends BuiltInComponent<DropDownButton> i
         final Insets padding = content.padding(false);
         final float innerY = bounds.y() + padding.top();
         final float innerHeight = bounds.height() - padding.vertical();
-        content.paintContent(painter, bounds.x() + padding.left(), innerY,
-                bounds.width() - padding.horizontal() - ComboBoxImpl.ARROW_GAP - ComboBoxImpl.ARROW_WIDTH, innerHeight,
-                enabled, enabled ? content.caption : content.disabledCaption);
+        // The content and its clip area end before the arrow
+        content.paintContent(painter, new Rect(bounds.x(), bounds.y(),
+                        bounds.width() - ComboBoxImpl.ARROW_GAP - ComboBoxImpl.ARROW_WIDTH, bounds.height()), padding,
+                enabled, enabled ? content.caption : content.disabledCaption, this.environment().millis());
 
         final float arrowX = bounds.right() - padding.right() - ComboBoxImpl.ARROW_WIDTH;
         final float arrowY = innerY + (innerHeight - Rings.ARROW_SHORT) * 0.5f;

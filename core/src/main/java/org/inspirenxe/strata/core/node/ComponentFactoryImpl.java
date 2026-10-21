@@ -383,7 +383,7 @@ public final class ComponentFactoryImpl implements ComponentFactory {
 
     @Override
     public <T> ListView<T> listView(final Function<? super T, ? extends Component<?>> cellFactory) {
-        return new ListViewImpl<>(this, cellFactory);
+        return new ListViewImpl<T>(this, cellFactory).standalone();
     }
 
     @Override

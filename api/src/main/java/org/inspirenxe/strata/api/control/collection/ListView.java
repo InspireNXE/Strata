@@ -146,6 +146,54 @@ public interface ListView<T> extends Component<ListView<T>>, Focusable<ListView<
      */
     String STYLE_ROW_SELECTED = "list.row.selected";
     /**
+     * Style key for the selected row while the list does not have focus (paint, optional). Defaults to
+     * {@value #STYLE_ROW_SELECTED}. Trees and tables read it too.
+     */
+    String STYLE_ROW_SELECTED_UNFOCUSED = "list.row.selected.unfocused";
+    /**
+     * Style key for a one-unit ring just inside the selected row while the list has focus (paint, optional).
+     * Defaults to none. Trees and tables read it too.
+     */
+    String STYLE_ROW_RING = "list.row.ring";
+    /**
+     * Style key for a one-unit ring just inside the selected row while the list does not have focus (paint,
+     * optional). Defaults to none. Trees and tables read it too.
+     */
+    String STYLE_ROW_RING_UNFOCUSED = "list.row.ring.unfocused";
+    /**
+     * Style key for the space above the first row and below the last (insets, optional), in UI units, which
+     * scrolls with the rows. Only its top and bottom are read. Defaults to none. Lists inside other controls ignore it.
+     */
+    String STYLE_PADDING = "list.padding";
+    /**
+     * Style key for the widest a row gets (metric, optional), in UI units. A list wider than this centers a column
+     * of rows this wide and puts its scroll bar beside the column, {@value #STYLE_BAR_GAP} units right of it, even
+     * where that reaches past the list's right edge. Defaults
+     * to 0, which makes rows as wide as the list. Lists inside other controls, such as a table's or a combo box's,
+     * ignore it.
+     */
+    String STYLE_ROW_WIDTH = "list.row.width";
+    /**
+     * Style key for the space between a centered column of rows and the scroll bar (metric, optional), in UI units.
+     * Read only when {@value #STYLE_ROW_WIDTH} narrows the rows. Defaults to 2.
+     */
+    String STYLE_BAR_GAP = "list.bar.gap";
+    /**
+     * Style key for how far one wheel notch scrolls (metric, optional), in rows. Defaults to 1. Trees and tables
+     * read it too.
+     */
+    String STYLE_SCROLL_ROWS = "list.scroll.rows";
+    /**
+     * Style key for a one-unit line just outside the list's top and bottom edges (paint, optional), next to the
+     * list. Defaults to none. Lists inside other controls do not draw it.
+     */
+    String STYLE_EDGE = "list.edge";
+    /**
+     * Style key for a one-unit line outside {@value #STYLE_EDGE}, away from the list (paint, optional). Defaults to
+     * none.
+     */
+    String STYLE_EDGE_OUTER = "list.edge.outer";
+    /**
      * Style key for the placeholder text (text style, optional).
      */
     String STYLE_PLACEHOLDER = "list.placeholder";

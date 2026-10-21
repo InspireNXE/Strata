@@ -36,6 +36,9 @@ import org.inspirenxe.strata.api.text.Text;
  *     <li>{@value #STYLE_DOT} (paint, required): each unlit dot.</li>
  *     <li>{@value #STYLE_DOT_ACTIVE} (paint, required): the lit dot.</li>
  *     <li>{@value #STYLE_TEXT} (text style, optional): the caption. Falls back to the default style.</li>
+ *     <li>{@value #STYLE_DOTS_TEXT} (text style, optional): when set, the dots are drawn as the letters
+ *     {@code o o o} in this style, the lit one a capital {@code O}, one line tall and centered where the dots
+ *     would be, instead of with the two dot paints.</li>
  * </ul>
  *
  * <pre>{@code
@@ -58,6 +61,10 @@ public interface BusyIndicator extends Component<BusyIndicator>, HasText<BusyInd
      * Style key for the caption (text style, optional).
      */
     String STYLE_TEXT = "busy.text";
+    /**
+     * Style key for drawing the dots as letters (text style, optional). See the class description.
+     */
+    String STYLE_DOTS_TEXT = "busy.dots.text";
     /**
      * How wide and tall each dot is, in UI units.
      */

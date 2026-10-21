@@ -24,6 +24,7 @@ import org.inspirenxe.strata.api.text.Text;
 import org.inspirenxe.strata.api.text.TextStyle;
 import org.inspirenxe.strata.api.theme.Paint;
 import org.inspirenxe.strata.api.theme.Theme;
+import org.inspirenxe.strata.core.control.Caption;
 import org.inspirenxe.strata.core.node.BuiltInComponent;
 import org.inspirenxe.strata.core.node.ComponentFactoryImpl;
 import org.inspirenxe.strata.core.text.TextLine;
@@ -34,7 +35,8 @@ import java.util.Set;
 /**
  * The core {@link BusyIndicator}. The lit dot follows the frames 0, 1, 2, 1 and repeats, one frame every
  * {@link BusyIndicator#FRAME_MILLIS} milliseconds of the environment's clock. The caption is measured during layout
- * and the dots' rectangles are worked out again only when the bounds change, so painting allocates nothing.
+ * and the dots' rectangles are worked out again only when the bounds change, so painting allocates nothing. With
+ * the theme's {@value BusyIndicator#STYLE_DOTS_TEXT} each frame is a line of letters, all measured during layout.
  */
 public final class BusyIndicatorImpl extends BuiltInComponent<BusyIndicator> implements BusyIndicator {
     private static final Set<String> REQUIRED = Set.of(STYLE_DOT, STYLE_DOT_ACTIVE);
@@ -51,6 +53,11 @@ public final class BusyIndicatorImpl extends BuiltInComponent<BusyIndicator> imp
     private TextLine line;
     private float textWidth;
     private float lineHeight;
+    // The dots as letters, one line per frame, when the theme sets a style for them
+    private TextStyle dotsStyle;
+    private final TextLine[] letterFrames = new TextLine[DOT_COUNT];
+    private float lettersWidth;
+    private float lettersHeight;
 
     /**
      * Creates an indicator with no caption.
@@ -90,19 +97,44 @@ public final class BusyIndicatorImpl extends BuiltInComponent<BusyIndicator> imp
         this.dotPaint = theme.paintOr(STYLE_DOT, Paint.NONE);
         this.activePaint = theme.paintOr(STYLE_DOT_ACTIVE, Paint.NONE);
         this.textStyle = theme.textStyleOr(STYLE_TEXT, TextStyle.DEFAULT);
+        this.dotsStyle = theme.textStyle(STYLE_DOTS_TEXT).orElse(null);
+    }
+
+    /**
+     * Returns the width and height the dots take: the dot row, or the widest line of letters.
+     */
+    private float dotsWidth() {
+        return this.dotsStyle != null ? this.lettersWidth : DOTS_WIDTH;
+    }
+
+    private float dotsHeight() {
+        return this.dotsStyle != null ? this.lettersHeight : DOT_SIZE;
     }
 
     @Override
     protected Size measure(final MeasureContext context, final float availableWidth, final float availableHeight) {
         this.line = TextLine.of(this.text, this.textStyle, context.text());
+        if (this.dotsStyle != null) {
+            this.lettersWidth = 0f;
+            this.lettersHeight = 0f;
+            for (int lit = 0; lit < DOT_COUNT; lit++) {
+                final StringBuilder letters = new StringBuilder();
+                for (int i = 0; i < DOT_COUNT; i++) {
+                    letters.append(i > 0 ? " " : "").append(i == lit ? 'O' : 'o');
+                }
+                this.letterFrames[lit] = TextLine.of(Text.of(letters.toString()), this.dotsStyle, context.text());
+                this.lettersWidth = Math.max(this.lettersWidth, this.letterFrames[lit].width());
+                this.lettersHeight = Math.max(this.lettersHeight, this.letterFrames[lit].height());
+            }
+        }
         if (this.line.isEmpty()) {
             this.textWidth = 0f;
             this.lineHeight = 0f;
-            return new Size(DOTS_WIDTH, DOT_SIZE);
+            return new Size(this.dotsWidth(), this.dotsHeight());
         }
         this.textWidth = this.line.width();
         this.lineHeight = this.line.height();
-        return new Size(Math.max(DOTS_WIDTH, this.textWidth), this.lineHeight + DOT_GAP + DOT_SIZE);
+        return new Size(Math.max(this.dotsWidth(), this.textWidth), this.lineHeight + DOT_GAP + this.dotsHeight());
     }
 
     @Override
@@ -117,12 +149,18 @@ public final class BusyIndicatorImpl extends BuiltInComponent<BusyIndicator> imp
         }
         final long step = Math.floorDiv(this.environment().millis(), FRAME_MILLIS);
         final int lit = FRAMES[(int) Math.floorMod(step, (long) FRAMES.length)];
-        for (int i = 0; i < DOT_COUNT; i++) {
-            (i == lit ? this.activePaint : this.dotPaint).paint(painter, this.dots[i]);
+        if (this.dotsStyle != null && this.letterFrames[lit] != null) {
+            final TextLine letters = this.letterFrames[lit];
+            letters.draw(painter, Caption.center(bounds.x(), bounds.width(), letters.width()),
+                    bounds.bottom() - this.lettersHeight);
+        } else {
+            for (int i = 0; i < DOT_COUNT; i++) {
+                (i == lit ? this.activePaint : this.dotPaint).paint(painter, this.dots[i]);
+            }
         }
         if (!this.line.isEmpty()) {
-            this.line.draw(painter, bounds.x() + (bounds.width() - this.textWidth) * 0.5f,
-                    bounds.bottom() - DOT_SIZE - DOT_GAP - this.lineHeight);
+            this.line.draw(painter, Caption.center(bounds.x(), bounds.width(), this.textWidth),
+                    bounds.bottom() - this.dotsHeight() - DOT_GAP - this.lineHeight);
         }
     }
 }

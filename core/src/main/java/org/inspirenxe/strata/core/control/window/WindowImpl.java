@@ -81,6 +81,8 @@ public final class WindowImpl extends BuiltInContainer<Window> implements Window
     private final ComponentFactoryImpl ui;
     private Text title;
     private boolean closable;
+    // False hides the close button while Escape still closes a closable window
+    private boolean closeButtonShown = true;
     private boolean movable;
     private boolean resizable;
     private boolean edgeResizable;
@@ -174,6 +176,22 @@ public final class WindowImpl extends BuiltInContainer<Window> implements Window
     @Override
     public boolean isClosable() {
         return this.closable;
+    }
+
+    /**
+     * Shows or hides the close button of a closable window. A hidden close button leaves Escape closing the window.
+     *
+     * @param shown false to hide it
+     * @return this window
+     */
+    public WindowImpl setCloseButtonShown(final boolean shown) {
+        this.closeButtonShown = shown;
+        this.invalidateLayout();
+        return this;
+    }
+
+    private boolean hasCloseButton() {
+        return this.closable && this.closeButtonShown;
     }
 
     @Override
@@ -481,7 +499,7 @@ public final class WindowImpl extends BuiltInContainer<Window> implements Window
             width = Math.max(width, outer.width());
             height = Math.max(height, outer.height());
         }
-        this.titleRoom = this.titleWidth + (this.closable ? (CLOSE_WIDTH + 1f) * 2f : 0f) + 8f;
+        this.titleRoom = this.titleWidth + (this.hasCloseButton() ? (CLOSE_WIDTH + 1f) * 2f : 0f) + 8f;
         return new Size(Math.max(width + padding.horizontal(), this.titleRoom), height + padding.vertical() + this.titleHeight);
     }
 
@@ -531,7 +549,7 @@ public final class WindowImpl extends BuiltInContainer<Window> implements Window
         final float textY = bounds.y() + padding.top();
         this.titleSpan.draw(painter, bounds.x() + padding.left()
                 + (bounds.width() - padding.horizontal() - this.titleWidth) * 0.5f, textY);
-        if (this.closable) {
+        if (this.hasCloseButton()) {
             final Rect close = this.closeRect(bounds);
             painter.text(this.closeHovered ? this.closeHoveredSpan : this.closeSpan,
                     close.x() + (close.width() - this.closeWidth) * 0.5f, textY);
@@ -551,7 +569,7 @@ public final class WindowImpl extends BuiltInContainer<Window> implements Window
             return;
         }
         final Rect bounds = this.bounds();
-        final boolean onClose = this.closable && this.closeRect(bounds).contains(event.x(), event.y());
+        final boolean onClose = this.hasCloseButton() && this.closeRect(bounds).contains(event.x(), event.y());
         final int edges = onClose ? 0 : this.edgesAt(event.x(), event.y());
         if (edges != 0) {
             this.resizeEdges = edges;
@@ -629,7 +647,7 @@ public final class WindowImpl extends BuiltInContainer<Window> implements Window
 
     @Override
     protected void onPointerMove(final PointerEvent event) {
-        this.closeHovered = event.target() == this && this.closable
+        this.closeHovered = event.target() == this && this.hasCloseButton()
                 && this.closeRect(this.bounds()).contains(event.x(), event.y());
         if (this.resizable || this.resizeCursor) {
             this.hoverEdges(this.closeHovered ? 0 : this.edgesAt(event.x(), event.y()));

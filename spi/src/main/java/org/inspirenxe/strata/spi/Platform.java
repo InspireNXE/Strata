@@ -72,6 +72,15 @@ public interface Platform {
     Capabilities capabilities();
 
     /**
+     * Returns how the engine's own controls behave, so Strata's can match them.
+     *
+     * @return the conventions; constant for the platform's life. {@link Conventions#DEFAULT} unless overridden
+     */
+    default Conventions conventions() {
+        return Conventions.DEFAULT;
+    }
+
+    /**
      * Returns where hosts look up themes named by id.
      *
      * @return the theme source, or {@link ThemeSource#NONE} if the engine has no themes or theme files of its own

@@ -106,11 +106,12 @@ import java.util.function.Consumer;
  * <p>Toasts are overlays placed down the top-right corner. Presses elsewhere and Escape leave them open; each closes
  * on a click that nothing in it consumed, or on the first frame rendered after its time runs out.</p>
  *
- * <p>Tooltips: the hovered node's tooltip, or its nearest ancestor's, shows {@link #TOOLTIP_OFFSET} units right of
- * and above the pointer, flipped left of it when it would leave the host on the right, kept inside the host. It
- * shows on the first frame rendered once the pointer has stayed on its owner for the
- * {@linkplain #setTooltipDelay tooltip delay}, or at once when the pointer moves to it from another tooltip's owner.
- * It follows the pointer and hides while a drag is in progress.</p>
+ * <p>Tooltips: the hovered node's tooltip, or its nearest ancestor's, shows with its corner offset from the
+ * pointer's whole-unit position by the theme's {@value Tooltip#STYLE_OFFSET_X} and {@value Tooltip#STYLE_OFFSET_Y},
+ * {@link #TOOLTIP_OFFSET} units right of and above it by default, flipped left of it when it would leave the host on
+ * the right, kept inside the host. It shows on the first frame rendered once the pointer has stayed on its owner for
+ * the {@linkplain #tooltipDelay tooltip delay}, or at once when the pointer moves to it from another tooltip's
+ * owner. It follows the pointer and hides while a drag is in progress.</p>
  *
  * <p>Every method must be called on the UI thread.</p>
  */
@@ -187,7 +188,7 @@ public final class Root {
         this.attachedBindings = new ArrayList<>();
         this.modifiers = Modifiers.NONE;
         this.layoutRequested = true;
-        this.tooltipDelay = Tooltip.DEFAULT_DELAY_MILLIS;
+        this.tooltipDelay = -1L;
         ui.bindRoot(this);
     }
 
@@ -228,17 +229,24 @@ public final class Root {
     }
 
     /**
-     * Returns how long the pointer rests on a component before its tooltip shows.
+     * Returns how long the pointer rests on a component before its tooltip shows: the delay set with
+     * {@link #setTooltipDelay}, else the theme's {@value Tooltip#STYLE_DELAY}, else
+     * {@link Tooltip#DEFAULT_DELAY_MILLIS}.
      *
      * @return the delay in milliseconds
      */
     public long tooltipDelay() {
-        return this.tooltipDelay;
+        if (this.tooltipDelay >= 0L) {
+            return this.tooltipDelay;
+        }
+        final Theme theme = this.theme();
+        return theme == null ? Tooltip.DEFAULT_DELAY_MILLIS
+                : Math.max(0L, (long) theme.metricOr(Tooltip.STYLE_DELAY, Tooltip.DEFAULT_DELAY_MILLIS));
     }
 
     /**
-     * Sets how long the pointer rests on a component before its tooltip shows. A tooltip waiting to show uses the
-     * new delay.
+     * Sets how long the pointer rests on a component before its tooltip shows, in place of the theme's. A tooltip
+     * waiting to show uses the new delay.
      *
      * @param millis the delay in milliseconds; 0 shows tooltips at once
      * @throws IllegalArgumentException if {@code millis} is negative
@@ -248,6 +256,16 @@ public final class Root {
             throw new IllegalArgumentException("Tooltip delay must not be negative: " + millis);
         }
         this.tooltipDelay = millis;
+    }
+
+    /**
+     * Returns whether buttons act as the pointer's left button goes down on them rather than on the click after it,
+     * from the platform's {@link org.inspirenxe.strata.spi.Conventions}.
+     *
+     * @return true when buttons act on press
+     */
+    public boolean activatesOnPress() {
+        return this.platform.conventions().activateOnPress();
     }
 
     /**
@@ -543,10 +561,13 @@ public final class Root {
             this.content.measure(this.layoutPass, this.width, this.height);
             this.content.arrange(this.layoutPass, area);
         }
-        float toastY = Overlays.TOAST_MARGIN;
+        final Theme toastTheme = this.theme();
+        final float toastMargin = toastTheme == null ? Overlays.TOAST_MARGIN
+                : Math.max(0f, toastTheme.metricOr(Overlays.STYLE_TOAST_MARGIN, Overlays.TOAST_MARGIN));
+        float toastY = toastMargin;
         for (final Layer layer : List.copyOf(this.layers)) {
             if (layer.isToast()) {
-                toastY = layer.layoutToast(area, toastY);
+                toastY = layer.layoutToast(area, toastY, toastMargin);
             } else {
                 layer.layout(area);
             }
@@ -570,14 +591,50 @@ public final class Root {
         node.measure(this.layoutPass, this.width, this.height);
         final float tooltipWidth = node.outerWidth();
         final float tooltipHeight = node.outerHeight();
-        float x = this.pointerX + TOOLTIP_OFFSET;
+        final Theme theme = this.theme();
+        final float offsetX = theme == null ? TOOLTIP_OFFSET : theme.metricOr(Tooltip.STYLE_OFFSET_X, TOOLTIP_OFFSET);
+        final float offsetY = theme == null ? -TOOLTIP_OFFSET : theme.metricOr(Tooltip.STYLE_OFFSET_Y, -TOOLTIP_OFFSET);
+        // From the whole unit the pointer is in, so the box does not shift with sub-unit motion
+        final float pointerX = (float) Math.floor(this.pointerX);
+        final float pointerY = (float) Math.floor(this.pointerY);
+        float x = pointerX + offsetX;
         if (x + tooltipWidth > this.width) {
-            x = this.pointerX - TOOLTIP_OFFSET - tooltipWidth;
+            x = pointerX - offsetX - tooltipWidth;
         }
-        float y = this.pointerY - TOOLTIP_OFFSET;
+        float y = pointerY + offsetY;
+        final Node owner = this.tooltipOwner;
+        if (theme != null && owner != null && theme.metricOr(Tooltip.STYLE_BELOW, 0f) != 0f) {
+            y = belowOwner(owner.bounds(), pointerY, tooltipHeight, this.height,
+                    theme.metricOr(Tooltip.STYLE_BELOW_OVERLAP, 3f), theme.metricOr(Tooltip.STYLE_BELOW_GAP, 5f));
+        }
         x = Math.max(0f, Math.min(x, this.width - tooltipWidth));
         y = Math.max(0f, Math.min(y, this.height - tooltipHeight));
         node.arrange(this.layoutPass, new Rect(x, y, tooltipWidth, tooltipHeight));
+    }
+
+    /**
+     * Returns the top of a tooltip placed below its owner, or above it when there is no room below, as
+     * {@link Tooltip#STYLE_BELOW} describes.
+     */
+    private static float belowOwner(final Rect owner, final float pointerY, final float boxHeight,
+                                    final float hostHeight, final float overlap, final float gap) {
+        final float height = owner.height();
+        if (!(height > 0f)) {
+            return owner.bottom() + gap;
+        }
+        if (owner.bottom() + height + boxHeight <= hostHeight - gap) {
+            return pointerY + ease(Math.abs(pointerY + overlap - owner.y()), height, overlap, gap);
+        }
+        return pointerY - boxHeight - ease(Math.abs(pointerY + overlap - owner.bottom()), height, overlap, gap);
+    }
+
+    /**
+     * Eases from {@code height - overlap} at a distance of 0 to {@code gap} at a distance of {@code height} or more,
+     * rounded to a whole unit.
+     */
+    private static float ease(final float distance, final float height, final float overlap, final float gap) {
+        final float t = Math.min(distance, height) / height;
+        return Math.round((height - overlap) + t * (gap - (height - overlap)));
     }
 
     /**
@@ -985,7 +1042,7 @@ public final class Root {
             this.tooltipPending = null;
             return;
         }
-        if (!warm && this.tooltipDelay > 0L) {
+        if (!warm && this.tooltipDelay() > 0L) {
             if (owner != this.tooltipPending) {
                 this.tooltipPending = owner;
                 this.tooltipPendingSince = this.platform.clock().millis();
@@ -1001,7 +1058,7 @@ public final class Root {
     private void showPendingTooltip() {
         final Node owner = this.tooltipPending;
         if (owner != null && owner.tooltip() != null
-                && this.platform.clock().millis() - this.tooltipPendingSince >= this.tooltipDelay) {
+                && this.platform.clock().millis() - this.tooltipPendingSince >= this.tooltipDelay()) {
             this.showTooltip(owner);
         }
     }
@@ -1453,14 +1510,14 @@ public final class Root {
          *
          * @return where the next toast's top goes
          */
-        float layoutToast(final Rect area, final float y) {
+        float layoutToast(final Rect area, final float y, final float margin) {
             final LayoutPass pass = Root.this.layoutPass;
             this.node.measure(pass, area.width(), area.height());
             final float toastWidth = this.node.outerWidth();
             final float toastHeight = this.node.outerHeight();
-            final float x = Math.max(0f, area.width() - Overlays.TOAST_MARGIN - toastWidth);
+            final float x = Math.max(0f, area.width() - margin - toastWidth);
             this.node.arrange(pass, new Rect(x, y, toastWidth, toastHeight));
-            return y + toastHeight + Overlays.TOAST_MARGIN;
+            return y + toastHeight + margin;
         }
 
         @Override

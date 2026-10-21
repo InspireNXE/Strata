@@ -1228,6 +1228,8 @@ public final class NavigationViewImpl extends BuiltInComposite<NavigationView> i
             return;
         }
         event.consume();
+        // The keyboard ring follows the pointer, so Tab or an arrow key carries on from the clicked item
+        this.cursor = item;
         final float arrowZone = row.bounds().right() - this.itemPadding.right() - Rings.ARROW_LONG - GAP;
         if (!this.compactLook() && !item.children().isEmpty() && event.x() >= arrowZone) {
             this.userExpand(item, !item.isExpanded());

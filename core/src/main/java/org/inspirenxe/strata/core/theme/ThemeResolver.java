@@ -61,7 +61,7 @@ import java.util.Set;
  * included, {@value #CODE_LAYER} for overrides and definitions from the registry, and {@value #REF_LAYER} for
  * the ref's overrides.</p>
  *
- * <p>A theme file is a JSON object with four optional members:</p>
+ * <p>A theme file is a JSON object with five optional members:</p>
  * <pre>{@code
  * {
  *   "parent": "strata:flat",
@@ -77,6 +77,9 @@ import java.util.Set;
  *   },
  *   "insets": {
  *     "tab.padding": [8, 5, 8, 2]
+ *   },
+ *   "metrics": {
+ *     "tooltip.delay": 250
  *   }
  * }
  * }</pre>
@@ -88,7 +91,7 @@ import java.util.Set;
  * {@code [horizontal, vertical]} or {@code [left, top, right, bottom]}. A text style sets any of {@code color},
  * {@code bold}, {@code italic}, {@code underline}, {@code strikethrough}, {@code shadow} and {@code monospace}; the
  * rest keep the inherited style for that key, or {@link TextStyle#DEFAULT} if there is none. Insets take the same
- * forms as a border, in UI units. Unknown members are errors. Overrides from code and from the ref replace a key's
+ * forms as a border, in UI units. A metric is one number, in the unit its key states. Unknown members are errors. Overrides from code and from the ref replace a key's
  * whole text style.</p>
  *
  * <p>A theme file from {@link ThemeSource#documents} that cannot be parsed is skipped and logged, so one broken
@@ -145,11 +148,12 @@ public final class ThemeResolver {
      */
     public Theme resolve(final ThemeRef ref) {
         final Keys keys = this.resolve(ref.id(), new LinkedHashSet<>());
-        keys.set(new ThemeOverrides(ref.paints(), ref.textStyles(), ref.insets()), REF_LAYER);
+        keys.set(new ThemeOverrides(ref.paints(), ref.textStyles(), ref.insets(), ref.metrics()), REF_LAYER);
         final Theme.Builder builder = Theme.builder(ref.id().toString());
         keys.paints.forEach(builder::paint);
         keys.text.forEach(builder::textStyle);
         keys.insets.forEach(builder::insets);
+        keys.metrics.forEach(builder::metric);
         keys.layers.forEach(builder::layer);
         return builder.build();
     }
@@ -178,8 +182,8 @@ public final class ThemeResolver {
         final Keys keys;
         if (code.isPresent()) {
             keys = new Keys();
-            keys.set(new ThemeOverrides(code.get().paints(), code.get().textStyles(), code.get().insets()),
-                    BASE_LAYER);
+            keys.set(new ThemeOverrides(code.get().paints(), code.get().textStyles(), code.get().insets(),
+                    code.get().metrics()), BASE_LAYER);
         } else if (!baseDocuments.isEmpty()) {
             final List<ThemeFile> bases = new ArrayList<>();
             for (final ThemeDocument document : baseDocuments) {
@@ -259,10 +263,11 @@ public final class ThemeResolver {
         private final Map<String, Paint> paints = new HashMap<>();
         private final Map<String, TextStyle> text = new HashMap<>();
         private final Map<String, Insets> insets = new HashMap<>();
+        private final Map<String, Float> metrics = new HashMap<>();
         private final Map<String, String> layers = new HashMap<>();
 
         /**
-         * Applies a theme file: paints and insets replace, text entries change only the fields they set.
+         * Applies a theme file: paints, insets and metrics replace, text entries change only the fields they set.
          */
         private void apply(final ThemeFile file) {
             file.paints().forEach((key, paint) -> {
@@ -271,6 +276,10 @@ public final class ThemeResolver {
             });
             file.insets().forEach((key, value) -> {
                 this.insets.put(key, value);
+                this.layers.put(key, file.layer());
+            });
+            file.metrics().forEach((key, value) -> {
+                this.metrics.put(key, value);
                 this.layers.put(key, file.layer());
             });
             file.text().forEach((key, patch) -> {
@@ -293,6 +302,10 @@ public final class ThemeResolver {
             });
             overrides.insets().forEach((key, value) -> {
                 this.insets.put(key, value);
+                this.layers.put(key, layer);
+            });
+            overrides.metrics().forEach((key, value) -> {
+                this.metrics.put(key, value);
                 this.layers.put(key, layer);
             });
         }

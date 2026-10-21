@@ -138,8 +138,20 @@ import java.util.Objects;
  *     {@value #STYLE_TEXT_DISABLED}.</li>
  *     <li>{@value #STYLE_PLACEHOLDER} (text style, optional): the {@linkplain #setPlaceholder placeholder}. Falls
  *     back to {@value #STYLE_TEXT_DISABLED}.</li>
+ *     <li>{@value #STYLE_PLACEHOLDER_HIDE} (metric, optional): any value but 0 hides the placeholder while the box
+ *     has focus. Defaults to 0.</li>
  *     <li>{@value #STYLE_SELECTION} (paint, optional): drawn behind selected text. Falls back to translucent blue.</li>
+ *     <li>{@value #STYLE_SELECTION_EXTEND} (metric, optional): how far the selection reaches above and below the
+ *     line. Defaults to 0.</li>
+ *     <li>{@value #STYLE_TEXT_SELECTED} (text style, optional): selected text is drawn in it. Defaults to none,
+ *     which leaves selected text in its own style.</li>
  *     <li>{@value #STYLE_CARET} (paint, optional): the one-unit-wide caret. Falls back to light gray.</li>
+ *     <li>{@value #STYLE_CARET_EXTEND} (metric, optional): how far the caret reaches above and below the line.
+ *     Defaults to 0.</li>
+ *     <li>{@value #STYLE_CARET_BLINK} (metric, optional): how long, in milliseconds, the caret stays shown and then
+ *     hidden. Defaults to 500.</li>
+ *     <li>{@value #STYLE_CARET_UNDERSCORE} (metric, optional): any value but 0 draws a caret at the end of the
+ *     text as an underscore in the text's style. Defaults to 0.</li>
  *     <li>{@value #STYLE_SUGGESTIONS} (paint, optional): behind the suggestion list. Falls back to
  *     {@value org.inspirenxe.strata.api.control.collection.ComboBox#STYLE_POPUP}.</li>
  *     <li>{@value #STYLE_SUGGESTION_TEXT} (text style, optional): the text of each suggestion. Falls back to
@@ -153,7 +165,8 @@ import java.util.Objects;
  *
  * <h2>Size</h2>
  * <p>The desired size is 120 units wide and one line plus the text padding tall (4 units left and right, 5 top and
- * bottom by default), with a minimum of 20 by 20. Set a width, or stretch it, to make it wider.</p>
+ * bottom by default), and at least 20 tall, with a minimum width of 20. A smaller height set on it applies. Set a
+ * width, or stretch it, to make it wider.</p>
  *
  * <pre>{@code
  * TextBox name = factory.textBox()
@@ -196,9 +209,36 @@ public interface TextBox extends Component<TextBox>, Focusable<TextBox>, HasCurs
      */
     String STYLE_SELECTION = "textbox.selection";
     /**
+     * Style key for selected text (text style, optional). Selected text is drawn in this style instead of its own,
+     * which suits a selection paint that hides the text's color. Defaults to none, which leaves selected text as it
+     * is. Text areas and password boxes read it too.
+     */
+    String STYLE_TEXT_SELECTED = "textbox.text.selected";
+    /**
+     * Style key for how far the selection reaches above and below the line of text (metric, optional), in UI units.
+     * Defaults to 0. Text areas and password boxes read it too.
+     */
+    String STYLE_SELECTION_EXTEND = "textbox.selection.extend";
+    /**
      * Style key for the caret (paint, optional).
      */
     String STYLE_CARET = "textbox.caret";
+    /**
+     * Style key for how far the caret reaches above and below the line of text (metric, optional), in UI units.
+     * Defaults to 0. Text areas and password boxes read it too.
+     */
+    String STYLE_CARET_EXTEND = "textbox.caret.extend";
+    /**
+     * Style key for how long the caret stays shown and then hidden (metric, optional), in milliseconds. Each edit or
+     * caret move starts it shown again. Defaults to 500. Text areas and password boxes read it too.
+     */
+    String STYLE_CARET_BLINK = "textbox.caret.blink";
+    /**
+     * Style key for drawing a caret at the end of the text as an underscore (metric, optional): any value but 0
+     * draws an underscore in the text's style, 1 unit after the text, or at its start in an empty field, instead of
+     * the caret bar. Defaults to 0. Password boxes read it too; text areas always draw the bar.
+     */
+    String STYLE_CARET_UNDERSCORE = "textbox.caret.underscore";
     /**
      * Style key for behind the suggestion list (paint, optional).
      */
@@ -211,6 +251,11 @@ public interface TextBox extends Component<TextBox>, Focusable<TextBox>, HasCurs
      * Style key for the placeholder (text style, optional).
      */
     String STYLE_PLACEHOLDER = "textbox.placeholder";
+    /**
+     * Style key for hiding the placeholder while the field has focus (metric, optional): any value but 0 hides it.
+     * Defaults to 0, which shows it under the caret. Password boxes read it too.
+     */
+    String STYLE_PLACEHOLDER_HIDE = "textbox.placeholder.hide";
     /**
      * Style key for the space between a text box's edges and its text (insets, optional). Defaults to 4 at the
      * sides and 5 at the top and bottom. A spinner's field reads it, and a text area falls back to it.
@@ -288,8 +333,9 @@ public interface TextBox extends Component<TextBox>, Focusable<TextBox>, HasCurs
 
     /**
      * Sets the hint drawn in the {@value #STYLE_PLACEHOLDER} style while the box is empty, such as
-     * {@code "Search items"}. It shows whether or not the box has focus, goes away as soon as there is text, and is
-     * never part of {@link #text()}.
+     * {@code "Search items"}. It shows whether or not the box has focus, unless the theme's
+     * {@value #STYLE_PLACEHOLDER_HIDE} hides it while focused, goes away as soon as there is text, and is never part
+     * of {@link #text()}.
      *
      * @param placeholder the hint, or {@code null} or empty for none
      * @return this box

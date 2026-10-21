@@ -137,9 +137,11 @@ public interface ScreenHost extends InputSink {
     void resize(float width, float height);
 
     /**
-     * Sets how long the pointer must rest on a component before its tooltip shows. The host starts with
-     * {@link org.inspirenxe.strata.api.component.Tooltip#DEFAULT_DELAY_MILLIS}. A waiting tooltip shows on the first
-     * {@link #render} after the delay has passed on the platform's clock.
+     * Sets how long the pointer must rest on a component before its tooltip shows, in place of the theme's. Until
+     * this is called, the host uses the theme's
+     * {@value org.inspirenxe.strata.api.component.Tooltip#STYLE_DELAY} metric, or
+     * {@link org.inspirenxe.strata.api.component.Tooltip#DEFAULT_DELAY_MILLIS} when the theme has none. A waiting
+     * tooltip shows on the first {@link #render} after the delay has passed on the platform's clock.
      *
      * @param millis the delay in milliseconds; 0 shows tooltips as soon as the pointer arrives
      * @throws IllegalArgumentException if {@code millis} is negative

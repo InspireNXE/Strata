@@ -23,7 +23,7 @@ import java.util.Map;
 import java.util.Objects;
 
 /**
- * Keys to set on a theme: paints, text styles and insets by style key, with no theme id. The same overrides can
+ * Keys to set on a theme: paints, text styles, insets and metrics by style key, with no theme id. The same overrides can
  * change a theme for every screen with {@link ThemeRegistry#override}, start a theme of your own with
  * {@link ThemeRegistry#define}, or change a theme for one screen with {@link ThemeRef#override(ThemeOverrides)}.
  *
@@ -41,18 +41,39 @@ import java.util.Objects;
  * @param paints paints by style key; copied
  * @param textStyles text styles by style key; copied
  * @param insets insets by style key, in UI units; copied
+ * @param metrics metrics by style key, each in the unit its key states; copied
  */
 public record ThemeOverrides(Map<String, Paint> paints, Map<String, TextStyle> textStyles,
-                             Map<String, Insets> insets) {
-    private static final ThemeOverrides EMPTY = new ThemeOverrides(Map.of(), Map.of(), Map.of());
+                             Map<String, Insets> insets, Map<String, Float> metrics) {
+    private static final ThemeOverrides EMPTY = new ThemeOverrides(Map.of(), Map.of(), Map.of(), Map.of());
 
     /**
      * Copies the maps.
+     *
+     * @throws IllegalArgumentException if a metric is not finite
      */
     public ThemeOverrides {
         paints = Map.copyOf(paints);
         textStyles = Map.copyOf(textStyles);
         insets = Map.copyOf(insets);
+        metrics = Map.copyOf(metrics);
+        metrics.forEach((key, value) -> {
+            if (!Float.isFinite(value)) {
+                throw new IllegalArgumentException("Metric " + key + " is not finite: " + value);
+            }
+        });
+    }
+
+    /**
+     * Creates overrides that set no metrics.
+     *
+     * @param paints paints by style key; copied
+     * @param textStyles text styles by style key; copied
+     * @param insets insets by style key, in UI units; copied
+     */
+    public ThemeOverrides(final Map<String, Paint> paints, final Map<String, TextStyle> textStyles,
+                          final Map<String, Insets> insets) {
+        this(paints, textStyles, insets, Map.of());
     }
 
     /**
@@ -74,7 +95,7 @@ public record ThemeOverrides(Map<String, Paint> paints, Map<String, TextStyle> t
     public ThemeOverrides with(final String key, final Paint paint) {
         final Map<String, Paint> all = new HashMap<>(this.paints);
         all.put(Objects.requireNonNull(key, "key"), Objects.requireNonNull(paint, "paint"));
-        return new ThemeOverrides(all, this.textStyles, this.insets);
+        return new ThemeOverrides(all, this.textStyles, this.insets, this.metrics);
     }
 
     /**
@@ -87,7 +108,7 @@ public record ThemeOverrides(Map<String, Paint> paints, Map<String, TextStyle> t
     public ThemeOverrides with(final String key, final TextStyle style) {
         final Map<String, TextStyle> all = new HashMap<>(this.textStyles);
         all.put(Objects.requireNonNull(key, "key"), Objects.requireNonNull(style, "style"));
-        return new ThemeOverrides(this.paints, all, this.insets);
+        return new ThemeOverrides(this.paints, all, this.insets, this.metrics);
     }
 
     /**
@@ -100,6 +121,20 @@ public record ThemeOverrides(Map<String, Paint> paints, Map<String, TextStyle> t
     public ThemeOverrides with(final String key, final Insets insets) {
         final Map<String, Insets> all = new HashMap<>(this.insets);
         all.put(Objects.requireNonNull(key, "key"), Objects.requireNonNull(insets, "insets"));
-        return new ThemeOverrides(this.paints, this.textStyles, all);
+        return new ThemeOverrides(this.paints, this.textStyles, all, this.metrics);
+    }
+
+    /**
+     * Returns a copy of these overrides that also sets a metric, replacing any metric they set for the key.
+     *
+     * @param key the style key
+     * @param value the metric, in the unit its key states
+     * @return the new overrides
+     * @throws IllegalArgumentException if {@code value} is not finite
+     */
+    public ThemeOverrides with(final String key, final float value) {
+        final Map<String, Float> all = new HashMap<>(this.metrics);
+        all.put(Objects.requireNonNull(key, "key"), value);
+        return new ThemeOverrides(this.paints, this.textStyles, this.insets, all);
     }
 }

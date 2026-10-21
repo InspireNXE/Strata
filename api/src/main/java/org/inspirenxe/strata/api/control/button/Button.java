@@ -37,9 +37,9 @@ import java.util.Objects;
  * repeated). It consumes those inputs. Each press fires {@link #PRESS}, then {@link #PRESSED} unless a handler
  * canceled the request. A disabled button does neither and draws its disabled look.</p>
  *
- * <p>It is focusable and tabbable, shows the hand cursor, and has a minimum size of 20 by 20. Its desired size is
- * the caption plus the text padding (8 units left and right, 5 top and bottom by default). The caption is centered
- * in whatever size the button ends up.</p>
+ * <p>It is focusable and tabbable, shows the hand cursor, and has a minimum width of 20. Its desired size is the
+ * caption plus the text padding (8 units left and right, 5 top and bottom by default), and at least 20 tall; a
+ * smaller height set on it applies. The caption is centered in whatever size the button ends up.</p>
  *
  * <p>An {@linkplain #setIcon(SpriteId) icon} is drawn before the caption, 4 units from it, and the two are centered
  * together. A button with an icon and no caption is meant to be square, so it pads by 2 units on every side and a
@@ -129,6 +129,23 @@ public interface Button extends Component<Button>, Focusable<Button>, HasCursor<
      * Defaults to 2 on every side.
      */
     String STYLE_PADDING_ICON = "button.padding.icon";
+    /**
+     * Style key for where a caption too wide for its button is cut, as insets from the button's edges (insets,
+     * optional). Defaults to the padding's left and right, and none at the top and bottom. A caption that fits is
+     * kept inside this area too. A cycle button reads it too.
+     */
+    String STYLE_CLIP = "button.clip";
+    /**
+     * Style key for how fast a caption too wide for its button scrolls (metric, optional), in milliseconds per unit
+     * of overflow for one sweep there and back. Defaults to 0, which cuts the caption at the clip area's right
+     * instead. A cycle button reads it too.
+     */
+    String STYLE_TEXT_SCROLL = "button.text.scroll";
+    /**
+     * Style key for the shortest sweep of a scrolling caption (metric, optional), in milliseconds. Defaults to 0.
+     * A cycle button reads it too.
+     */
+    String STYLE_TEXT_SCROLL_MINIMUM = "button.text.scroll.minimum";
 
     /**
      * Fired when the user presses the button by click or key, before it is pressed. Canceling it refuses the press,
@@ -273,8 +290,8 @@ public interface Button extends Component<Button>, Focusable<Button>, HasCursor<
     /**
      * Makes the button a link or a framed button again. A link draws no face and no focus ring, only its caption in
      * the link text styles, and the caption underlines while the link is hovered or focused. It has no minimum size
-     * and, unless {@link #setTextPadding} was called, no padding; turning the link off restores the minimum size of
-     * 20 by 20. A new layout runs.
+     * and, unless {@link #setTextPadding} was called, no padding; turning the link off restores the minimum width of
+     * 20 and the desired height of at least 20. A new layout runs.
      *
      * @param link true for a link
      * @return this button

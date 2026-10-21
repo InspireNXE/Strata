@@ -26,6 +26,7 @@ import org.inspirenxe.strata.api.theme.Paint;
 import org.inspirenxe.strata.api.theme.SpriteId;
 import org.inspirenxe.strata.api.theme.Theme;
 import org.inspirenxe.strata.api.visual.Visual;
+import org.inspirenxe.strata.core.control.Caption;
 import org.inspirenxe.strata.core.control.Rings;
 import org.inspirenxe.strata.core.text.TextLine;
 
@@ -60,6 +61,7 @@ final class ButtonContent {
     private Visual iconVisual;
     private float iconWidth;
     private float iconHeight;
+    private final Caption captionDrawer = new Caption();
 
     // Theme
     Paint normal;
@@ -207,6 +209,8 @@ final class ButtonContent {
         this.linkDisabledTextStyle = theme.textStyleOr(Button.STYLE_LINK_TEXT_DISABLED, this.disabledTextStyle);
         this.themePadding = theme.insetsOr(Button.STYLE_PADDING, ButtonImpl.DEFAULT_PADDING);
         this.themeIconPadding = theme.insetsOr(Button.STYLE_PADDING_ICON, ButtonImpl.DEFAULT_ICON_PADDING);
+        this.captionDrawer.applyTheme(theme, Button.STYLE_CLIP, Button.STYLE_TEXT_SCROLL,
+                Button.STYLE_TEXT_SCROLL_MINIMUM);
     }
 
     /**
@@ -274,21 +278,33 @@ final class ButtonContent {
     }
 
     /**
-     * Draws the icon and a caption centered together in an area: horizontally across it, and each vertically in it.
+     * Draws the icon and a caption centered together in the bounds less the padding: horizontally across it, and
+     * each vertically in it. A caption with no icon is drawn by a {@link Caption}, so one too wide is cut or
+     * scrolled as the theme says.
      *
      * @param painter what to draw with
-     * @param left the area's left edge
-     * @param top the area's top edge
-     * @param width the area's width
-     * @param height the area's height
+     * @param bounds the bounds to center in, less anything the button draws beside its content
+     * @param padding the padding
      * @param enabled false to tint the icon gray
      * @param shown the caption to draw, one of the three this content measured
+     * @param millis the platform's clock, for a scrolling caption
      */
-    void paintContent(final Painter painter, final float left, final float top, final float width, final float height,
-                      final boolean enabled, final TextLine shown) {
+    void paintContent(final Painter painter, final Rect bounds, final Insets padding, final boolean enabled,
+                      final TextLine shown, final long millis) {
         final boolean icon = this.hasIcon();
         final boolean hasText = !this.caption.isEmpty();
-        float x = left + (width - this.contentWidth()) * 0.5f;
+        final float left = bounds.x() + padding.left();
+        final float top = bounds.y() + padding.top();
+        final float width = bounds.width() - padding.horizontal();
+        final float height = bounds.height() - padding.vertical();
+        if (!icon) {
+            if (hasText) {
+                this.captionDrawer.draw(painter, shown, bounds, padding, top + (height - this.captionHeight) * 0.5f,
+                        millis);
+            }
+            return;
+        }
+        float x = Caption.center(left, width, this.contentWidth());
         if (icon) {
             final Rect iconRect = new Rect(x, top + (height - this.iconHeight) * 0.5f, this.iconWidth, this.iconHeight);
             final int tint = enabled ? 0xFFFFFFFF : DISABLED_ICON_TINT;

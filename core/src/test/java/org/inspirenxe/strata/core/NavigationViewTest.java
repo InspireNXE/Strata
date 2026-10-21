@@ -236,6 +236,18 @@ class NavigationViewTest {
         }
 
         @Test
+        void theKeyboardRingFollowsAClick() {
+            NavigationViewTest.this.show();
+            NavigationViewTest.this.clickRow(1);
+            final NavigationViewImpl impl = (NavigationViewImpl) NavigationViewTest.this.view;
+            assertSame(NavigationViewTest.this.item("Sound"), impl.cursorItem());
+            NavigationViewTest.this.clickRow(2);
+            assertSame(NavigationViewTest.this.item("Video"), impl.cursorItem());
+            NavigationViewTest.this.key(Key.UP);
+            assertSame(NavigationViewTest.this.item("Sound"), impl.cursorItem());
+        }
+
+        @Test
         void anItemThatIsNotSelectableOnlyActivates() {
             NavigationViewTest.this.show();
             // Sign out sits in the footer at the bottom of the 300 tall view: 300 - 2 - 19

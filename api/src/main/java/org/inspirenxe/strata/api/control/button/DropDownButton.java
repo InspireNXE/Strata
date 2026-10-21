@@ -50,7 +50,8 @@ import java.util.Optional;
  *
  * <p>It looks and measures like a {@link Button}, with an arrow 7 units wide and 4 tall at the right end of the
  * space inside its padding, 4 units after the caption. While open it draws the pressed face. It is focusable and
- * tabbable, shows the hand cursor, and is at least 20 by 20 units. A disabled button takes no focus, does not open,
+ * tabbable, shows the hand cursor, is at least 20 units wide, and asks to be at least 20 tall, though a smaller
+ * height set on it applies. A disabled button takes no focus, does not open,
  * closes its popup, and draws its disabled face with the arrow in the disabled text style.</p>
  *
  * <h2>Events</h2>

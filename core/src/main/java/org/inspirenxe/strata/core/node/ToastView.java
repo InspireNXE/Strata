@@ -39,7 +39,9 @@ import java.util.Optional;
 /**
  * Draws a text toast: the message wrapped to fit a third of the width offered, inside the theme's toast padding or
  * {@link #PADDING}. Its background and text style come from the toast keys when the theme has them and from the
- * tooltip keys otherwise. Without either background it draws a dark box with a purple one-unit edge.
+ * tooltip keys otherwise. Without either background it draws a dark box with a purple one-unit edge. With the
+ * theme's toast title style the first line is drawn in it, lines are the theme's line gap apart, and the box is at
+ * least the theme's least width.
  */
 final class ToastView extends BuiltInComponent<ToastView> {
     /**
@@ -56,6 +58,9 @@ final class ToastView extends BuiltInComponent<ToastView> {
     // The height of the characters, which each line is at least as tall as
     private float lineHeight;
     private Insets padding = PADDING;
+    private TextStyle titleStyle;
+    private float lineGap;
+    private float minimumWidth;
 
     ToastView(final ComponentFactoryImpl factory, final Text message) {
         super(factory);
@@ -74,6 +79,9 @@ final class ToastView extends BuiltInComponent<ToastView> {
         this.setBorder(themed.isPresent() ? Border.NONE : FALLBACK_EDGE);
         this.textStyle = theme.textStyleOr(Overlays.STYLE_TOAST_TEXT, theme.textStyleOr(Tooltip.STYLE_TEXT, TextStyle.DEFAULT));
         this.padding = theme.insetsOr(Overlays.STYLE_TOAST_PADDING, PADDING);
+        this.titleStyle = theme.textStyle(Overlays.STYLE_TOAST_TITLE).orElse(null);
+        this.lineGap = Math.max(0f, theme.metricOr(Overlays.STYLE_TOAST_LINE_GAP, 0f));
+        this.minimumWidth = Math.max(0f, theme.metricOr(Overlays.STYLE_TOAST_WIDTH_MINIMUM, 0f));
     }
 
     @Override
@@ -83,6 +91,13 @@ final class ToastView extends BuiltInComponent<ToastView> {
         final float wrapAt = Float.isInfinite(availableWidth) ? availableWidth : Math.max(1f, availableWidth / 3f - this.padding.horizontal());
         final List<TextSpan> spans = this.message.resolve(this.textStyle);
         this.lines.addAll(RichText.wrap(spans, wrapAt, metrics));
+        if (this.titleStyle != null && !this.lines.isEmpty()) {
+            final List<TextSpan> title = new ArrayList<>();
+            for (final TextSpan span : this.lines.getFirst()) {
+                title.add(new TextSpan(span.text(), this.titleStyle));
+            }
+            this.lines.set(0, title);
+        }
         final InlineMetrics inline = InlineMetrics.of(metrics);
         this.lineHeight = inline.textHeight(spans, this.textStyle);
         this.lineHeights.clear();
@@ -94,7 +109,8 @@ final class ToastView extends BuiltInComponent<ToastView> {
             this.lineHeights.add(lineHeight);
             height += lineHeight;
         }
-        return new Size(width + this.padding.horizontal(), height + this.padding.vertical());
+        height += this.lineGap * Math.max(0, this.lines.size() - 1);
+        return new Size(Math.max(this.minimumWidth, width + this.padding.horizontal()), height + this.padding.vertical());
     }
 
     @Override
@@ -104,7 +120,7 @@ final class ToastView extends BuiltInComponent<ToastView> {
         for (int i = 0; i < this.lines.size(); i++) {
             final float lineHeight = this.lineHeights.get(i);
             metrics.draw(painter, this.lines.get(i), bounds.x() + this.padding.left(), y, lineHeight, this.lineHeight);
-            y += lineHeight;
+            y += lineHeight + this.lineGap;
         }
     }
 

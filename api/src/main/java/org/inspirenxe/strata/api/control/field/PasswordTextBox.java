@@ -133,7 +133,8 @@ import java.util.function.IntPredicate;
  * </ul>
  *
  * <h2>Size</h2>
- * <p>As a {@link TextBox}: 120 units wide and one line plus the text padding tall, at least 20 by 20. The eye is a
+ * <p>As a {@link TextBox}: 120 units wide and one line plus the text padding tall, at least 20 wide and asking to be
+ * at least 20 tall, though a smaller height set on it applies. The eye is a
  * square one line tall at the right of the text area, 2 units from the text.</p>
  *
  * <p>Get one from {@link org.inspirenxe.strata.api.ComponentFactory#passwordTextBox()}. Do not implement this

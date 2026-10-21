@@ -32,6 +32,7 @@ import org.inspirenxe.strata.api.input.Key;
 import org.inspirenxe.strata.api.input.Modifiers;
 import org.inspirenxe.strata.api.input.MouseButton;
 import org.inspirenxe.strata.api.layout.ScrollPanel;
+import org.inspirenxe.strata.api.text.Text;
 import org.inspirenxe.strata.api.text.TextHighlighter;
 import org.inspirenxe.strata.api.text.TextMetrics;
 import org.inspirenxe.strata.api.text.TextSpan;
@@ -42,6 +43,7 @@ import org.inspirenxe.strata.core.layout.ScrollTrack;
 import org.inspirenxe.strata.core.node.BuiltInComponent;
 import org.inspirenxe.strata.core.node.ComponentFactoryImpl;
 import org.inspirenxe.strata.core.text.StyledText;
+import org.inspirenxe.strata.core.text.TextLine;
 
 import java.util.Arrays;
 import java.util.Objects;
@@ -50,8 +52,9 @@ import java.util.Set;
 /**
  * The core {@link TextArea}. It edits like {@link TextBoxImpl} and lays its text out in rows: one per line, and more
  * where a line wraps. Rows are worked out again only when the text, the style or the content size changes, and each
- * row keeps its span, so painting measures nothing. The caret stays shown and then hidden for
- * {@link TextBoxImpl#BLINK_MILLIS} milliseconds each.
+ * row keeps its span, so painting measures nothing. The caret stays shown and then hidden for the theme's
+ * {@value TextBox#STYLE_CARET_BLINK}, {@link TextBoxImpl#BLINK_MILLIS} milliseconds each by default. Setting the text
+ * puts the caret at its end and scrolls back to the top.
  *
  * <p>A row that wraps keeps its trailing space, and the caret cannot sit after its last character: that position is
  * the start of the next row. The view scrolls to keep the caret in sight after the caret moves, but not on other
@@ -128,8 +131,10 @@ public final class TextAreaImpl extends BuiltInComponent<TextArea> implements Te
     private Paint normal;
     private Paint focusedPaint;
     private Paint disabledPaint;
-    private Paint selectionPaint;
-    private Paint caretPaint;
+    private FieldLook look;
+    private Text placeholder;
+    private TextStyle placeholderStyle;
+    private TextLine placeholderLine;
     private Paint thumb;
     private Paint thumbHovered;
     private Paint track;
@@ -192,8 +197,10 @@ public final class TextAreaImpl extends BuiltInComponent<TextArea> implements Te
         this.normal = Paint.NONE;
         this.focusedPaint = Paint.NONE;
         this.disabledPaint = Paint.NONE;
-        this.selectionPaint = DEFAULT_SELECTION;
-        this.caretPaint = DEFAULT_CARET;
+        this.look = FieldLook.plain(DEFAULT_SELECTION, DEFAULT_CARET);
+        this.placeholder = Text.empty();
+        this.placeholderStyle = TextStyle.DEFAULT;
+        this.placeholderLine = TextLine.EMPTY;
         this.thumb = Paint.NONE;
         this.thumbHovered = Paint.NONE;
         this.track = Paint.NONE;
@@ -232,8 +239,8 @@ public final class TextAreaImpl extends BuiltInComponent<TextArea> implements Te
         if (!this.buffer.contentEquals(clean)) {
             final String previous = this.buffer.toString();
             this.buffer.set(clean);
-            this.caret = 0;
-            this.anchor = 0;
+            this.caret = this.buffer.length();
+            this.anchor = this.caret;
             this.scrollX = 0f;
             this.scrollY = 0f;
             this.changed(previous);
@@ -399,14 +406,14 @@ public final class TextAreaImpl extends BuiltInComponent<TextArea> implements Te
         this.normal = theme.paintOr(TextBox.STYLE_NORMAL, Paint.NONE);
         this.focusedPaint = theme.paintOr(TextBox.STYLE_FOCUSED, this.normal);
         this.disabledPaint = theme.paintOr(TextBox.STYLE_DISABLED, this.normal);
-        this.selectionPaint = theme.paintOr(TextBox.STYLE_SELECTION, DEFAULT_SELECTION);
-        this.caretPaint = theme.paintOr(TextBox.STYLE_CARET, DEFAULT_CARET);
+        this.look = FieldLook.of(theme, DEFAULT_SELECTION, DEFAULT_CARET);
         this.thumb = theme.paintOr(ScrollPanel.STYLE_THUMB, Paint.NONE);
         this.thumbHovered = theme.paintOr(ScrollPanel.STYLE_THUMB_HOVERED, this.thumb);
         this.track = theme.paintOr(ScrollPanel.STYLE_TRACK, Paint.NONE);
         this.textStyle = theme.textStyleOr(TextBox.STYLE_TEXT, TextStyle.DEFAULT);
         this.disabledTextStyle = theme.textStyleOr(TextBox.STYLE_TEXT_DISABLED, this.textStyle);
         this.readOnlyTextStyle = theme.textStyleOr(TextBox.STYLE_TEXT_READ_ONLY, this.disabledTextStyle);
+        this.placeholderStyle = theme.textStyleOr(TextBox.STYLE_PLACEHOLDER, this.disabledTextStyle);
         this.rowsDirty = true;
     }
 
@@ -417,6 +424,7 @@ public final class TextAreaImpl extends BuiltInComponent<TextArea> implements Te
     @Override
     protected Size measure(final MeasureContext context, final float availableWidth, final float availableHeight) {
         final TextMetrics metrics = context.text();
+        this.placeholderLine = TextLine.of(this.placeholder, this.placeholderStyle, metrics);
         this.lineHeight = Math.max(metrics.lineHeight(this.textStyle),
                 Math.max(metrics.lineHeight(this.disabledTextStyle), metrics.lineHeight(this.readOnlyTextStyle)));
         this.rowsDirty = true;
@@ -707,7 +715,8 @@ public final class TextAreaImpl extends BuiltInComponent<TextArea> implements Te
             final float y = this.viewport.y() + this.caretRow * this.lineHeight - Math.round(this.scrollY);
             if (x >= this.viewport.x() && x < this.viewport.right() && y + this.lineHeight > this.viewport.y()
                     && y < this.viewport.bottom()) {
-                this.caretPaint.paint(painter, new Rect(x, y, 1f, this.lineHeight));
+                final float reach = this.look.caretExtend();
+                this.look.caret().paint(painter, new Rect(x, y - reach, 1f, this.lineHeight + reach * 2f));
             }
         }
         if (this.barShown) {
@@ -726,24 +735,60 @@ public final class TextAreaImpl extends BuiltInComponent<TextArea> implements Te
     private void drawContent() {
         final float originX = this.viewport.x() - this.scrollX;
         final float offset = Math.round(this.scrollY);
+        if (this.buffer.length() == 0) {
+            if (!this.placeholderLine.isEmpty() && !(this.look.hidePlaceholder() && this.isFocused())) {
+                this.placeholderLine.draw(this.painter, this.viewport.x(), this.viewport.y() - offset);
+            }
+            return;
+        }
         final int first = Math.max(0, (int) Math.floor(offset / this.lineHeight));
         final int last = Math.min(this.rowCount - 1, (int) Math.floor((offset + this.viewport.height()) / this.lineHeight));
+        final TextStyle selectedStyle = this.look.selectedText();
         for (int row = first; row <= last; row++) {
             final float y = this.viewport.y() + row * this.lineHeight - offset;
-            if (this.selectionX1[row] > this.selectionX0[row]) {
-                this.selectionPaint.paint(this.painter, new Rect(originX + this.selectionX0[row], y,
-                        this.selectionX1[row] - this.selectionX0[row], this.lineHeight));
-            }
             final TextSpan[] spans = this.rowSpans[row];
             final float[] offsets = this.rowSpanX[row];
-            for (int i = 0; i < spans.length; i++) {
-                this.painter.text(spans[i], originX + offsets[i], y);
+            if (this.selectionX1[row] > this.selectionX0[row]) {
+                final Rect selected = new Rect(originX + this.selectionX0[row], y,
+                        this.selectionX1[row] - this.selectionX0[row], this.lineHeight);
+                this.look.selection().paint(this.painter, selected);
+                if (selectedStyle != null) {
+                    // The row outside the selection as it is, and inside it in the selected style
+                    final float left = this.viewport.x();
+                    final float right = this.viewport.right();
+                    this.painter.clipped(new Rect(left, y, Math.max(0f, selected.x() - left), this.lineHeight),
+                            () -> this.drawRow(spans, offsets, originX, y, null));
+                    this.painter.clipped(new Rect(selected.right(), y, Math.max(0f, right - selected.right()),
+                            this.lineHeight), () -> this.drawRow(spans, offsets, originX, y, null));
+                    this.painter.clipped(selected, () -> this.drawRow(spans, offsets, originX, y, selectedStyle));
+                    continue;
+                }
             }
+            this.drawRow(spans, offsets, originX, y, null);
+        }
+    }
+
+    private void drawRow(final TextSpan[] spans, final float[] offsets, final float originX, final float y,
+                         final TextStyle style) {
+        for (int i = 0; i < spans.length; i++) {
+            this.painter.text(style == null ? spans[i] : new TextSpan(spans[i].text(), style), originX + offsets[i], y);
         }
     }
 
     private boolean caretShown() {
-        return ((this.environment().millis() - this.blinkStart) / TextBoxImpl.BLINK_MILLIS) % 2 == 0;
+        return ((this.environment().millis() - this.blinkStart) / this.look.blinkMillis()) % 2 == 0;
+    }
+
+    @Override
+    public Text placeholder() {
+        return this.placeholder;
+    }
+
+    @Override
+    public TextArea setPlaceholder(final Text placeholder) {
+        this.placeholder = placeholder == null ? Text.empty() : placeholder;
+        this.invalidateLayout();
+        return this;
     }
 
     // ------------------------------------------------------------------

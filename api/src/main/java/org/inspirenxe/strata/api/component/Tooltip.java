@@ -25,11 +25,13 @@ import java.util.function.Function;
 /**
  * What a host shows near the pointer while it rests on a component; see {@link HasTooltip#setTooltip(Tooltip)}.
  *
- * <p>The host shows a tooltip once the pointer has rested on its component for the host's tooltip delay,
- * {@value #DEFAULT_DELAY_MILLIS} milliseconds unless the adapter sets another, or at once when the pointer moves
- * straight from another component's tooltip. It moves with the pointer: 12 units right of and 12 units above the
- * pointer, flipped to the left side when it would leave the host on the right, and kept inside the host. It hides
- * while a drag is in progress. A tooltip draws above the screen and every overlay, and takes no input.</p>
+ * <p>The host shows a tooltip once the pointer has rested on its component for the host's tooltip delay, or at
+ * once when the pointer moves straight from another component's tooltip. The delay is the one the adapter sets,
+ * else the theme's {@value #STYLE_DELAY}, else {@value #DEFAULT_DELAY_MILLIS} milliseconds. It moves with the
+ * pointer: its top-left corner sits {@value #STYLE_OFFSET_X} units right of and {@value #STYLE_OFFSET_Y} units below
+ * the pointer's whole-unit position (12 right and 12 above by default), flipped to the left side when it would
+ * leave the host on the right, and kept inside the host. It hides while a drag is in progress. A tooltip draws
+ * above the screen and every overlay, and takes no input.</p>
  *
  * <p>There are two kinds. {@link Lines}, made by {@link #text(Text)}, {@link #text(String)} and {@link #lines},
  * is drawn by Strata: on the {@value #STYLE_BACKGROUND} paint inside the {@value #STYLE_PADDING} insets, 4 units on
@@ -54,8 +56,55 @@ public sealed interface Tooltip {
      */
     String STYLE_PADDING = "tooltip.padding";
     /**
-     * How long, in milliseconds, the pointer rests on a component before its tooltip shows, unless the adapter sets
-     * another delay.
+     * Style key for a second layer drawn over the {@value #STYLE_BACKGROUND} of a {@link Lines} tooltip, such as
+     * an edge (paint, optional). Defaults to none.
+     */
+    String STYLE_FRAME = "tooltip.frame";
+    /**
+     * Style key for how far the background and frame of a {@link Lines} tooltip reach past its box (insets,
+     * optional), for paints whose images have a margin of their own. The box, which is placed and kept inside the
+     * host, is the text and its padding. Defaults to none.
+     */
+    String STYLE_OUTSET = "tooltip.outset";
+    /**
+     * Style key for how long the pointer rests on a component before its tooltip shows (metric, optional), in
+     * milliseconds. A delay the adapter sets wins. Defaults to {@value #DEFAULT_DELAY_MILLIS}.
+     */
+    String STYLE_DELAY = "tooltip.delay";
+    /**
+     * Style key for where a tooltip's left edge sits, right of the pointer (metric, optional), in UI units. When
+     * flipped to the left side, its right edge sits this far left of the pointer. Defaults to 12.
+     */
+    String STYLE_OFFSET_X = "tooltip.offset.x";
+    /**
+     * Style key for where a tooltip's top edge sits, below the pointer (metric, optional), in UI units; a negative
+     * value puts it above. Defaults to -12.
+     */
+    String STYLE_OFFSET_Y = "tooltip.offset.y";
+    /**
+     * Style key for placing a tooltip below its component rather than beside the pointer (metric, optional): any
+     * value but 0 turns it on. Defaults to 0. The left edge still follows {@value #STYLE_OFFSET_X}. With the
+     * pointer at height {@code p}, the component's top at {@code t}, its bottom at {@code b} and its height
+     * {@code h}, the box's top is {@code p + e(|p + o - t|)}, where {@code e(d)} eases from {@code h - o} at a
+     * distance of 0 to {@code g} at a distance of {@code h} or more and rounds to a whole unit, {@code o} is
+     * {@value #STYLE_BELOW_OVERLAP} and {@code g} is {@value #STYLE_BELOW_GAP}. So the box sits just below the
+     * component and moves a little with the pointer. When the host has no room for the box below
+     * {@code b + h}, less {@code g}, the box's bottom goes to {@code p - e(|p + o - b|)} instead, above the pointer.
+     */
+    String STYLE_BELOW = "tooltip.below";
+    /**
+     * Style key for the overlap of a tooltip placed below its component (metric, optional), in UI units. See
+     * {@value #STYLE_BELOW}. Defaults to 3.
+     */
+    String STYLE_BELOW_OVERLAP = "tooltip.below.overlap";
+    /**
+     * Style key for the gap of a tooltip placed below its component (metric, optional), in UI units. See
+     * {@value #STYLE_BELOW}. Defaults to 5.
+     */
+    String STYLE_BELOW_GAP = "tooltip.below.gap";
+    /**
+     * How long, in milliseconds, the pointer rests on a component before its tooltip shows, unless the adapter or
+     * the theme sets another delay.
      */
     long DEFAULT_DELAY_MILLIS = 500L;
 

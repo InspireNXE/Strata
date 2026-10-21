@@ -23,6 +23,8 @@ import org.inspirenxe.strata.api.geometry.Rect;
 import org.inspirenxe.strata.api.input.Key;
 import org.inspirenxe.strata.api.input.Modifiers;
 import org.inspirenxe.strata.api.text.TextMetrics;
+import org.inspirenxe.strata.api.text.TextSpan;
+import org.inspirenxe.strata.api.text.TextStyle;
 import org.inspirenxe.strata.api.theme.Paint;
 
 /**
@@ -46,10 +48,15 @@ final class LineEditor {
     private final Owner owner;
     private final Runnable drawContent;
 
+    private final Runnable drawPlain;
+    private final Runnable drawSelected;
     private int caret;
     private int anchor;
     private float scrollX;
     private long blinkStart;
+    private FieldLook look = FieldLook.plain(Paint.NONE, Paint.NONE);
+    private TextStyle underscoreStyle;
+    private TextSpan underscore;
 
     // Double-click drags select whole words around the word first clicked
     private boolean wordDrag;
@@ -80,6 +87,8 @@ final class LineEditor {
         this.boundaries = boundaries;
         this.owner = owner;
         this.drawContent = this::drawContent;
+        this.drawPlain = this::drawPlainText;
+        this.drawSelected = this::drawSelectedText;
         this.contentBox = Rect.ZERO;
         this.selectionPaint = Paint.NONE;
         this.visualsDirty = true;
@@ -167,7 +176,7 @@ final class LineEditor {
      * Returns whether the caret is in the shown half of its blink.
      */
     boolean caretShown() {
-        return ((this.owner.environment().millis() - this.blinkStart) / BLINK_MILLIS) % 2 == 0;
+        return ((this.owner.environment().millis() - this.blinkStart) / this.look.blinkMillis()) % 2 == 0;
     }
 
     private void moveTo(final int index, final boolean extend) {
@@ -409,31 +418,46 @@ final class LineEditor {
     // ------------------------------------------------------------------
 
     /**
-     * Draws the selection and the text inside a clip of the content box, then the caret. Scrolls first, just enough
-     * to keep the caret in view.
+     * Draws the selection and the text inside a clip of the content box, grown up and down by the selection's
+     * reach, then the caret. Scrolls first, just enough to keep the caret in view.
      *
+     * @param look how the caret and selection look
+     * @param textStyle the style of the text, for an underscore caret
      * @param showCaret whether the caret may show at all: focused, enabled and editable
      */
     void paint(final Painter painter, final Rect contentBox, final float textY, final float lineHeight,
-               final Paint selection, final Paint caretPaint, final boolean showCaret) {
+               final FieldLook look, final TextStyle textStyle, final boolean showCaret) {
         this.contentBox = contentBox;
         this.textY = textY;
         this.lineHeight = lineHeight;
-        this.selectionPaint = selection;
+        this.look = look;
+        this.selectionPaint = look.selection();
         this.updateVisuals(this.owner.environment().text());
         this.revealCaret();
 
         this.painter = painter;
         try {
-            painter.clipped(contentBox, this.drawContent);
+            final float reach = look.selectionExtend();
+            painter.clipped(reach > 0f
+                    ? new Rect(contentBox.x(), contentBox.y() - reach, contentBox.width(), contentBox.height() + reach * 2f)
+                    : contentBox, this.drawContent);
         } finally {
             this.painter = null;
         }
 
         if (showCaret && this.caretShown()) {
-            final float x = Math.max(contentBox.x(),
-                    Math.min(contentBox.right() - 1f, contentBox.x() + this.caretX - this.scrollX));
-            caretPaint.paint(painter, new Rect(x, textY, 1f, lineHeight));
+            final float atX = contentBox.x() + this.caretX - this.scrollX;
+            if (look.underscoreCaret() && this.caret == this.buffer.length()) {
+                if (this.underscore == null || !textStyle.equals(this.underscoreStyle)) {
+                    this.underscoreStyle = textStyle;
+                    this.underscore = new TextSpan("_", textStyle);
+                }
+                painter.text(this.underscore, this.buffer.length() > 0 ? atX + 1f : atX, textY);
+                return;
+            }
+            final float x = Math.max(contentBox.x(), Math.min(contentBox.right() - 1f, atX));
+            final float reach = look.caretExtend();
+            look.caret().paint(painter, new Rect(x, textY - reach, 1f, lineHeight + reach * 2f));
         }
     }
 
@@ -443,11 +467,36 @@ final class LineEditor {
      */
     private void drawContent() {
         final float originX = this.contentBox.x() - this.scrollX;
-        if (this.hasSelection()) {
-            this.selectionPaint.paint(this.painter, new Rect(originX + this.selectionStartX, this.textY,
-                    this.selectionEndX - this.selectionStartX, this.lineHeight));
+        if (!this.hasSelection()) {
+            this.owner.drawText(this.painter, originX, this.contentBox.x(), this.textY, null);
+            return;
         }
-        this.owner.drawText(this.painter, originX, this.contentBox.x(), this.textY);
+        final float reach = this.look.selectionExtend();
+        final Rect selected = new Rect(originX + this.selectionStartX, this.textY - reach,
+                this.selectionEndX - this.selectionStartX, this.lineHeight + reach * 2f);
+        this.selectionPaint.paint(this.painter, selected);
+        if (this.look.selectedText() == null) {
+            this.owner.drawText(this.painter, originX, this.contentBox.x(), this.textY, null);
+            return;
+        }
+        // The text outside the selection as it is, and inside it in the selected style
+        final Rect content = this.contentBox;
+        final float top = content.y() - reach;
+        final float height = content.height() + reach * 2f;
+        this.painter.clipped(new Rect(content.x(), top, Math.max(0f, selected.x() - content.x()), height),
+                this.drawPlain);
+        this.painter.clipped(new Rect(selected.right(), top, Math.max(0f, content.right() - selected.right()), height),
+                this.drawPlain);
+        this.painter.clipped(selected, this.drawSelected);
+    }
+
+    private void drawPlainText() {
+        this.owner.drawText(this.painter, this.contentBox.x() - this.scrollX, this.contentBox.x(), this.textY, null);
+    }
+
+    private void drawSelectedText() {
+        this.owner.drawText(this.painter, this.contentBox.x() - this.scrollX, this.contentBox.x(), this.textY,
+                this.look.selectedText());
     }
 
     /**
@@ -515,8 +564,10 @@ final class LineEditor {
 
         /**
          * Draws the text with its start at {@code originX}, or the placeholder at {@code left} when there is no text.
+         *
+         * @param style the style to draw the text in instead of its own, or null to keep its own
          */
-        void drawText(Painter painter, float originX, float left, float y);
+        void drawText(Painter painter, float originX, float left, float y, TextStyle style);
 
         /**
          * Selects everything, for Ctrl+A.

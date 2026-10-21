@@ -33,7 +33,8 @@ import java.util.List;
  * A {@link Window} with a message and a row of buttons, for confirmations and notices. Show it with
  * {@link org.inspirenxe.strata.api.overlay.Overlays#dialog}.
  *
- * <p>The message wraps at {@link #MESSAGE_WIDTH} units. The buttons sit at the bottom right, in the order of the
+ * <p>The message wraps at {@link #MESSAGE_WIDTH} units unless the theme says otherwise. The buttons sit at the
+ * bottom right, or share the row when the theme says so, in the order of the
  * {@link Buttons} set, the first one focused when the dialog opens. A box made without a set has
  * {@link Buttons#OK}. A button press, the close button or Escape
  * answers once: the box reports a {@link Result} through {@link #ANSWERED} and closes the overlay showing it. The
@@ -42,9 +43,12 @@ import java.util.List;
  * <p>The box is a composite: the events of its window and buttons reach handlers on those parts and on the box,
  * and nothing outside it. To hear the user's answer, handle {@link #ANSWER} and {@link #ANSWERED}.</p>
  *
- * <p>It uses the theme keys of {@link Window}, {@link Label} and {@link Button}, and one of its own:
+ * <p>It uses the theme keys of {@link Window}, {@link Label} and {@link Button}, and its own:
  * {@value #STYLE_PADDING} (insets, optional), the space between the window's padding and the message and buttons,
- * 4 on every side by default.</p>
+ * 4 on every side by default, and the metrics {@value #STYLE_SPACING}, {@value #STYLE_MESSAGE_WIDTH},
+ * {@value #STYLE_MESSAGE_CENTER},
+ * {@value #STYLE_BUTTON_WIDTH}, {@value #STYLE_BUTTON_WIDTH_MAXIMUM}, {@value #STYLE_BUTTON_GAP} and
+ * {@value #STYLE_CLOSE}.</p>
  *
  * <pre>{@code
  * factory.overlays().dialog(factory.messageBox("Delete", "Delete this exchange?", MessageBox.Buttons.YES_NO)
@@ -69,6 +73,40 @@ public interface MessageBox extends Component<MessageBox>, HasCursor<MessageBox>
      * Defaults to 4 on every side.
      */
     String STYLE_PADDING = "messagebox.padding";
+    /**
+     * Style key for the space between the message and the buttons (metric, optional), in UI units. Defaults to 8.
+     */
+    String STYLE_SPACING = "messagebox.spacing";
+    /**
+     * Style key for the width the message wraps at (metric, optional), in UI units. Defaults to
+     * {@value #MESSAGE_WIDTH}.
+     */
+    String STYLE_MESSAGE_WIDTH = "messagebox.message.width";
+    /**
+     * Style key for centering the message's lines (metric, optional): any value but 0 centers them. Defaults to 0,
+     * which starts them at the left.
+     */
+    String STYLE_MESSAGE_CENTER = "messagebox.message.center";
+    /**
+     * Style key for each button's width (metric, optional), in UI units. Defaults to 64, with the buttons at the
+     * right. A value of 0 makes the box as wide as {@value #STYLE_MESSAGE_WIDTH} and has the buttons share that
+     * width evenly, each at most {@value #STYLE_BUTTON_WIDTH_MAXIMUM} wide, centered.
+     */
+    String STYLE_BUTTON_WIDTH = "messagebox.button.width";
+    /**
+     * Style key for the widest a button gets when the buttons share the row (metric, optional), in UI units.
+     * Defaults to 0, which sets no limit.
+     */
+    String STYLE_BUTTON_WIDTH_MAXIMUM = "messagebox.button.width.maximum";
+    /**
+     * Style key for the space between buttons (metric, optional), in UI units. Defaults to 4.
+     */
+    String STYLE_BUTTON_GAP = "messagebox.button.gap";
+    /**
+     * Style key for whether the window shows its close button (metric, optional): 0 hides it, and Escape still
+     * answers. Defaults to 1, which shows it.
+     */
+    String STYLE_CLOSE = "messagebox.close";
 
     /**
      * Requested when the user answers: one of the buttons pressed with a click, Enter or Space, or the window's

@@ -20,6 +20,7 @@ import org.inspirenxe.strata.api.component.HasCursor;
 import org.inspirenxe.strata.api.component.HasTooltip;
 import org.inspirenxe.strata.api.control.pane.Tab;
 import org.inspirenxe.strata.api.control.pane.TabBar;
+import org.inspirenxe.strata.api.event.input.FocusEvent;
 import org.inspirenxe.strata.api.event.input.KeyEvent;
 import org.inspirenxe.strata.api.event.input.PointerButtonEvent;
 import org.inspirenxe.strata.api.extension.ArrangeContext;
@@ -35,6 +36,7 @@ import org.inspirenxe.strata.api.text.TextMetrics;
 import org.inspirenxe.strata.api.text.TextStyle;
 import org.inspirenxe.strata.api.theme.Paint;
 import org.inspirenxe.strata.api.theme.Theme;
+import org.inspirenxe.strata.core.control.Caption;
 import org.inspirenxe.strata.core.node.BuiltInComponent;
 import org.inspirenxe.strata.core.node.BuiltInComposite;
 import org.inspirenxe.strata.core.node.ComponentFactoryImpl;
@@ -64,6 +66,8 @@ public final class TabBarImpl extends BuiltInComposite<TabBar> implements TabBar
     private final List<TabView> views;
     private int selectedIndex;
     private float spacing;
+    // True while the keyboard brought or kept focus here, which lights the selected tab
+    private boolean keyboardFocus;
 
     /**
      * Creates a bar with no tabs.
@@ -235,11 +239,22 @@ public final class TabBarImpl extends BuiltInComposite<TabBar> implements TabBar
         if (count == 0) {
             return;
         }
-        final float tabWidth = (bounds.width() - this.spacing * (count - 1)) / count;
+        final float room = bounds.width() - this.spacing * (count - 1);
+        // Whole widths for a whole room, so tab edges and centered labels land on whole units
+        final boolean whole = room == Math.rint(room);
+        final float tabWidth = whole ? (float) Math.floor(room / count) : room / count;
+        final int spare = whole ? (int) (room - tabWidth * count) : 0;
+        float x = bounds.x();
         for (int i = 0; i < count; i++) {
-            context.arrange(this.views.get(i), new Rect(bounds.x() + i * (tabWidth + this.spacing), bounds.y(), tabWidth,
-                    bounds.height()));
+            final float width = tabWidth + (i < spare ? 1f : 0f);
+            context.arrange(this.views.get(i), new Rect(x, bounds.y(), width, bounds.height()));
+            x += width + this.spacing;
         }
+    }
+
+    @Override
+    protected void onFocusGained(final FocusEvent event) {
+        this.keyboardFocus = !this.isFocusFromPress();
     }
 
     @Override
@@ -247,6 +262,7 @@ public final class TabBarImpl extends BuiltInComposite<TabBar> implements TabBar
         if (!event.action().isDown() || this.views.isEmpty()) {
             return;
         }
+        this.keyboardFocus = true;
         final int direction = switch (event.key()) {
             case LEFT -> -1;
             case RIGHT -> 1;
@@ -276,6 +292,12 @@ public final class TabBarImpl extends BuiltInComposite<TabBar> implements TabBar
         private Paint hovered;
         private Paint disabled;
         private Paint selectedDisabled;
+        private Paint selectedHovered;
+        private Paint selectedFill;
+        private Insets selectedFillInsets;
+        private Paint underline;
+        private Paint underlineDisabled;
+        private final Caption caption;
         private TextStyle textStyle;
         private TextStyle selectedText;
         private TextStyle disabledText;
@@ -297,6 +319,12 @@ public final class TabBarImpl extends BuiltInComposite<TabBar> implements TabBar
             this.hovered = Paint.NONE;
             this.disabled = Paint.NONE;
             this.selectedDisabled = Paint.NONE;
+            this.selectedHovered = Paint.NONE;
+            this.selectedFill = Paint.NONE;
+            this.selectedFillInsets = Insets.NONE;
+            this.underline = Paint.NONE;
+            this.underlineDisabled = Paint.NONE;
+            this.caption = new Caption();
             this.textStyle = TextStyle.DEFAULT;
             this.selectedText = TextStyle.DEFAULT;
             this.disabledText = TextStyle.DEFAULT;
@@ -327,6 +355,12 @@ public final class TabBarImpl extends BuiltInComposite<TabBar> implements TabBar
             this.hovered = theme.paintOr(STYLE_HOVERED, this.normal);
             this.disabled = theme.paintOr(STYLE_DISABLED, this.normal);
             this.selectedDisabled = theme.paintOr(STYLE_SELECTED_DISABLED, this.disabled);
+            this.selectedHovered = theme.paintOr(STYLE_SELECTED_HOVERED, this.selected);
+            this.selectedFill = theme.paintOr(STYLE_SELECTED_FILL, Paint.NONE);
+            this.selectedFillInsets = theme.insetsOr(STYLE_SELECTED_FILL_INSETS, Insets.NONE);
+            this.underline = theme.paintOr(STYLE_UNDERLINE, Paint.NONE);
+            this.underlineDisabled = theme.paintOr(STYLE_UNDERLINE_DISABLED, this.underline);
+            this.caption.applyTheme(theme, STYLE_CLIP, STYLE_TEXT_SCROLL, STYLE_TEXT_SCROLL_MINIMUM);
             this.textStyle = theme.textStyleOr(STYLE_TEXT, TextStyle.DEFAULT);
             this.selectedText = theme.textStyleOr(STYLE_TEXT_SELECTED, this.textStyle);
             this.disabledText = theme.textStyleOr(STYLE_TEXT_DISABLED, this.textStyle);
@@ -359,7 +393,9 @@ public final class TabBarImpl extends BuiltInComposite<TabBar> implements TabBar
             final Paint face;
             final TextLine caption;
             if (isSelected) {
-                face = enabled ? this.selected : this.selectedDisabled;
+                face = !enabled ? this.selectedDisabled
+                        : this.isHovered() || this.bar.isFocused() && this.bar.keyboardFocus ? this.selectedHovered
+                        : this.selected;
                 caption = enabled ? this.selectedSpan : this.disabledSpan;
             } else if (!enabled) {
                 face = this.disabled;
@@ -369,16 +405,51 @@ public final class TabBarImpl extends BuiltInComposite<TabBar> implements TabBar
                 caption = this.span;
             }
             face.paint(painter, bounds);
+            if (isSelected) {
+                if (this.selectedFill != Paint.NONE) {
+                    this.selectedFill.paint(painter, bounds.shrink(this.selectedFillInsets));
+                }
+                final Paint line = enabled ? this.underline : this.underlineDisabled;
+                if (line != Paint.NONE) {
+                    final float width = Math.max(0f, Math.min(caption.width(), bounds.width() - 4f));
+                    // Half the spare room on the left, rounded down on whole units
+                    final float spare = bounds.width() - width;
+                    final float left = bounds.x() + (spare == Math.rint(spare) ? (float) Math.floor(spare / 2f) : spare / 2f);
+                    line.paint(painter, new Rect(left,
+                            bounds.bottom() - 2f, width, 1f));
+                }
+            }
             // Centered in the tab less its state's padding
             final Insets pad = isSelected ? this.selectedPadding : this.padding;
-            caption.draw(painter,
-                    bounds.x() + pad.left() + (bounds.width() - pad.left() - pad.right() - this.textWidth) * 0.5f,
-                    bounds.y() + pad.top() + (bounds.height() - pad.top() - pad.bottom() - this.lineHeight) * 0.5f);
+            this.caption.draw(painter, caption, bounds, pad,
+                    bounds.y() + pad.top() + (bounds.height() - pad.top() - pad.bottom() - this.lineHeight) * 0.5f,
+                    this.environment().millis());
+        }
+
+        @Override
+        protected void onPointerPress(final PointerButtonEvent event) {
+            if (this.activatesOnPress()) {
+                this.clicked(event);
+            }
         }
 
         @Override
         protected void onClick(final PointerButtonEvent event) {
+            if (!this.activatesOnPress()) {
+                this.clicked(event);
+            }
+        }
+
+        /**
+         * Acts on a pointer press or click, whichever the platform's conventions say buttons act on.
+         */
+        private void clicked(final PointerButtonEvent event) {
             if (event.button() == MouseButton.LEFT && this.tab.isEnabled()) {
+                // A clicked tab takes the bar's focus, as a clicked button takes its own
+                if (this.bar.isEnabled()) {
+                    this.bar.requestFocus();
+                    this.bar.keyboardFocus = false;
+                }
                 this.bar.userSelect(this.index());
                 event.consume();
             }

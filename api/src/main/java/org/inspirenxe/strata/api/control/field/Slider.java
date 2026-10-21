@@ -136,9 +136,23 @@ public interface Slider extends Component<Slider>, Focusable<Slider>, HasCursor<
     String STYLE_TEXT_DISABLED = "slider.text.disabled";
     /**
      * Style key for the space between the slider's edges and its label (insets, optional). The label centers in
-     * the slider less this padding and is cut to it. Defaults to none.
+     * the slider less this padding, and a label too wide is cut at the padding's left and right. Defaults to none.
      */
     String STYLE_PADDING = "slider.padding";
+    /**
+     * Style key for how fast a label too wide for the slider scrolls (metric, optional), in milliseconds per unit
+     * of overflow for one sweep there and back. Defaults to 0, which cuts the label instead.
+     */
+    String STYLE_TEXT_SCROLL = "slider.text.scroll";
+    /**
+     * Style key for the shortest sweep of a scrolling label (metric, optional), in milliseconds. Defaults to 0.
+     */
+    String STYLE_TEXT_SCROLL_MINIMUM = "slider.text.scroll.minimum";
+    /**
+     * Style key for how far an arrow key moves the thumb of a slider with no step (metric, optional), in units of
+     * the thumb's travel along the track. Defaults to 0, which moves the value by a hundredth of the range instead.
+     */
+    String STYLE_KEY_TRAVEL = "slider.key.travel";
 
     /**
      * Returns the value.
@@ -203,7 +217,9 @@ public interface Slider extends Component<Slider>, Focusable<Slider>, HasCursor<
     /**
      * Returns how far one press of an arrow key moves the value.
      *
-     * @return the step, or a hundredth of the range when there is no step
+     * @return the step; with no step, the value that moves the thumb {@value #STYLE_KEY_TRAVEL} units when the
+     *     theme sets that above 0 and the slider has been laid out longer than its thumb, and otherwise a
+     *     hundredth of the range
      */
     double keyStep();
 

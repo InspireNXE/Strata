@@ -43,9 +43,10 @@ import java.util.function.Function;
  * to the item with the selected item's {@linkplain #setKeyFunction key}, or to the first item if there is none.
  * Code can clear the selection with {@link #clearSelection()}.</p>
  *
- * <p>The button is focusable and tabbable, shows the hand cursor, and has a minimum size of 20 by 20. It asks for
- * the label plus its widest value, so cycling does not change its size, and the same padding as a {@link Button}
- * (8 units left and right, 5 top and bottom). The text is centered.</p>
+ * <p>The button is focusable and tabbable, shows the hand cursor, and has a minimum width of 20. It asks for the
+ * label plus its widest value, so cycling does not change its size, and the same padding as a {@link Button} (8
+ * units left and right, 5 top and bottom), and to be at least 20 tall; a smaller height set on it applies. The text
+ * is centered.</p>
  *
  * <h2>Events</h2>
  * <ul>

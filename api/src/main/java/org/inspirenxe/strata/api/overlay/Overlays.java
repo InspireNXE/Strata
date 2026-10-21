@@ -69,6 +69,26 @@ public interface Overlays {
      */
     String STYLE_TOAST_PADDING = "toast.padding";
     /**
+     * Style key for the first line of a text toast (text style, optional). When set, the message's first line is
+     * a title drawn in this style, replacing the styles of its parts. Defaults to none, which draws every line in
+     * {@value #STYLE_TOAST_TEXT}.
+     */
+    String STYLE_TOAST_TITLE = "toast.title";
+    /**
+     * Style key for the extra space between the lines of a text toast (metric, optional), in UI units. Defaults
+     * to 0.
+     */
+    String STYLE_TOAST_LINE_GAP = "toast.line.gap";
+    /**
+     * Style key for the least width of a text toast (metric, optional), in UI units. Defaults to 0.
+     */
+    String STYLE_TOAST_WIDTH_MINIMUM = "toast.width.minimum";
+    /**
+     * Style key for the space between toasts and the host's top and right edges, and between one toast and the
+     * next (metric, optional), in UI units. Defaults to {@value #TOAST_MARGIN}.
+     */
+    String STYLE_TOAST_MARGIN = "toast.margin";
+    /**
      * How long a toast shows unless told otherwise, in milliseconds.
      */
     long DEFAULT_TOAST_MILLIS = 3000L;

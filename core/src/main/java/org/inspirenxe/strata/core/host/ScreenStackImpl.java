@@ -15,7 +15,6 @@
  */
 package org.inspirenxe.strata.core.host;
 
-import org.inspirenxe.strata.api.component.Tooltip;
 import org.inspirenxe.strata.api.input.Key;
 import org.inspirenxe.strata.api.input.KeyAction;
 import org.inspirenxe.strata.api.input.Modifiers;
@@ -52,7 +51,8 @@ public final class ScreenStackImpl implements ScreenStack {
     private ThemeRef themeRef;
     private float width;
     private float height;
-    private long tooltipDelay = Tooltip.DEFAULT_DELAY_MILLIS;
+    // Negative until set, so each screen follows its theme
+    private long tooltipDelay = -1L;
 
     /**
      * Creates an empty stack of size 0 by 0. Adapters use {@code StrataCore} instead.
@@ -112,7 +112,9 @@ public final class ScreenStackImpl implements ScreenStack {
         self[0] = host;
         host.setOpener(new Above(host));
         host.resize(this.width, this.height);
-        host.setTooltipDelay(this.tooltipDelay);
+        if (this.tooltipDelay >= 0L) {
+            host.setTooltipDelay(this.tooltipDelay);
+        }
         final Entry entry = new Entry(host, own != null);
         // In the stack before it opens, so a screen can open another above itself from opened()
         this.entries.add(index, entry);

@@ -37,8 +37,8 @@ import java.util.Optional;
 
 /**
  * Draws a {@link Tooltip.Lines} tooltip: lines of spans one line height plus one unit apart, inside the theme's
- * tooltip padding or {@link #PADDING}, on the theme's tooltip background. Without that key it draws a dark box with
- * a purple one-unit edge.
+ * tooltip padding or {@link #PADDING}, on the theme's tooltip background and frame, both drawn over the box grown by
+ * the theme's tooltip outset. Without a background key it draws a dark box with a purple one-unit edge.
  */
 final class TooltipView extends BuiltInComponent<TooltipView> {
     /**
@@ -58,6 +58,9 @@ final class TooltipView extends BuiltInComponent<TooltipView> {
     private final List<Float> textHeights;
     private TextStyle textStyle;
     private Insets padding = PADDING;
+    private Paint background = Paint.NONE;
+    private Paint frame = Paint.NONE;
+    private Insets outset = Insets.NONE;
 
     TooltipView(final ComponentFactoryImpl factory, final Tooltip tooltip) {
         super(factory);
@@ -73,8 +76,12 @@ final class TooltipView extends BuiltInComponent<TooltipView> {
     @Override
     protected void onApplyTheme(final Theme theme) {
         final Optional<Paint> themed = theme.paint(Tooltip.STYLE_BACKGROUND);
-        this.setBackground(themed.orElse(FALLBACK_BACKGROUND));
+        // A themed background is drawn here rather than as the container background, so it can reach past the box
+        this.setBackground(themed.isPresent() ? Paint.NONE : FALLBACK_BACKGROUND);
         this.setBorder(themed.isPresent() ? Border.NONE : FALLBACK_EDGE);
+        this.background = themed.orElse(Paint.NONE);
+        this.frame = theme.paintOr(Tooltip.STYLE_FRAME, Paint.NONE);
+        this.outset = theme.insetsOr(Tooltip.STYLE_OUTSET, Insets.NONE);
         this.textStyle = theme.textStyleOr(Tooltip.STYLE_TEXT, TextStyle.DEFAULT);
         this.padding = theme.insetsOr(Tooltip.STYLE_PADDING, PADDING);
     }
@@ -106,6 +113,11 @@ final class TooltipView extends BuiltInComponent<TooltipView> {
 
     @Override
     protected void paint(final Painter painter, final Rect bounds) {
+        if (this.background != Paint.NONE || this.frame != Paint.NONE) {
+            final Rect area = bounds.grow(this.outset);
+            this.background.paint(painter, area);
+            this.frame.paint(painter, area);
+        }
         final InlineMetrics metrics = InlineMetrics.of(this.environment().text());
         float y = bounds.y() + this.padding.top();
         for (int i = 0; i < this.lines.size(); i++) {

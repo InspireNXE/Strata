@@ -38,10 +38,11 @@ import java.util.Set;
  * @param paints the paints it sets
  * @param text the text style changes it makes, applied over the inherited style of each key
  * @param insets the insets it sets
+ * @param metrics the metrics it sets
  */
 record ThemeFile(String layer, Optional<ThemeId> parent, Map<String, Paint> paints,
-                 Map<String, TextPatch> text, Map<String, Insets> insets) {
-    private static final Set<String> TOP_KEYS = Set.of("parent", "paints", "text", "insets");
+                 Map<String, TextPatch> text, Map<String, Insets> insets, Map<String, Float> metrics) {
+    private static final Set<String> TOP_KEYS = Set.of("parent", "paints", "text", "insets", "metrics");
     private static final Set<String> SPRITE_KEYS = Set.of("sprite", "tint");
     private static final Set<String> NINE_SLICE_KEYS = Set.of("nine_slice", "border", "tint", "size", "tiled");
     private static final Set<String> TILED_KEYS = Set.of("tiled", "size", "tint");
@@ -81,7 +82,13 @@ record ThemeFile(String layer, Optional<ThemeId> parent, Map<String, Paint> pain
                     insets.put(entry.getKey(), insets(entry.getValue(), "insets." + entry.getKey()));
                 }
             }
-            return new ThemeFile(document.layer(), parent, paints, text, insets);
+            final Map<String, Float> metrics = new LinkedHashMap<>();
+            if (root.containsKey("metrics")) {
+                for (final Map.Entry<String, Object> entry : object(root.get("metrics"), "metrics").entrySet()) {
+                    metrics.put(entry.getKey(), metric(entry.getValue(), "metrics." + entry.getKey()));
+                }
+            }
+            return new ThemeFile(document.layer(), parent, paints, text, insets, metrics);
         } catch (final IllegalArgumentException e) {
             throw new ThemeException("Theme file " + document.origin() + " is invalid: " + e.getMessage());
         }
@@ -159,6 +166,13 @@ record ThemeFile(String layer, Optional<ThemeId> parent, Map<String, Paint> pain
             default -> throw new IllegalArgumentException(
                     where + " needs one number, [horizontal, vertical] or [left, top, right, bottom]");
         };
+    }
+
+    private static float metric(final Object value, final String where) {
+        if (value instanceof final Double number && Double.isFinite(number)) {
+            return number.floatValue();
+        }
+        throw new IllegalArgumentException(where + " must be a number");
     }
 
     /**

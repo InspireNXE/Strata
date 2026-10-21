@@ -34,6 +34,7 @@ import org.inspirenxe.strata.api.text.TextMetrics;
 import org.inspirenxe.strata.api.text.TextStyle;
 import org.inspirenxe.strata.api.theme.Paint;
 import org.inspirenxe.strata.api.theme.Theme;
+import org.inspirenxe.strata.core.control.Caption;
 import org.inspirenxe.strata.core.node.BuiltInComponent;
 import org.inspirenxe.strata.core.node.ComponentFactoryImpl;
 import org.inspirenxe.strata.core.text.TextLine;
@@ -49,7 +50,8 @@ import java.util.function.Function;
  * pressed paint while held under the pointer, the hovered paint while hovered or focused, and the normal paint
  * otherwise, plus the focus ring when the theme has one. The text is {@code label: value}, centered.
  *
- * <p>The button is focusable and tabbable, shows a hand cursor, and is at least 20 by 20 units. Its desired size is
+ * <p>The button is focusable and tabbable, shows a hand cursor, is at least 20 units wide, and measures at least 20
+ * tall, though a smaller height set on it applies. Its desired size is
  * the widest text over all items, with the theme's {@value Button#STYLE_PADDING} around it, or
  * {@link ButtonImpl#DEFAULT_PADDING} when the theme sets none. A new button has no items and shows only its label.</p>
  *
@@ -77,6 +79,7 @@ public final class CycleButtonImpl<T> extends BuiltInComponent<CycleButton<T>> i
     // Computed during measure
     private float lineHeight;
     private Insets padding = ButtonImpl.DEFAULT_PADDING;
+    private final Caption caption = new Caption();
 
     // The joined text last painted, for the selected index it was made for; -2 when it must be made again
     private int shownIndex;
@@ -110,7 +113,7 @@ public final class CycleButtonImpl<T> extends BuiltInComponent<CycleButton<T>> i
         this.textStyle = TextStyle.DEFAULT;
         this.disabledTextStyle = TextStyle.DEFAULT;
         this.setCursor(CursorKind.HAND);
-        this.setMinSize(20f, 20f);
+        this.setMinSize(20f, 0f);
     }
 
     // ------------------------------------------------------------------
@@ -299,6 +302,7 @@ public final class CycleButtonImpl<T> extends BuiltInComponent<CycleButton<T>> i
         this.textStyle = theme.textStyleOr(Button.STYLE_TEXT, TextStyle.DEFAULT);
         this.disabledTextStyle = theme.textStyleOr(Button.STYLE_TEXT_DISABLED, this.textStyle);
         this.padding = theme.insetsOr(Button.STYLE_PADDING, ButtonImpl.DEFAULT_PADDING);
+        this.caption.applyTheme(theme, Button.STYLE_CLIP, Button.STYLE_TEXT_SCROLL, Button.STYLE_TEXT_SCROLL_MINIMUM);
         this.shownIndex = -2;
     }
 
@@ -317,7 +321,8 @@ public final class CycleButtonImpl<T> extends BuiltInComponent<CycleButton<T>> i
         }
         this.lineHeight = height;
         this.shownIndex = -2;
-        return new Size(widest + this.padding.horizontal(), this.lineHeight + this.padding.vertical());
+        return new Size(widest + this.padding.horizontal(),
+                Math.max(ButtonImpl.MIN_HEIGHT, this.lineHeight + this.padding.vertical()));
     }
 
     @Override
@@ -351,8 +356,9 @@ public final class CycleButtonImpl<T> extends BuiltInComponent<CycleButton<T>> i
         }
         final TextLine line = enabled ? this.shown : this.shownDisabled;
         final Insets padding = this.padding;
-        line.draw(painter, bounds.x() + padding.left() + (bounds.width() - padding.horizontal() - line.width()) * 0.5f,
-                bounds.y() + padding.top() + (bounds.height() - padding.vertical() - this.lineHeight) * 0.5f);
+        this.caption.draw(painter, line, bounds, padding,
+                bounds.y() + padding.top() + (bounds.height() - padding.vertical() - this.lineHeight) * 0.5f,
+                this.environment().millis());
     }
 
     // ------------------------------------------------------------------
@@ -360,7 +366,23 @@ public final class CycleButtonImpl<T> extends BuiltInComponent<CycleButton<T>> i
     // ------------------------------------------------------------------
 
     @Override
+    protected void onPointerPress(final PointerButtonEvent event) {
+        if (this.activatesOnPress()) {
+            this.clicked(event);
+        }
+    }
+
+    @Override
     protected void onClick(final PointerButtonEvent event) {
+        if (!this.activatesOnPress()) {
+            this.clicked(event);
+        }
+    }
+
+    /**
+     * Acts on a pointer press or click, whichever the platform's conventions say buttons act on.
+     */
+    private void clicked(final PointerButtonEvent event) {
         final MouseButton button = event.button();
         if (button == MouseButton.LEFT || button == MouseButton.RIGHT) {
             this.userCycle(button == MouseButton.RIGHT || event.modifiers().shift() ? -1 : 1);

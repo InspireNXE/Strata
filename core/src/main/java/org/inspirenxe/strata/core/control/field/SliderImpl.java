@@ -27,13 +27,15 @@ import org.inspirenxe.strata.api.geometry.Rect;
 import org.inspirenxe.strata.api.geometry.Size;
 import org.inspirenxe.strata.api.input.MouseButton;
 import org.inspirenxe.strata.api.layout.Orientation;
+import org.inspirenxe.strata.api.text.Text;
 import org.inspirenxe.strata.api.text.TextMetrics;
-import org.inspirenxe.strata.api.text.TextSpan;
 import org.inspirenxe.strata.api.text.TextStyle;
 import org.inspirenxe.strata.api.theme.Paint;
 import org.inspirenxe.strata.api.theme.Theme;
+import org.inspirenxe.strata.core.control.Caption;
 import org.inspirenxe.strata.core.node.BuiltInComponent;
 import org.inspirenxe.strata.core.node.ComponentFactoryImpl;
+import org.inspirenxe.strata.core.text.TextLine;
 
 import java.util.Objects;
 import java.util.Set;
@@ -71,7 +73,7 @@ public final class SliderImpl extends BuiltInComponent<Slider> implements Slider
     public static final int PAGE_STEPS = 10;
     private static final Set<String> REQUIRED = Set.of(STYLE_TRACK, STYLE_THUMB, STYLE_THUMB_HOVERED);
 
-    private final Runnable drawLabel;
+    private final Caption caption;
     private double value;
     private double min;
     private double max;
@@ -90,14 +92,11 @@ public final class SliderImpl extends BuiltInComponent<Slider> implements Slider
     private TextStyle disabledTextStyle;
 
     // Rebuilt during painting when the label text or theme changes; null when stale
-    private TextSpan labelSpan;
-    private TextSpan disabledLabelSpan;
-    private float labelWidth;
+    private TextLine labelSpan;
+    private TextLine disabledLabelSpan;
     private float labelHeight;
-    // The bounds the label is drawn in, set just before drawLabel runs
-    private Rect labelBounds;
     private Insets padding = Insets.NONE;
-    private Painter labelPainter;
+    private float keyTravel;
 
     /**
      * Creates a slider over 0 to 1, at 0, with no step.
@@ -107,7 +106,7 @@ public final class SliderImpl extends BuiltInComponent<Slider> implements Slider
     @SuppressWarnings("this-escape")
     public SliderImpl(final ComponentFactoryImpl ui) {
         super(ui);
-        this.drawLabel = this::drawLabel;
+        this.caption = new Caption();
         this.min = 0d;
         this.max = 1d;
         this.labelText = "";
@@ -179,7 +178,15 @@ public final class SliderImpl extends BuiltInComponent<Slider> implements Slider
 
     @Override
     public double keyStep() {
-        return this.step > 0d ? this.step : (this.max - this.min) / 100d;
+        if (this.step > 0d) {
+            return this.step;
+        }
+        final Rect bounds = this.bounds();
+        final float length = this.orientation == Orientation.HORIZONTAL ? bounds.width() : bounds.height();
+        if (this.keyTravel > 0f && length > THUMB_WIDTH) {
+            return (this.max - this.min) * this.keyTravel / (length - THUMB_WIDTH);
+        }
+        return (this.max - this.min) / 100d;
     }
 
     @Override
@@ -281,6 +288,8 @@ public final class SliderImpl extends BuiltInComponent<Slider> implements Slider
         this.textStyle = theme.textStyleOr(STYLE_TEXT, TextStyle.DEFAULT);
         this.disabledTextStyle = theme.textStyleOr(STYLE_TEXT_DISABLED, this.textStyle);
         this.padding = theme.insetsOr(STYLE_PADDING, Insets.NONE);
+        this.keyTravel = Math.max(0f, theme.metricOr(STYLE_KEY_TRAVEL, 0f));
+        this.caption.applyTheme(theme, STYLE_PADDING, STYLE_TEXT_SCROLL, STYLE_TEXT_SCROLL_MINIMUM);
         this.labelSpan = null;
     }
 
@@ -317,25 +326,17 @@ public final class SliderImpl extends BuiltInComponent<Slider> implements Slider
         }
 
         if (!this.labelText.isEmpty()) {
-            this.labelBounds = bounds.shrink(this.padding);
-            this.labelPainter = painter;
-            painter.clipped(this.labelBounds, this.drawLabel);
-            this.labelPainter = null;
+            if (this.labelSpan == null) {
+                final TextMetrics metrics = this.environment().text();
+                this.labelSpan = TextLine.of(Text.of(this.labelText), this.textStyle, metrics);
+                this.disabledLabelSpan = TextLine.of(Text.of(this.labelText), this.disabledTextStyle, metrics);
+                this.labelHeight = metrics.lineHeight(this.textStyle);
+            }
+            final Insets padding = this.padding;
+            this.caption.draw(painter, enabled ? this.labelSpan : this.disabledLabelSpan, bounds, padding,
+                    bounds.y() + padding.top() + (bounds.height() - padding.vertical() - this.labelHeight) * 0.5f,
+                    this.environment().millis());
         }
-    }
-
-    private void drawLabel() {
-        if (this.labelSpan == null) {
-            final TextMetrics metrics = this.environment().text();
-            this.labelSpan = new TextSpan(this.labelText, this.textStyle);
-            this.disabledLabelSpan = new TextSpan(this.labelText, this.disabledTextStyle);
-            this.labelWidth = metrics.width(this.labelSpan);
-            this.labelHeight = metrics.lineHeight(this.textStyle);
-        }
-        final Rect bounds = this.labelBounds;
-        this.labelPainter.text(this.isEnabled() ? this.labelSpan : this.disabledLabelSpan,
-                bounds.x() + (bounds.width() - this.labelWidth) * 0.5f,
-                bounds.y() + (bounds.height() - this.labelHeight) * 0.5f);
     }
 
     // ------------------------------------------------------------------

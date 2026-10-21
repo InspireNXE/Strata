@@ -328,7 +328,23 @@ public final class CheckBoxImpl extends BuiltInComponent<CheckBox> implements Ch
     }
 
     @Override
+    protected void onPointerPress(final PointerButtonEvent event) {
+        if (this.activatesOnPress()) {
+            this.clicked(event);
+        }
+    }
+
+    @Override
     protected void onClick(final PointerButtonEvent event) {
+        if (!this.activatesOnPress()) {
+            this.clicked(event);
+        }
+    }
+
+    /**
+     * Acts on a pointer press or click, whichever the platform's conventions say buttons act on.
+     */
+    private void clicked(final PointerButtonEvent event) {
         if (event.button() == MouseButton.LEFT) {
             this.userToggle();
             event.consume();

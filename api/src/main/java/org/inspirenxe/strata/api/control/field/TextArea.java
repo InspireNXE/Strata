@@ -22,6 +22,7 @@ import org.inspirenxe.strata.api.component.HasTooltip;
 import org.inspirenxe.strata.api.control.attribute.text.TextEntry;
 import org.inspirenxe.strata.api.control.attribute.text.TextInput;
 import org.inspirenxe.strata.api.geometry.Insets;
+import org.inspirenxe.strata.api.text.Text;
 
 import java.util.Objects;
 
@@ -69,7 +70,8 @@ import java.util.Objects;
  * <h2>Theme keys</h2>
  * <p>A text area reads the {@link TextBox} keys, so the two look alike, and the {@link
  * org.inspirenxe.strata.api.layout.ScrollPanel} keys for its scroll bar. Its own {@value #STYLE_PADDING} sets the
- * space around its text.</p>
+ * space around its text. Of the caret keys it reads the paint, the reach and the blink, and always draws the caret
+ * as a bar.</p>
  *
  * <pre>{@code
  * TextArea notes = factory.textArea().setText(item.notes()).setMaxLength(500)
@@ -96,6 +98,33 @@ public interface TextArea extends Component<TextArea>, Focusable<TextArea>, HasC
     String STYLE_PADDING = "textarea.padding";
 
     /**
+     * Returns the placeholder.
+     *
+     * @return the placeholder; empty for a new area
+     */
+    Text placeholder();
+
+    /**
+     * Sets the hint drawn on the first line in the {@value TextBox#STYLE_PLACEHOLDER} style while the area is empty,
+     * such as {@code "Add a note"}. It goes away as soon as there is text, hides while the area has focus when the
+     * theme's {@value TextBox#STYLE_PLACEHOLDER_HIDE} says so, and is never part of {@link #text()}.
+     *
+     * @param placeholder the hint, or {@code null} or empty for none
+     * @return this area
+     */
+    TextArea setPlaceholder(Text placeholder);
+
+    /**
+     * Does the same as {@link #setPlaceholder(Text)} with literal text.
+     *
+     * @param placeholder the hint, or {@code null} or empty for none
+     * @return this area
+     */
+    default TextArea setPlaceholder(final String placeholder) {
+        return this.setPlaceholder(placeholder == null ? null : Text.of(placeholder));
+    }
+
+    /**
      * Returns the text.
      *
      * @return the text, with lines separated by {@code \n}
@@ -103,7 +132,7 @@ public interface TextArea extends Component<TextArea>, Focusable<TextArea>, HasC
     String text();
 
     /**
-     * Replaces the text, cut to the length limit, puts the caret at its start and scrolls to the top.
+     * Replaces the text, cut to the length limit, puts the caret at its end and scrolls to the top.
      * {@link #EDITED} fires if the text changed; {@link #EDIT} does not.
      *
      * @param text the new text; {@code \r\n} and {@code \r} become {@code \n}

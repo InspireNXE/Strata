@@ -28,6 +28,9 @@ import org.inspirenxe.strata.api.layout.Orientation;
  * <h2>Theme keys</h2>
  * <ul>
  *     <li>{@value #STYLE_LINE} (paint, required): the line.</li>
+ *     <li>{@value #STYLE_SHADOW} (paint, optional): a second line as thick as the first, below a horizontal
+ *     separator's line or right of a vertical one. A theme that sets it makes every separator twice its
+ *     thickness. Defaults to none.</li>
  * </ul>
  *
  * <p>Get one from {@link org.inspirenxe.strata.api.ComponentFactory#separator()}, which is horizontal, or
@@ -38,6 +41,10 @@ public interface Separator extends Component<Separator> {
      * Style key for the line (paint, required).
      */
     String STYLE_LINE = "separator";
+    /**
+     * Style key for a second line beside the first (paint, optional). See the class description.
+     */
+    String STYLE_SHADOW = "separator.shadow";
 
     /**
      * Returns which way the line runs.

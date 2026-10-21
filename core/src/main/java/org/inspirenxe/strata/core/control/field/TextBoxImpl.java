@@ -45,6 +45,7 @@ import org.inspirenxe.strata.api.text.TextStyle;
 import org.inspirenxe.strata.api.theme.Paint;
 import org.inspirenxe.strata.api.theme.Theme;
 import org.inspirenxe.strata.core.control.collection.ListViewImpl;
+import org.inspirenxe.strata.core.control.button.ButtonImpl;
 import org.inspirenxe.strata.core.node.BuiltInComponent;
 import org.inspirenxe.strata.core.node.ComponentFactoryImpl;
 import org.inspirenxe.strata.core.text.StyledText;
@@ -58,7 +59,8 @@ import java.util.function.UnaryOperator;
 /**
  * The core {@link TextBox}, a single-line field ported from Wintergreen's {@code TextBox}.
  *
- * <p>The box is focusable and tabbable, shows a text cursor, accepts text input and is at least 20 by 20 units. It
+ * <p>The box is focusable and tabbable, shows a text cursor, accepts text input, is at least 20 units wide, and
+ * measures at least 20 tall, though a smaller height set on it applies. It
  * asks for {@link #DEFAULT_WIDTH} units of width, so give it a fixed width or stretch it to change that. Text sits
  * 4 units in from the left and right edges and 5 from the top and bottom unless the padding is changed. Text wider
  * than the box scrolls sideways to keep the caret in view. The caret, the selection, the scroll and the key and
@@ -142,8 +144,7 @@ public final class TextBoxImpl extends BuiltInComponent<TextBox> implements Text
     private Paint normal;
     private Paint focusedPaint;
     private Paint disabledPaint;
-    private Paint selectionPaint;
-    private Paint caretPaint;
+    private FieldLook look;
     private TextStyle textStyle;
     private TextStyle disabledTextStyle;
     private TextStyle readOnlyTextStyle;
@@ -180,8 +181,7 @@ public final class TextBoxImpl extends BuiltInComponent<TextBox> implements Text
         this.normal = Paint.NONE;
         this.focusedPaint = Paint.NONE;
         this.disabledPaint = Paint.NONE;
-        this.selectionPaint = DEFAULT_SELECTION;
-        this.caretPaint = DEFAULT_CARET;
+        this.look = FieldLook.plain(DEFAULT_SELECTION, DEFAULT_CARET);
         this.textStyle = TextStyle.DEFAULT;
         this.disabledTextStyle = TextStyle.DEFAULT;
         this.readOnlyTextStyle = TextStyle.DEFAULT;
@@ -195,7 +195,7 @@ public final class TextBoxImpl extends BuiltInComponent<TextBox> implements Text
         this.displaySpans = new TextSpan[0];
         this.displayX = new float[0];
         this.setCursor(CursorKind.TEXT);
-        this.setMinSize(20f, 20f);
+        this.setMinSize(20f, 0f);
     }
 
     // ------------------------------------------------------------------
@@ -575,8 +575,7 @@ public final class TextBoxImpl extends BuiltInComponent<TextBox> implements Text
         this.normal = theme.paintOr(STYLE_NORMAL, Paint.NONE);
         this.focusedPaint = theme.paintOr(STYLE_FOCUSED, this.normal);
         this.disabledPaint = theme.paintOr(STYLE_DISABLED, this.normal);
-        this.selectionPaint = theme.paintOr(STYLE_SELECTION, DEFAULT_SELECTION);
-        this.caretPaint = theme.paintOr(STYLE_CARET, DEFAULT_CARET);
+        this.look = FieldLook.of(theme, DEFAULT_SELECTION, DEFAULT_CARET);
         this.textStyle = theme.textStyleOr(STYLE_TEXT, TextStyle.DEFAULT);
         this.disabledTextStyle = theme.textStyleOr(STYLE_TEXT_DISABLED, this.textStyle);
         this.readOnlyTextStyle = theme.textStyleOr(STYLE_TEXT_READ_ONLY, this.disabledTextStyle);
@@ -593,7 +592,7 @@ public final class TextBoxImpl extends BuiltInComponent<TextBox> implements Text
     protected Size measure(final MeasureContext context, final float availableWidth, final float availableHeight) {
         this.lineHeight = Math.max(context.text().lineHeight(this.textStyle), context.text().lineHeight(this.disabledTextStyle));
         this.placeholderLine = TextLine.of(this.placeholder, this.placeholderStyle, context.text());
-        return new Size(DEFAULT_WIDTH, this.lineHeight + this.textPadding.vertical());
+        return new Size(DEFAULT_WIDTH, Math.max(ButtonImpl.MIN_HEIGHT, this.lineHeight + this.textPadding.vertical()));
     }
 
     @Override
@@ -610,7 +609,7 @@ public final class TextBoxImpl extends BuiltInComponent<TextBox> implements Text
 
         final Rect contentBox = bounds.shrink(this.textPadding);
         final float textY = contentBox.y() + (contentBox.height() - this.lineHeight) * 0.5f;
-        this.editor.paint(painter, contentBox, textY, this.lineHeight, this.selectionPaint, this.caretPaint,
+        this.editor.paint(painter, contentBox, textY, this.lineHeight, this.look, this.style(),
                 this.isFocused() && this.isEnabled() && !this.readOnly);
     }
 
@@ -947,14 +946,18 @@ public final class TextBoxImpl extends BuiltInComponent<TextBox> implements Text
         }
 
         @Override
-        public void drawText(final Painter painter, final float originX, final float left, final float y) {
+        public void drawText(final Painter painter, final float originX, final float left, final float y,
+                             final TextStyle style) {
             final TextBoxImpl box = TextBoxImpl.this;
-            if (box.buffer.isEmpty() && !box.placeholderLine.isEmpty()) {
-                box.placeholderLine.draw(painter, left, y);
+            if (box.buffer.isEmpty()) {
+                if (!box.placeholderLine.isEmpty() && !(box.look.hidePlaceholder() && box.isFocused())) {
+                    box.placeholderLine.draw(painter, left, y);
+                }
                 return;
             }
             for (int i = 0; i < box.displaySpans.length; i++) {
-                painter.text(box.displaySpans[i], originX + box.displayX[i], y);
+                final TextSpan span = box.displaySpans[i];
+                painter.text(style == null ? span : new TextSpan(span.text(), style), originX + box.displayX[i], y);
             }
         }
 
