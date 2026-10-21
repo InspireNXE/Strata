@@ -18,6 +18,10 @@ package org.inspirenxe.strata.core.state;
 import org.inspirenxe.strata.api.component.Component;
 import org.inspirenxe.strata.api.event.EventType;
 import org.inspirenxe.strata.api.event.Subscription;
+import org.inspirenxe.strata.api.event.cause.CauseFrame;
+import org.inspirenxe.strata.api.event.cause.CauseKeys;
+import org.inspirenxe.strata.api.event.cause.CauseStack;
+import org.inspirenxe.strata.api.event.cause.Origin;
 import org.inspirenxe.strata.api.event.control.ControlEvent;
 import org.inspirenxe.strata.api.state.PropertyKey;
 import org.inspirenxe.strata.api.state.Source;
@@ -28,6 +32,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.Supplier;
 
 /**
  * One property of one component kept in step with a {@link Source}, made by {@code Component.bind}. The component's
@@ -41,8 +46,9 @@ import java.util.concurrent.atomic.AtomicBoolean;
  *
  * <p>When the source is a state and the key has a report, the binding also handles that report on the component,
  * at the highest priority, so after the component's other handlers and before the handlers of the ancestors the
- * report bubbles to, and writes the property's value to the state unless the two are equal. It skips
- * reports that fire while it writes the property itself, so a value it set never comes back to the state, and
+ * report bubbles to, and writes the property's value to the state unless the two are equal. It writes inside a
+ * cause frame whose origin is an {@link Origin.Binding} of its source, so the control's requests do not fire for
+ * the write. It skips reports with that origin, so a value it set never comes back to the state, and
  * reports that fire after attach before its first evaluation, so a value the control had before it read the source,
  * such as a combo box selecting its first item when the items arrive, never replaces the state's.</p>
  *
@@ -56,8 +62,9 @@ public final class Binding<V> {
     private final AtomicBoolean dirty;
     private final Set<StateImpl<?>> dependencies;
     private volatile BindingQueue queue;
+    private final Supplier<CauseStack> causes;
+    private final Origin.Binding origin;
     private Subscription reportSubscription;
-    private boolean writing;
     // Whether the source was read since the last attach; reports are not written back until it was
     private boolean evaluated;
 
@@ -67,12 +74,16 @@ public final class Binding<V> {
      * @param component the component whose property it sets
      * @param key the property; must apply to the component's type, which {@code Component.bind} checked
      * @param source the source
+     * @param causes the cause stack of the component's factory, where the binding opens its frame while it writes
      */
     @SuppressWarnings("unchecked")
-    public Binding(final Component<?> component, final PropertyKey<?, V> key, final Source<V> source) {
+    public Binding(final Component<?> component, final PropertyKey<?, V> key, final Source<V> source,
+                   final Supplier<CauseStack> causes) {
         this.component = Objects.requireNonNull(component, "component");
         this.key = (PropertyKey<Object, V>) Objects.requireNonNull(key, "key");
         this.source = Objects.requireNonNull(source, "source");
+        this.causes = Objects.requireNonNull(causes, "causes");
+        this.origin = new Origin.Binding(source);
         this.writable = source instanceof StateImpl<V> state && key.report().isPresent() ? state : null;
         this.dirty = new AtomicBoolean();
         this.dependencies = new HashSet<>();
@@ -203,18 +214,15 @@ public final class Binding<V> {
         if (Objects.equals(this.key.reader().apply(this.component), value)) {
             return;
         }
-        // TODO(causes, design 4.14): once causes are built, set the origin to Origin.Binding here and have reported()
-        //  skip events whose origin is this binding, instead of the flag
-        this.writing = true;
-        try {
+        // Its own reports carry this origin, so reported() leaves them alone, and the control's requests do not fire
+        try (CauseFrame _ = this.causes.get().pushFrame().put(CauseKeys.ORIGIN, this.origin)) {
             this.key.writer().accept(this.component, value);
-        } finally {
-            this.writing = false;
         }
     }
 
     private void reported(final ControlEvent<?> event) {
-        if (this.writing || !this.evaluated || this.queue == null || event.target() != this.component) {
+        if (!this.evaluated || this.queue == null || event.target() != this.component
+                || event.origin() instanceof Origin.Binding(final Object written) && written == this.source) {
             return;
         }
         final V value = this.key.reader().apply(this.component);

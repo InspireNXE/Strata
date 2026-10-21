@@ -925,7 +925,7 @@ public abstract class BuiltInComponent<T extends Component<T>> implements Compon
 
     /**
      * Fires a request without a value through this component's path, for the user's actions only. Fires nothing and
-     * returns true when no handler for the type is on the path.
+     * returns true when the current origin is not {@code Origin.User} or no handler for the type is on the path.
      *
      * @param type the request type
      * @return true if the component should go ahead, false if a handler canceled the request
@@ -937,8 +937,8 @@ public abstract class BuiltInComponent<T extends Component<T>> implements Compon
 
     /**
      * Fires a value request through this component's path, for the user's actions only, then applies the final
-     * value unless a handler canceled the request. Applies the value at once when no handler for the type is on the
-     * path.
+     * value unless a handler canceled the request. Applies the value at once when the current origin is not
+     * {@code Origin.User} or no handler for the type is on the path.
      *
      * @param <V> the value type
      * @param type the request type

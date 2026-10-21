@@ -66,6 +66,7 @@ import org.inspirenxe.strata.api.control.pane.Tab;
 import org.inspirenxe.strata.api.control.pane.TabBar;
 import org.inspirenxe.strata.api.control.window.MessageBox;
 import org.inspirenxe.strata.api.control.window.Window;
+import org.inspirenxe.strata.api.event.cause.CauseStack;
 import org.inspirenxe.strata.api.extension.CustomComponent;
 import org.inspirenxe.strata.api.extension.peer.ComponentHooks;
 import org.inspirenxe.strata.api.extension.peer.ComponentPeer;
@@ -128,6 +129,15 @@ public interface ComponentFactory {
      * @return the host's overlays
      */
     Overlays overlays();
+
+    /**
+     * Returns the cause stack of the UI thread, for opening a frame around a change made for someone else, such as
+     * an update another player made through the server. On an engine with its own cause stack, such as Sponge, it is
+     * backed by that stack.
+     *
+     * @return the cause stack
+     */
+    CauseStack causes();
 
     /**
      * Makes an {@link AnchorPanel}.

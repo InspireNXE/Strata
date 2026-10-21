@@ -16,6 +16,8 @@
 package org.inspirenxe.strata.core.node;
 
 import org.inspirenxe.strata.api.ComponentFactory;
+import org.inspirenxe.strata.api.event.cause.CauseStack;
+import org.inspirenxe.strata.core.event.CauseStackImpl;
 import org.inspirenxe.strata.api.appearance.Appearances;
 import org.inspirenxe.strata.api.component.Component;
 import org.inspirenxe.strata.api.control.button.Button;
@@ -167,6 +169,7 @@ public final class ComponentFactoryImpl implements ComponentFactory {
     private final Supplier<Theme> theme;
     private final Environment environment;
     private final Platform platform;
+    private final CauseStack platformCauses;
     private Root root;
 
     /**
@@ -180,6 +183,18 @@ public final class ComponentFactoryImpl implements ComponentFactory {
         this.theme = Objects.requireNonNull(theme, "theme");
         this.environment = new EnvironmentImpl(platform, this);
         this.platform = platform;
+        this.platformCauses = platform.causes().orElse(null);
+    }
+
+    /**
+     * Returns the platform's cause stack if it has one, or else the calling thread's own, which is the UI thread's
+     * when called from it.
+     *
+     * @return the stack
+     */
+    @Override
+    public CauseStack causes() {
+        return this.platformCauses != null ? this.platformCauses : CauseStackImpl.forThread();
     }
 
     /**

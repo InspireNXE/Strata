@@ -22,10 +22,13 @@
  * <ul>
  *     <li>Pre events ask to do something and are {@link org.inspirenxe.strata.api.event.Cancelable}: input (the
  *     types in {@link org.inspirenxe.strata.api.event.input.InputEvents}) and a control's requests, such as
- *     {@code TextInput.EDIT}. Requests fire only for what the user does, and a request with a value can be rewritten
+ *     {@code TextInput.EDIT}. Requests fire only for what the user does, when the event's
+ *     {@linkplain org.inspirenxe.strata.api.event.cause.Origin origin} is the user, and a request with a value can be
+ *     rewritten
  *     ({@link org.inspirenxe.strata.api.event.control.ValueRequestEvent#setValue}).</li>
  *     <li>Post events report that something happened, such as {@code TextInput.EDITED}, whether the user or code
- *     caused it. They cannot be canceled.</li>
+ *     caused it, and carry who did in {@link org.inspirenxe.strata.api.event.Event#origin()}. They cannot be
+ *     canceled.</li>
  * </ul>
  * <p>For every component an input event reaches, its handlers run, then its default behavior unless the event was
  * canceled. A <em>bubbling</em> event then moves to the parent and repeats, up to the top of the tree it is in (the

@@ -15,6 +15,7 @@
  */
 package org.inspirenxe.strata.core;
 
+import org.inspirenxe.strata.api.event.cause.CauseStack;
 import org.inspirenxe.strata.api.geometry.Rect;
 import org.inspirenxe.strata.api.input.TextInputKind;
 import org.inspirenxe.strata.api.text.TextMetrics;
@@ -49,6 +50,8 @@ public final class TestPlatform implements Platform {
     private Rect textInputArea;
     private TextInputKind textInputKind;
     private ThemeSource themes = ThemeSource.NONE;
+    private CauseStack causes;
+    private Object user;
     private java.time.Clock wall = java.time.Clock.fixed(TODAY.toInstant(ZoneOffset.UTC), ZoneOffset.UTC);
 
     public TestPlatform() {
@@ -171,5 +174,24 @@ public final class TestPlatform implements Platform {
     @Override
     public ThemeSource themes() {
         return this.themes;
+    }
+
+    // Set before the host is made: hosts read both once
+    public void setCauses(final CauseStack causes) {
+        this.causes = causes;
+    }
+
+    @Override
+    public Optional<CauseStack> causes() {
+        return Optional.ofNullable(this.causes);
+    }
+
+    public void setUser(final Object user) {
+        this.user = user;
+    }
+
+    @Override
+    public Optional<Object> user() {
+        return Optional.ofNullable(this.user);
     }
 }

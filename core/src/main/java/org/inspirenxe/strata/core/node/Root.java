@@ -23,6 +23,10 @@ import org.inspirenxe.strata.api.event.Event;
 import org.inspirenxe.strata.api.event.EventHandler;
 import org.inspirenxe.strata.api.event.EventType;
 import org.inspirenxe.strata.api.event.Subscription;
+import org.inspirenxe.strata.api.event.cause.CauseFrame;
+import org.inspirenxe.strata.api.event.cause.CauseKeys;
+import org.inspirenxe.strata.api.event.cause.Device;
+import org.inspirenxe.strata.api.event.cause.Origin;
 import org.inspirenxe.strata.api.event.input.InputEvents;
 import org.inspirenxe.strata.api.geometry.Rect;
 import org.inspirenxe.strata.api.input.Key;
@@ -31,6 +35,7 @@ import org.inspirenxe.strata.api.input.Modifier;
 import org.inspirenxe.strata.api.input.Modifiers;
 import org.inspirenxe.strata.api.input.MouseButton;
 import org.inspirenxe.strata.api.input.ScrollKind;
+import org.inspirenxe.strata.api.screen.Screen;
 import org.inspirenxe.strata.api.overlay.Overlay;
 import org.inspirenxe.strata.api.overlay.Overlays;
 import org.inspirenxe.strata.api.text.Text;
@@ -132,6 +137,8 @@ public final class Root {
     private final BindingQueue bindingQueue;
     // Bindings of nodes attached since attachTree last evaluated them
     private final List<Binding<?>> attachedBindings;
+    private final Origin.User user;
+    private Screen screen;
 
     private Theme theme;
     private Node content;
@@ -176,6 +183,7 @@ public final class Root {
         this.arrangeRequests = new ArrayList<>();
         this.overlays = new OverlaysImpl();
         this.bindingQueue = new BindingQueue();
+        this.user = new Origin.User(platform.user().orElse(null));
         this.attachedBindings = new ArrayList<>();
         this.modifiers = Modifiers.NONE;
         this.layoutRequested = true;
@@ -636,8 +644,33 @@ public final class Root {
         }
         final Key key = this.keyRepeater.poll(this.platform.clock().millis());
         if (key != null) {
-            this.dispatchKey(key, KeyAction.REPEAT, this.keyRepeater.modifiers());
+            try (CauseFrame _ = this.inputFrame(Device.KEYBOARD, this.keyRepeater.modifiers())) {
+                this.dispatchKey(key, KeyAction.REPEAT, this.keyRepeater.modifiers());
+            }
         }
+    }
+
+    /**
+     * Tells the root which screen its host shows, for the {@link CauseKeys#SCREEN} context of input.
+     *
+     * @param screen the screen, or {@code null} when none is open
+     */
+    public void setScreen(final Screen screen) {
+        this.screen = screen;
+    }
+
+    /**
+     * Opens the frame every input runs in: the user as the origin, the device, the modifiers and the screen.
+     */
+    private CauseFrame inputFrame(final Device device, final Modifiers modifiers) {
+        final CauseFrame frame = this.ui.causes().pushFrame()
+                .put(CauseKeys.ORIGIN, this.user)
+                .put(CauseKeys.DEVICE, device)
+                .put(CauseKeys.MODIFIERS, modifiers);
+        if (this.screen != null) {
+            frame.put(CauseKeys.SCREEN, this.screen);
+        }
+        return frame;
     }
 
     // ------------------------------------------------------------------
@@ -654,6 +687,12 @@ public final class Root {
      * @return true if a drag is in progress or the pointer is over a node
      */
     public boolean pointerMoved(final float x, final float y, final Modifiers modifiers) {
+        try (CauseFrame _ = this.inputFrame(Device.MOUSE, modifiers)) {
+            return this.handlePointerMoved(x, y, modifiers);
+        }
+    }
+
+    private boolean handlePointerMoved(final float x, final float y, final Modifiers modifiers) {
         this.pointerX = x;
         this.pointerY = y;
         this.updateModifiers(modifiers, null, null);
@@ -697,6 +736,13 @@ public final class Root {
      */
     public boolean pointerButton(final float x, final float y, final MouseButton button, final boolean pressed,
                                  final Modifiers modifiers) {
+        try (CauseFrame _ = this.inputFrame(Device.MOUSE, modifiers).put(CauseKeys.BUTTON, button)) {
+            return this.handlePointerButton(x, y, button, pressed, modifiers);
+        }
+    }
+
+    private boolean handlePointerButton(final float x, final float y, final MouseButton button,
+                                        final boolean pressed, final Modifiers modifiers) {
         this.updateModifiers(modifiers, null, null);
         final boolean used = pressed ? this.pointerPressed(x, y, button, modifiers) : this.pointerReleased(x, y, button, modifiers);
         this.updateTooltip();
@@ -749,7 +795,10 @@ public final class Root {
         final int clicks = this.clickCounter.press(target, button, x, y, this.platform.clock().millis());
         this.presses.put(button, new Press(target, clicks, x, y));
         target.setPressed(true);
-        target.fire(InputEvents.POINTER_PRESS, new PointerButtonEventImpl(target.facade(), x, y, modifiers, button, clicks));
+        try (CauseFrame _ = this.ui.causes().pushFrame().put(CauseKeys.CLICKS, clicks)) {
+            target.fire(InputEvents.POINTER_PRESS, new PointerButtonEventImpl(target.facade(), x, y, modifiers, button,
+                    clicks));
+        }
         return true;
     }
 
@@ -770,12 +819,16 @@ public final class Root {
             return true;
         }
 
-        target.fire(InputEvents.POINTER_RELEASE, new PointerButtonEventImpl(target.facade(), x, y, modifiers, button, press.clicks));
-        if (press.dragging) {
-            target.fire(InputEvents.DRAG_END, new DragEventImpl(target.facade(), x, y, modifiers, button, press.clicks,
-                    press.startX, press.startY, x - press.lastX, y - press.lastY));
-        } else if (target.root() == this && target.isEnabled() && target.bounds().contains(x, y)) {
-            target.fire(InputEvents.CLICK, new PointerButtonEventImpl(target.facade(), x, y, modifiers, button, press.clicks));
+        try (CauseFrame _ = this.ui.causes().pushFrame().put(CauseKeys.CLICKS, press.clicks)) {
+            target.fire(InputEvents.POINTER_RELEASE, new PointerButtonEventImpl(target.facade(), x, y, modifiers, button,
+                    press.clicks));
+            if (press.dragging) {
+                target.fire(InputEvents.DRAG_END, new DragEventImpl(target.facade(), x, y, modifiers, button,
+                        press.clicks, press.startX, press.startY, x - press.lastX, y - press.lastY));
+            } else if (target.root() == this && target.isEnabled() && target.bounds().contains(x, y)) {
+                target.fire(InputEvents.CLICK, new PointerButtonEventImpl(target.facade(), x, y, modifiers, button,
+                        press.clicks));
+            }
         }
         this.updateHover(x, y, modifiers);
         return true;
@@ -795,6 +848,13 @@ public final class Root {
      */
     public boolean scroll(final float x, final float y, final float scrollX, final float scrollY,
                           final ScrollKind kind, final Modifiers modifiers) {
+        try (CauseFrame _ = this.inputFrame(Device.MOUSE, modifiers)) {
+            return this.handleScroll(x, y, scrollX, scrollY, kind, modifiers);
+        }
+    }
+
+    private boolean handleScroll(final float x, final float y, final float scrollX, final float scrollY,
+                                 final ScrollKind kind, final Modifiers modifiers) {
         this.pointerX = x;
         this.pointerY = y;
         this.updateModifiers(modifiers, null, null);
@@ -817,6 +877,12 @@ public final class Root {
      * tooltip hides. Presses stay tracked, so a drag can continue when the pointer comes back.
      */
     public void pointerLeft() {
+        try (CauseFrame _ = this.inputFrame(Device.MOUSE, this.modifiers)) {
+            this.handlePointerLeft();
+        }
+    }
+
+    private void handlePointerLeft() {
         if (this.hovered != null) {
             final Node old = this.hovered;
             this.hovered = null;
@@ -990,6 +1056,12 @@ public final class Root {
      * @return true if a node handled the key, it closed an overlay, or it moved focus
      */
     public boolean key(final Key key, final KeyAction action, final Modifiers modifiers) {
+        try (CauseFrame _ = this.inputFrame(Device.KEYBOARD, modifiers)) {
+            return this.handleKey(key, action, modifiers);
+        }
+    }
+
+    private boolean handleKey(final Key key, final KeyAction action, final Modifiers modifiers) {
         this.updateModifiers(modifiers, key, action);
         if (!this.platform.capabilities().sendsKeyRepeat()) {
             this.keyRepeater.onKey(key, action, modifiers, this.platform.clock().millis());
@@ -1028,6 +1100,12 @@ public final class Root {
      * @return true if a node handled it; false when nothing has focus
      */
     public boolean charTyped(final int codePoint, final Modifiers modifiers) {
+        try (CauseFrame _ = this.inputFrame(Device.KEYBOARD, modifiers)) {
+            return this.handleCharTyped(codePoint, modifiers);
+        }
+    }
+
+    private boolean handleCharTyped(final int codePoint, final Modifiers modifiers) {
         if (this.focused == null) {
             return false;
         }

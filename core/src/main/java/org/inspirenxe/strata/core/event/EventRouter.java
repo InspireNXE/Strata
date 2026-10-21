@@ -44,6 +44,7 @@ public final class EventRouter {
      * @return the same event, so the caller can check whether it was canceled
      */
     public static <E extends EventImpl> E dispatch(final EventType<? super E> type, final E event, final Node target) {
+        event.setCauses(target.causes());
         // A report fires after its change, so a snapshot would show the new state; it carries previous() instead
         if (!(event instanceof ControlEventImpl<?>)) {
             EventRouter.takeSnapshots(type, event, target);
