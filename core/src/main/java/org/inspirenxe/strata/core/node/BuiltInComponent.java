@@ -61,7 +61,8 @@ import java.util.function.Consumer;
  * {@link org.inspirenxe.strata.api.extension.CustomComponent} that developers extend. It offers the same hooks and
  * helpers under the same names, so a control reads the same either way, and adds what only core may use: its own
  * {@link #node()}, the nodes of other components through {@link #nodeOf}, the host's {@link #hostRoot()},
- * {@link #isFocusFromPress()}, and the {@link #onDisabled()} and {@link #onReleased()} hooks.
+ * {@link #isFocusFromPress()}, and the {@link #onDisabled()}, {@link #onReleased()} and {@link #onPressWithin}
+ * hooks.
  *
  * <p>The component holds no state of its own. Its constructor makes the {@link Node} behind it and hands it a private
  * {@link NodeHooks} that calls the protected hooks here; every {@link Component} method is {@code final} and forwards
@@ -238,6 +239,16 @@ public abstract class BuiltInComponent<T extends Component<T>> implements Compon
      * here. The default does nothing.
      */
     protected void onReleased() {
+    }
+
+    /**
+     * Called when a pointer button goes down on this component or on a component inside it, after focus moved and
+     * before the press is delivered, on the pressed component and then on each ancestor up to the top of its layer.
+     * It runs whatever handlers later do with the press, so a window raises itself here. The default does nothing.
+     *
+     * @param target the component the press is aimed at
+     */
+    protected void onPressWithin(final Component<?> target) {
     }
 
     /**
@@ -501,6 +512,11 @@ public abstract class BuiltInComponent<T extends Component<T>> implements Compon
         public void released() {
             BuiltInComponent.this.onReleased();
         }
+
+        @Override
+        public void pressedWithin(final Component<?> target) {
+            BuiltInComponent.this.onPressWithin(target);
+        }
     }
 
     // ------------------------------------------------------------------
@@ -633,6 +649,17 @@ public abstract class BuiltInComponent<T extends Component<T>> implements Compon
     @Override
     public final float desiredHeight() {
         return this.node.desiredHeight();
+    }
+
+    @Override
+    public final int zIndex() {
+        return this.node.zIndex();
+    }
+
+    @Override
+    public final T setZIndex(final int zIndex) {
+        this.node.setZIndex(zIndex);
+        return this.self();
     }
 
     @Override

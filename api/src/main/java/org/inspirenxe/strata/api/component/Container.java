@@ -23,8 +23,22 @@ import java.util.List;
 
 /**
  * A component with children. The container decides where its children go (see the layouts in
- * {@link org.inspirenxe.strata.api.layout}); children are drawn in list order, so later ones appear on top, and
- * the pointer hits later ones first.
+ * {@link org.inspirenxe.strata.api.layout}).
+ *
+ * <h2>Two orders</h2>
+ * <p>The children have a layout order, the order of {@link #children()}, which layout, focus and Tab follow, and
+ * which {@link #insert} and {@link #move} change. They also have a drawing order, {@link #paintOrder()}: by
+ * {@linkplain Component#zIndex() z index}, lowest first, and among children with the same z index in the order they
+ * were added, {@linkplain #raise raised} or {@linkplain #lower lowered}. Later children in the drawing order appear
+ * on top, and the pointer hits them first. While children are only added at the end and no z index is set, the
+ * drawing order is the layout order, so the child added last is on top.</p>
+ *
+ * <pre>{@code
+ * // Bring the window the user pressed to the front without moving it in the layout
+ * panel.raise(window);
+ * // Keep a toolbar over every window, whatever is raised
+ * toolbar.setZIndex(1);
+ * }</pre>
  *
  * <p>Do not implement this interface. Get containers from a {@link org.inspirenxe.strata.api.ComponentFactory}, or
  * extend {@link org.inspirenxe.strata.api.extension.CustomContainer} to write a new layout.</p>
@@ -34,16 +48,17 @@ import java.util.List;
 public interface Container<T extends Container<T>> extends Component<T>, HasCursor<T>, HasTooltip<T> {
 
     /**
-     * Returns the children in drawing order. The list is a live, unmodifiable view: it reflects later adds and
-     * removes, and throws {@link UnsupportedOperationException} if changed directly.
+     * Returns the children in layout order, the order layout, focus and Tab follow. The list is a live, unmodifiable
+     * view: it reflects later changes, and throws {@link UnsupportedOperationException} if changed directly. For the
+     * order children are drawn in, see {@link #paintOrder()}.
      *
      * @return the children
      */
     List<Component<?>> children();
 
     /**
-     * Adds a child at the end of the list, on top of the existing children. If this container is attached, the
-     * child is attached too and gets the host's theme.
+     * Adds a child at the end of the list. It is drawn over the existing children with the same z index. If this
+     * container is attached, the child is attached too and gets the host's theme.
      *
      * @param child the component to add
      * @return this container
@@ -54,6 +69,71 @@ public interface Container<T extends Container<T>> extends Component<T>, HasCurs
      *                                                         lacks style keys the child needs
      */
     T add(Component<?> child);
+
+    /**
+     * Adds a child at a place in the layout order. A child inserted anywhere is drawn over the existing children
+     * with the same z index, as one added at the end is. If this container is attached, the child is attached too
+     * and gets the host's theme.
+     *
+     * @param index where the child goes in {@link #children()}: 0 for the first, {@code children().size()} for the
+     *     last
+     * @param child the component to add
+     * @return this container
+     * @throws IndexOutOfBoundsException if the index is negative or greater than the number of children
+     * @throws IllegalArgumentException as for {@link #add(Component)}, including when the child is already a child
+     *                                  of this container
+     * @throws org.inspirenxe.strata.api.theme.ThemeException as for {@link #add(Component)}
+     */
+    T insert(int index, Component<?> child);
+
+    /**
+     * Moves a child to another place in the layout order. The child stays attached: it keeps focus, hover and press
+     * state, and fires no events of leaving or joining the tree. Layout runs again and Tab follows the new order.
+     * Where the child is drawn among its siblings does not change.
+     *
+     * @param child the child to move
+     * @param index the place it ends up at in {@link #children()}, from 0 to {@code children().size() - 1}
+     * @return this container
+     * @throws IllegalArgumentException if the component is not a child of this container
+     * @throws IndexOutOfBoundsException if the index is negative or not less than the number of children
+     */
+    T move(Component<?> child, int index);
+
+    /**
+     * Returns where a child is in the layout order.
+     *
+     * @param child the component to look for
+     * @return its index in {@link #children()}, or -1 when it is not a child of this container
+     */
+    int indexOf(Component<?> child);
+
+    /**
+     * Draws a child over its siblings with the same z index, and lets the pointer hit it first among them. Siblings
+     * with a higher z index stay over it. The layout order does not change, and nothing is laid out again.
+     *
+     * @param child the child to raise
+     * @return this container
+     * @throws IllegalArgumentException if the component is not a child of this container
+     */
+    T raise(Component<?> child);
+
+    /**
+     * Draws a child under its siblings with the same z index, so the pointer hits it last among them. Siblings with
+     * a lower z index stay under it. The layout order does not change, and nothing is laid out again.
+     *
+     * @param child the child to lower
+     * @return this container
+     * @throws IllegalArgumentException if the component is not a child of this container
+     */
+    T lower(Component<?> child);
+
+    /**
+     * Returns the children in the order they are drawn, bottom first. The pointer hits them from the end of the
+     * list. The list is a copy that later changes do not reach.
+     *
+     * @return the children, bottom first
+     */
+    List<Component<?>> paintOrder();
 
     /**
      * Removes a child. A removed child loses focus, hover and press state and is detached from the host. Does

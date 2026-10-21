@@ -636,6 +636,17 @@ public abstract class CustomComponent<T extends Component<T>> implements Compone
         return this.peer.desiredHeight();
     }
 
+    @Override
+    public final int zIndex() {
+        return this.peer.zIndex();
+    }
+
+    @Override
+    public final T setZIndex(final int zIndex) {
+        this.peer.setZIndex(zIndex);
+        return this.self();
+    }
+
     // ------------------------------------------------------------------
     // Focusable, HasCursor and HasTooltip, for subclasses that declare them. Strata ignores these on the rest.
     // ------------------------------------------------------------------

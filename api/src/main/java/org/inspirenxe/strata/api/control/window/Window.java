@@ -35,6 +35,10 @@ import org.inspirenxe.strata.api.text.Text;
  *
  * <h2>Input</h2>
  * <ul>
+ *     <li>A press with any button anywhere in the window, on a child included, {@linkplain Container#raise raises} it
+ *     in its parent while it {@linkplain #setRaiseOnPress raises on press}, so of several windows in an
+ *     {@code AbsolutePanel} the one pressed comes to the front. It is raised before the press is delivered, whatever
+ *     handlers then do with the press.</li>
  *     <li>Dragging the title bar moves the window by its {@linkplain #setOffset offset}, kept inside the slot its
  *     parent gives it, while it {@linkplain #setMovable is movable}.</li>
  *     <li>A click on the close button {@linkplain #close closes} it while it {@linkplain #setClosable is
@@ -242,6 +246,23 @@ public interface Window extends Container<Window>, Titled<Window>, Closable<Wind
      * @return this window
      */
     Window setEdgeResizable(boolean edgeResizable);
+
+    /**
+     * Returns whether a press anywhere in the window raises it in its parent.
+     *
+     * @return true by default
+     */
+    boolean isRaiseOnPress();
+
+    /**
+     * Sets whether a press anywhere in the window, on a child included, {@linkplain Container#raise raises} it among
+     * its siblings with the same z index before the press is delivered. A window with no parent, such as a screen's
+     * root or an overlay's content, has nothing to be raised in.
+     *
+     * @param raiseOnPress false to leave the drawing order alone
+     * @return this window
+     */
+    Window setRaiseOnPress(boolean raiseOnPress);
 
     /**
      * Closes the window: reports {@link #CLOSED}, then closes the overlay showing it, if it is in one. A window that

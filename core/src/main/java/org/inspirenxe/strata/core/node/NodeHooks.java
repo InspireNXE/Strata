@@ -32,8 +32,8 @@ import java.util.Set;
  * The calls a {@link Node} makes into its component. A {@link BuiltInComponent} hands the node a private instance
  * that calls its protected hooks. A developer's {@code CustomComponent} hands its peer the public
  * {@link org.inspirenxe.strata.api.extension.peer.ComponentHooks}, which {@link ExtensionHooks} adapts to this
- * interface. Calls that only Strata's own controls answer, {@link #disabled()} and {@link #released()}, do nothing
- * for a developer's component, so they never widen the public extension API.
+ * interface. Calls that only Strata's own controls answer, {@link #disabled()}, {@link #released()} and
+ * {@link #pressedWithin}, do nothing for a developer's component, so they never widen the public extension API.
  */
 interface NodeHooks {
 
@@ -144,4 +144,12 @@ interface NodeHooks {
      * Tells the component that the root let go of the tree it is in and it was not attached again.
      */
     void released();
+
+    /**
+     * Tells the component that a pointer button went down on it or on a component inside it, before the press is
+     * delivered.
+     *
+     * @param target the component the press is aimed at
+     */
+    void pressedWithin(Component<?> target);
 }

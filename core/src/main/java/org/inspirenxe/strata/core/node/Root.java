@@ -72,12 +72,14 @@ import java.util.function.Consumer;
  * <p>Layers: the content is at the bottom, then each open overlay in the order it opened, then the tooltip. Each
  * draws after a {@link Canvas#nextLayer()}. A dialog draws the {@link Overlays#STYLE_BACKDROP} paint over everything
  * below it first. The pointer hits the topmost layer that has something under it; a dialog blocks every layer below
- * it, and the tooltip is never hit.</p>
+ * it, and the tooltip is never hit. {@link Overlay#raise()} moves a popup or toast up past the popups and toasts
+ * above it, stopping below the first dialog, so a dialog stays above every overlay opened before it.</p>
  *
  * <p>Pointer rules: hover goes to the deepest visible, enabled node under the pointer. A press first closes every
  * popup above the layer it lands on, except those opened without light dismiss, and then goes nowhere if any
- * closed. Otherwise it focuses the pressed node or
- * its nearest focusable ancestor and clears focus if there is none. Each button is tracked on its own. A drag starts
+ * closed. Otherwise it focuses the pressed node or its nearest focusable ancestor and clears focus if there is none,
+ * then tells the pressed node and each of its ancestors through {@link NodeHooks#pressedWithin}, innermost first,
+ * and only then fires the press. Each button is tracked on its own. A drag starts
  * once the pointer moves more than {@link #DRAG_THRESHOLD} units from the press on either axis, and its events go to
  * the pressed node wherever the pointer is. A release fires a click only when it ends no drag and lands inside the
  * pressed node, which must still be enabled. After a scroll that a node handled, hover is worked out again, since
@@ -685,6 +687,10 @@ public final class Root {
             this.changeFocus(this.focusableAncestor(target));
         } finally {
             this.focusFromPress = false;
+        }
+
+        for (Node node = target; node != null; node = node.parentNode()) {
+            node.hooks().pressedWithin(target.facade());
         }
 
         final int clicks = this.clickCounter.press(target, button, x, y, this.platform.clock().millis());
@@ -1339,6 +1345,28 @@ public final class Root {
         @Override
         public boolean isOpen() {
             return this.open;
+        }
+
+        @Override
+        public Overlay raise() {
+            if (!this.open || this.modal) {
+                return this;
+            }
+            final List<Layer> layers = Root.this.layers;
+            final int from = layers.indexOf(this);
+            int to = from;
+            while (to + 1 < layers.size() && !layers.get(to + 1).modal) {
+                to++;
+            }
+            if (to != from) {
+                layers.remove(from);
+                layers.add(to, this);
+                if (layers.stream().anyMatch(Layer::isToast)) {
+                    // Toasts are placed down the corner in layer order
+                    Root.this.requestLayout();
+                }
+            }
+            return this;
         }
 
         @Override

@@ -48,6 +48,12 @@ import java.util.Optional;
  * measured size. Every size is clamped to the {@linkplain #minWidth() minimum} and {@linkplain #maxWidth()
  * maximum}.</p>
  *
+ * <h2>Drawing order</h2>
+ * <p>A parent draws its children by {@linkplain #zIndex() z index} and then in the order they were added, raised or
+ * lowered, and the pointer hits them in the opposite order. See {@link #setZIndex} and {@link Container#paintOrder()}.
+ * The drawing order is kept apart from the order of {@link Container#children()}, which layout, focus and Tab
+ * follow.</p>
+ *
  * <h2>What only some components have</h2>
  * <p>This interface holds what every component needs. The rest comes from smaller interfaces a component implements
  * when it fits: {@link Focusable} for keyboard focus and tab order, {@link HasCursor} and {@link HasTooltip}, and
@@ -347,6 +353,30 @@ public interface Component<T extends Component<T>> extends EventTarget<T> {
      * @return the desired height
      */
     float desiredHeight();
+
+    // Drawing order
+
+    /**
+     * Returns the component's z index among its siblings.
+     *
+     * @return the z index; 0 by default
+     */
+    int zIndex();
+
+    /**
+     * Sets where the component is drawn among its siblings. A parent draws its children by z index, lowest first,
+     * and the pointer hits them in the opposite order, so a child with a higher z index is drawn over its siblings
+     * and takes presses where they overlap. Children with the same z index are drawn in the order they were added,
+     * unless {@link Container#raise} or {@link Container#lower} changed it. The z index orders siblings only: a
+     * child is never drawn over its parent's siblings, whatever its z index.
+     *
+     * <p>Layout, focus and Tab order do not change: they follow the order of {@link Container#children()}. A change
+     * redraws but lays nothing out again.</p>
+     *
+     * @param zIndex the z index; may be negative
+     * @return this component
+     */
+    T setZIndex(int zIndex);
 
     // Events
 }

@@ -21,7 +21,10 @@ import org.inspirenxe.strata.api.component.Container;
 /**
  * A container that places each child at a fixed position, measured from the top-left corner of its content area
  * (its bounds minus padding). Each child gets a slot of exactly its desired size plus margin at that position, so
- * alignment has no effect here. Children may overlap; later ones are drawn on top.
+ * alignment has no effect here. Children may overlap: they are drawn in the panel's
+ * {@linkplain Container#paintOrder() drawing order}, so later ones are drawn on top until {@link Container#raise},
+ * {@link Container#lower} or a {@linkplain Component#setZIndex z index} changes it. A {@code Window} in the panel
+ * comes to the front when it is pressed.
  *
  * <p>Its desired size is just large enough to cover every child. Use it for free-form placement, such as a canvas
  * of draggable items; prefer the other layouts for forms and menus, which adapt to text and screen size.</p>
@@ -43,7 +46,8 @@ public interface AbsolutePanel extends Container<AbsolutePanel> {
     AbsolutePanel add(Component<?> child, float x, float y);
 
     /**
-     * Moves a child. Does nothing if the component is not a child of this panel.
+     * Moves a child to another position. Does nothing if the component is not a child of this panel. To move a child
+     * in the order of {@link #children()} instead, use {@link Container#move(Component, int)}.
      *
      * @param child the child to move
      * @param x the new left edge, relative to the content area

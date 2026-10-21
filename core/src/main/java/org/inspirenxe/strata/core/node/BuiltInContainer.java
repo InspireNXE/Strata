@@ -69,6 +69,40 @@ public abstract class BuiltInContainer<T extends Container<T>> extends BuiltInCo
     }
 
     @Override
+    public final T insert(final int index, final Component<?> child) {
+        this.node().insert(index, child);
+        return this.self();
+    }
+
+    @Override
+    public final T move(final Component<?> child, final int index) {
+        this.node().move(child, index);
+        return this.self();
+    }
+
+    @Override
+    public final int indexOf(final Component<?> child) {
+        return this.node().indexOf(child);
+    }
+
+    @Override
+    public final T raise(final Component<?> child) {
+        this.node().raise(child);
+        return this.self();
+    }
+
+    @Override
+    public final T lower(final Component<?> child) {
+        this.node().lower(child);
+        return this.self();
+    }
+
+    @Override
+    public final List<Component<?>> paintOrder() {
+        return this.node().paintOrder();
+    }
+
+    @Override
     public final T remove(final Component<?> child) {
         this.node().remove(child);
         return this.self();

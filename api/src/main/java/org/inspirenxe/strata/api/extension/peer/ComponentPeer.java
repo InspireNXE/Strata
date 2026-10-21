@@ -326,6 +326,20 @@ public interface ComponentPeer {
     void setOffset(float offsetX, float offsetY);
 
     /**
+     * See {@link org.inspirenxe.strata.api.component.Component#zIndex()}.
+     *
+     * @return the z index
+     */
+    int zIndex();
+
+    /**
+     * See {@link org.inspirenxe.strata.api.component.Component#setZIndex(int)}.
+     *
+     * @param zIndex the z index
+     */
+    void setZIndex(int zIndex);
+
+    /**
      * See {@link org.inspirenxe.strata.api.component.Container#border()}.
      *
      * @return the border

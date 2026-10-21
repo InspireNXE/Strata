@@ -41,6 +41,7 @@ import org.inspirenxe.strata.api.theme.Paint;
 import org.inspirenxe.strata.api.theme.Theme;
 import org.inspirenxe.strata.core.node.BuiltInContainer;
 import org.inspirenxe.strata.core.node.ComponentFactoryImpl;
+import org.inspirenxe.strata.core.node.ContainerNode;
 import org.inspirenxe.strata.core.text.TextLine;
 
 import java.util.Objects;
@@ -56,6 +57,10 @@ import java.util.Set;
  * elsewhere on the title bar starts a move. A resize works from the bounds and pointer position at the press, so
  * each move of the drag works out the size afresh rather than adding up steps. The grip's six squares are placed
  * during arrange, so painting allocates nothing.</p>
+ *
+ * <p>While it raises on press, which a new window does, any press inside it raises it in its parent node, a
+ * container's or a composite's, through {@link #onPressWithin}, so handlers that cancel the press or stop it on a
+ * child do not keep it back.</p>
  */
 public final class WindowImpl extends BuiltInContainer<Window> implements Window {
     /**
@@ -79,6 +84,7 @@ public final class WindowImpl extends BuiltInContainer<Window> implements Window
     private boolean movable;
     private boolean resizable;
     private boolean edgeResizable;
+    private boolean raiseOnPress;
 
     // Pointer
     private boolean closePressed;
@@ -133,6 +139,7 @@ public final class WindowImpl extends BuiltInContainer<Window> implements Window
         this.title = Objects.requireNonNull(title, "title");
         this.closable = true;
         this.movable = true;
+        this.raiseOnPress = true;
         this.background = Paint.NONE;
         this.titleBar = Paint.NONE;
         this.titleStyle = TextStyle.DEFAULT;
@@ -210,6 +217,29 @@ public final class WindowImpl extends BuiltInContainer<Window> implements Window
     public Window setEdgeResizable(final boolean edgeResizable) {
         this.edgeResizable = edgeResizable;
         return this;
+    }
+
+    @Override
+    public boolean isRaiseOnPress() {
+        return this.raiseOnPress;
+    }
+
+    @Override
+    public Window setRaiseOnPress(final boolean raiseOnPress) {
+        this.raiseOnPress = raiseOnPress;
+        return this;
+    }
+
+    /**
+     * Raises the window in its parent, a container or a composite, before a press inside it is delivered, while it
+     * raises on press.
+     */
+    @Override
+    protected void onPressWithin(final Component<?> target) {
+        final ContainerNode parent = this.node().parentNode();
+        if (this.raiseOnPress && parent != null) {
+            parent.raise(this);
+        }
     }
 
     @Override

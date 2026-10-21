@@ -65,7 +65,8 @@ import java.util.function.Function;
  * facade's protected hooks only through the hooks object the facade hands its node.
  *
  * <p>A new node is visible, enabled, not focusable and not tabbable, with tab index 0, no cursor, no margin, no
- * size limits, no fixed size, left and top alignment, no offset, no background, no border and no tooltip.</p>
+ * size limits, no fixed size, left and top alignment, no offset, no background, no border, no tooltip and z index
+ * 0.</p>
  *
  * <p>Layout is incremental. A node measured again with the same available space, with nothing inside it changed
  * since, keeps its last desired size without calling its hook. A node arranged again into the same slot, with
@@ -123,6 +124,10 @@ public class Node implements ComponentPeer {
     private Paint background;
     private Border border;
     private Tooltip tooltip;
+
+    // Drawing order among siblings: the z index, then the sequence number the parent gave when adding or raising
+    private int zIndex;
+    private long paintSequence;
 
     // Layout outputs, and what they were computed from
     private float desiredWidth;
@@ -962,6 +967,41 @@ public class Node implements ComponentPeer {
             this.offsetY = offsetY;
             this.invalidateArrangement();
         }
+    }
+
+    @Override
+    public final int zIndex() {
+        return this.zIndex;
+    }
+
+    /**
+     * Sets the z index. A change makes the parent sort its drawing order again before the next paint or hit test,
+     * and marks nothing for layout.
+     *
+     * @param zIndex the z index; may be negative
+     */
+    @Override
+    public final void setZIndex(final int zIndex) {
+        if (this.zIndex != zIndex) {
+            this.zIndex = zIndex;
+            if (this.parent != null) {
+                this.parent.paintOrderChanged();
+            }
+        }
+    }
+
+    /**
+     * Returns the sequence number the parent gave this node when it was added, raised or lowered, which orders it
+     * among siblings with the same z index.
+     *
+     * @return the sequence number; higher draws later
+     */
+    final long paintSequence() {
+        return this.paintSequence;
+    }
+
+    final void setPaintSequence(final long paintSequence) {
+        this.paintSequence = paintSequence;
     }
 
     @Override

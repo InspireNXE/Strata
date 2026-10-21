@@ -126,7 +126,9 @@ public abstract class BuiltInComposite<T extends Component<T>> extends BuiltInCo
     // ------------------------------------------------------------------
 
     /**
-     * Returns the children, in drawing order: later children draw on top and are hit first.
+     * Returns the children in layout order, the order focus and Tab follow. They are drawn by z index and then in
+     * the order they were added, {@linkplain #raiseChild raised} or {@linkplain #lowerChild lowered}; later ones draw
+     * on top and are hit first.
      *
      * @return a live, unmodifiable view
      */
@@ -146,17 +148,17 @@ public abstract class BuiltInComposite<T extends Component<T>> extends BuiltInCo
     }
 
     /**
-     * Adds a private part at a place in the drawing order, which is also the tree order Tab follows. Only core can
-     * do this; the public {@code CustomComposite} adds at the end.
+     * Adds a private part at a place in the layout order, which is also the tree order Tab follows. It is drawn over
+     * the existing children with the same z index, as a part added at the end is.
      *
      * @param index where the child goes: 0 for the first, the number of children for the last
      * @param child the child
      * @throws IndexOutOfBoundsException if the index is negative or greater than the number of children
-     * @throws IllegalArgumentException if the child already has a parent, is a host's content, would create a
-     *     cycle, or was made by another factory
+     * @throws IllegalArgumentException if the child already has a parent, this component included, is a host's
+     *     content, would create a cycle, or was made by another factory
      */
-    protected final void addChild(final int index, final Component<?> child) {
-        this.node().add(index, child);
+    protected final void insertChild(final int index, final Component<?> child) {
+        this.node().insert(index, child);
     }
 
     /**
@@ -172,7 +174,7 @@ public abstract class BuiltInComposite<T extends Component<T>> extends BuiltInCo
     }
 
     /**
-     * Adds content, as {@link #addContent(Component)} does, at a place in the drawing order, which is also the tree
+     * Adds content, as {@link #addContent(Component)} does, at a place in the layout order, which is also the tree
      * order Tab follows. Only core can do this.
      *
      * @param index where the child goes: 0 for the first, the number of children for the last
@@ -181,8 +183,44 @@ public abstract class BuiltInComposite<T extends Component<T>> extends BuiltInCo
      * @throws IllegalArgumentException if the child already has a parent, is a host's content, would create a
      *     cycle, or was made by another factory
      */
-    protected final void addContent(final int index, final Component<?> child) {
-        this.node().addContent(index, child);
+    protected final void insertContent(final int index, final Component<?> child) {
+        this.node().insertContent(index, child);
+    }
+
+    /**
+     * Moves a child to another place in the layout order. The child stays attached, keeps focus, hover and press
+     * state, and fires no events of leaving or joining the tree. Layout runs again; where the child is drawn does not
+     * change.
+     *
+     * @param child the child
+     * @param index the place it ends up at, from 0 to the number of children minus one
+     * @throws IllegalArgumentException if the component is not a child of this component
+     * @throws IndexOutOfBoundsException if the index is negative or not less than the number of children
+     */
+    protected final void moveChild(final Component<?> child, final int index) {
+        this.node().move(child, index);
+    }
+
+    /**
+     * Draws a child over its siblings with the same z index, and lets the pointer hit it first among them. Nothing is
+     * laid out again.
+     *
+     * @param child the child
+     * @throws IllegalArgumentException if the component is not a child of this component
+     */
+    protected final void raiseChild(final Component<?> child) {
+        this.node().raise(child);
+    }
+
+    /**
+     * Draws a child under its siblings with the same z index, so the pointer hits it last among them. Nothing is laid
+     * out again.
+     *
+     * @param child the child
+     * @throws IllegalArgumentException if the component is not a child of this component
+     */
+    protected final void lowerChild(final Component<?> child) {
+        this.node().lower(child);
     }
 
     /**

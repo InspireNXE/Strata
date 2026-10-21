@@ -51,6 +51,51 @@ public interface ContainerPeer extends ComponentPeer {
     void addContent(Component<?> child);
 
     /**
+     * See {@link org.inspirenxe.strata.api.component.Container#insert(int, Component)}.
+     *
+     * @param index where the child goes
+     * @param child the child to add
+     */
+    void insert(int index, Component<?> child);
+
+    /**
+     * See {@link org.inspirenxe.strata.api.component.Container#move(Component, int)}.
+     *
+     * @param child the child to move
+     * @param index where it ends up
+     */
+    void move(Component<?> child, int index);
+
+    /**
+     * See {@link org.inspirenxe.strata.api.component.Container#indexOf(Component)}.
+     *
+     * @param child the component to look for
+     * @return its index, or -1
+     */
+    int indexOf(Component<?> child);
+
+    /**
+     * See {@link org.inspirenxe.strata.api.component.Container#raise(Component)}.
+     *
+     * @param child the child to raise
+     */
+    void raise(Component<?> child);
+
+    /**
+     * See {@link org.inspirenxe.strata.api.component.Container#lower(Component)}.
+     *
+     * @param child the child to lower
+     */
+    void lower(Component<?> child);
+
+    /**
+     * See {@link org.inspirenxe.strata.api.component.Container#paintOrder()}.
+     *
+     * @return the children, bottom first
+     */
+    List<Component<?>> paintOrder();
+
+    /**
      * See {@link org.inspirenxe.strata.api.component.Container#remove(Component)}.
      *
      * @param child the child to remove

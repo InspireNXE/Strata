@@ -874,7 +874,7 @@ public final class NavigationViewImpl extends BuiltInComposite<NavigationView> i
     private void paneClosed() {
         this.overlay = null;
         this.paneOpen = false;
-        this.addChild(0, this.pane);
+        this.insertChild(0, this.pane);
         this.syncLook();
         this.report(EXPANDED, false, true);
     }
@@ -1313,7 +1313,7 @@ public final class NavigationViewImpl extends BuiltInComposite<NavigationView> i
                 }
                 this.headerShown = header;
                 if (header != null) {
-                    this.addContent(1, header);
+                    this.insertContent(1, header);
                 }
             }
             final Component<?> foot = show ? NavigationViewImpl.this.paneFooter : null;

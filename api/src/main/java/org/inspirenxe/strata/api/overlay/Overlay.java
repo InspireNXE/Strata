@@ -65,6 +65,15 @@ public interface Overlay extends Closable<Overlay> {
     boolean isOpen();
 
     /**
+     * Brings a popup or a toast above the other popups and toasts, so it is drawn over them and the pointer hits it
+     * first. Dialogs keep their place: an overlay is raised only as far as the first dialog opened after it, so a
+     * dialog stays above everything opened before it. Does nothing for a dialog or a closed overlay.
+     *
+     * @return this overlay
+     */
+    Overlay raise();
+
+    /**
      * Closes the overlay and detaches its content, then reports {@link #CLOSED}. Closing an overlay that is already
      * closed does nothing.
      *

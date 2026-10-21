@@ -105,6 +105,40 @@ public abstract class CustomContainer<T extends Container<T>> extends CustomComp
     }
 
     @Override
+    public final T insert(final int index, final Component<?> child) {
+        this.containerPeer().insert(index, child);
+        return this.self();
+    }
+
+    @Override
+    public final T move(final Component<?> child, final int index) {
+        this.containerPeer().move(child, index);
+        return this.self();
+    }
+
+    @Override
+    public final int indexOf(final Component<?> child) {
+        return this.containerPeer().indexOf(child);
+    }
+
+    @Override
+    public final T raise(final Component<?> child) {
+        this.containerPeer().raise(child);
+        return this.self();
+    }
+
+    @Override
+    public final T lower(final Component<?> child) {
+        this.containerPeer().lower(child);
+        return this.self();
+    }
+
+    @Override
+    public final List<Component<?>> paintOrder() {
+        return this.containerPeer().paintOrder();
+    }
+
+    @Override
     public final T remove(final Component<?> child) {
         this.containerPeer().remove(child);
         return this.self();

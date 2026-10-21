@@ -23,17 +23,26 @@ import org.inspirenxe.strata.core.paint.CanvasPainter;
 import org.inspirenxe.strata.spi.Canvas;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 
 /**
- * Core's half of a container or composite: the child list, padding and clipping. Children are kept twice in the
- * same order, as nodes for core and as public components for callers. A new container has no padding and clips its
- * children to its {@code childClip}, which is its bounds unless the component says otherwise. While clipping, a
- * child whose bounds miss the clip entirely is not painted.
+ * Core's half of a container or composite: the child list, the drawing order, padding and clipping. A new container
+ * has no padding and clips its children to its {@code childClip}, which is its bounds unless the component says
+ * otherwise. While clipping, a child whose bounds miss the clip entirely is not painted.
+ *
+ * <p>Children are kept in layout order twice, as nodes for core and as public components for callers; layout, focus
+ * and Tab follow that order. The drawing order is kept apart in an array sorted by z index and then by a sequence
+ * number: each child gets the next number above every sibling's when it is added or raised, and the next one below
+ * every sibling's when it is lowered. The array is sorted again, in place, before the first paint or hit test after a
+ * child is added, removed, raised or lowered or changes z index, so painting and hit testing allocate nothing while
+ * the children stay the same. A move in the layout order leaves the drawing order alone.</p>
  */
 public final class ContainerNode extends Node implements ContainerPeer {
+    private static final Node[] NO_NODES = new Node[0];
+
     private final List<Node> childNodes;
     private final List<Component<?>> children;
     private final List<Component<?>> childrenView;
@@ -43,6 +52,14 @@ public final class ContainerNode extends Node implements ContainerPeer {
     private boolean paddingSet;
     private boolean clipChildren;
     private final boolean composite;
+
+    // The drawing order, bottom first, in the first paintCount entries; sorted again when paintOrderValid is false
+    private Node[] paintOrder;
+    private int paintCount;
+    private boolean paintOrderValid;
+    // The last sequence numbers handed out at the top and at the bottom
+    private long topSequence;
+    private long bottomSequence;
 
     /**
      * Creates the node behind a container or composite. {@link ComponentFactoryImpl#createContainerPeer} and
@@ -63,10 +80,12 @@ public final class ContainerNode extends Node implements ContainerPeer {
         this.padding = Insets.NONE;
         this.defaultPadding = Insets.NONE;
         this.clipChildren = true;
+        this.paintOrder = NO_NODES;
+        this.paintOrderValid = true;
     }
 
     /**
-     * Returns the child nodes, in the same order as {@link #children()}.
+     * Returns the child nodes in layout order, the same order as {@link #children()}.
      *
      * @return an unmodifiable view that follows later changes
      */
@@ -86,19 +105,21 @@ public final class ContainerNode extends Node implements ContainerPeer {
 
     @Override
     public void add(final Component<?> child) {
-        this.add(this.childNodes.size(), child);
+        this.insert(this.childNodes.size(), child);
     }
 
     /**
-     * Adds a child at a place in the drawing order, which is also the tree order Tab follows.
+     * Adds a child at a place in the layout order, which is also the tree order Tab follows. The child is drawn over
+     * its siblings with the same z index.
      *
      * @param index where the child goes: 0 for the first, the number of children for the last
      * @param child the child
      * @throws IndexOutOfBoundsException if the index is negative or greater than the number of children
-     * @throws IllegalArgumentException if the child already has a parent, is a host's content, would create a
-     *     cycle, or was made by another factory
+     * @throws IllegalArgumentException if the child already has a parent, this container included, is a host's
+     *     content, would create a cycle, or was made by another factory
      */
-    public void add(final int index, final Component<?> child) {
+    @Override
+    public void insert(final int index, final Component<?> child) {
         Objects.checkIndex(index, this.childNodes.size() + 1);
         final Node node = this.factory().nodeOf(child);
         if (node.parentNode() != null) {
@@ -113,6 +134,8 @@ public final class ContainerNode extends Node implements ContainerPeer {
         this.childNodes.add(index, node);
         this.children.add(index, node.facade());
         node.setParent(this);
+        node.setPaintSequence(++this.topSequence);
+        this.paintOrderValid = false;
         final Root root = this.root();
         if (root != null) {
             root.attachTree(node);
@@ -127,7 +150,7 @@ public final class ContainerNode extends Node implements ContainerPeer {
     }
 
     /**
-     * Adds content, as {@link #addContent(Component)} does, at a place in the drawing order.
+     * Adds content, as {@link #addContent(Component)} does, at a place in the layout order.
      *
      * @param index where the child goes: 0 for the first, the number of children for the last
      * @param child the child
@@ -135,19 +158,91 @@ public final class ContainerNode extends Node implements ContainerPeer {
      * @throws IllegalArgumentException if the child already has a parent, is a host's content, would create a
      *     cycle, or was made by another factory
      */
-    public void addContent(final int index, final Component<?> child) {
-        this.add(index, child);
+    public void insertContent(final int index, final Component<?> child) {
+        this.insert(index, child);
         this.factory().nodeOf(child).setContent(true);
     }
 
     @Override
+    public void move(final Component<?> child, final int index) {
+        final int from = this.requireChild(child);
+        Objects.checkIndex(index, this.childNodes.size());
+        if (from == index) {
+            return;
+        }
+        final Node node = this.childNodes.remove(from);
+        this.childNodes.add(index, node);
+        this.children.remove(from);
+        this.children.add(index, node.facade());
+        this.invalidateLayout();
+        final Root root = this.root();
+        if (root != null) {
+            // Tab follows the layout order
+            root.treeChanged();
+        }
+    }
+
+    @Override
+    public int indexOf(final Component<?> child) {
+        for (int i = 0; i < this.children.size(); i++) {
+            if (this.children.get(i) == child) {
+                return i;
+            }
+        }
+        return -1;
+    }
+
+    /**
+     * Draws a child over its siblings with the same z index. Does nothing if it is already the last child added or
+     * raised. Marks nothing for layout.
+     *
+     * @param child the child
+     * @throws IllegalArgumentException if the component is not a child of this container
+     */
+    @Override
+    public void raise(final Component<?> child) {
+        final Node node = this.childNodes.get(this.requireChild(child));
+        if (node.paintSequence() != this.topSequence) {
+            node.setPaintSequence(++this.topSequence);
+            this.paintOrderValid = false;
+        }
+    }
+
+    @Override
+    public void lower(final Component<?> child) {
+        final Node node = this.childNodes.get(this.requireChild(child));
+        if (node.paintSequence() != this.bottomSequence) {
+            node.setPaintSequence(--this.bottomSequence);
+            this.paintOrderValid = false;
+        }
+    }
+
+    @Override
+    public List<Component<?>> paintOrder() {
+        this.sortPaintOrder();
+        final List<Component<?>> order = new ArrayList<>(this.paintCount);
+        for (int i = 0; i < this.paintCount; i++) {
+            order.add(this.paintOrder[i].facade());
+        }
+        return Collections.unmodifiableList(order);
+    }
+
+    /**
+     * Makes the drawing order be sorted again before the next paint or hit test, after a child's z index changed.
+     */
+    void paintOrderChanged() {
+        this.paintOrderValid = false;
+    }
+
+    @Override
     public void remove(final Component<?> child) {
-        final int index = this.children.indexOf(child);
+        final int index = this.indexOf(child);
         if (index < 0) {
             return;
         }
         final Node node = this.childNodes.remove(index);
         this.children.remove(index);
+        this.paintOrderValid = false;
         this.hooks().childRemoved(node.facade());
         final Root root = this.root();
         if (root != null) {
@@ -206,15 +301,21 @@ public final class ContainerNode extends Node implements ContainerPeer {
         if (this.childNodes.isEmpty()) {
             return;
         }
+        this.sortPaintOrder();
+        final Node[] order = this.paintOrder;
+        final int count = this.paintCount;
         if (!this.clipChildren) {
-            this.paintEach(painter);
+            for (int i = 0; i < count; i++) {
+                order[i].paint(painter);
+            }
             return;
         }
         final Rect clip = this.hooks().childClip();
         final Canvas canvas = painter.canvas();
         canvas.pushClip(clip);
         try {
-            for (final Node child : this.childNodes) {
+            for (int i = 0; i < count; i++) {
+                final Node child = order[i];
                 if (child.bounds().intersects(clip)) {
                     child.paint(painter);
                 }
@@ -224,15 +325,9 @@ public final class ContainerNode extends Node implements ContainerPeer {
         }
     }
 
-    private void paintEach(final CanvasPainter painter) {
-        for (final Node child : this.childNodes) {
-            child.paint(painter);
-        }
-    }
-
     /**
-     * Children later in the list are drawn on top, so they are tested first. A clipping container's children can
-     * only be hit inside its child clip, and nothing can be hit outside its bounds.
+     * Children are tested from the top of the drawing order down. A clipping container's children can only be hit
+     * inside its child clip, and nothing can be hit outside its bounds.
      */
     @Override
     public Node hitTest(final float x, final float y) {
@@ -243,13 +338,60 @@ public final class ContainerNode extends Node implements ContainerPeer {
         if (this.clipChildren && (!inside || !this.hooks().childClip().contains(x, y))) {
             return inside ? this : null;
         }
-        for (int i = this.childNodes.size() - 1; i >= 0; i--) {
-            final Node hit = this.childNodes.get(i).hitTest(x, y);
+        this.sortPaintOrder();
+        for (int i = this.paintCount - 1; i >= 0; i--) {
+            final Node hit = this.paintOrder[i].hitTest(x, y);
             if (hit != null) {
                 return hit;
             }
         }
         return inside ? this : null;
+    }
+
+    /**
+     * Sorts the drawing order again if a change made it stale: copies the children into the array, growing it only
+     * when it is too small, and sorts them in place by insertion, which is stable and allocates nothing. Children
+     * added at the end and never raised are already in order, so that case takes one pass.
+     */
+    private void sortPaintOrder() {
+        if (this.paintOrderValid) {
+            return;
+        }
+        this.paintOrderValid = true;
+        final int count = this.childNodes.size();
+        if (this.paintOrder.length < count) {
+            this.paintOrder = new Node[Math.max(count, this.paintOrder.length * 2)];
+        } else if (count < this.paintCount) {
+            // Let go of removed children
+            Arrays.fill(this.paintOrder, count, this.paintCount, null);
+        }
+        final Node[] order = this.paintOrder;
+        for (int i = 0; i < count; i++) {
+            final Node node = this.childNodes.get(i);
+            int j = i - 1;
+            while (j >= 0 && ContainerNode.drawsAfter(order[j], node)) {
+                order[j + 1] = order[j];
+                j--;
+            }
+            order[j + 1] = node;
+        }
+        this.paintCount = count;
+    }
+
+    private static boolean drawsAfter(final Node a, final Node b) {
+        if (a.zIndex() != b.zIndex()) {
+            return a.zIndex() > b.zIndex();
+        }
+        return a.paintSequence() > b.paintSequence();
+    }
+
+    private int requireChild(final Component<?> child) {
+        Objects.requireNonNull(child, "child");
+        final int index = this.indexOf(child);
+        if (index < 0) {
+            throw new IllegalArgumentException(child + " is not a child of " + this.facade());
+        }
+        return index;
     }
 
     private boolean isDescendantOf(final Node candidate) {
