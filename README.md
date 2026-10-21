@@ -17,7 +17,7 @@ Strata is a GUI library for Java that works with any engine. You build screens f
 | <img src=".github/assets/platform-minecraft.svg" width="40" alt=""> | Minecraft | [Strata-Minecraft](https://github.com/InspireNXE/Strata-Minecraft) | 26.3 on NeoForge, Forge, Fabric and SpongeVanilla |
 | <img src=".github/assets/platform-engine.svg" width="40" alt=""> | Your engine | [Writing an adapter](https://inspirenxe.github.io/Strata/platforms/writing-an-adapter/) | |
 
-Nothing is published yet.
+Every artifact is published to Maven Central under the group `org.inspirenxe`. Until 0.1.0 is released, there are snapshots only, in Central's snapshot repository. [Installation](https://inspirenxe.github.io/Strata/getting-started/installation/) has the setup.
 
 ## A screen
 
@@ -51,7 +51,7 @@ Building needs JDK 25.
 ./gradlew build
 ```
 
-Strata-Swing, Strata-Minecraft, Strata-Gallery and Strata-Docs build against a checkout of this repository beside them, so clone them side by side.
+Strata-Swing, Strata-Minecraft and Strata-Gallery build against a Strata checkout beside them when there is one, so a change here reaches them at once. Without one they take Strata from Maven Central. Strata-Docs builds its Javadoc and design pages from the checkouts, so it needs Strata and Strata-Swing beside it.
 
 ## Documentation
 
