@@ -161,6 +161,9 @@ public final class ComponentFactoryImpl implements ComponentFactory {
      */
     public static final Insets DEFAULT_CELL_PADDING = new Insets(CELL_PADDING, 0f, CELL_PADDING, 0f);
 
+    // Between a cell's icon and its name
+    private static final Text CELL_GAP = Text.of(" ");
+
     private final Supplier<Theme> theme;
     private final Environment environment;
     private final Platform platform;
@@ -277,21 +280,15 @@ public final class ComponentFactoryImpl implements ComponentFactory {
         final Label label = this.label(text)
                 .setOverflow(TextOverflow.ELLIPSIS)
                 .setAnchor(Anchor.MIDDLE_LEFT);
-        return this.cellPadded(label, false);
+        return this.cellPadded(label);
     }
 
     @Override
     public Component<?> cell(final Object value) {
         final Appearances appearances = this.appearances();
-        final Label name = this.cellLabel(appearances.nameOf(value));
+        final Text name = appearances.nameOf(value);
         final Optional<Visual> icon = appearances.iconOf(value);
-        if (icon.isEmpty()) {
-            name.setTooltip(appearances.tooltipOf(value).orElse(null));
-            return name.onEvent(InputEvents.POINTER_ENTER, event -> name.setTooltip(appearances.tooltipOf(value).orElse(null)));
-        }
-        final StackPanel row = this.stackPanel(Orientation.HORIZONTAL)
-                .add(this.cellPadded(this.image(icon.get()).setAnchor(Anchor.MIDDLE_LEFT), true))
-                .add(name);
+        final Label row = this.cellLabel(icon.isEmpty() ? name : Text.concat(Text.visual(icon.get()), CELL_GAP, name));
         row.setTooltip(appearances.tooltipOf(value).orElse(null));
         return row.onEvent(InputEvents.POINTER_ENTER, event -> row.setTooltip(appearances.tooltipOf(value).orElse(null)));
     }
@@ -300,16 +297,12 @@ public final class ComponentFactoryImpl implements ComponentFactory {
      * Gives a component the theme's cell padding as its margin, {@link ListView#STYLE_CELL_PADDING} or
      * {@link #DEFAULT_CELL_PADDING}, until its margin is set.
      *
-     * @param component the label or icon of a cell
-     * @param icon true for an icon before a label, which takes no right margin
+     * @param component the label of a cell
      * @param <C> the component's type
      * @return the component
      */
-    public <C extends Component<?>> C cellPadded(final C component, final boolean icon) {
-        this.nodeOf(component).setThemeMargin(theme -> {
-            final Insets padding = theme.insetsOr(ListView.STYLE_CELL_PADDING, DEFAULT_CELL_PADDING);
-            return icon ? new Insets(padding.left(), padding.top(), 0f, padding.bottom()) : padding;
-        });
+    public <C extends Component<?>> C cellPadded(final C component) {
+        this.nodeOf(component).setThemeMargin(theme -> theme.insetsOr(ListView.STYLE_CELL_PADDING, DEFAULT_CELL_PADDING));
         return component;
     }
 

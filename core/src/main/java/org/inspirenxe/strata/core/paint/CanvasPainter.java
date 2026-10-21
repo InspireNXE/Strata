@@ -19,9 +19,13 @@ import org.inspirenxe.strata.api.extension.Painter;
 import org.inspirenxe.strata.api.geometry.Insets;
 import org.inspirenxe.strata.api.geometry.Rect;
 import org.inspirenxe.strata.api.geometry.Size;
+import org.inspirenxe.strata.api.text.InlineSprite;
+import org.inspirenxe.strata.api.text.InlineVisual;
+import org.inspirenxe.strata.api.text.TextMetrics;
 import org.inspirenxe.strata.api.text.TextSpan;
 import org.inspirenxe.strata.api.theme.SpriteId;
 import org.inspirenxe.strata.api.visual.Visual;
+import org.inspirenxe.strata.core.text.InlineMetrics;
 import org.inspirenxe.strata.spi.Canvas;
 
 /**
@@ -37,14 +41,28 @@ import org.inspirenxe.strata.spi.Canvas;
 public final class CanvasPainter implements Painter {
     /** The most copies of a tile in one row or column, so a tiny tile cannot flood the canvas with calls. */
     static final int MAX_COPIES = 1024;
+    private static final int WHITE = 0xFFFFFFFF;
 
+    private final InlineMetrics metrics;
     private Canvas canvas;
     private boolean slicesSprites;
 
     /**
-     * Creates a painter with no canvas. Call {@link #begin(Canvas)} before drawing.
+     * Creates a painter with no canvas and no text metrics. Call {@link #begin(Canvas)} before drawing. It draws
+     * inline sprites that {@linkplain InlineSprite#fitsLine() fit the line} nowhere, since it cannot measure the line.
      */
     public CanvasPainter() {
+        this.metrics = null;
+    }
+
+    /**
+     * Creates a painter with no canvas that measures inline sprites that fit the line with the given metrics. Call
+     * {@link #begin(Canvas)} before drawing.
+     *
+     * @param metrics the host's text metrics
+     */
+    public CanvasPainter(final TextMetrics metrics) {
+        this.metrics = InlineMetrics.of(metrics);
     }
 
     /**
@@ -212,7 +230,21 @@ public final class CanvasPainter implements Painter {
 
     @Override
     public void text(final TextSpan span, final float x, final float y) {
-        this.canvas.text(span, x, y);
+        switch (span.element()) {
+            case null -> this.canvas.text(span, x, y);
+            case final InlineVisual visual -> {
+                final Size size = visual.visual().size();
+                this.canvas.visual(visual.visual(), new Rect(x, y, size.width(), size.height()), WHITE);
+            }
+            case final InlineSprite sprite -> {
+                if (!sprite.fitsLine()) {
+                    this.canvas.sprite(sprite.sprite(), new Rect(x, y, sprite.width(), sprite.height()), WHITE);
+                } else if (this.metrics != null) {
+                    final float side = this.metrics.lineHeight(span.style());
+                    this.canvas.sprite(sprite.sprite(), new Rect(x, y, side, side), WHITE);
+                }
+            }
+        }
     }
 
     @Override

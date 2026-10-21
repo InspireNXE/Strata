@@ -251,10 +251,9 @@ public interface ComponentFactory {
     }
 
     /**
-     * Makes the row a list, tree or grid shows for a value by default: the value's icon, if its appearance has one,
-     * and its name in a {@linkplain #cellLabel(Text) cell label}. The icon's margin is the left, top and bottom of
-     * the cell padding the label uses, so the two line up. The row shows the value's tooltip, asked anew each time
-     * the pointer arrives.
+     * Makes the row a list, tree or grid shows for a value by default: a {@linkplain #cellLabel(Text) cell label}
+     * holding the value's icon, if its appearance has one, as an {@linkplain Text#visual inline visual}, then a space
+     * and the value's name. The row shows the value's tooltip, asked anew each time the pointer arrives.
      *
      * @param value the value
      * @return a new row

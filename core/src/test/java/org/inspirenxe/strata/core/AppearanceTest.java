@@ -19,7 +19,6 @@ import org.inspirenxe.strata.api.Strata;
 import org.inspirenxe.strata.api.appearance.Appearance;
 import org.inspirenxe.strata.api.appearance.Appearances;
 import org.inspirenxe.strata.api.component.Component;
-import org.inspirenxe.strata.api.component.HasTooltip;
 import org.inspirenxe.strata.api.component.Tooltip;
 import org.inspirenxe.strata.api.control.button.CycleButton;
 import org.inspirenxe.strata.api.control.collection.ComboBox;
@@ -28,9 +27,10 @@ import org.inspirenxe.strata.api.control.display.Label;
 import org.inspirenxe.strata.api.event.Subscription;
 import org.inspirenxe.strata.api.geometry.Size;
 import org.inspirenxe.strata.api.input.Modifiers;
-import org.inspirenxe.strata.api.layout.StackPanel;
+import org.inspirenxe.strata.api.text.InlineVisual;
 import org.inspirenxe.strata.api.text.Text;
 import org.inspirenxe.strata.api.text.TextSpan;
+import org.inspirenxe.strata.api.text.TextStyle;
 import org.inspirenxe.strata.api.visual.Visual;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
@@ -165,12 +165,12 @@ class AppearanceTest {
         this.register(Fruit.class, fruits());
         final TestHost test = new TestHost(200, 100);
         final Component<?> row = test.factory().cell(new Fruit("kiwi"));
-        final StackPanel panel = assertInstanceOf(StackPanel.class, row);
-        test.show(panel);
-        final List<Component<?>> children = panel.children();
-        assertEquals(new Icon("kiwi"), assertInstanceOf(Image.class, children.get(0)).visual());
-        assertEquals("KIWI", assertInstanceOf(Label.class, children.get(1)).text().plain());
-        assertEquals(Tooltip.text("Fresh kiwi"), ((HasTooltip<?>) row).tooltip());
+        final Label label = assertInstanceOf(Label.class, row);
+        test.show(label);
+        final List<TextSpan> spans = label.text().resolve(TextStyle.DEFAULT);
+        assertEquals(new InlineVisual(new Icon("kiwi")), spans.getFirst().element());
+        assertEquals(" KIWI", spans.get(1).text());
+        assertEquals(Tooltip.text("Fresh kiwi"), label.tooltip());
     }
 
     @Test

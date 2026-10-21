@@ -18,6 +18,7 @@ package org.inspirenxe.strata.core.node;
 import org.inspirenxe.strata.api.extension.Environment;
 import org.inspirenxe.strata.api.input.Modifiers;
 import org.inspirenxe.strata.api.text.TextMetrics;
+import org.inspirenxe.strata.core.text.InlineMetrics;
 import org.inspirenxe.strata.spi.Platform;
 
 import java.util.Objects;
@@ -30,15 +31,17 @@ import java.util.Optional;
 final class EnvironmentImpl implements Environment {
     private final Platform platform;
     private final ComponentFactoryImpl ui;
+    private final InlineMetrics metrics;
 
     EnvironmentImpl(final Platform platform, final ComponentFactoryImpl ui) {
         this.platform = Objects.requireNonNull(platform, "platform");
         this.ui = ui;
+        this.metrics = InlineMetrics.of(platform.textMetrics());
     }
 
     @Override
     public TextMetrics text() {
-        return this.platform.textMetrics();
+        return this.metrics;
     }
 
     @Override

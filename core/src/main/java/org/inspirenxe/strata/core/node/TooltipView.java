@@ -28,6 +28,7 @@ import org.inspirenxe.strata.api.text.TextStyle;
 import org.inspirenxe.strata.api.theme.Border;
 import org.inspirenxe.strata.api.theme.Paint;
 import org.inspirenxe.strata.api.theme.Theme;
+import org.inspirenxe.strata.core.text.InlineMetrics;
 import org.inspirenxe.strata.core.text.RichText;
 
 import java.util.ArrayList;
@@ -54,6 +55,7 @@ final class TooltipView extends BuiltInComponent<TooltipView> {
     private final Tooltip tooltip;
     private final List<List<TextSpan>> lines;
     private final List<Float> lineHeights;
+    private final List<Float> textHeights;
     private TextStyle textStyle;
     private Insets padding = PADDING;
 
@@ -62,6 +64,7 @@ final class TooltipView extends BuiltInComponent<TooltipView> {
         this.tooltip = tooltip;
         this.lines = new ArrayList<>();
         this.lineHeights = new ArrayList<>();
+        this.textHeights = new ArrayList<>();
         this.textStyle = TextStyle.DEFAULT;
         this.setBackground(FALLBACK_BACKGROUND);
         this.setBorder(FALLBACK_EDGE);
@@ -81,6 +84,7 @@ final class TooltipView extends BuiltInComponent<TooltipView> {
         final TextMetrics metrics = context.text();
         this.lines.clear();
         this.lineHeights.clear();
+        this.textHeights.clear();
         if (this.tooltip instanceof final Tooltip.Lines lines) {
             for (final Text text : lines.lines()) {
                 this.lines.addAll(RichText.wrap(text.resolve(this.textStyle), Float.POSITIVE_INFINITY, metrics));
@@ -90,11 +94,10 @@ final class TooltipView extends BuiltInComponent<TooltipView> {
         float height = 0f;
         for (final List<TextSpan> line : this.lines) {
             width = Math.max(width, RichText.width(line, metrics));
-            float lineHeight = metrics.lineHeight(this.textStyle);
-            for (final TextSpan span : line) {
-                lineHeight = Math.max(lineHeight, metrics.lineHeight(span.style()));
-            }
+            final InlineMetrics inline = InlineMetrics.of(metrics);
+            final float lineHeight = inline.lineHeight(line, this.textStyle);
             this.lineHeights.add(lineHeight);
+            this.textHeights.add(inline.textHeight(line, this.textStyle));
             height += lineHeight;
         }
         height += LINE_GAP * Math.max(0, this.lines.size() - 1);
@@ -103,14 +106,11 @@ final class TooltipView extends BuiltInComponent<TooltipView> {
 
     @Override
     protected void paint(final Painter painter, final Rect bounds) {
-        final TextMetrics metrics = this.environment().text();
+        final InlineMetrics metrics = InlineMetrics.of(this.environment().text());
         float y = bounds.y() + this.padding.top();
         for (int i = 0; i < this.lines.size(); i++) {
-            float x = bounds.x() + this.padding.left();
-            for (final TextSpan span : this.lines.get(i)) {
-                painter.text(span, x, y);
-                x += metrics.width(span);
-            }
+            metrics.draw(painter, this.lines.get(i), bounds.x() + this.padding.left(), y, this.lineHeights.get(i),
+                    this.textHeights.get(i));
             y += this.lineHeights.get(i) + LINE_GAP;
         }
     }

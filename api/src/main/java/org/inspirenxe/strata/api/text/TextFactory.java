@@ -77,6 +77,15 @@ public interface TextFactory {
     Text join(Text separator, Iterable<? extends Text> parts);
 
     /**
+     * Makes text that holds one element, as {@link Text#visual} and {@link Text#sprite(org.inspirenxe.strata.api.theme.SpriteId)}
+     * do. It resolves to one span holding the element in the base style.
+     *
+     * @param element the element
+     * @return the text
+     */
+    Text inline(InlineElement element);
+
+    /**
      * See {@link Text#builder()}.
      *
      * @return a new builder

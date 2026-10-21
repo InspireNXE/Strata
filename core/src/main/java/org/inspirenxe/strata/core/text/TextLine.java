@@ -25,22 +25,28 @@ import java.util.List;
 
 /**
  * One line of resolved text, measured once so it can be drawn without allocating. Controls make one per caption
- * during measure and draw it during paint. Line breaks are not honored; the spans are drawn one after another.
+ * during measure and draw it during paint. Line breaks are not honored; the spans are drawn one after another. A
+ * line that holds inline elements is tall enough for them, and each span is centered on it as
+ * {@link InlineMetrics#draw} centers them.
  */
 public final class TextLine {
     /**
      * A line with no text and no height.
      */
-    public static final TextLine EMPTY = new TextLine(List.of(), new float[0], 0f, 0f);
+    public static final TextLine EMPTY = new TextLine(List.of(), new float[0], new float[0], 0f, 0f);
 
     private final List<TextSpan> spans;
     private final float[] offsets;
+    // How far below the line's top each span is drawn
+    private final float[] tops;
     private final float width;
     private final float height;
 
-    private TextLine(final List<TextSpan> spans, final float[] offsets, final float width, final float height) {
+    private TextLine(final List<TextSpan> spans, final float[] offsets, final float[] tops, final float width,
+                     final float height) {
         this.spans = spans;
         this.offsets = offsets;
+        this.tops = tops;
         this.width = width;
         this.height = height;
     }
@@ -66,16 +72,19 @@ public final class TextLine {
      * @return the line
      */
     public static TextLine of(final List<TextSpan> spans, final TextStyle base, final TextMetrics metrics) {
+        final InlineMetrics inline = InlineMetrics.of(metrics);
+        final float textHeight = inline.textHeight(spans, base);
+        final float height = inline.lineHeight(spans, base);
         final float[] offsets = new float[spans.size()];
+        final float[] tops = new float[spans.size()];
         float x = 0f;
-        float height = metrics.lineHeight(base);
         for (int i = 0; i < spans.size(); i++) {
             final TextSpan span = spans.get(i);
             offsets[i] = x;
-            x += metrics.width(span);
-            height = Math.max(height, metrics.lineHeight(span.style()));
+            tops[i] = (height - (span.isInline() ? inline.height(span) : textHeight)) * 0.5f;
+            x += inline.width(span);
         }
-        return new TextLine(List.copyOf(spans), offsets, x, height);
+        return new TextLine(List.copyOf(spans), offsets, tops, x, height);
     }
 
     /**
@@ -99,7 +108,8 @@ public final class TextLine {
     /**
      * Returns the height.
      *
-     * @return the tallest line height of the base style and the spans' styles
+     * @return the tallest line height of the base style and the spans' styles, or the tallest inline element if that
+     *         is taller
      */
     public float height() {
         return this.height;
@@ -138,7 +148,7 @@ public final class TextLine {
      */
     public void draw(final Painter painter, final float x, final float y) {
         for (int i = 0; i < this.offsets.length; i++) {
-            painter.text(this.spans.get(i), x + this.offsets[i], y);
+            painter.text(this.spans.get(i), x + this.offsets[i], y + this.tops[i]);
         }
     }
 }

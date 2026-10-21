@@ -16,8 +16,10 @@
 package org.inspirenxe.strata.api.text;
 
 /**
- * Something that sits in a line of text: a {@link TextSpan} or a {@link SpriteSpan}. Reserved for rich text that
- * mixes the two.
+ * Something drawn in a line of text in place of characters: a sprite or an engine visual. Text holds one with
+ * {@link Text#sprite(org.inspirenxe.strata.api.theme.SpriteId)} or
+ * {@link Text#visual(org.inspirenxe.strata.api.visual.Visual)}, and it resolves to a {@link TextSpan} whose
+ * {@linkplain TextSpan#element() element} it is.
  */
-public interface InlineElement {
+public sealed interface InlineElement permits InlineSprite, InlineVisual {
 }

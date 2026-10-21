@@ -29,6 +29,7 @@ import org.inspirenxe.strata.api.text.TextStyle;
 import org.inspirenxe.strata.api.theme.Border;
 import org.inspirenxe.strata.api.theme.Paint;
 import org.inspirenxe.strata.api.theme.Theme;
+import org.inspirenxe.strata.core.text.InlineMetrics;
 import org.inspirenxe.strata.core.text.RichText;
 
 import java.util.ArrayList;
@@ -50,7 +51,9 @@ final class ToastView extends BuiltInComponent<ToastView> {
 
     private final Text message;
     private final List<List<TextSpan>> lines;
+    private final List<Float> lineHeights;
     private TextStyle textStyle;
+    // The height of the characters, which each line is at least as tall as
     private float lineHeight;
     private Insets padding = PADDING;
 
@@ -58,6 +61,7 @@ final class ToastView extends BuiltInComponent<ToastView> {
         super(factory);
         this.message = message;
         this.lines = new ArrayList<>();
+        this.lineHeights = new ArrayList<>();
         this.textStyle = TextStyle.DEFAULT;
         this.setBackground(FALLBACK_BACKGROUND);
         this.setBorder(FALLBACK_EDGE);
@@ -79,29 +83,28 @@ final class ToastView extends BuiltInComponent<ToastView> {
         final float wrapAt = Float.isInfinite(availableWidth) ? availableWidth : Math.max(1f, availableWidth / 3f - this.padding.horizontal());
         final List<TextSpan> spans = this.message.resolve(this.textStyle);
         this.lines.addAll(RichText.wrap(spans, wrapAt, metrics));
-        float lineHeight = metrics.lineHeight(this.textStyle);
-        for (final TextSpan span : spans) {
-            lineHeight = Math.max(lineHeight, metrics.lineHeight(span.style()));
-        }
-        this.lineHeight = lineHeight;
+        final InlineMetrics inline = InlineMetrics.of(metrics);
+        this.lineHeight = inline.textHeight(spans, this.textStyle);
+        this.lineHeights.clear();
         float width = 0f;
+        float height = 0f;
         for (final List<TextSpan> line : this.lines) {
             width = Math.max(width, RichText.width(line, metrics));
+            final float lineHeight = Math.max(this.lineHeight, inline.lineHeight(line, this.textStyle));
+            this.lineHeights.add(lineHeight);
+            height += lineHeight;
         }
-        return new Size(width + this.padding.horizontal(), this.lines.size() * this.lineHeight + this.padding.vertical());
+        return new Size(width + this.padding.horizontal(), height + this.padding.vertical());
     }
 
     @Override
     protected void paint(final Painter painter, final Rect bounds) {
-        final TextMetrics metrics = this.environment().text();
+        final InlineMetrics metrics = InlineMetrics.of(this.environment().text());
         float y = bounds.y() + this.padding.top();
-        for (final List<TextSpan> line : this.lines) {
-            float x = bounds.x() + this.padding.left();
-            for (final TextSpan span : line) {
-                painter.text(span, x, y);
-                x += metrics.width(span);
-            }
-            y += this.lineHeight;
+        for (int i = 0; i < this.lines.size(); i++) {
+            final float lineHeight = this.lineHeights.get(i);
+            metrics.draw(painter, this.lines.get(i), bounds.x() + this.padding.left(), y, lineHeight, this.lineHeight);
+            y += lineHeight;
         }
     }
 

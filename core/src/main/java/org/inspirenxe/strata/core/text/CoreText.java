@@ -15,6 +15,7 @@
  */
 package org.inspirenxe.strata.core.text;
 
+import org.inspirenxe.strata.api.text.InlineElement;
 import org.inspirenxe.strata.api.text.Text;
 import org.inspirenxe.strata.api.text.TextSpan;
 import org.inspirenxe.strata.api.text.TextStyle;
@@ -165,6 +166,27 @@ sealed interface CoreText extends Text {
         @Override
         public String plain() {
             return this.text;
+        }
+    }
+
+    /**
+     * One inline element, in the base style.
+     *
+     * @param element the element
+     */
+    record Inline(InlineElement element) implements CoreText {
+        public Inline {
+            Objects.requireNonNull(element, "element");
+        }
+
+        @Override
+        public List<TextSpan> resolve(final TextStyle base) {
+            return List.of(TextSpan.of(this.element, base));
+        }
+
+        @Override
+        public String plain() {
+            return TextSpan.OBJECT_REPLACEMENT;
         }
     }
 

@@ -46,10 +46,10 @@ public final class RichText {
      */
     public static List<List<TextSpan>> wrap(final List<TextSpan> spans, final float maxWidth, final TextMetrics metrics) {
         final List<List<TextSpan>> lines = new ArrayList<>();
-        if (spans.size() == 1) {
+        if (spans.size() == 1 && !spans.getFirst().isInline()) {
             final TextSpan only = spans.getFirst();
             for (final String line : TextWrap.wrap(only.text(), only.style(), maxWidth, metrics)) {
-                lines.add(line.isEmpty() ? List.of() : List.of(new TextSpan(line, only.style())));
+                lines.add(line.isEmpty() ? List.of() : List.of(only.withText(line)));
             }
             return lines;
         }
@@ -172,8 +172,7 @@ public final class RichText {
                 continue;
             }
             if (used + dots <= maxWidth) {
-                final int fit = TextWrap.fittingPrefix(span.text(), span.style(), maxWidth - used - dots, metrics);
-                kept.add(new TextSpan(span.text().substring(0, fit) + ELLIPSIS, span.style()));
+                kept.add(shortened(span, maxWidth - used - dots, metrics));
                 return kept;
             }
             break;
@@ -184,12 +183,23 @@ public final class RichText {
             final float before = width(kept, metrics);
             final float dots = metrics.width(new TextSpan(ELLIPSIS, last.style()));
             if (before + dots <= maxWidth) {
-                final int fit = TextWrap.fittingPrefix(last.text(), last.style(), maxWidth - before - dots, metrics);
-                kept.add(new TextSpan(last.text().substring(0, fit) + ELLIPSIS, last.style()));
+                kept.add(shortened(last, maxWidth - before - dots, metrics));
                 return kept;
             }
         }
         return List.of();
+    }
+
+    /**
+     * Returns as much of a span as fits a width, followed by the ellipsis in its style. An inline element is never
+     * cut, so it gives way to the ellipsis alone.
+     */
+    private static TextSpan shortened(final TextSpan span, final float width, final TextMetrics metrics) {
+        if (span.isInline()) {
+            return new TextSpan(ELLIPSIS, span.style());
+        }
+        final int fit = TextWrap.fittingPrefix(span.text(), span.style(), width, metrics);
+        return new TextSpan(span.text().substring(0, fit) + ELLIPSIS, span.style());
     }
 
     private static float width(final List<TextSpan> spans, final int[] owners, final String text, final int start,
@@ -202,7 +212,7 @@ public final class RichText {
             while (j < end && owners[j] == span) {
                 j++;
             }
-            width += metrics.width(new TextSpan(text.substring(i, j), spans.get(span).style()));
+            width += metrics.width(spans.get(span).withText(text.substring(i, j)));
             i = j;
         }
         return width;
@@ -218,7 +228,7 @@ public final class RichText {
             while (j < end && owners[j] == span) {
                 j++;
             }
-            line.add(new TextSpan(text.substring(i, j), spans.get(span).style()));
+            line.add(spans.get(span).withText(text.substring(i, j)));
             i = j;
         }
         return line;

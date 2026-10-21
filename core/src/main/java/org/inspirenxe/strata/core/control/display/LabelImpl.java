@@ -29,6 +29,7 @@ import org.inspirenxe.strata.api.text.TextStyle;
 import org.inspirenxe.strata.api.theme.Theme;
 import org.inspirenxe.strata.core.node.BuiltInComponent;
 import org.inspirenxe.strata.core.node.ComponentFactoryImpl;
+import org.inspirenxe.strata.core.text.InlineMetrics;
 import org.inspirenxe.strata.core.text.RichText;
 import org.inspirenxe.strata.core.text.TextWrap;
 
@@ -57,6 +58,8 @@ public final class LabelImpl extends BuiltInComponent<Label> implements Label {
     // Computed during measure, drawn during paint
     private final List<List<TextSpan>> lines;
     private final List<Float> lineWidths;
+    private final List<Float> lineHeights;
+    // The height of the characters, which each line is at least as tall as
     private float lineHeight;
 
     // Shortened lines for the last bounds width
@@ -84,6 +87,7 @@ public final class LabelImpl extends BuiltInComponent<Label> implements Label {
         this.overflow = TextOverflow.VISIBLE;
         this.lines = new ArrayList<>();
         this.lineWidths = new ArrayList<>();
+        this.lineHeights = new ArrayList<>();
         this.shownLines = new ArrayList<>();
         this.shownWidths = new ArrayList<>();
         this.shownForWidth = Float.NaN;
@@ -188,17 +192,21 @@ public final class LabelImpl extends BuiltInComponent<Label> implements Label {
             this.lineWidths.add(lineWidth);
             width = Math.max(width, lineWidth);
         }
-        float height = metrics.lineHeight(this.style());
-        for (final TextSpan run : runs) {
-            height = Math.max(height, metrics.lineHeight(run.style()));
+        final InlineMetrics inline = InlineMetrics.of(metrics);
+        this.lineHeight = inline.textHeight(runs, this.style());
+        this.lineHeights.clear();
+        float height = 0f;
+        for (final List<TextSpan> line : this.lines) {
+            final float lineHeight = Math.max(this.lineHeight, inline.lineHeight(line, this.style()));
+            this.lineHeights.add(lineHeight);
+            height += lineHeight;
         }
-        this.lineHeight = height;
 
         float scaledWidth = width * this.textScale;
         if (this.overflow == TextOverflow.ELLIPSIS && scaledWidth > availableWidth) {
             scaledWidth = Math.max(0f, availableWidth);
         }
-        return new Size(scaledWidth, this.lineHeight * this.lines.size() * this.textScale);
+        return new Size(scaledWidth, height * this.textScale);
     }
 
     @Override
@@ -246,23 +254,18 @@ public final class LabelImpl extends BuiltInComponent<Label> implements Label {
         final float left = this.paintBounds.x() / scale;
         final float top = this.paintBounds.y() / scale;
         final float width = this.paintBounds.width() / scale;
-        final TextMetrics metrics = this.environment().text();
+        final InlineMetrics metrics = InlineMetrics.of(this.environment().text());
+        float y = top;
         for (int i = 0; i < shown.size(); i++) {
             final float lineWidth = widths.get(i);
-            float x = switch (this.textAlignment) {
+            final float x = switch (this.textAlignment) {
                 case LEFT, STRETCH -> left;
                 case CENTER -> left + (width - lineWidth) * 0.5f;
                 case RIGHT -> left + width - lineWidth;
             };
-            final float y = top + i * this.lineHeight;
-            final List<TextSpan> line = shown.get(i);
-            for (int s = 0; s < line.size(); s++) {
-                final TextSpan span = line.get(s);
-                this.painter.text(span, x, y);
-                if (s + 1 < line.size()) {
-                    x += metrics.width(span);
-                }
-            }
+            final float lineHeight = this.lineHeights.get(i);
+            metrics.draw(this.painter, shown.get(i), x, y, lineHeight, this.lineHeight);
+            y += lineHeight;
         }
     }
 

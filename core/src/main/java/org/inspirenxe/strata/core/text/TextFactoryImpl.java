@@ -15,6 +15,7 @@
  */
 package org.inspirenxe.strata.core.text;
 
+import org.inspirenxe.strata.api.text.InlineElement;
 import org.inspirenxe.strata.api.text.Text;
 import org.inspirenxe.strata.api.text.TextFactory;
 import org.inspirenxe.strata.api.text.TextStyle;
@@ -79,6 +80,11 @@ public final class TextFactoryImpl implements TextFactory {
             joined.add(Objects.requireNonNull(part, "part"));
         }
         return this.concat(joined);
+    }
+
+    @Override
+    public Text inline(final InlineElement element) {
+        return new CoreText.Inline(element);
     }
 
     @Override

@@ -440,7 +440,7 @@ public final class TextBoxImpl extends BuiltInComponent<TextBox> implements Text
 
     private Label suggestionCell(final Suggestion suggestion) {
         final Label label = this.ui.cellPadded(
-                this.ui.label(suggestion.text()).setStyle(this.suggestionTextStyle), false);
+                this.ui.label(suggestion.text()).setStyle(this.suggestionTextStyle));
         label.setOverflow(TextOverflow.ELLIPSIS);
         label.setAnchor(Anchor.MIDDLE_LEFT);
         return label;

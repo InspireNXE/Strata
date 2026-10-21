@@ -117,7 +117,7 @@ final class TimeColumns {
         final ListViewImpl<Integer> list = new ListViewImpl<>(this.ui, value -> {
             final String text = halves == null ? String.format(Locale.ROOT, "%02d", value)
                     : value == 0 ? halves.am() : halves.pm();
-            final Label label = this.ui.cellPadded(this.ui.label(Text.of(text)).setStyle(style), false);
+            final Label label = this.ui.cellPadded(this.ui.label(Text.of(text)).setStyle(style));
             label.setAnchor(Anchor.MIDDLE_LEFT);
             return label;
         });

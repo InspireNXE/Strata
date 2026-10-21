@@ -322,7 +322,7 @@ public final class ComboBoxImpl<T> extends BuiltInComponent<ComboBox<T>> impleme
 
     private Label cell(final T option) {
         final Label label = this.ui.cellPadded(
-                this.ui.label(this.ui.appearances().nameOf(this.labelFunction.apply(option))).setStyle(this.textStyle), false);
+                this.ui.label(this.ui.appearances().nameOf(this.labelFunction.apply(option))).setStyle(this.textStyle));
         label.setOverflow(TextOverflow.ELLIPSIS);
         label.setAnchor(Anchor.MIDDLE_LEFT);
         return label;

@@ -17,6 +17,9 @@ package org.inspirenxe.strata.api.text;
 
 import org.inspirenxe.strata.api.Strata;
 
+import org.inspirenxe.strata.api.theme.SpriteId;
+import org.inspirenxe.strata.api.visual.Visual;
+
 import java.util.List;
 import java.util.function.UnaryOperator;
 import java.util.regex.Pattern;
@@ -137,6 +140,46 @@ public interface Text {
      */
     static Text join(final Text separator, final Iterable<? extends Text> parts) {
         return Strata.texts().join(separator, parts);
+    }
+
+    /**
+     * Makes text that shows an engine visual at its natural size, in the line where it lands. A label makes the line
+     * tall enough for it, and the text beside it is centered on the line. In {@link #plain()} it is
+     * {@link TextSpan#OBJECT_REPLACEMENT}.
+     *
+     * @param visual the visual
+     * @return the text
+     */
+    static Text visual(final Visual visual) {
+        return Strata.texts().inline(new InlineVisual(visual));
+    }
+
+    /**
+     * Makes text that shows a sprite as a square as tall as the line height of the style where it lands, so it sits
+     * in the text like a character. In {@link #plain()} it is {@link TextSpan#OBJECT_REPLACEMENT}.
+     *
+     * @param sprite the sprite
+     * @return the text
+     */
+    static Text sprite(final SpriteId sprite) {
+        return Strata.texts().inline(new InlineSprite(sprite));
+    }
+
+    /**
+     * Makes text that shows a sprite at a given size. A label makes the line tall enough for it, and the text beside
+     * it is centered on the line. In {@link #plain()} it is {@link TextSpan#OBJECT_REPLACEMENT}.
+     *
+     * @param sprite the sprite
+     * @param width its width in UI units
+     * @param height its height in UI units
+     * @return the text
+     * @throws IllegalArgumentException if the size is not positive and finite
+     */
+    static Text sprite(final SpriteId sprite, final float width, final float height) {
+        if (width == 0f && height == 0f) {
+            throw new IllegalArgumentException("Inline sprite size must be positive: 0 x 0");
+        }
+        return Strata.texts().inline(new InlineSprite(sprite, width, height));
     }
 
     /**

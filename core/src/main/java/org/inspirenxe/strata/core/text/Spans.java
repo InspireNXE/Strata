@@ -60,7 +60,8 @@ public final class Spans {
             if (span.text().isEmpty()) {
                 continue;
             }
-            if (!out.isEmpty() && out.getLast().style().equals(span.style())) {
+            if (!out.isEmpty() && !span.isInline() && !out.getLast().isInline()
+                    && out.getLast().style().equals(span.style())) {
                 final TextSpan last = out.removeLast();
                 out.add(last.withText(last.text() + span.text()));
             } else {
@@ -117,7 +118,7 @@ public final class Spans {
                 if (from > 0) {
                     out.add(span.withText(text.substring(0, from)));
                 }
-                out.add(new TextSpan(text.substring(from, to), change.apply(span.style())));
+                out.add(span.withText(text.substring(from, to)).withStyle(change.apply(span.style())));
                 if (to < text.length()) {
                     out.add(span.withText(text.substring(to)));
                 }
