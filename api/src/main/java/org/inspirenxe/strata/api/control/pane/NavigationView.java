@@ -85,10 +85,12 @@ import java.util.function.Function;
  *
  * <h2>Keyboard</h2>
  * <p>The view is one tab stop. While it has focus, a cursor marks one of the items the pane shows, starting on the
- * selected item: Up and Down move it, skipping headers, separators and disabled items, Home and End go to the first
- * and last, Enter and Space pick its item as a click does, Right expands an item with children, or opens its menu in
- * the column of icons, and Left collapses an expanded item or moves to its parent. With the pane hidden in
- * {@code MINIMAL}, Enter and Space open it as the toggle does. Tab moves on to the pane header, the pane footer and
+ * selected item: Up and Down move it, skipping headers, separators, disabled items and items whose rows are hidden,
+ * without wrapping, and Home and End go to the first and last; held keys repeat. Enter, keypad Enter and Space pick
+ * its item as a click does, and always activate it (not repeated). Right expands a collapsed item with children, or
+ * opens its menu in the column of icons. Left collapses an expanded item or moves to its parent, and does nothing in
+ * the column of icons. With the pane hidden in {@code MINIMAL}, Enter and Space open it as the toggle does. These
+ * keys work with any modifiers held, and only while the view itself has focus. Tab moves on to the pane header, the pane footer and
  * the content. The cursor's item draws {@value #STYLE_FOCUS} while the view has focus.</p>
  *
  * <h2>Pages and content</h2>

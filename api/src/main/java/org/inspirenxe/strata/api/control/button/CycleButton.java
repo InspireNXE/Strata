@@ -30,8 +30,9 @@ import java.util.function.Function;
  * A button that steps through a list of values, one on each click, and shows the current one after its label, as in
  * {@code Difficulty: Hard}.
  *
- * <p>A left click, or Enter or Space while the button has focus, selects the next value, and the first after the
- * last. A right click, or Shift held with any of those, selects the previous value, and the last before the first.
+ * <p>A left click, or Enter, keypad Enter or Space while the button has focus (not repeated), selects the next value,
+ * and the first after the last. A right click, or Shift held with any of those, selects the previous value, and the
+ * last before the first.
  * The button consumes those inputs. A disabled button ignores them and draws its disabled face. A step that lands on
  * the value already selected, as with a single value, changes nothing and fires no events.</p>
  *

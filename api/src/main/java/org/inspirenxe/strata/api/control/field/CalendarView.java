@@ -48,18 +48,21 @@ import java.util.function.Predicate;
  *
  * <h2>Input</h2>
  * <ul>
- *     <li>A click on a day picks it. A click on a day of the month before or after browses there first, then picks
- *     it.</li>
- *     <li>A click on the title zooms out, from the month to the year and from the year to the decade. A click on a
- *     month or a year zooms back in on it.</li>
+ *     <li>A left click on a day picks it. A click on a day of the month before or after browses there first, then
+ *     picks it.</li>
+ *     <li>A left click on the title zooms out, from the month to the year and from the year to the decade. A click on
+ *     a month or a year zooms back in on it.</li>
  *     <li>The arrows browse by a month, a year or a decade, and stop at the months of the range.</li>
  *     <li>The wheel is ignored, so scrolling over a calendar moves the panel it is in.</li>
  *     <li>While focused, a cursor marks one day: the picked date when it is in view, else today when it is in view,
- *     else the first of the month. The arrow keys move it by a day or a week, Page Up and Page Down by a month and,
- *     with Shift, by a year, and Home and End to the first and last day of the month. It passes over disabled days and
- *     stays inside the range. Moving past the month browses. Enter and Space pick the cursor's day. Control and Up
- *     zooms out, and Control and Down or Enter zooms in on the cursor's month or year. In the year and decade views
- *     the arrow keys move by one cell across and four up and down.</li>
+ *     else the first of the month. In the month view the arrow keys move it by a day or a week, Page Up and Page Down
+ *     by a month and, with Shift, by a year, and Home and End to the first and last day of the month. In the year
+ *     view the arrow keys move it by a month across and four months up and down, and Page Up and Page Down by a year;
+ *     in the decade view by a year across and four years up and down, and Page Up and Page Down by ten years. It
+ *     passes over disabled days and stays inside the range. Moving past what is in view browses. Held keys repeat.
+ *     In the month view, Enter, keypad Enter and Space pick the cursor's day (not repeated); in the year and decade
+ *     views they zoom in on the cursor's month or year. Control and Up zooms out, and Control and Down zooms in.
+ *     The calendar consumes these keys, and leaves other keys with Control or Alt alone.</li>
  *     <li>A disabled calendar takes no focus or clicks and draws every day disabled.</li>
  * </ul>
  *

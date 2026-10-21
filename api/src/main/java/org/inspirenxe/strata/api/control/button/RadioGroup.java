@@ -28,9 +28,11 @@ import java.util.Optional;
  * reports the value of the selected button. The group is not a component: place its buttons anywhere in the tree,
  * in any layout.
  *
- * <p>A new group has no buttons and nothing selected. Selecting a button deselects the one before it. Up and Left
- * move the selection and focus to the previous enabled, visible button in the group, and Down and Right to the next
- * one, wrapping at the ends.</p>
+ * <p>A new group has no buttons and nothing selected. Selecting a button deselects the one before it. While a button
+ * has focus, Up and Left move the selection and focus to the previous button in the group that is in a tree, enabled
+ * and visible, and Down and Right to the next one, wrapping at the ends. Held arrows repeat, and arrows with Control
+ * or Alt are left alone. The focused button consumes the arrows it acts on, even when no other button can take the
+ * selection.</p>
  *
  * <p>The group is an {@link EventTarget} of its own for {@link SingleSelection#SELECTED}, which carries the index
  * of the selected button in {@link #buttons()}. The event's {@linkplain org.inspirenxe.strata.api.event.Event#target()

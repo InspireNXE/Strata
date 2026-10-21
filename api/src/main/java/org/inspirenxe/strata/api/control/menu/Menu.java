@@ -41,9 +41,13 @@ import java.util.function.Consumer;
  * an item; it is only a hint and binds no key.</p>
  *
  * <p>An open menu takes focus. Hovering an item highlights it, and hovering a submenu item opens the submenu beside
- * it. Up and Down move the highlight past separators and disabled items, wrapping at the ends; Right and Left open
- * and close a submenu; Enter, keypad Enter and Space choose the highlighted item; Escape closes the menu it is
- * pressed in. Choosing an item, by click or key, closes the whole chain of menus and then runs the item's action.
+ * it. Up and Down move the highlight past separators and disabled items, wrapping at the ends, and repeat while held.
+ * Right on a highlighted submenu item opens its submenu with the first item highlighted and focused. When hovering
+ * already opened the submenu, Right moves focus into it and highlights its first item unless the pointer highlighted
+ * one there. Left in a submenu closes it and gives focus back to the menu it opened from. Enter, keypad Enter and Space choose the
+ * highlighted item, or open the submenu of a submenu item as Right does. Escape closes the menu it is pressed in,
+ * with its submenus, and focus goes back to the menu it opened from. These keys work with any modifiers held, and the
+ * menu consumes them. A left click on an item chooses it. Choosing an item, by click or key, closes the whole chain of menus and then runs the item's action.
  * Clicking outside closes the menus. When the first menu of a chain closes, focus goes back to where it was before
  * the chain opened.</p>
  *

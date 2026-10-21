@@ -27,9 +27,10 @@ import java.util.Optional;
 /**
  * A row of menu titles, each opening its {@link Menu} below it.
  *
- * <p>Clicking a title opens its menu, and clicking it again closes it. While one of the bar's menus is open, moving
- * the pointer onto another title opens that one instead, and Left and Right in a menu with no submenu open move to
- * the neighboring title's menu. Titles are their text plus 8 units on each side, and the bar is one line plus 6 units
+ * <p>A left click on a title opens its menu, and clicking it again closes it. While one of the bar's menus is open,
+ * moving the pointer onto another title opens that one instead. Right on an item with no submenu, in the open menu
+ * or any submenu of it, opens the next title's menu, and Left in the bar's own menu opens the previous one; both wrap
+ * at the ends, skip disabled titles and titles with no menu, and highlight the new menu's first item. Titles are their text plus 8 units on each side, and the bar is one line plus 6 units
  * tall. The bar is not focusable.</p>
  *
  * <p>The bar's selection is its open menu: {@link #selectedIndex()} is the index of the title whose menu is open, and

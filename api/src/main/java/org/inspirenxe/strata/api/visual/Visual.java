@@ -27,13 +27,21 @@ import org.inspirenxe.strata.api.geometry.Size;
  * {@link org.inspirenxe.strata.api.ComponentFactory#image(Visual)} or draw it with
  * {@link org.inspirenxe.strata.api.extension.Painter#visual}.</p>
  *
+ * <p>A visual is either a snapshot or live, and the adapter method that makes it says which. A snapshot shows the
+ * object as it was when the visual was made; to show a change, make a new visual. A live visual holds an object the
+ * caller made and owns, such as an image the caller draws into, and shows each change on the next paint.</p>
+ *
  * <h2>Requirements for implementors</h2>
  * <ul>
  *     <li>Only engine adapters implement this interface, for objects their own canvas can draw.</li>
- *     <li>Make visuals immutable. Copy mutable engine objects when the visual is made, so a later change to the
- *     original does not show; make a new visual to show the change.</li>
- *     <li>Implement {@code equals} and {@code hashCode} by what is drawn, so two visuals of the same thing are
- *     equal.</li>
+ *     <li>Keep the visual's own fields immutable. Its size never changes.</li>
+ *     <li>Make a snapshot of an object that something other than the caller can change, such as an engine object
+ *     the engine updates or shares: copy it when the visual is made, and implement {@code equals} and
+ *     {@code hashCode} by what is drawn, so two snapshots of the same thing are equal.</li>
+ *     <li>A visual may instead be live for an object the caller made and owns. It holds the object without copying
+ *     it, its canvas draws what the object holds at each paint with nothing cached that would hide a change, and two
+ *     live visuals are equal only when they hold the same object, by identity, at the same size.</li>
+ *     <li>State on each method that makes visuals whether they are snapshots or live.</li>
  * </ul>
  */
 public interface Visual {

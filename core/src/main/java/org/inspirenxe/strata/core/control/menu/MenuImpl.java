@@ -451,7 +451,17 @@ public final class MenuImpl extends BuiltInComponent<Menu> implements Menu, Core
 
     private void openSubmenu(final int index, final boolean fromKeyboard) {
         final MenuImpl submenu = this.items.get(index).submenu();
-        if (submenu == null || submenu.isOpen()) {
+        if (submenu == null) {
+            return;
+        }
+        if (submenu.isOpen()) {
+            // Opened by hovering, which kept focus here: the keyboard moves into it
+            if (fromKeyboard) {
+                submenu.requestFocus();
+                if (submenu.highlighted < 0) {
+                    submenu.highlightFirst();
+                }
+            }
             return;
         }
         final Rect bounds = this.bounds();

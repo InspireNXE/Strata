@@ -35,10 +35,11 @@ import java.time.LocalDate;
  * {@code 20.10.2026}, {@code 10/20/2026} or {@code 2026-10-20}. Days and months have two digits and years four.
  * Empty and unfocused, the field shows its placeholder. Focused and empty, each part shows dashes.</p>
  * <ul>
- *     <li>A click on a part focuses the field and that part. Left and Right move between the parts, and Tab leaves
+ *     <li>A left press on a part focuses the field and that part. Left and Right move between the parts, and Home
+ *     and End go to the first and last; Left on the first part and Right on the last are not consumed. Tab leaves
  *     the field.</li>
  *     <li>Up and Down step the focused part, wrapping within it without carrying into the next, so the 31st steps to
- *     the 1st and the month stays. An empty part starts from today's.</li>
+ *     the 1st and the month stays. The year does not wrap. An empty part starts from today's. Held keys repeat.</li>
  *     <li>Digits type into the focused part and move on to the next part when no further digit could fit, so typing
  *     {@code 2}, {@code 0}, {@code 1}, {@code 0} on a day-first field fills the day and the month. Typing a separator
  *     moves on too. Backspace empties the focused part.</li>
@@ -46,12 +47,15 @@ import java.time.LocalDate;
  *     every part is filled and they make a date. A day past the end of the month is cut to the last day, and a year
  *     typed with one or two digits becomes the year ending in them in the hundred years around today. A draft that is
  *     incomplete, not a date, outside the range or refused by the filter stays on Enter, and is dropped when the field
- *     loses focus, which then shows the date again. Escape drops the draft, and is consumed only when there was
- *     one, so an Escape with nothing to drop still closes a dialog.</li>
- *     <li>Delete clears the date while the picker is {@linkplain #isClearable() clearable}.</li>
- *     <li>The button at the right end opens the calendar, as do Alt and Down and F4 while the field has focus. The
- *     calendar shows the date's month, or today's, with the picker's range, filter and first day of the week. Focus
- *     moves into it. Picking a day sets the date, closes the calendar and returns focus to the field. Escape and a
+ *     loses focus, which then shows the date again. Enter is consumed only when there was a draft, and so is
+ *     Escape, which drops the draft, so an Enter or an Escape with nothing to take or drop still reaches a
+ *     dialog.</li>
+ *     <li>Delete drops the draft and clears the date while the picker is {@linkplain #isClearable() clearable}.</li>
+ *     <li>The keys above work only without Control or Alt held. The picker consumes every typed character while it
+ *     has focus.</li>
+ *     <li>A left press on the button at the right end opens the calendar, as do Alt and Down, and F4 without Control or Alt, while the field
+ *     has focus (not repeated). The calendar shows the date's month, or today's, with the picker's range, filter and
+ *     first day of the week. Focus moves into it, and its own keys apply. Picking a day sets the date, closes the calendar and returns focus to the field. Escape and a
  *     press outside close it with no change. The calendar is private to the picker and fires no events of its own.</li>
  *     <li>A disabled picker takes no focus, draws the {@link TextBox} disabled face and text, and cannot open.</li>
  * </ul>

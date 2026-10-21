@@ -47,17 +47,20 @@ import java.util.function.Function;
  *
  * <h2>Selection and input</h2>
  * <ul>
- *     <li>In the default {@link SelectionMode#SINGLE} mode at most one item is selected. A press on a row selects
- *     it; a press on the selected row deselects it only when the list {@linkplain #setDeselectable is deselectable}.
+ *     <li>In the default {@link SelectionMode#SINGLE} mode at most one item is selected. A left press on a row
+ *     selects it; a press on the selected row deselects it only when the list {@linkplain #setDeselectable is deselectable}.
  *     A cell that consumes the press, such as a button, keeps the row from being selected.</li>
  *     <li>In {@link SelectionMode#MULTIPLE} mode Control, Shift and Control+A select several rows, as that mode
  *     describes. Those changes ask {@link MultiSelection#SELECT_MANY} in place of
  *     {@link Selection#SELECT}, and every change of the selected rows reports
  *     {@link MultiSelection#SELECTED_MANY}.</li>
- *     <li>A double click, or Enter while the list has focus, {@linkplain Activatable#ACTIVATE activates} the
- *     selected item. With {@link #setActivateOnClick} a single click does, as in a drop-down.</li>
+ *     <li>A double press on a row {@linkplain Activatable#ACTIVATE activates} it, and so does Enter or keypad Enter
+ *     on the selected row while the list has focus (not repeated). With {@link #setActivateOnClick} a single left
+ *     click does instead of a double press, as in a drop-down.</li>
  *     <li>While focused: Up and Down move the selection, Page Up and Page Down by a viewport, Home and End to the
- *     ends; the list scrolls to keep the selection in view.</li>
+ *     ends; the list scrolls to keep the selection in view. With nothing selected, Up starts from the last row.
+ *     Held keys repeat. Keys with Alt are left alone, and so are keys with Control other than Control+A in
+ *     {@link SelectionMode#MULTIPLE} mode. An empty list takes no keys.</li>
  *     <li>The wheel and the scroll bar scroll as in {@link org.inspirenxe.strata.api.layout.ScrollPanel}, and the
  *     list uses its theme keys for the bar.</li>
  * </ul>

@@ -29,8 +29,11 @@ import org.inspirenxe.strata.api.control.button.Button;
  * number in the range: digits, one decimal point when {@linkplain #decimals() decimals} are allowed, and a leading
  * minus sign when the minimum is negative. Typed text becomes the value on Enter and when the field loses focus; text
  * that is not a number goes back to the current value. Up and Down step by one step while the field has focus, and
- * Page Up and Page Down by ten. The wheel steps while the pointer is over the spinner. The buttons sit at the right
- * edge, {@value #BUTTON_WIDTH} units wide, the upper half stepping up and the lower half down.</p>
+ * Page Up and Page Down by ten; held keys repeat, and with Control or Alt held they do nothing. The wheel
+ * steps once for each vertical scroll while the pointer is over the spinner, up when it turns away from the user. The
+ * buttons sit at the right edge, {@value #BUTTON_WIDTH} units wide, the upper half stepping up and the lower half
+ * down; a left press on one steps once, and holding it does not repeat. The spinner consumes the keys, scrolls and
+ * presses it acts on.</p>
  *
  * <p>The field is a private part of the spinner: its {@link TextBox} events reach the spinner but nothing above it,
  * so handlers outside see only {@link #CHANGE} and {@link #CHANGED}.</p>

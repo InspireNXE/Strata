@@ -86,9 +86,9 @@ import java.util.function.IntPredicate;
  *
  * <h2>Peeking</h2>
  * <ul>
- *     <li>An eye at the right end of the box toggles between the mask and the text on a click, and so does Alt+F8
- *     while the box has focus. The eye cannot take focus, so Tab order is the same with or without it and a press on
- *     it leaves focus in the box.</li>
+ *     <li>An eye at the right end of the box toggles between the mask and the text on a left click, and so does Alt+F8
+ *     while the box has focus (not repeated). The box consumes Alt+F8 even while it cannot reveal. The eye cannot
+ *     take focus, so Tab order is the same with or without it and a press on it leaves focus in the box.</li>
  *     <li>The eye shows while the box is {@linkplain #setRevealable revealable}, enabled and not empty. The text keeps
  *     the eye's room whenever the box is revealable, so it does not move when the eye appears.</li>
  *     <li>Text set from code cannot be revealed by the user until they clear the box or replace all of its text, so

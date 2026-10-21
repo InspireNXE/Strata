@@ -281,6 +281,17 @@ class DatePickerTest {
     }
 
     @Test
+    void altF4IsLeftForTheWindow() {
+        this.picker.requestFocus();
+        assertFalse(this.press(Key.F4, Modifiers.of(Modifier.ALT)), "Alt+F4 is not consumed");
+        assertFalse(this.picker.isOpen());
+        this.press(Key.F4);
+        assertTrue(this.picker.isOpen());
+        assertFalse(this.press(Key.F4, Modifiers.of(Modifier.ALT)), "nor while the calendar is open");
+        assertTrue(this.picker.isOpen());
+    }
+
+    @Test
     void escapeClosesTheCalendarWithNoChange() {
         this.picker.setDate(LocalDate.of(2026, 3, 3));
         this.events.clear();

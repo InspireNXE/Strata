@@ -34,20 +34,21 @@ import java.time.LocalTime;
  * <p>The time shows as hour, minute, the second while {@linkplain #isSecondsShown() shown} and, on a 12-hour clock,
  * the half of the day, such as {@code 14:05} or {@code 02:05 PM}. Every number has two digits. The clock and the names
  * of the halves follow the language unless code sets a {@linkplain #setClockFormat clock format}. The field edits the
- * way a {@link DatePicker}'s does: click or Left and Right to pick a part, Up and Down to step it (the minutes by the
+ * way a {@link DatePicker}'s does: a press or Left and Right to pick a part, Up and Down to step it (the minutes by the
  * {@linkplain #minuteStep() minute step}), digits to type, Backspace to empty a part, Enter or focus loss to take the
  * draft, Escape to drop it, and Delete to clear the time while {@linkplain #isClearable() clearable}. On the half of
  * the day, the first letter of either name picks it, and Up and Down flip it. An empty part starts from the current
  * time's.</p>
  *
  * <h2>The popup</h2>
- * <p>The button, Alt and Down, and F4 open a row of lists: hours (12, then 1 to 11, or 0 to 23), minutes in the minute step,
+ * <p>The button, Alt and Down, and F4 without Control or Alt open a row of lists: hours (12, then 1 to 11, or 0 to 23), minutes in the minute step,
  * seconds while shown, and the halves of the day on a 12-hour clock. Each row is a line plus 4 units tall, at most
  * seven show, and the row of the current value starts in the middle where the column allows. Picking a row sets
  * that part of the time at once; when the time was empty, the other parts start at zero. Focus stays in the field,
- * whose focused part is the column the keys work on: Left and Right move between columns, Up and Down pick the row
- * above or below at once, and Enter and Escape close the popup. The lists are private to the picker and fire no
- * events of their own.</p>
+ * whose focused part is the column the keys work on: Left and Right move between columns, Up and Down step the part
+ * as in the field and set the time at once, Enter takes the draft and closes the popup, and Escape drops the draft
+ * and closes it. F4 and Alt and Down close it too. Alt and F4 is left alone, for the window. Home, End, Backspace and Delete do nothing while it is open. The
+ * lists are private to the picker and fire no events of their own.</p>
  *
  * <h2>Events</h2>
  * <ul>

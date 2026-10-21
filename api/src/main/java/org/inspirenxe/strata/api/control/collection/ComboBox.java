@@ -31,14 +31,16 @@ import java.util.function.Function;
 /**
  * A drop-down: shows the selected option and opens a list of all options to pick from.
  *
- * <p>A click opens the list as a popup below the box (above it if there is more room there), at least as wide as
+ * <p>A left click opens the list as a popup below the box (above it if there is more room there), at least as wide as
  * the box. A click on an option selects it and closes the list; a click anywhere else, or Escape, closes it without
  * changing the selection. The list shows at most {@linkplain #setMaxVisibleOptions the maximum} rows and scrolls
  * the rest.</p>
  *
  * <p>While focused and closed: Up and Down select the previous and next option, Home and End the first and last,
- * and Enter, Space or Alt+Down open the list. While open: Up and Down move the highlight, Enter or Space selects it,
- * and Escape closes. A disabled box ignores input.</p>
+ * and Enter, keypad Enter, Space or Alt+Down open the list. The open list takes no focus, so the keys stay with the
+ * box: Up and Down move the highlight without wrapping, Enter, keypad Enter or Space selects it, and Escape closes.
+ * Held arrows repeat; Enter, Space and Alt+Down do not. A box with no options takes no keys, and a disabled box
+ * ignores input.</p>
  *
  * <p>Options are drawn with the {@linkplain #setLabelFunction label function}. The one that
  * {@link org.inspirenxe.strata.api.ComponentFactory#comboBox()} sets shows each option by its appearance's name, or

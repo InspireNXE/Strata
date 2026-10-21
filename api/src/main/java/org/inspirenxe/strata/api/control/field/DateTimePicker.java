@@ -46,11 +46,12 @@ import java.util.Optional;
  *
  * <h2>The field and the popup</h2>
  * <p>The field edits as those of {@link DatePicker} and {@link TimePicker} do, one part at a time, and its draft
- * becomes the value only when every part is filled. The button, Alt and Down, and F4 open the calendar beside the time
+ * becomes the value only when every part is filled. The button, Alt and Down, and F4 without Control or Alt open the calendar beside the time
  * columns. Focus stays in the field. Picking a day sets the date and leaves the popup open, so the time can follow;
  * picking a row sets that part of the time at once. Left and Right move through the field's parts, Up and Down step
- * the focused part and set the value at once, and Enter and Escape close the popup. The calendar and the columns
- * are private to the picker and fire no events of their own.</p>
+ * the focused part and set the value at once, Enter takes the draft and closes the popup, and Escape drops the draft
+ * and closes it. F4 and Alt and Down close it too. Alt and F4 is left alone, for the window. Home, End, Backspace and Delete do nothing while it is open. The
+ * calendar and the columns are private to the picker and fire no events of their own.</p>
  *
  * <h2>Events</h2>
  * <p>A change by the user first asks {@link #PICK} with the whole new value, then {@link HasDate#PICK_DATE} if the

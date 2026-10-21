@@ -197,6 +197,31 @@ class MenuWindowEventsTest {
         }
 
         @Test
+        void rightMovesIntoASubmenuThatHoveringOpened() {
+            this.show();
+            final MenuWindowEventsTest outer = MenuWindowEventsTest.this;
+            // More is the fifth row: 2 in, then One, the separator, Two and Check
+            outer.move(30, 10 + 2 + 15 + 5 + 15 + 15 + 7);
+            assertTrue(this.more.isOpen());
+            assertSame(this.menu, outer.test.focused(), "hovering keeps focus in the menu");
+            assertTrue(outer.key(Key.RIGHT));
+            assertSame(this.more, outer.test.focused());
+            outer.key(Key.ENTER);
+            assertEquals(List.of("deep"), outer.heard);
+        }
+
+        @Test
+        void enterMovesIntoASubmenuThatHoveringOpened() {
+            this.show();
+            final MenuWindowEventsTest outer = MenuWindowEventsTest.this;
+            outer.move(30, 10 + 2 + 15 + 5 + 15 + 15 + 7);
+            outer.key(Key.ENTER);
+            assertSame(this.more, outer.test.focused());
+            outer.key(Key.ENTER);
+            assertEquals(List.of("deep"), outer.heard);
+        }
+
+        @Test
         void codeFiresNoRequestButReportsClosing() {
             this.show();
             final List<String> heard = MenuWindowEventsTest.this.heard;

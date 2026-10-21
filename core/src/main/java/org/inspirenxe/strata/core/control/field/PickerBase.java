@@ -661,7 +661,9 @@ abstract class PickerBase<T extends Component<T>, V> extends BuiltInComponent<T>
         }
         final Key key = event.key();
         final boolean press = event.action() == KeyAction.PRESS;
-        if (key == Key.F4 && !event.modifiers().control() || key == Key.DOWN && event.modifiers().alt()) {
+        // Alt+F4 is left alone, since platforms use it to close the window
+        if (key == Key.F4 && !event.modifiers().control() && !event.modifiers().alt()
+                || key == Key.DOWN && event.modifiers().alt()) {
             if (press) {
                 if (this.isOpen()) {
                     this.close();

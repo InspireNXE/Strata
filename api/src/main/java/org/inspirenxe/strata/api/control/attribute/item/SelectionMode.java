@@ -24,8 +24,10 @@ public enum SelectionMode {
      */
     SINGLE,
     /**
-     * Any number of entries. A click selects one, Control and a click adds or removes one, Shift and a click selects
-     * the range from the anchor, Shift and the arrow keys extend the range, and Control+A selects every entry.
+     * Any number of entries. A press selects one, Control and a press adds or removes one, Shift and a press selects
+     * the range from the anchor, Shift and the keys that move the selection (the arrows, Page Up, Page Down, Home
+     * and End) extend the range, and Control+A selects every entry. Those keys without Shift select only the entry
+     * they move to.
      */
     MULTIPLE
 }

@@ -31,8 +31,8 @@ import java.util.Optional;
  * its tooltip.
  *
  * <p>Tabs share the bar's width equally, with {@linkplain #setSpacing the spacing} between them, and are one line
- * plus 7 units tall. A click on an enabled tab selects it. While the bar has focus, Left and Right select the
- * previous and next enabled tab. Each tab can have its own tooltip, such as one that says why it is disabled. The
+ * plus 7 units tall. A left click on an enabled tab selects it. While the bar has focus, Left and Right select the
+ * previous and next enabled tab, without wrapping, and repeat while held; the bar consumes them even at the ends. Each tab can have its own tooltip, such as one that says why it is disabled. The
  * first tab added is selected; a bar with no tabs has none.</p>
  *
  * <p>The bar is focusable and tabbable, and each tab shows the hand cursor while enabled.</p>
