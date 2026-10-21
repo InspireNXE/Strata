@@ -21,9 +21,10 @@ import org.inspirenxe.strata.api.geometry.Insets;
 import java.util.List;
 
 /**
- * Strata's half of a {@link org.inspirenxe.strata.api.extension.CustomContainer}. Each method has the meaning of
- * the {@link org.inspirenxe.strata.api.component.Container} method of the same name, with setters returning
- * nothing. Not for use outside Strata.
+ * Strata's half of a {@link org.inspirenxe.strata.api.extension.CustomComposite} or
+ * {@link org.inspirenxe.strata.api.extension.CustomContainer}. Each method has the meaning of the
+ * {@link org.inspirenxe.strata.api.component.Container} method of the same name, with setters returning nothing. Not
+ * for use outside Strata.
  */
 public interface ContainerPeer extends ComponentPeer {
 

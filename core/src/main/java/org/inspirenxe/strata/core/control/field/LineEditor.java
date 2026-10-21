@@ -508,8 +508,8 @@ final class LineEditor {
         float xForIndex(TextMetrics metrics, int index);
 
         /**
-         * The code point boundary nearest to {@code x}, which is positive, from the start of the text. Called after
-         * {@link #layoutText}.
+         * The code point boundary nearest to {@code x}, measured from the start of the text and always above 0.
+         * Called after {@link #layoutText}.
          */
         int indexForX(TextMetrics metrics, float x);
 

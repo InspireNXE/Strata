@@ -62,7 +62,7 @@ public final class Themes {
 
     /**
      * Returns a dark theme made of solid colors only, so it works on any engine without image assets. It defines
-     * every key of every built-in control.
+     * every required key of every built-in control.
      *
      * @return the flat theme
      */

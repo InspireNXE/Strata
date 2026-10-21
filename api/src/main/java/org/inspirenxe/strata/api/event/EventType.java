@@ -25,8 +25,8 @@ import java.util.Objects;
 
 /**
  * A typed key for one kind of event, used to register handlers with {@link EventTarget#onEvent}. Input types are in
- * {@link InputEvents}, and each control declares its own as constants on its interface. Types are compared by
- * identity in dispatch, so always use the constants rather than creating equal copies.
+ * {@link InputEvents}, and each control declares its own as constants on its interface. Strata picks a component's
+ * default behavior by comparing types by identity, so always use the constants rather than creating equal copies.
  *
  * @param <E> the event interface handlers receive
  * @param name a readable name, for debugging

@@ -156,8 +156,8 @@ import java.util.function.Supplier;
  */
 public final class ComponentFactoryImpl implements ComponentFactory {
     /**
-     * The cell padding when the theme sets no {@link ListView#STYLE_CELL_PADDING}: {@value ComponentFactory#CELL_PADDING} units
-     * at the sides.
+     * The cell padding when the theme sets no {@link ListView#STYLE_CELL_PADDING}:
+     * {@value ComponentFactory#CELL_PADDING} units at the sides.
      */
     public static final Insets DEFAULT_CELL_PADDING = new Insets(CELL_PADDING, 0f, CELL_PADDING, 0f);
 

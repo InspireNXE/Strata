@@ -106,7 +106,7 @@ import java.util.function.Function;
  */
 public interface ComponentFactory {
     /**
-     * The margin, in UI units, on each side of the text in a row's default cell when the theme sets no
+     * The margin, in UI units, on the left and right of the text in a row's default cell when the theme sets no
      * {@value org.inspirenxe.strata.api.control.collection.ListView#STYLE_CELL_PADDING}; see
      * {@link #cellLabel(String)}.
      */
@@ -720,8 +720,8 @@ public interface ComponentFactory {
     }
 
     /**
-     * Makes a {@link TreeView} with no roots and no children function, whose cells are labels showing
-     * {@link String#valueOf(Object)} of each item. Set other cells with {@code setCellFactory}.
+     * Makes a {@link TreeView} with no roots and no children function, whose rows show each item's
+     * {@linkplain #cell(Object) appearance}. Set other cells with {@code setCellFactory}.
      *
      * @param <T> the type of the items
      * @return a new tree
@@ -927,8 +927,7 @@ public interface ComponentFactory {
     <T> GridView<T> gridView(Function<? super T, ? extends Component<?>> cellFactory);
 
     /**
-     * Makes a {@link CycleButton} with no label and no values that shows each value as
-     * {@link String#valueOf(Object)}.
+     * Makes a {@link CycleButton} with no label and no values that shows each value by its appearance's name.
      *
      * @param <T> the type of the values
      * @return a new cycle button
@@ -938,7 +937,7 @@ public interface ComponentFactory {
     }
 
     /**
-     * Makes a {@link CycleButton} with no values that shows each value as {@link String#valueOf(Object)}.
+     * Makes a {@link CycleButton} with no values that shows each value by its appearance's name.
      *
      * @param <T> the type of the values
      * @param text the label shown before the value

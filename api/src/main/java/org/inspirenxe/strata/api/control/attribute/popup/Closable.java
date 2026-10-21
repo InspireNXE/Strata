@@ -23,7 +23,7 @@ import org.inspirenxe.strata.api.event.control.RequestEvent;
 /**
  * Something that can be closed, such as a window, an overlay, a combo box's list or a menu.
  *
- * <p>Only Strata implements this interface.</p>
+ * <p>Do not implement this interface.</p>
  *
  * @param <S> the control's own type, which {@link #close()} returns
  */

@@ -30,7 +30,7 @@ import java.util.Optional;
 /**
  * A strip inside a screen's layout that tells the user something about the screen, such as a failed save or a
  * message from a server: a severity, a title, a message, an optional action and an optional close button. It stays
- * until it is closed, where a toast closes itself after its time.
+ * until it is closed, unlike a toast, which closes itself after a while.
  *
  * <p>From the left, the bar shows an accent strip {@value #ACCENT_WIDTH} units wide in the severity's color, the
  * severity's icon when the theme has one, the {@linkplain #title() title} in the title style, the
@@ -47,8 +47,8 @@ import java.util.Optional;
  * {@link Openable#OPEN}, since only code opens a bar. {@code setVisible} stays separate from opening and closing, so
  * layout code that hides a bar does not count as the user closing it.</p>
  *
- * <p>The action is the developer's content, so its control events, such as a button's {@code PRESSED}, pass the bar
- * on to its ancestors. Pressing it does not close the bar; a handler does that if wanted. The bar itself takes no
+ * <p>The action is the developer's content, so its control events, such as a button's {@code PRESSED}, go through
+ * the bar to its ancestors. Pressing it does not close the bar; a handler does that if wanted. The bar itself takes no
  * focus. Disabled, the bar and everything in it take no input.</p>
  *
  * <h2>Events</h2>
@@ -74,8 +74,8 @@ import java.util.Optional;
  *     bold.</li>
  *     <li>{@value #STYLE_TEXT} (text style, optional): the message. Falls back to the default text style.</li>
  *     <li>{@value #STYLE_CLOSE} and {@value #STYLE_CLOSE_HOVERED} (text style, optional): the close button's
- *     {@code x}, and while the pointer is over it or it has focus. Fall back to the window's close button keys,
- *     then to {@value #STYLE_TEXT}.</li>
+ *     {@code x}, and while the pointer is over it or it has focus. Each falls back to the window's matching close
+ *     button key, then the first to {@value #STYLE_TEXT} and the second to the first.</li>
  *     <li>{@value #STYLE_PADDING} (insets, optional): between the accent strip and the bar's other edges and its
  *     contents. Defaults to 6 at the sides and 4 at the top and bottom.</li>
  * </ul>
@@ -161,12 +161,12 @@ public interface InfoBar extends Component<InfoBar>, HasCursor<InfoBar>, HasTool
     String STYLE_TEXT = "infobar.text";
     /**
      * Style key for the close button's {@code x} (text style, optional). Falls back to the window's
-     * {@code window.close}.
+     * {@code window.close}, then to {@value #STYLE_TEXT}.
      */
     String STYLE_CLOSE = "infobar.close";
     /**
      * Style key for the close button's {@code x} while hovered or focused (text style, optional). Falls back to the
-     * window's {@code window.close.hovered}.
+     * window's {@code window.close.hovered}, then to {@value #STYLE_CLOSE}.
      */
     String STYLE_CLOSE_HOVERED = "infobar.close.hovered";
     /**
@@ -237,8 +237,8 @@ public interface InfoBar extends Component<InfoBar>, HasCursor<InfoBar>, HasTool
 
     /**
      * Shows a component after the message, such as a button that tries again. It is content, so its control events
-     * pass the bar. It replaces the action set before, which leaves the tree. While the bar is closed, the action is
-     * kept and joins the tree when the bar opens.
+     * go through the bar. It replaces the action set before, which leaves the tree. While the bar is closed, the
+     * action is kept and joins the tree when the bar opens.
      *
      * @param action the component, or {@code null} to remove the action
      * @return this bar

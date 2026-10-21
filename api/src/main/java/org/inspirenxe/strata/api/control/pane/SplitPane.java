@@ -30,11 +30,11 @@ import org.inspirenxe.strata.api.layout.Orientation;
  *
  * <p>A {@link Orientation#HORIZONTAL} pane puts the first component on the left and the second on the right, with a
  * vertical divider; a {@link Orientation#VERTICAL} one puts the first on top. The divider is {@value #DIVIDER_SIZE}
- * units thick and shows a resize cursor. Its position is the fraction of the space, after the divider, that the
- * first component gets. Dragging moves it, kept so neither side is smaller than its {@linkplain #setMinSizes minimum}
- * when there is room for both. Each move by a drag fires {@link #MOVE}, and every change fires {@link #MOVED}. Each
- * side is placed in its part by its own alignment, so give it {@link org.inspirenxe.strata.api.layout.Anchor#FILL}
- * to fill the part.</p>
+ * units thick and shows a resize cursor. Its position is the fraction of the space left beside the divider that the
+ * first component gets. Dragging moves it, kept so neither side is smaller than its
+ * {@linkplain #setMinSizes minimum} when there is room for both. Each move by a drag fires {@link #MOVE}, and every
+ * change fires {@link #MOVED}. Each side is placed in its part by its own alignment, so give it
+ * {@link org.inspirenxe.strata.api.layout.Anchor#FILL} to fill the part.</p>
  *
  * <p>The desired size is the two components' desired sizes and the divider along the split, and the larger of the
  * two across it. A missing side counts as empty.</p>

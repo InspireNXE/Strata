@@ -181,7 +181,7 @@ public sealed interface Paint {
      * A sprite repeated from the rectangle's top left corner, one copy per {@code size}. The copies in the last
      * column and row are cropped to the rectangle.
      *
-     * <p>An engine that stores the slicing with the image may use that instead; keep the two in agreement so
+     * <p>An engine that stores the tiling with the image may use that instead; keep the two in agreement so
      * every engine draws the same.</p>
      *
      * @param sprite the sprite

@@ -95,7 +95,7 @@ final class TextBoundaries {
 
     /**
      * The run of word or whitespace characters around an index, as {start, end}, stopping at line breaks. At the very
-     * end of the text, the run before it. The whole text when it is one word.
+     * end of the text it is the run before the end, and when the text is one word it is the whole text.
      */
     int[] wordAround(final int index) {
         final int length = this.buffer.length();

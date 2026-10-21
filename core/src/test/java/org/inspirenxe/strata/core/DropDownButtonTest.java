@@ -186,7 +186,7 @@ class DropDownButtonTest {
             assertEquals(new Fill(new Rect(10, 10, 51, 20), NORMAL), canvas.fills.getFirst());
             // Inside the padding less the gap and the arrow, which is exactly the caption's width
             assertEquals(new Drawn("Sort", 18, 15.5f), canvas.texts.getFirst());
-            // The combo box's arrow: four shrinking lines, 7 by 4, against the right padding
+            // The same arrow as the combo box: four shrinking lines, 7 by 4, against the right padding
             assertEquals(List.of(new Fill(new Rect(46, 18, 7, 1), TEXT), new Fill(new Rect(47, 19, 5, 1), TEXT),
                     new Fill(new Rect(48, 20, 3, 1), TEXT), new Fill(new Rect(49, 21, 1, 1), TEXT)),
                     canvas.fillsAfter(1, 4));

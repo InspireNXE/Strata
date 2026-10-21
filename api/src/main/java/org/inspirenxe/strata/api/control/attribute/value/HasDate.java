@@ -38,7 +38,7 @@ import java.util.function.Predicate;
  * form.onEvent(HasDate.DATE_PICKED, event -> this.save());
  * }</pre>
  *
- * <p>Only Strata implements this interface.</p>
+ * <p>Do not implement this interface.</p>
  *
  * @param <S> the control's own type, which the setters return
  */

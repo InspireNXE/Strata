@@ -33,8 +33,8 @@ import java.util.Objects;
  * selected button leaves it selected. Arrow keys move the selection through the group, as {@link RadioGroup}
  * describes. It consumes those inputs. Each selection by the user fires {@link Toggle#TOGGLE} with true on the
  * button about to be selected. Every change fires {@link Toggle#TOGGLED} on each button whose state changed, then
- * {@link SingleSelection#SELECTED} on the group. A disabled button does
- * none of this and draws its disabled look.</p>
+ * {@link SingleSelection#SELECTED} on the group. A disabled button does none of this and draws its disabled
+ * look.</p>
  *
  * <p>It is focusable and tabbable and shows the hand cursor. It measures and lays out like a {@link CheckBox}: a
  * square box the caption's line height plus 8 units on a side, the caption 4 units to its right.</p>

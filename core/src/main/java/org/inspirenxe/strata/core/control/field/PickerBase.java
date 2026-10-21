@@ -381,7 +381,7 @@ abstract class PickerBase<T extends Component<T>, V> extends BuiltInComponent<T>
     /**
      * Takes the draft as the value if it is complete and valid.
      *
-     * @param drop whether a draft that is not is dropped
+     * @param drop whether to drop a draft that is not complete and valid
      */
     final void commit(final boolean drop) {
         if (!this.field.isDirty()) {

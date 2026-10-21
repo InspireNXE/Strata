@@ -37,7 +37,7 @@ public final class Strata {
      * Returns the factory that makes text.
      *
      * @return the factory
-     * @throws IllegalStateException if Strata's core is not on the class path, or more than one provider is
+     * @throws IllegalStateException if Strata's core is missing from the class path or more than one provider is on it
      */
     public static TextFactory texts() {
         return Strata.provider().texts();
@@ -47,7 +47,7 @@ public final class Strata {
      * Returns the appearances registered for the process.
      *
      * @return the registry
-     * @throws IllegalStateException if Strata's core is not on the class path, or more than one provider is
+     * @throws IllegalStateException if Strata's core is missing from the class path or more than one provider is on it
      */
     public static Appearances appearances() {
         return Strata.provider().appearances();
@@ -57,7 +57,7 @@ public final class Strata {
      * Returns the themes and theme overrides added in code for the process.
      *
      * @return the registry
-     * @throws IllegalStateException if Strata's core is not on the class path, or more than one provider is
+     * @throws IllegalStateException if Strata's core is missing from the class path or more than one provider is on it
      */
     public static ThemeRegistry themes() {
         return Strata.provider().themes();

@@ -24,7 +24,7 @@ import org.inspirenxe.strata.core.node.ComponentFactoryImpl;
 
 /**
  * The core {@link Spacer}. It measures as 0 by 0, so its fixed size, minimum size or slot decides how big it is, and
- * it paints nothing beyond the background and border every component has. It stretches on both axes by default, so
+ * it draws nothing. It stretches on both axes by default, so
  * it fills a weighted share without being told to.
  */
 public final class SpacerImpl extends BuiltInComponent<Spacer> implements Spacer {

@@ -21,8 +21,7 @@ package org.inspirenxe.strata.api.input;
  * <p>Each adapter maps its engine's key codes (GLFW, SDL, AWT) to these constants, so no engine number reaches a
  * component. Keys name physical positions on a US layout: {@link #A} is the key labeled A there, whatever the
  * user's layout prints on it. Use {@link org.inspirenxe.strata.api.event.input.CharEvent} for the characters a user
- * types.
- * Adapters map any key they cannot identify to {@link #UNKNOWN}.</p>
+ * types. Adapters map any key they cannot identify to {@link #UNKNOWN}.</p>
  *
  * <p>Ordinals carry no meaning and may change between versions; store keys by {@link #name()}.</p>
  */

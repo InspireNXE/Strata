@@ -34,7 +34,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * What a password box leaves behind in memory: the buffer zeroes what it frees, and the host wipes boxes when their
+ * What a password box leaves behind in memory: the buffer zeroes what it frees, and a box wipes itself when its
  * screen or overlay closes. These tests read the buffer's array through its test hook.
  */
 class SecretBufferTest {

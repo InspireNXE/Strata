@@ -90,7 +90,7 @@ class InfoBarTest {
     }
 
     /**
-     * Finds the close button: the one tab stop that is not a button, since the bars here hold only buttons.
+     * Finds the close button: the first tab stop that is not a {@code Button}, since every other control here is one.
      */
     private Component<?> closeButton() {
         return this.test.tabOrder().stream()

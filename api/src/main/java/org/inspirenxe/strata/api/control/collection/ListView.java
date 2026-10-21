@@ -33,7 +33,7 @@ import java.util.Optional;
 import java.util.function.Function;
 
 /**
- * A scrolling list of items, each shown as a row built by a cell factory, with single selection.
+ * A scrolling list of items, each shown as a row built by a cell factory, that selects one item or several.
  *
  * <h2>Rows</h2>
  * <p>Every row is {@linkplain #setRowHeight the row height} tall, with {@linkplain #setRowSpacing the row
@@ -47,9 +47,13 @@ import java.util.function.Function;
  *
  * <h2>Selection and input</h2>
  * <ul>
- *     <li>At most one item is selected. A press on a row selects it; a press on the selected row deselects it only
- *     when the list {@linkplain #setDeselectable is deselectable}. A cell that consumes the press, such as a button,
- *     keeps the row from being selected.</li>
+ *     <li>In the default {@link SelectionMode#SINGLE} mode at most one item is selected. A press on a row selects
+ *     it; a press on the selected row deselects it only when the list {@linkplain #setDeselectable is deselectable}.
+ *     A cell that consumes the press, such as a button, keeps the row from being selected.</li>
+ *     <li>In {@link SelectionMode#MULTIPLE} mode Control, Shift and Control+A select several rows, as that mode
+ *     describes. Those changes ask {@link MultiSelection#SELECT_MANY} in place of
+ *     {@link Selection#SELECT}, and every change of the selected rows reports
+ *     {@link MultiSelection#SELECTED_MANY}.</li>
  *     <li>A double click, or Enter while the list has focus, {@linkplain Activatable#ACTIVATE activates} the
  *     selected item. With {@link #setActivateOnClick} a single click does, as in a drop-down.</li>
  *     <li>While focused: Up and Down move the selection, Page Up and Page Down by a viewport, Home and End to the
@@ -58,8 +62,9 @@ import java.util.function.Function;
  *     list uses its theme keys for the bar.</li>
  * </ul>
  *
- * <p>{@link #setItems} keeps the selection on the item with the same {@linkplain #setKeyFunction key}, so a list
- * refreshed from the server keeps the row the user picked. If no item has that key, nothing is selected.</p>
+ * <p>{@link #setItems} keeps each selected item selected if an item with the same {@linkplain #setKeyFunction key}
+ * is still there, so a list refreshed from the server keeps the row the user picked. If no item has that key,
+ * nothing is selected.</p>
  *
  * <p>The events carry row indexes, so read the item from the list: {@code list.items().get(e.value())}. Handle
  * {@link Selection#SELECT} or {@link Activatable#ACTIVATE} to refuse or change what the user does, and

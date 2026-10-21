@@ -50,9 +50,8 @@ import java.util.function.Function;
  * otherwise, plus the focus ring when the theme has one. The text is {@code label: value}, centered.
  *
  * <p>The button is focusable and tabbable, shows a hand cursor, and is at least 20 by 20 units. Its desired size is
- * the widest text over all items, with the theme's {@value Button#STYLE_PADDING} around it, or else
- * {@link ButtonImpl#DEFAULT_PADDING}. A new
- * button has no items and shows only its label.</p>
+ * the widest text over all items, with the theme's {@value Button#STYLE_PADDING} around it, or
+ * {@link ButtonImpl#DEFAULT_PADDING} when the theme sets none. A new button has no items and shows only its label.</p>
  *
  * @param <T> the type of the values
  */

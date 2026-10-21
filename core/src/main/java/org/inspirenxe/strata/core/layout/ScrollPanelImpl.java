@@ -131,8 +131,8 @@ public final class ScrollPanelImpl extends BuiltInContainer<ScrollPanel> impleme
     }
 
     /**
-     * Moves to an offset, clamped once laid out, and fires {@link ScrollPanel#SCROLLED} on a change. The states are
-     * only made when a handler is on the path.
+     * Moves to an offset, clamped once laid out, and fires {@link ScrollPanel#SCROLLED} on a change. The states the
+     * event carries are made only when a handler is on the path.
      *
      * @return true if the offset changed
      */

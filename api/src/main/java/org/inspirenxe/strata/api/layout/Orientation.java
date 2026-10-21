@@ -16,7 +16,8 @@
 package org.inspirenxe.strata.api.layout;
 
 /**
- * The direction a {@link StackPanel} lays out its children.
+ * The direction a {@link StackPanel} lays out its children, or the way a control such as a slider, separator, scroll
+ * bar or split pane runs.
  */
 public enum Orientation {
     /** Left to right, in a row. */

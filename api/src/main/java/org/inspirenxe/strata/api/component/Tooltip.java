@@ -27,14 +27,14 @@ import java.util.function.Function;
  *
  * <p>The host shows a tooltip once the pointer has rested on its component for the host's tooltip delay,
  * {@value #DEFAULT_DELAY_MILLIS} milliseconds unless the adapter sets another, or at once when the pointer moves
- * straight from another component's tooltip. It moves with the pointer: 12 units
- * right of and 12 units above the pointer, flipped to the left side when it would leave the host on the right, and
- * kept inside the host. Tooltips take no input. Text tooltips draw on the {@value #STYLE_BACKGROUND} paint inside
- * the {@value #STYLE_PADDING} insets, 4 units on every side by default. Their plain parts are drawn in the {@value #STYLE_TEXT} text style, and styled parts change
- * it; see {@link Text}.</p>
+ * straight from another component's tooltip. It moves with the pointer: 12 units right of and 12 units above the
+ * pointer, flipped to the left side when it would leave the host on the right, and kept inside the host. Tooltips
+ * take no input. Text tooltips draw on the {@value #STYLE_BACKGROUND} paint inside the {@value #STYLE_PADDING}
+ * insets, 4 units on every side by default. Their plain parts are drawn in the {@value #STYLE_TEXT} text style, and
+ * styled parts change it; see {@link Text}.</p>
  *
- * <p>The {@link Lines} kind is drawn by Strata. Engine adapters can offer factory methods that
- * build tooltips from engine objects, such as the lines an engine shows for one of its items.</p>
+ * <p>The {@link Lines} kind is drawn by Strata. Engine adapters can offer factory methods that build tooltips from
+ * engine objects, such as the lines an engine shows for one of its items.</p>
  */
 public sealed interface Tooltip {
     /**

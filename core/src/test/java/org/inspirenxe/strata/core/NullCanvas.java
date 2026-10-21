@@ -27,7 +27,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * A canvas that records fills and text, and checks clip and transform pushes stay balanced.
+ * A canvas that records fills and text, counts clip and transform pushes, and throws when a pop has no matching push.
  */
 public final class NullCanvas implements Canvas {
     private final List<Rect> fills;

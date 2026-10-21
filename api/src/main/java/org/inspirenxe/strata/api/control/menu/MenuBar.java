@@ -130,9 +130,10 @@ public interface MenuBar extends Component<MenuBar>, HasCursor<MenuBar>, HasTool
      * Adds a title at the right end, as {@code addMenu(factory.submenuItem(title).setMenu(menu))} would.
      *
      * @param title the title
-     * @param menu the menu it opens; it must not belong to another bar or be a submenu
+     * @param menu the menu it opens; it must not belong to another bar, be a submenu or be held by a drop-down button
      * @return this bar
-     * @throws IllegalArgumentException if {@code menu} already belongs to a bar or is a submenu
+     * @throws IllegalArgumentException if {@code menu} already belongs to a bar, is a submenu or is held by a
+     *     {@link org.inspirenxe.strata.api.control.button.DropDownButton}
      */
     MenuBar addMenu(Text title, Menu menu);
 
@@ -140,9 +141,10 @@ public interface MenuBar extends Component<MenuBar>, HasCursor<MenuBar>, HasTool
      * Does the same as {@link #addMenu(Text, Menu)} with literal text.
      *
      * @param title the title
-     * @param menu the menu it opens; it must not belong to another bar or be a submenu
+     * @param menu the menu it opens; it must not belong to another bar, be a submenu or be held by a drop-down button
      * @return this bar
-     * @throws IllegalArgumentException if {@code menu} already belongs to a bar or is a submenu
+     * @throws IllegalArgumentException if {@code menu} already belongs to a bar, is a submenu or is held by a
+     *     {@link org.inspirenxe.strata.api.control.button.DropDownButton}
      */
     default MenuBar addMenu(final String title, final Menu menu) {
         return this.addMenu(Text.of(title), menu);
@@ -167,7 +169,7 @@ public interface MenuBar extends Component<MenuBar>, HasCursor<MenuBar>, HasTool
     /**
      * Opens the menu under a title, closing the one open before, or closes the open menu for -1. Fires
      * {@link SingleSelection#SELECTED} if that changed which menu is open, and never {@link SingleSelection#SELECT}.
-     * A menu with no items, a disabled title, or a bar that is not attached, stays closed.
+     * A menu with no items, a menu under a disabled title, and every menu of a bar that is not attached stay closed.
      *
      * @param index the title index, or -1
      * @return this bar

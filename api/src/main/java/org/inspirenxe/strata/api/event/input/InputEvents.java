@@ -18,7 +18,7 @@ package org.inspirenxe.strata.api.event.input;
 import org.inspirenxe.strata.api.event.EventType;
 
 /**
- * The event types Strata fires. Every component can receive every type; built-in controls act on the ones listed
+ * The input event types Strata fires. Every component can receive every type; built-in controls act on the ones listed
  * under "default behavior" below. Positions in pointer events are in the host's coordinates.
  */
 public final class InputEvents {
@@ -50,7 +50,7 @@ public final class InputEvents {
     /**
      * A press and release of the same button on the target, without a drag in between, with the pointer still over
      * the target at release and the target enabled. Bubbles. Fired after {@link #POINTER_RELEASE}. Default behavior:
-     * a button runs its actions on a left click.
+     * a button presses on a left click.
      */
     public static final EventType<PointerButtonEvent> CLICK = EventType.bubbling("click", PointerButtonEvent.class);
     /**

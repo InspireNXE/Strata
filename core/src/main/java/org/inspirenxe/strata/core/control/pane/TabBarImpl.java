@@ -48,13 +48,14 @@ import java.util.Set;
 
 /**
  * The core {@link TabBar}. Each {@link TabImpl} is drawn by a private child component, so it can have its own hover
- * and tooltip. A tab
- * asks for its text plus 8 units on each side. Tabs stay enabled as components even when they cannot be selected,
- * so a disabled tab still shows its tooltip.
+ * and tooltip. A tab asks for its text plus the larger of its normal and selected padding, so selecting it never moves
+ * its neighbors. Tabs stay enabled as components even when they cannot be selected, so a disabled tab still shows its
+ * tooltip.
  */
 public final class TabBarImpl extends BuiltInComposite<TabBar> implements TabBar {
     /**
-     * The space around a tab's text, in UI units, when the theme sets no {@value #STYLE_PADDING}.
+     * The space around a tab's text, in UI units, when the theme sets no {@value #STYLE_PADDING}: 8 at the sides,
+     * 4 at the top and 3 at the bottom.
      */
     public static final Insets DEFAULT_PADDING = new Insets(8f, 4f, 8f, 3f);
     private static final Set<String> REQUIRED = Set.of(STYLE_NORMAL, STYLE_SELECTED);

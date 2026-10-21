@@ -23,8 +23,8 @@ import java.util.Objects;
 import java.util.Optional;
 
 /**
- * The base of every core event. It holds the target, the component currently handling the event, and the
- * canceled and propagation flags, and the snapshots taken when it fired. Only {@link EventRouter} moves
+ * The base of every core event. It holds the target, the component currently handling the event, the canceled
+ * and propagation flags, and the snapshots taken when it fired. Only {@link EventRouter} moves
  * {@link #current()} and sets the snapshots.
  */
 public abstract class EventImpl implements Event {

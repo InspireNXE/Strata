@@ -35,8 +35,8 @@ import java.util.Optional;
  * What dates and times look like in the current language: month and weekday names, the first day of the week, the
  * order and separator of a date's parts, the 12 or 24 hour clock, and the names of the halves of the day.
  *
- * <p>Each piece is read from the translator first, under the keys below, and else from {@code java.time}'s data for
- * the translator's {@linkplain Translator#locale() locale}. Unlike other translated text, these keys skip
+ * <p>Each piece is read from the translator first, under the keys below, and if it has none, from {@code java.time}'s
+ * data for the translator's {@linkplain Translator#locale() locale}. Unlike other translated text, these keys skip
  * {@link Translations#DEFAULTS}, whose English would hide the locale's data, and a missing key is not logged. A value
  * that does not parse is ignored and the locale's data is used.</p>
  * <ul>
@@ -59,8 +59,9 @@ import java.util.Optional;
  * <p>The separator between hours, minutes and seconds comes from the short time pattern, {@code :} when it has none,
  * and has no key.</p>
  *
- * <p>{@link #current()} keeps the last result and makes a new one only when the locale or {@link Translations#version()}
- * changed, so controls can call it from every measure. Instances are immutable and may be used from any thread.</p>
+ * <p>{@link #current()} keeps the last result and makes a new one only when the locale or
+ * {@link Translations#version()} changed, so controls can call it from every measure. Instances are immutable and may
+ * be used from any thread.</p>
  */
 public final class DateFormats {
     private static volatile DateFormats cached;

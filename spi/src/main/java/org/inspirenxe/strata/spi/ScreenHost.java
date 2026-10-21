@@ -51,7 +51,9 @@ public interface ScreenHost extends InputSink {
      * @param screen the screen to show
      * @throws org.inspirenxe.strata.api.theme.ThemeException if the theme lacks keys the screen's tree needs; no
      *                                                         screen is open afterwards
-     * @throws IllegalArgumentException if the screen's {@code build} returns a component it may not use
+     * @throws IllegalArgumentException if the screen's {@code build} returns a component that is already in a tree,
+     *                                  that implements a component interface directly, or that another host's
+     *                                  factory made
      */
     void open(Screen screen);
 

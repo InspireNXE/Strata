@@ -232,8 +232,7 @@ public interface CalendarView extends Component<CalendarView>, Focusable<Calenda
     Zoom zoom();
 
     /**
-     * Shows a month, the twelve months of a year, or twelve years around a decade, all around the month in view.
-     * Fires no event.
+     * Shows the month in view, the twelve months of its year, or twelve years around its decade. Fires no event.
      *
      * @param zoom the zoom
      * @return this calendar

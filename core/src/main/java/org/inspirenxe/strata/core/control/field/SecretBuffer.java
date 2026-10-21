@@ -162,7 +162,7 @@ final class SecretBuffer implements EditBuffer {
     }
 
     /**
-     * Prints the length and nothing of the text.
+     * Prints only the length, never the text.
      */
     @Override
     public String toString() {

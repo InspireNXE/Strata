@@ -24,8 +24,8 @@ import java.util.Optional;
 
 /**
  * The appearances registered for the process, which controls ask how to show a value. Reach it with
- * {@link org.inspirenxe.strata.api.Strata#appearances()}, or {@link org.inspirenxe.strata.api.ComponentFactory#appearances()}
- * inside a screen; both return the same registry.
+ * {@link org.inspirenxe.strata.api.Strata#appearances()}, or
+ * {@link org.inspirenxe.strata.api.ComponentFactory#appearances()} inside a screen; both return the same registry.
  *
  * <p>A value's appearance is the one registered for its class, else for its nearest superclass that has one, else
  * for the nearest of its interfaces that has one, searching each interface's superinterfaces before the next
@@ -51,7 +51,7 @@ public interface Appearances {
     <T> Subscription register(Class<T> type, Appearance<? super T> appearance);
 
     /**
-     * Returns the appearance values of a class take.
+     * Returns the appearance that values of a class take.
      *
      * @param <T> the type
      * @param type the class

@@ -25,9 +25,9 @@ import java.util.function.Function;
  *
  * <p>A control may build cells only for the items in view and drop them when they scroll out, so keep nothing in a
  * cell that must outlive it; build it from the item. Events from inside a cell, such as a button's
- * {@code PRESSED}, pass the control and reach the containers around it.</p>
+ * {@code PRESSED}, go through the control and reach the containers around it.</p>
  *
- * <p>Only Strata implements this interface.</p>
+ * <p>Do not implement this interface.</p>
  *
  * @param <T> the type of the items
  * @param <S> the control's own type, which the setter returns

@@ -33,7 +33,7 @@ import org.inspirenxe.strata.api.geometry.Rect;
  * button or a menu bar, asks on its own behalf. A popup reports {@link Openable#OPENED} each time it opens and
  * {@link Closable#CLOSED} each time it closes, for any reason, and never asks {@link Closable#CLOSE}.</p>
  *
- * <p>Only Strata implements this interface.</p>
+ * <p>Do not implement this interface.</p>
  *
  * @param <S> the control's own type, which the methods return
  */

@@ -26,6 +26,9 @@ public enum VerticalAlignment {
     MIDDLE,
     /** Against the slot's bottom edge (before the margin), at the desired height. */
     BOTTOM,
-    /** As tall as the slot minus the margin, unless the component has a fixed height; the minimum and maximum still apply. */
+    /**
+     * As tall as the slot minus the margin, unless the component has a fixed height; the minimum and maximum still
+     * apply.
+     */
     STRETCH
 }

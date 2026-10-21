@@ -23,7 +23,8 @@
  *     {@link org.inspirenxe.strata.api.event}.</li>
  *     <li>Compose: put built-in components inside a container and expose the group through your own
  *     interface.</li>
- *     <li>Write a new component: extend {@link org.inspirenxe.strata.api.extension.CustomComponent}, or
+ *     <li>Write a new component: extend {@link org.inspirenxe.strata.api.extension.CustomComponent},
+ *     {@link org.inspirenxe.strata.api.extension.CustomComposite} for one built from private parts, or
  *     {@link org.inspirenxe.strata.api.extension.CustomContainer} for a new layout. Your class can implement your own
  *     interface, so other code sees it as a type of its own, and declare and fire events of its own with
  *     {@link org.inspirenxe.strata.api.extension.CustomComponent}'s {@code request} and {@code report}.</li>

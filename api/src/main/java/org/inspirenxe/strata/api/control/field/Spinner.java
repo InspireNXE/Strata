@@ -49,7 +49,7 @@ import org.inspirenxe.strata.api.control.button.Button;
  *     {@link #increment} and {@link #decrement} called from code fire none.</li>
  *     <li>{@link Ranged#CHANGED}: Fired after the value changed: by the user, by {@link #setValue}, {@link #increment}
  *     or {@link #decrement}, or by {@link #setRange} or {@link #setDecimals} moving it. The value is the new value and
- *     {@code previous()} the value before; neither is null. Fires for changes made from code too.</li>
+ *     {@code previous()} the value before; neither is null.</li>
  * </ul>
  *
  * <h2>Theme keys</h2>

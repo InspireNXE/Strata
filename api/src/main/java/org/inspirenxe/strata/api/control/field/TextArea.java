@@ -51,17 +51,17 @@ import java.util.Objects;
  *     the text and selection as they were; {@code EDIT} then does not fire. It fires for the same edits as
  *     {@code EDIT}.</li>
  *     <li>{@link TextInput#EDIT}: Fired when the user is about to edit the text by typing, pressing Enter, deleting,
- *     cutting or pasting, unless {@code MODIFY} was canceled. The value is the whole text the edit would produce. While handlers run, the area still holds
- *     the text and selection from before the edit. Cancel the event to reject the edit and keep the text and selection
- *     as they were, or set another text to rewrite it; the value must not be set to null. The final text has its
- *     {@code \r\n} and {@code \r} turned into {@code \n} and is cut to {@link #maxLength()} before it applies, and the
- *     caret goes as many characters before its end as the edit left it, with nothing selected. An edit that would leave
- *     the text as it is, such as typing into a full area, fires nothing, and a read-only area fires nothing. Fires only
- *     for the user's actions: {@link #setText} and {@link #setMaxLength} fire none.</li>
+ *     cutting or pasting, unless {@code MODIFY} was canceled. The value is the whole text the edit would produce.
+ *     While handlers run, the area still holds the text and selection from before the edit. Cancel the event to
+ *     reject the edit and keep the text and selection as they were, or set another text to rewrite it; the value must
+ *     not be set to null. The final text has its {@code \r\n} and {@code \r} turned into {@code \n} and is cut to
+ *     {@link #maxLength()} before it applies, and the caret goes as many characters before its end as the edit left
+ *     it, with nothing selected. An edit that would leave the text as it is, such as typing into a full area, fires
+ *     nothing, and a read-only area fires nothing. Fires only for the user's actions: {@link #setText} and
+ *     {@link #setMaxLength} fire none.</li>
  *     <li>{@link TextInput#EDITED}: Fired after the text changed: by an edit of the user's, by {@link #setText}, or by
  *     {@link #setMaxLength} cutting it. The value is the new text and {@code previous()} the text before, both with
- *     lines separated by {@code \n}; neither is null. An edit whose final text equals the old one fires nothing. Fires
- *     for changes made from code too.</li>
+ *     lines separated by {@code \n}; neither is null. An edit whose final text equals the old one fires nothing.</li>
  *     <li>{@link TextEntry#MODIFIED}: Fired after every change that fires {@code EDITED}, after it, with the new and
  *     previous lengths in code points, line breaks included.</li>
  * </ul>

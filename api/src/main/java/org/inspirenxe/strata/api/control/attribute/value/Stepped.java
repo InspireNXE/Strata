@@ -18,7 +18,7 @@ package org.inspirenxe.strata.api.control.attribute.value;
 /**
  * A {@link Ranged} control whose value moves in steps, such as a slider or a spinner.
  *
- * <p>Only Strata implements this interface.</p>
+ * <p>Do not implement this interface.</p>
  *
  * @param <S> the control's own type, which the setters return
  */

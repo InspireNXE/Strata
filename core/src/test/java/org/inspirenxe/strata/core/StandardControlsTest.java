@@ -66,8 +66,9 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * The standard controls added after the tier 2 controls. Text in the test platform is 6 units per code point and 9
- * per line.
+ * Radio buttons, toggle switches, spinners, text areas, tables, trees, menus, menu bars, expanders, split panes, toasts
+ * and grid views, and events from the content of tables and expanders. Text in the test platform is 6 units per
+ * code point and 9 per line.
  */
 class StandardControlsTest {
     private final TestHost test = new TestHost(300, 300);

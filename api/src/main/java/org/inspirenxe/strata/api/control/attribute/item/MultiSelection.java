@@ -29,14 +29,14 @@ import java.util.List;
  *
  * <p>Indexes are the same as {@link Selection}'s. Every change of the set fires {@link #SELECTED_MANY}, and then
  * {@link Selection#SELECTED} if the current entry moved too. In {@code MULTIPLE} mode the user's changes ask
- * {@link #SELECT_MANY}; in {@code SINGLE} mode they ask {@link Selection#SELECT}, as before.</p>
+ * {@link #SELECT_MANY}; in {@code SINGLE} mode they ask {@link Selection#SELECT}.</p>
  *
  * <pre>{@code
  * list.setSelectionMode(SelectionMode.MULTIPLE)
  *         .onEvent(MultiSelection.SELECTED_MANY, event -> remove.setEnabled(!event.value().isEmpty()));
  * }</pre>
  *
- * <p>Only Strata implements this interface.</p>
+ * <p>Do not implement this interface.</p>
  *
  * @param <T> the type of the entries
  * @param <S> the control's own type, which the setters return

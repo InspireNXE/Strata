@@ -29,9 +29,9 @@ import java.util.List;
 import java.util.Locale;
 
 /**
- * A canvas that writes every call down as a line of text, so a test can compare what was drawn in order: fills with
- * their color, sprites and visuals with their rectangle, text with its position and color, and the transforms. Clips
- * and layers are left out. Numbers print without a fraction when they are whole.
+ * A canvas that writes each drawing call down as a line of text, so a test can compare what was drawn in order: fills
+ * with their color, sprites and visuals with their rectangle, text with its position and color, and the transforms.
+ * Clips, layers and cursor requests are left out. Numbers print without a fraction when they are whole.
  */
 public final class DrawLog implements Canvas {
     private final List<String> lines = new ArrayList<>();

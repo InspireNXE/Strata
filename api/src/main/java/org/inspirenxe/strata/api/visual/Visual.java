@@ -19,8 +19,8 @@ import org.inspirenxe.strata.api.geometry.Size;
 
 /**
  * Something an engine knows how to draw that Strata cannot describe itself, such as a game item or a loaded image
- * on Swing. Strata never looks inside a visual; it passes it to the engine's canvas, which draws the
- * kinds it made and a placeholder for any other.
+ * on Swing. Strata never looks inside a visual; it passes it to the engine's canvas, which draws the kinds it made
+ * and a placeholder for any other.
  *
  * <p>Engine adapters make visuals in their own public classes ({@code SwingVisuals.image(...)} on Swing), so code
  * that has an engine object in hand can show it while the rest of the screen stays engine-free. Show one with

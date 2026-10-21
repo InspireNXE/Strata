@@ -20,7 +20,7 @@ import org.inspirenxe.strata.api.text.Text;
 /**
  * A control that shows its entries as scrolling rows of one height, such as a list, a table or a tree.
  *
- * <p>Only Strata implements this interface.</p>
+ * <p>Do not implement this interface.</p>
  *
  * @param <S> the control's own type, which the setters return
  */

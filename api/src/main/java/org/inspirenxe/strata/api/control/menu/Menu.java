@@ -59,6 +59,10 @@ import java.util.function.Consumer;
  *
  * <h2>Events</h2>
  * <ul>
+ *     <li>{@link #CHOOSE}: Requested when the user chooses an item, by click or key. Cancel it to leave the menu open
+ *     and run nothing.</li>
+ *     <li>{@link #CHOSEN}: Reported after the menus closed and the chosen item's action ran.</li>
+ *     <li>{@link Openable#OPENED}: Reported each time the menu opens, as a submenu too.</li>
  *     <li>{@link Closable#CLOSED}: Reported each time the menu closes, for any reason: a choice, Escape, a press
  *     outside, a parent menu closing, or {@link #close()} called from code.</li>
  * </ul>

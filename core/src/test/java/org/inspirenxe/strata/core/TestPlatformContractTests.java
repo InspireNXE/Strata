@@ -23,8 +23,9 @@ import org.inspirenxe.strata.spi.testing.TextMetricsContract;
 import org.junit.jupiter.api.Nested;
 
 /**
- * Runs the SPI contracts against the test doubles core's tests use, so a test that passes here proves something
- * about real adapters too. It also exercises the contract kit's non-readable canvas path.
+ * Runs the SPI contracts against the test doubles core's tests use, so a core test that passes with these doubles
+ * says something about real adapters too. It also exercises the contract kit's path for a canvas that cannot be read
+ * back.
  */
 class TestPlatformContractTests {
 

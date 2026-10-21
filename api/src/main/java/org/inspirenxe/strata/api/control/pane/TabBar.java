@@ -116,11 +116,11 @@ public interface TabBar extends Component<TabBar>, Focusable<TabBar>, HasCursor<
      */
     String STYLE_TEXT_DISABLED = "tab.text.disabled";
     /**
-     * Style key for the space around an unselected tab's text.
+     * Style key for the space around an unselected tab's text (insets, optional).
      */
     String STYLE_PADDING = "tab.padding";
     /**
-     * Style key for the space around the selected tab's text.
+     * Style key for the space around the selected tab's text (insets, optional).
      */
     String STYLE_PADDING_SELECTED = "tab.padding.selected";
 
@@ -181,7 +181,7 @@ public interface TabBar extends Component<TabBar>, Focusable<TabBar>, HasCursor<
     }
 
     /**
-     * Returns the selected tab.
+     * Returns the index of the selected tab.
      *
      * @return the selected index, or -1 when there are no tabs or the selection was cleared
      */

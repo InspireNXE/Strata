@@ -60,8 +60,8 @@ import java.util.function.Consumer;
  * Base class of Strata's own leaf controls, the counterpart of the public
  * {@link org.inspirenxe.strata.api.extension.CustomComponent} that developers extend. It offers the same hooks and
  * helpers under the same names, so a control reads the same either way, and adds what only core may use: its own
- * {@link #node()}, the nodes of other components through {@link #nodeOf}, the host's {@link #hostRoot()}, and the
- * {@link #onDisabled()} and {@link #onReleased()} hooks.
+ * {@link #node()}, the nodes of other components through {@link #nodeOf}, the host's {@link #hostRoot()},
+ * {@link #isFocusFromPress()}, and the {@link #onDisabled()} and {@link #onReleased()} hooks.
  *
  * <p>The component holds no state of its own. Its constructor makes the {@link Node} behind it and hands it a private
  * {@link NodeHooks} that calls the protected hooks here; every {@link Component} method is {@code final} and forwards
@@ -126,7 +126,7 @@ public abstract class BuiltInComponent<T extends Component<T>> implements Compon
     }
 
     /**
-     * Returns the root of this component's host, which exists whether or not this component is attached.
+     * Returns the root of this component's host, whether or not this component is attached.
      *
      * @return the root, or {@code null} before the host made it
      */

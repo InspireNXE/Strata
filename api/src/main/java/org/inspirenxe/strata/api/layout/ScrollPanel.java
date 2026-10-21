@@ -106,7 +106,7 @@ public interface ScrollPanel extends Container<ScrollPanel>, Focusable<ScrollPan
     /**
      * Fired after the offset changed, by input or by a setter. The value is the panel's state after the change and
      * the previous value its state before. Offsets clamped during layout because the content shrank are not
-     * reported. There is no request event for scrolling. Fires for changes made from code too.
+     * reported. There is no request event for scrolling.
      */
     EventType<ValueEvent<ScrollPanel, State>> SCROLLED = EventType.valueReport("scroll_panel.scrolled");
 

@@ -76,7 +76,7 @@ import java.util.function.Function;
 
 /**
  * The core {@link NavigationView}, a composite of a private pane, a private toggle for the bar of
- * {@link DisplayMode#MINIMAL}, and the page or content it shows, which is content.
+ * {@link DisplayMode#MINIMAL}, and the page or content it shows, added as content.
  *
  * <p>The pane is a private composite holding its toggle, the pane header and footer as content, a private
  * {@link ScrollPanel} that cannot take focus around a {@link StackPanel} of the items' rows, and a stack of the footer

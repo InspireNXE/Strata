@@ -110,7 +110,7 @@ class ExtensionTest {
     // ------------------------------------------------------------------
 
     /**
-     * A mod's own API type, as another mod would see it.
+     * A developer's own API type, as other code would see it.
      */
     interface Counter extends Component<Counter> {
         int count();

@@ -26,7 +26,7 @@ import org.inspirenxe.strata.api.event.control.ValueRequestEvent;
  * <p>A double click on an entry activates it, and so does Enter while the control has focus and an entry is
  * selected. With {@link #setActivateOnClick} a single click does instead, as in a drop-down.</p>
  *
- * <p>Only Strata implements this interface.</p>
+ * <p>Do not implement this interface.</p>
  *
  * @param <S> the control's own type, which the setter returns
  */

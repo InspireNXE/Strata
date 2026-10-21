@@ -16,7 +16,7 @@
 package org.inspirenxe.strata.api.control.pane;
 
 /**
- * One entry of a {@link NavigationView}'s pane: an {@link NavigationItem} the user can pick, a
+ * One entry of a {@link NavigationView}'s pane: a {@link NavigationItem} the user can pick, a
  * {@link NavigationHeader} caption over a group of items, or a {@link NavigationSeparator} line.
  *
  * <p>Entries are made by the {@link org.inspirenxe.strata.api.ComponentFactory}, or by the view's shorthands. They

@@ -51,13 +51,13 @@ import java.util.function.Function;
  * The core {@link ComboBox}. The open list is a {@link ListView} in a popup, not focusable, whose selection is the
  * highlight; it is built when the list opens and dropped when it closes. The box routes the list's input to itself,
  * so the list fires no events: moving the highlight is silent, and a row picked from it becomes the box's own
- * {@code SELECT} request. Its rows are one line plus 4 units tall,
- * with the option text 4 units in from the left.
+ * {@code SELECT} request. Its rows are one line plus 4 units tall, with the option text inset by the list's cell
+ * padding, {@value ListView#STYLE_CELL_PADDING}, which is 4 units unless the theme sets it.
  *
  * <p>The box draws its text inside its padding on the left, cut short with {@code ...} if it does not fit, and a
  * small down arrow inside its padding on the right, {@link #ARROW_GAP} units after the text. The padding is the
  * theme's {@value #STYLE_PADDING}, or else {@link #DEFAULT_PADDING}, and the box is a line tall plus its top and
- * bottom.</p>
+ * bottom padding.</p>
  *
  * @param <T> the type of the options
  */

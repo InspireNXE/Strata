@@ -34,8 +34,7 @@ import org.inspirenxe.strata.api.visual.Visual;
  *     is already drawn.</li>
  *     <li>Later calls draw over earlier ones. An engine that batches or reorders draws must keep this order, at least
  *     across {@link #nextLayer()}.</li>
- *     <li>Calls may be recorded and replayed later; nothing requires immediate
- *     drawing.</li>
+ *     <li>Calls may be recorded and replayed later; nothing requires immediate drawing.</li>
  *     <li>Clips and transforms form stacks. Strata balances every push with a pop within one frame, and pops in
  *     reverse order, even when a component throws. A clip applies in the transform current when it was pushed and
  *     intersects any clip already in place.</li>
@@ -179,8 +178,8 @@ public interface Canvas {
 
     /**
      * Starts a new layer: everything drawn after this call must appear above everything drawn before it, even if
-     * the engine sorts draws within a layer. A screen stack calls it between screens. Engines that always draw in
-     * call order may do nothing.
+     * the engine sorts draws within a layer. Core calls it between the screens of a screen stack, before each
+     * overlay and before the tooltip. Engines that always draw in call order may do nothing.
      */
     void nextLayer();
 

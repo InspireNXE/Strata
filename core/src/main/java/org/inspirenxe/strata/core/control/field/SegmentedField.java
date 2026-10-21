@@ -34,8 +34,8 @@ import java.util.Locale;
  *
  * <p>Each part holds a number, or -1 while empty. Hours are held as shown: 1 to 12 with the half of the day (0 for
  * the first half, 1 for the second) on a 12 hour clock, 0 to 23 otherwise. Digits typed into a part build its number
- * until no further digit could fit, then focus moves on. A number that would pass the part's largest starts again
- * from the digit. The draft is dirty from the first edit until {@link #load} replaces it.</p>
+ * until no further digit could fit, then focus moves on. A digit that would take the number past the part's largest
+ * value starts a new number. The draft is dirty from the first edit until {@link #load} replaces it.</p>
  */
 final class SegmentedField {
     private final List<Kind> kinds;

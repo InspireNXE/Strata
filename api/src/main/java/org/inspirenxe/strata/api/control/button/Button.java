@@ -136,7 +136,7 @@ public interface Button extends Component<Button>, Focusable<Button>, HasCursor<
      */
     EventType<RequestEvent<Button>> PRESS = EventType.request("button.press");
     /**
-     * Fired after the button was pressed, by the user or by {@link #press()}. Fires for presses made from code too.
+     * Fired after the button was pressed, by the user or by {@link #press()}.
      */
     EventType<ControlEvent<Button>> PRESSED = EventType.report("button.pressed");
 

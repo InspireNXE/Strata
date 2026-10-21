@@ -16,8 +16,8 @@
 package org.inspirenxe.strata.api.layout;
 
 /**
- * A pair of alignments under one name, as MalisisCore's anchors were. {@code setAnchor(Anchor.BOTTOM_RIGHT)} is the
- * same as {@code setAlignment(HorizontalAlignment.RIGHT, VerticalAlignment.BOTTOM)}.
+ * A pair of alignments under one name. {@code setAnchor(Anchor.BOTTOM_RIGHT)} is the same as
+ * {@code setAlignment(HorizontalAlignment.RIGHT, VerticalAlignment.BOTTOM)}.
  */
 public enum Anchor {
     /** Left and top. */

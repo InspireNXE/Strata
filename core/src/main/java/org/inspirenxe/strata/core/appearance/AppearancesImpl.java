@@ -77,8 +77,8 @@ public final class AppearancesImpl implements Appearances {
 
     /**
      * Registers an appearance beneath every other registration for its type, so any registration, earlier or later,
-     * hides it. Engine adapters register their defaults this way, which makes the order in which mods load not
-     * matter.
+     * hides it. Engine adapters register their defaults this way, so it does not matter whether they register before
+     * or after other code.
      *
      * @param <T> the type
      * @param type the type

@@ -21,7 +21,7 @@ import org.inspirenxe.strata.api.event.control.ValueRequestEvent;
 import org.inspirenxe.strata.api.text.TextHighlighter;
 
 /**
- * A control the user types text into whose text code may read, such as a text box or a text area.
+ * A control the user types into and whose text code may read, such as a text box or a text area.
  *
  * <p>Indexes are char indexes into {@link #text()}, from 0 to its length, and never fall inside a surrogate pair.
  * Lengths are counted in code points.</p>
@@ -47,7 +47,7 @@ public interface TextInput<S extends TextInput<S>> extends TextEntry<S> {
     EventType<ValueRequestEvent<TextInput<?>, String>> EDIT = EventType.valueRequest("text_input.edit");
     /**
      * Told after the text changed, by the user or from code, before {@link TextEntry#MODIFIED}. The value is the new
-     * text and the previous value the text before; neither is null. Fires for changes made from code too.
+     * text and the previous value the text before; neither is null.
      */
     EventType<ValueEvent<TextInput<?>, String>> EDITED = EventType.valueReport("text_input.edited");
 

@@ -22,9 +22,9 @@ import java.util.Optional;
 
 /**
  * Keyboard focus moving. Used by {@link org.inspirenxe.strata.api.component.Focusable#FOCUS_GAINED} and
- * {@link org.inspirenxe.strata.api.component.Focusable#FOCUS_LOST}. When focus
- * moves from one component to another, the old one gets {@code FOCUS_LOST} first, then the new one gets
- * {@code FOCUS_GAINED}; both run after the focus has already changed.
+ * {@link org.inspirenxe.strata.api.component.Focusable#FOCUS_LOST}. When focus moves from one component to another,
+ * the old one gets {@code FOCUS_LOST} first, then the new one gets {@code FOCUS_GAINED}; both run after the focus has
+ * already changed.
  *
  * <p>Only Strata creates events. Do not implement this interface.</p>
  */

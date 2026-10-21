@@ -50,8 +50,8 @@ import java.util.Set;
 /**
  * The core {@link TextArea}. It edits like {@link TextBoxImpl} and lays its text out in rows: one per line, and more
  * where a line wraps. Rows are worked out again only when the text, the style or the content size changes, and each
- * row keeps its span, so painting measures nothing. The caret blinks every {@link TextBoxImpl#BLINK_MILLIS}
- * milliseconds.
+ * row keeps its span, so painting measures nothing. The caret stays shown and then hidden for
+ * {@link TextBoxImpl#BLINK_MILLIS} milliseconds each.
  *
  * <p>A row that wraps keeps its trailing space, and the caret cannot sit after its last character: that position is
  * the start of the next row. The view scrolls to keep the caret in sight after the caret moves, but not on other

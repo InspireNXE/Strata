@@ -431,8 +431,8 @@ public final class ColorPickerImpl extends BuiltInComposite<ColorPicker> impleme
     }
 
     /**
-     * Works out the markers for the current values: a ring in the square, outline, marker and outline from the
-     * outside in, and a bar across each strip with an outline around it.
+     * Works out the markers for the current values: three rings in the square, an outline, the marker and another
+     * outline from the outside in, and a bar across each strip with an outline around it.
      */
     private void updateMarkers() {
         this.markersDirty = false;

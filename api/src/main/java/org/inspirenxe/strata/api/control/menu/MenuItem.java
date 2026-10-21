@@ -44,7 +44,7 @@ public non-sealed interface MenuItem extends MenuEntry, HasText<MenuItem> {
     /**
      * Sets the hint drawn at the right of the item, such as {@code "Ctrl+C"}. It is only text and binds no key.
      *
-     * @param shortcut the hint, or an empty string for none
+     * @param shortcut the hint, or empty text for none
      * @return this item
      */
     MenuItem setShortcut(Text shortcut);

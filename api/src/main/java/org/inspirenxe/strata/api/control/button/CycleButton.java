@@ -32,14 +32,15 @@ import java.util.function.Function;
  *
  * <p>A left click, or Enter or Space while the button has focus, selects the next value, and the first after the
  * last. A right click, or Shift held with any of those, selects the previous value, and the last before the first.
- * The button consumes those inputs. A disabled button ignores them and draws its disabled face. With one value or
- * none, nothing changes, so no events fire.</p>
+ * The button consumes those inputs. A disabled button ignores them and draws its disabled face. A step that lands on
+ * the value already selected, as with a single value, changes nothing and fires no events.</p>
  *
  * <p>The text is the label that comes before the value. It is shown as {@code label: value}, or as the value alone
  * when the label is empty, and as the label alone while there is no value. Values are drawn with the
- * {@linkplain #setValueLabelFunction value label function}, {@link String#valueOf(Object)} by default. When the
- * items are set, the selection moves to the item with the selected item's {@linkplain #setKeyFunction key}, or to
- * the first item if there is none. Code can clear the selection with {@link #clearSelection()}.</p>
+ * {@linkplain #setValueLabelFunction value label function}, which by default shows each value by its appearance's
+ * name, or by {@link String#valueOf(Object)} when it has no appearance. When the items are set, the selection moves
+ * to the item with the selected item's {@linkplain #setKeyFunction key}, or to the first item if there is none.
+ * Code can clear the selection with {@link #clearSelection()}.</p>
  *
  * <p>The button is focusable and tabbable, shows the hand cursor, and has a minimum size of 20 by 20. It asks for
  * the label plus its widest value, so cycling does not change its size, and the same padding as a {@link Button}
@@ -49,8 +50,8 @@ import java.util.function.Function;
  * <ul>
  *     <li>{@link SingleSelection#SELECT}: Asked before the user steps to another value. The value is the index of the
  *     value about to be selected. A handler may rewrite it to another item's index, or to -1 to clear the selection;
- *     an index outside the items is ignored. Fires only for the user's actions, and only when there is more than one
- *     item.</li>
+ *     an index outside the items is ignored. Fires only for the user's actions, and only when the step would change
+ *     the selection.</li>
  *     <li>{@link SingleSelection#SELECTED}: Told after the selection changed. The value is the selected index, or -1,
  *     and the previous value the index before. Fires for changes made from code too, including {@link #cycle} and
  *     {@link #setItems}.</li>

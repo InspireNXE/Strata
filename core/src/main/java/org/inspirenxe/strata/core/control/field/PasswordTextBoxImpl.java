@@ -64,10 +64,10 @@ import java.util.function.IntPredicate;
  * <p>The box is a focusable composite, as a tab bar is, whose one private child is the eye: a square one line tall
  * at the right of the content box, {@link #REVEAL_GAP} units from the text, shown while the box is revealable and not
  * empty. The eye cannot take focus, so a press on it focuses the box; it consumes the press, so the caret stays put,
- * and a click on it asks {@link PasswordTextBox#REVEAL}. Without theme paints it draws an eye from one-unit fills, in
- * squares of the largest whole size that fits nine across, centered in its square: in the placeholder's color, the
+ * and a click on it asks {@link PasswordTextBox#REVEAL}. Without theme paints it draws an eye from filled squares of
+ * the largest whole size that fits nine across, on a grid centered in its square: in the placeholder's color, the
  * text color when hovered or while the text shows (with a slash), and the disabled text color while the user cannot
- * reveal the text.</p>
+ * reveal the text. It draws nothing while the box is disabled.</p>
  *
  * <p>Masked, the box measures the mask string for the whole length once per edit and places the boundary after the
  * k-th of n code points at k over n of that width, which is exact because every glyph is the same. Revealed, it makes

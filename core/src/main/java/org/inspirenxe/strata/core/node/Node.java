@@ -397,8 +397,9 @@ public class Node implements ComponentPeer {
 
     /**
      * Paints the component. If it has {@link Component#PAINT} handlers they run first, and canceling skips the
-     * component's own drawing. Then come its background and border, its paint hook, its children, and its over-children hook, and last any {@link Component#PAINTED} handlers. Hidden
-     * components and components with empty bounds paint nothing. The paint event object is made once and reused.
+     * component's own drawing but still paints its children. Then come its background and border, its paint hook,
+     * its children, its over-children hook, and last any {@link Component#PAINTED} handlers. Hidden components and
+     * components with empty bounds paint nothing. The paint event object is made once and reused.
      *
      * @param painter the painter for this frame
      */

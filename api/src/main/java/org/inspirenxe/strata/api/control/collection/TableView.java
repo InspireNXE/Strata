@@ -60,9 +60,11 @@ import java.util.function.Function;
  * <ul>
  *     <li>{@link Selection#SELECT}: Asked before the user changes the selection: a press on a row, or the Up,
  *     Down, Page Up, Page Down, Home and End keys while focus is in the table. It fires only when the selection would
- *     change. The value is the row of {@link #shownItems()} about to be selected. The user never clears the selection,
- *     but a handler may rewrite the value to -1 to clear it, or to another row; the table then selects as
- *     {@link #select} does and ignores any other index outside the rows. Fires only for the user's actions.</li>
+ *     change. The value is the row of {@link #shownItems()} about to be selected, or -1 when the user clears the
+ *     selection of a {@linkplain #setDeselectable deselectable} table. A handler may rewrite it to another row or to
+ *     -1; the table then selects as {@link #select} does and ignores any other index outside the rows. In
+ *     {@link SelectionMode#MULTIPLE} mode the user's changes ask {@link MultiSelection#SELECT_MANY} instead, as in a
+ *     {@link ListView}. Fires only for the user's actions.</li>
  *     <li>{@link Selection#SELECTED}: Told after the selected row changed. The value is the selected row of
  *     {@link #shownItems()}, or -1 when nothing is selected, and the previous value is the row before. A sort or
  *     {@link #setItems} that moves the selected item to another row fires it too, and so does {@link #setItems} when
@@ -134,8 +136,8 @@ public interface TableView<T> extends Component<TableView<T>>, HasCursor<TableVi
     EventType<ValueRequestEvent<TableView<?>, Sort>> SORT = EventType.valueRequest("table_view.sort");
     /**
      * Told after the sort changed. The value is the new sort and the previous value the sort before. It fires only when
-     * the column or the direction changed, for {@link #sortBy}, for {@link TableColumn#setComparator} removing the
-     * comparator of the sort column, and for {@link #removeColumn} removing it. Fires for changes made from code too.
+     * the column or the direction changed: after the user's click, {@link #sortBy}, {@link TableColumn#setComparator}
+     * removing the comparator of the sort column, or {@link #removeColumn} removing the sort column.
      */
     EventType<ValueEvent<TableView<?>, Sort>> SORTED = EventType.valueReport("table_view.sorted");
 

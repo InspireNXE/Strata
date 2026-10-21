@@ -47,9 +47,9 @@ import java.util.function.Function;
  *     over the content.</li>
  *     <li>{@link DisplayMode#MINIMAL}: the pane is hidden, and a bar across the top holds the toggle and the title.
  *     The toggle opens the pane over the content.</li>
- *     <li>{@link DisplayMode#AUTO}, the default: {@code EXPANDED} at {@link #DEFAULT_COMPACT_BELOW} units wide and
- *     more, {@code COMPACT} from {@link #DEFAULT_MINIMAL_BELOW}, and {@code MINIMAL} below, worked out from the
- *     view's width each time it is arranged. {@link #shownMode()} reports the result.</li>
+ *     <li>{@link DisplayMode#AUTO}, the default: {@code EXPANDED} at {@link #compactBelow()} units wide and more,
+ *     {@code COMPACT} from {@link #minimalBelow()}, and {@code MINIMAL} below, worked out from the view's width each
+ *     time it is arranged. {@link #shownMode()} reports the result.</li>
  * </ul>
  *
  * <p>The pane opened over the content is a popup laid out at the view's left edge, the pane's width wide and as tall
@@ -58,14 +58,14 @@ import java.util.function.Function;
  * tree, so control events of the pane header and footer reach only handlers on them until it closes.</p>
  *
  * <h2>The pane</h2>
- * <p>From the top: the toggle, three lines, and the title, then the {@linkplain #setPaneHeader pane header}, the
- * items in a scrolling list, the {@linkplain #addFooterItem footer items}, and the {@linkplain #setPaneFooter pane
- * footer}. The toggle shows while the pane can be opened over the content, so not in {@code EXPANDED}. Headers are
- * captions, hidden in the column of icons along with the pane header and footer, and separators are lines. An item
- * with children shows an arrow at its right end; its children show below it, indented, while it is expanded. The
- * selected item draws its selected background and an indicator {@value #INDICATOR_WIDTH} units wide down its left
- * edge, and so does an item whose selected descendant is hidden. Disabled items draw in the disabled text and cannot
- * be picked; their tooltips still show.</p>
+ * <p>From the top: the toggle, drawn as three lines, and the title, then the
+ * {@linkplain #setPaneHeader pane header}, the items in a scrolling list, the {@linkplain #addFooterItem footer items},
+ * and the {@linkplain #setPaneFooter pane footer}. The toggle shows while the pane can be opened over the content,
+ * so not in {@code EXPANDED}. Headers are captions, hidden in the column of icons along with the pane header and
+ * footer, and separators are lines. An item with children shows an arrow at its right end; its children show below
+ * it, indented, while it is expanded. The selected item draws its selected background and an indicator
+ * {@value #INDICATOR_WIDTH} units wide down its left edge, and so does an item whose selected descendant is hidden.
+ * Disabled items draw in the disabled text and cannot be picked; their tooltips still show.</p>
  *
  * <h2>Picking</h2>
  * <p>A click on an item asks {@link Activatable#ACTIVATE}, then, if the item is selectable and not selected,
@@ -97,7 +97,8 @@ import java.util.function.Function;
  * back finds its text, scroll and selection as they were. Removing the item or setting its page again discards the
  * kept page. While the selected item has no page, or nothing is selected, the view shows its
  * {@linkplain #setContent content}, so code that manages its own content sets it from a {@code SELECTED} handler.
- * Pages, the content, the pane header and the pane footer are content, so their controls' events pass the view.</p>
+ * Pages, the content, the pane header and the pane footer are content, so their controls' events go on past the
+ * view.</p>
  *
  * <p>The view stretches over its slot by default. Disabled, it closes the pane over the content and its menu, and it
  * and everything in it take no focus or input.</p>
@@ -134,11 +135,11 @@ import java.util.function.Function;
  *     <li>{@value #STYLE_HEADER_TEXT} (text style, optional): a header. Falls back to
  *     {@value #STYLE_ITEM_TEXT_DISABLED}.</li>
  *     <li>{@value #STYLE_TITLE_TEXT} (text style, optional): the title. Falls back to the default text style.</li>
- *     <li>{@value #STYLE_SEPARATOR} (paint, optional): a separator's line. Falls back to the separator's
+ *     <li>{@value #STYLE_SEPARATOR} (paint, optional): a separator's line. Falls back to the separator control's
  *     {@code separator}.</li>
- *     <li>{@value #STYLE_TOGGLE} and {@value #STYLE_TOGGLE_HOVERED} (paint, optional): behind the toggle, and while
- *     the pointer is over it. Nothing, and {@value #STYLE_ITEM_HOVERED}, if missing. The three lines are drawn over
- *     them in the item text's color.</li>
+ *     <li>{@value #STYLE_TOGGLE} and {@value #STYLE_TOGGLE_HOVERED} (paint, optional): behind the toggle, and behind
+ *     it while the pointer is over it. Without the first nothing is drawn, and the second falls back to
+ *     {@value #STYLE_ITEM_HOVERED}. The three lines are drawn over them in the item text's color.</li>
  *     <li>{@value #STYLE_FOCUS} (paint, optional): a one-unit ring around the keyboard cursor's item. Falls back to
  *     the button's {@code button.focus}.</li>
  *     <li>{@value #STYLE_ITEM_PADDING} (insets, optional): around an item's icon and text. Defaults to 6 at the
@@ -464,8 +465,8 @@ public interface NavigationView extends Component<NavigationView>, Focusable<Nav
 
     /**
      * Opens or closes the pane over the content and reports {@link #EXPANDED} if that changed. Never asks
-     * {@link #EXPAND}. Opening does nothing in {@code EXPANDED}, while the view is disabled, hidden, or not shown on a
-     * screen.
+     * {@link #EXPAND}. Opening does nothing in {@code EXPANDED}, or while the view is disabled, hidden or not shown on
+     * a screen.
      *
      * @param expanded true to open the pane over the content
      * @return this view
@@ -513,7 +514,7 @@ public interface NavigationView extends Component<NavigationView>, Focusable<Nav
 
     /**
      * Shows a component below the title, across the pane, such as a search box. It is content, so its control
-     * events pass the view, and it is out of the tree while the pane shows as a column of icons.
+     * events go on past the view, and it is out of the tree while the pane shows as a column of icons.
      *
      * @param header the component, or {@code null} to remove it
      * @return this view
@@ -548,7 +549,7 @@ public interface NavigationView extends Component<NavigationView>, Focusable<Nav
 
     /**
      * Sets what the view shows beside the pane while the selected item has no page or nothing is selected. It is
-     * content, so its control events pass the view.
+     * content, so its control events go on past the view.
      *
      * @param content the component, or {@code null} for none
      * @return this view

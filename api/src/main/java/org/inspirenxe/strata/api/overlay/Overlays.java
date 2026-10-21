@@ -54,7 +54,7 @@ public interface Overlays {
      */
     String STYLE_BACKDROP = "overlay.backdrop";
     /**
-     * Style key for behind a text toast (paint, optional). Without it a text toast draws on the tooltip
+     * Style key for the box behind a text toast (paint, optional). Without it a text toast draws on the tooltip
      * background.
      */
     String STYLE_TOAST = "toast.background";
@@ -146,7 +146,7 @@ public interface Overlays {
     /**
      * Finds the overlay a component is shown in.
      *
-     * @param component a component, or anything inside an overlay's content
+     * @param component the component to look up
      * @return the overlay whose content is the component or one of its ancestors; empty if the component is not
      *     in an open overlay
      */

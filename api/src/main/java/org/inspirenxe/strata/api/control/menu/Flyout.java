@@ -41,8 +41,8 @@ import java.util.Optional;
  * default, a press outside closes it and goes no further. Without it, a press outside goes to whatever is under the
  * pointer and the flyout stays open.</p>
  *
- * <p>The content is the developer's, so its control events, such as a button's {@code PRESSED}, pass the flyout
- * and reach handlers registered on it. They go no further, since the flyout has no parent.</p>
+ * <p>The content is the developer's, so its control events, such as a button's {@code PRESSED}, reach handlers
+ * registered on the flyout. They go no further, since the flyout has no parent.</p>
  *
  * <h2>Events</h2>
  * <ul>

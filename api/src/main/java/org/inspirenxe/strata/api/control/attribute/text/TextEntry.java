@@ -49,8 +49,7 @@ public interface TextEntry<S extends TextEntry<S>> extends EventTarget<S> {
     EventType<RequestEvent<TextEntry<?>>> MODIFY = EventType.request("text_entry.modify");
     /**
      * Told after the text changed, by the user or from code. The value is the new length in code points and the
-     * previous value the length before; they are equal when an edit replaced text with text as long. Fires for
-     * changes made from code too.
+     * previous value the length before; they are equal when an edit replaced text with text as long.
      */
     EventType<ValueEvent<TextEntry<?>, Integer>> MODIFIED = EventType.valueReport("text_entry.modified");
 

@@ -53,7 +53,7 @@ public interface Clipboard {
     /**
      * Puts text on the clipboard. Failures are ignored.
      *
-     * @param text the text; never null
+     * @param text the text
      */
     void set(String text);
 }

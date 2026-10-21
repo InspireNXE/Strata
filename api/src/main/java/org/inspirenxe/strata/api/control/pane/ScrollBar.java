@@ -233,7 +233,7 @@ public interface ScrollBar extends Component<ScrollBar>, Focusable<ScrollBar>, H
      *
      * @param rate the scroll rate
      * @return this bar
-     * @throws IllegalArgumentException if {@code rate} is not finite and greater than 0
+     * @throws IllegalArgumentException if {@code rate} is not greater than 0 or not finite
      */
     ScrollBar setScrollRate(double rate);
 

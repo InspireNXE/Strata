@@ -44,9 +44,9 @@ import java.util.Objects;
  *
  * <p>It is focusable and tabbable and shows the hand cursor. The box is square, {@linkplain #setBoxSize sized} to the
  * caption's line height plus 8 units by default, rounded to whole units so the mark centers exactly, which is 17
- * with a 9-unit font.
- * The caption sits 4 units right of the box, centered on it vertically. The desired size is the box, the gap and the
- * caption's width wide (just the box when the caption is empty), and the taller of the box and the caption.</p>
+ * with a 9-unit font. The caption sits 4 units right of the box, centered on it vertically. The desired size is the
+ * box, the gap and the caption's width wide (just the box when the caption is empty), and the taller of the box and
+ * the caption.</p>
  *
  * <h2>Theme keys</h2>
  * <p>The box paints cover the whole box. Themes built from images draw the check mark into the checked paints;

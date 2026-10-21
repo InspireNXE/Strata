@@ -75,8 +75,8 @@ import java.util.function.IntPredicate;
  *     selects everything, so the caret does not show where spaces are.</li>
  *     <li>Typed characters are consumed while the box has focus, read-only included, so they stop at the box and do
  *     not reach ancestors' {@code CHAR} handlers. Control characters are not typed.</li>
- *     <li>Line breaks are removed from pastes and from {@link #setPassword}. The length limit counts code points and
- *     cuts as on a text box.</li>
+ *     <li>{@link #setPassword} removes line breaks too. The length limit counts code points and cuts as on a text
+ *     box.</li>
  *     <li>It has no suggestions, highlighter or text filter. Its tooltip is only what code sets.</li>
  *     <li>While focused it asks the engine for text input of the
  *     {@link org.inspirenxe.strata.api.input.TextInputKind#SECRET} kind, so an engine can turn off input methods and
@@ -104,9 +104,9 @@ import java.util.function.IntPredicate;
  *     <li>{@link TextEntry#MODIFY}: Fired when the user is about to change the text by typing, deleting, cutting or
  *     pasting, with no value. Cancel it to refuse the edit. An edit that would change nothing fires nothing, and a
  *     read-only box fires nothing.</li>
- *     <li>{@link TextEntry#MODIFIED}: Fired after every change of the text, with the new and previous lengths in code
- *     points, including {@link #setPassword}, {@link #clear()} and {@link #setMaxLength} cutting. Wiping fires
- *     nothing.</li>
+ *     <li>{@link TextEntry#MODIFIED}: Fired after every change of the text, including {@link #setPassword},
+ *     {@link #clear()} and a cut by {@link #setMaxLength}, with the new and previous lengths in code points. Wiping
+ *     fires nothing.</li>
  *     <li>{@link #REVEAL}: Fired when the user clicks the eye or presses Alt+F8, with the state it would set.</li>
  *     <li>{@link #REVEALED}: Fired after the text was shown or hidden, by the user, by {@link #setRevealed}, or by
  *     the box hiding itself.</li>

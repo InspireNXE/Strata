@@ -187,7 +187,7 @@ public final class SpinnerImpl extends BuiltInComposite<Spinner> implements Spin
     }
 
     /**
-     * Steps the value for the user: takes the typed text first, then moves by {@code steps} steps, each through
+     * Steps the value for the user: takes the typed text first, then moves by {@code steps} steps in one
      * {@code change}. Does nothing while disabled.
      */
     private void stepBy(final int steps) {

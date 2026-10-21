@@ -83,9 +83,9 @@ import java.util.Objects;
  * a click puts it at the click, unless the box {@linkplain #setSelectAllOnFocus selects all on focus}. While focused
  * it asks the engine for text input (required on SDL-based engines, which send no characters otherwise) and
  * consumes every key that types a character, so engine shortcuts on those keys, such as a game's inventory key, do
- * not fire. Tab and Escape are not consumed: Tab moves focus and Escape still reaches the engine. Enter is consumed only
- * when a handler for {@link #SUBMIT} or {@link #SUBMITTED} is on the box or on an ancestor those events reach. While
- * the suggestion list is open, the box consumes Up, Down, Tab, Enter and Escape itself. A disabled box ignores
+ * not fire. Tab and Escape are not consumed: Tab moves focus and Escape still reaches the engine. Enter is consumed
+ * only when a handler for {@link #SUBMIT} or {@link #SUBMITTED} is on the box or on an ancestor those events reach.
+ * While the suggestion list is open, the box consumes Up, Down, Tab, Enter and Escape itself. A disabled box ignores
  * input.</p>
  *
  * <h2>Text and indexes</h2>
@@ -109,7 +109,7 @@ import java.util.Objects;
  *     the user's actions: {@link #setText} and {@link #setMaxLength} fire none.</li>
  *     <li>{@link TextInput#EDITED}: Fired after the text changed: by an edit of the user's, by {@link #setText}, or by
  *     {@link #setMaxLength} cutting it. The value is the new text and {@code previous()} the text before; neither is
- *     null. An edit whose final text equals the old one fires nothing. Fires for changes made from code too.</li>
+ *     null. An edit whose final text equals the old one fires nothing.</li>
  *     <li>{@link TextEntry#MODIFIED}: Fired after every change that fires {@code EDITED}, after it, with the new and
  *     previous lengths in code points.</li>
  *     <li>{@link #COMPLETE}: Fired when the user accepts a suggestion, before the text changes. The value is the

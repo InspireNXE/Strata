@@ -102,7 +102,7 @@ public interface MessageBox extends Component<MessageBox>, HasCursor<MessageBox>
     /**
      * Replaces the window's title.
      *
-     * @param title the title, or an empty string for none
+     * @param title the title, or empty text for none
      * @return this box
      */
     @Override

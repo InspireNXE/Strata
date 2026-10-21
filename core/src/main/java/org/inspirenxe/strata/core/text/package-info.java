@@ -14,7 +14,8 @@
  * limitations under the License.
  */
 /**
- * Text helpers that work through an engine's {@link org.inspirenxe.strata.api.text.TextMetrics}, such as word
- * wrapping.
+ * Core's text: the {@link org.inspirenxe.strata.api.text.Text} implementation and its factory, translations, date
+ * formats, and helpers that wrap, measure and shorten text with an engine's
+ * {@link org.inspirenxe.strata.api.text.TextMetrics}.
  */
 package org.inspirenxe.strata.core.text;

@@ -53,8 +53,9 @@ public final class StrataCore {
     }
 
     /**
-     * Registers an engine type's default appearance, beneath anything a mod registers for the type, whenever either
-     * happens. Adapters call this when they start, for the engine objects their visuals and text can show.
+     * Registers an engine type's default appearance beneath every other registration for the type, so anything
+     * registered for it, earlier or later, takes precedence. Adapters call this when they start, for the engine
+     * objects their visuals and text can show.
      *
      * @param <T> the type
      * @param type the engine type

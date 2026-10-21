@@ -54,8 +54,8 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * The tier 2 controls, rich labels and the text box additions. Text in the test platform is 6 units per code point
- * and 9 per line.
+ * Rich labels, text boxes, combo boxes, windows, message boxes and tab bars. Text in the test platform is 6 units per
+ * code point and 9 per line.
  */
 class ControlsTest {
     private final TestHost test = new TestHost(300, 300);

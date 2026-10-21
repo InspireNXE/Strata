@@ -50,7 +50,7 @@ import java.util.function.Function;
  * cell. The list keeps focus; Left and Right bubble up from it to the tree. The tree routes the list's input and
  * selection changes to itself and fires them as its own events, so the list fires no {@link ListView} events. A
  * change from code that moves the selection more than once, such as a collapse that rebuilds the rows, reports
- * {@link TreeView#SELECTED} once at the end.
+ * {@code SELECTED_MANY} and {@link TreeView#SELECTED} at most once each, at the end.
  *
  * @param <T> the type of the items
  */
@@ -159,15 +159,16 @@ public final class TreeViewImpl<T> extends BuiltInComposite<TreeView<T>> impleme
     }
 
     /**
-     * Flattens the shown hierarchy and hands it to the list, which keeps the selection on the same key.
+     * Rebuilds the rows with {@link #flattenShown} as one change of selection, through {@link #changeSelection}.
      */
     private void rebuild() {
         this.changeSelection(this::flattenShown);
     }
 
     /**
-     * Runs a change that may move the selection several times, then reports {@link TreeView#SELECTED} once if the
-     * selected index or item changed. Inside another such change it only runs the change, and the outer one reports.
+     * Runs a change that may move the selection several times, then reports {@code SELECTED_MANY} once if the
+     * selected rows or items changed and {@link TreeView#SELECTED} once if the selected index or item changed. Inside
+     * another such change it only runs the change, and the outer one reports.
      */
     private void changeSelection(final Runnable change) {
         if (this.quiet) {

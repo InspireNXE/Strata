@@ -23,9 +23,9 @@ import org.inspirenxe.strata.api.event.control.RequestEvent;
  * A control that opens a popup and closes it again, such as a combo box or a menu. How it opens is particular to
  * each control.
  *
- * <p>Only Strata implements this interface.</p>
+ * <p>Do not implement this interface.</p>
  *
- * @param <S> the control's own type, which the setters return
+ * @param <S> the control's own type
  */
 public interface Openable<S extends Openable<S>> extends Closable<S> {
     /**

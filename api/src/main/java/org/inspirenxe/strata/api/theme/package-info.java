@@ -14,7 +14,6 @@
  * limitations under the License.
  */
 /**
-
  * Themes: how components look.
  *
  * <p>A {@link org.inspirenxe.strata.api.theme.Theme} maps style keys, such as {@code button.hovered}, to

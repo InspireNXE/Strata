@@ -23,15 +23,17 @@ import org.inspirenxe.strata.api.event.control.ValueRequestEvent;
 import java.util.Optional;
 
 /**
- * A control with a current entry, the one selected, or with several selected the one the keyboard moves from and the
- * last one clicked. Every selecting control has one: a list, a table, a tree, a combo box, a grid, a tab bar, a menu
- * bar or a radio group. Each also implements exactly one of {@link SingleSelection}, for a control that only ever
- * selects one entry, and {@link MultiSelection}, for one that can select several.
+ * A control with a current entry: the selected entry or, while several are selected, the last one clicked, which the
+ * keyboard moves from. Every selecting control has one: a list, a table, a tree, a combo box, a cycle button, a grid,
+ * a tab bar, a menu bar, a navigation view or a radio group. Each also implements exactly one of
+ * {@link SingleSelection}, for a control that only ever selects one entry, and {@link MultiSelection}, for one that
+ * can select several.
  *
- * <p>Indexes are into what the control shows: its items for a list, a combo box or a grid, the
+ * <p>Indexes are into what the control shows: its items for a list, a combo box, a cycle button or a grid, the
  * {@linkplain org.inspirenxe.strata.api.control.collection.TableView#shownItems() sorted rows} of a table, the
  * {@linkplain org.inspirenxe.strata.api.control.collection.TreeView#shownItems() visible rows} of a tree, the tabs
- * of a tab bar, the menus of a menu bar and the buttons of a radio group. -1 means nothing is selected.
+ * of a tab bar, the menus of a menu bar, the items of a navigation view in {@code allItems()} order and the buttons
+ * of a radio group. -1 means nothing is selected.
  * {@link #selected()} returns the entry at the selected index, as each control describes.</p>
  *
  * <p>Handle {@link #SELECT} to refuse or change what the user picks, and {@link #SELECTED} to react to every
@@ -41,7 +43,7 @@ import java.util.Optional;
  * form.onEvent(Selection.SELECTED, event -> updateButtons());
  * }</pre>
  *
- * <p>Only Strata implements this interface.</p>
+ * <p>Do not implement this interface.</p>
  *
  * @param <T> the type of the entries
  * @param <S> the control's own type, which the setters return
@@ -50,9 +52,10 @@ public interface Selection<T, S extends Selection<T, S>> extends EventTarget<S> 
     /**
      * Asked before the user changes the current entry. The value is the index about to be current, or -1 when the
      * user clears the selection. A {@link MultiSelection} in {@link SelectionMode#MULTIPLE} mode asks
-     * {@link MultiSelection#SELECT_MANY} instead. A handler may rewrite it to another index or to -1; the control ignores an index it does
-     * not show. Fires only for the user's actions, and only when the selection would change. A control the user
-     * selects in only through its parts, such as a radio group, does not fire it; its parts fire their own requests.
+     * {@link MultiSelection#SELECT_MANY} instead. A handler may rewrite it to another index or to -1; the control
+     * ignores an index it does not show. Fires only for the user's actions, and only when the selection would
+     * change. A control whose selection the user changes only through its parts, such as a radio group, does not
+     * fire it; the parts fire their own requests.
      */
     EventType<ValueRequestEvent<Selection<?, ?>, Integer>> SELECT = EventType.valueRequest("selection.select");
     /**

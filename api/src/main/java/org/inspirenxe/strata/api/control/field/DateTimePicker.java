@@ -100,8 +100,8 @@ public interface DateTimePicker extends Component<DateTimePicker>, Focusable<Dat
      */
     String STYLE_BUTTON_DISABLED = DatePicker.STYLE_BUTTON_DISABLED;
     /**
-     * Style key for the icon on the button (paint, optional), the date picker's. Without it the button draws a down
-     * arrow.
+     * Style key for the icon on the button (paint, optional), shared with the date picker. Without it the button
+     * draws a down arrow.
      */
     String STYLE_ICON = DatePicker.STYLE_ICON;
     /**

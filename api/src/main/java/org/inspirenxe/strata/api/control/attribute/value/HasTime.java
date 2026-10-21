@@ -34,7 +34,7 @@ import java.util.Optional;
  * form.onEvent(HasTime.TIME_PICKED, event -> this.save());
  * }</pre>
  *
- * <p>Only Strata implements this interface.</p>
+ * <p>Do not implement this interface.</p>
  *
  * @param <S> the control's own type, which the setters return
  */

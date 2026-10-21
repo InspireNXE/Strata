@@ -46,7 +46,7 @@ public interface ComponentHooks {
     Size measure(MeasureContext context, float availableWidth, float availableHeight);
 
     /**
-     * Forwards to {@code CustomContainer.arrange}; does nothing for a leaf component.
+     * Forwards to {@code CustomComposite.arrange}; does nothing for a leaf component.
      *
      * @param context the arrange context
      * @param bounds the component's final bounds
@@ -105,7 +105,7 @@ public interface ComponentHooks {
     Object snapshotState();
 
     /**
-     * Forwards to {@code CustomContainer.onChildRemoved}; does nothing for a leaf component.
+     * Forwards to {@code CustomComposite.onChildRemoved}; does nothing for a leaf component.
      *
      * @param child the removed child
      */

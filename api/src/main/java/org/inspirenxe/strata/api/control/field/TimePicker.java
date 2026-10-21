@@ -31,7 +31,7 @@ import java.time.LocalTime;
  * hours, minutes, seconds and the halves of the day in a popup.
  *
  * <h2>The field</h2>
- * <p>The time shows as hour, minute, the second while {@linkplain #isSecondsShown() shown} and, on a 12 hour clock,
+ * <p>The time shows as hour, minute, the second while {@linkplain #isSecondsShown() shown} and, on a 12-hour clock,
  * the half of the day, such as {@code 14:05} or {@code 02:05 PM}. Every number has two digits. The clock and the names
  * of the halves follow the language unless code sets a {@linkplain #setClockFormat clock format}. The field edits the
  * way a {@link DatePicker}'s does: click or Left and Right to pick a part, Up and Down to step it (the minutes by the
@@ -42,7 +42,7 @@ import java.time.LocalTime;
  *
  * <h2>The popup</h2>
  * <p>The button, Alt and Down, and F4 open a row of lists: hours (1 to 12 or 0 to 23), minutes in the minute step,
- * seconds while shown, and the halves of the day on a 12 hour clock. Each row is a line plus 4 units tall, at most
+ * seconds while shown, and the halves of the day on a 12-hour clock. Each row is a line plus 4 units tall, at most
  * seven show, and the row of the current value starts in the middle where the column allows. Picking a row sets
  * that part of the time at once; when the time was empty, the other parts start at zero. Focus stays in the field,
  * whose focused part is the column the keys work on: Left and Right move between columns, Up and Down pick the row

@@ -26,6 +26,9 @@ public enum HorizontalAlignment {
     CENTER,
     /** Against the slot's right edge (before the margin), at the desired width. */
     RIGHT,
-    /** As wide as the slot minus the margin, unless the component has a fixed width; the minimum and maximum still apply. */
+    /**
+     * As wide as the slot minus the margin, unless the component has a fixed width; the minimum and maximum still
+     * apply.
+     */
     STRETCH
 }

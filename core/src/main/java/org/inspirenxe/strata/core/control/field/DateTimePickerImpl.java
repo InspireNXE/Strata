@@ -46,8 +46,8 @@ import java.util.function.Predicate;
  * The core {@link DateTimePicker}: one field of date parts, a space and time parts over a {@link SegmentedField},
  * with a private {@link CalendarViewImpl} beside {@link TimeColumns} in its popup.
  *
- * <p>The value is kept to whole minutes, or seconds while they show, and inside the range. When cutting the seconds
- * off would leave it before the range's start, it moves up to the next whole minute or second. The calendar in the
+ * <p>The value is kept to whole minutes, or seconds while they show, and inside the range. When cutting it to the
+ * minute or second would leave it before the range's start, it moves up to the next whole one. The calendar in the
  * popup is not focusable, so focus stays in the field; a press on the calendar or a column takes it back. The popup's
  * parts are made the first time it opens and kept.</p>
  */

@@ -50,17 +50,17 @@ import org.inspirenxe.strata.api.event.control.ValueRequestEvent;
  *
  * <h2>Events</h2>
  * <ul>
- *     <li>{@link #PICK}: Fired when the user is about to change the color: a press or a drag in the square or on a
+ *     <li>{@link #PICK}: Asked before the user changes the color: a press or a drag in the square or on a
  *     strip, or a hex code taken from the field. During a drag it fires for each move that would change the color. The
  *     value is the new color. Cancel the event to keep the current color, or set another color, which then applies as
  *     {@link #setColor} does; the value must not be null. A press, drag or hex code that would leave the color as it
  *     is fires nothing, though a press or drag on the hue strip while the color is gray still moves the hue. Fires only
  *     for the user's actions: {@link #setColor} fires none.</li>
- *     <li>{@link #PICKED}: Fired after the color changed, by the user or by {@link #setColor}. The value is the new
- *     color and {@code previous()} the color before. Fires for changes made from code too.</li>
+ *     <li>{@link #PICKED}: Told after the color changed, by the user or by {@link #setColor}. The value is the new
+ *     color and {@code previous()} the color before.</li>
  * </ul>
- * <p>The color is an {@code int} rather than a {@link org.inspirenxe.strata.api.control.attribute.value.Ranged}
- * value, whose {@code double} cannot hold it, so the picker has its own events.</p>
+ * <p>The picker has its own events because its color is an {@code int}, and a
+ * {@link org.inspirenxe.strata.api.control.attribute.value.Ranged} value is a {@code double}.</p>
  *
  * <h2>Theme keys</h2>
  * <ul>
@@ -130,7 +130,7 @@ public interface ColorPicker extends Component<ColorPicker>, HasCursor<ColorPick
     EventType<ValueRequestEvent<ColorPicker, Integer>> PICK = EventType.valueRequest("color_picker.pick");
     /**
      * Told after the color changed, by the user or from code. The value is the new ARGB color and the previous value
-     * the color before. Fires for changes made from code too.
+     * the color before.
      */
     EventType<ValueEvent<ColorPicker, Integer>> PICKED = EventType.valueReport("color_picker.picked");
 

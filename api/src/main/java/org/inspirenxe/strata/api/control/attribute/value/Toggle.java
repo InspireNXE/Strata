@@ -30,7 +30,7 @@ import org.inspirenxe.strata.api.event.control.ValueRequestEvent;
  * settings.onEvent(Toggle.TOGGLED, event -> save());
  * }</pre>
  *
- * <p>Only Strata implements this interface.</p>
+ * <p>Do not implement this interface.</p>
  *
  * @param <S> the control's own type, which the setters return
  */

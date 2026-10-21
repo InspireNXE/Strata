@@ -27,7 +27,8 @@ import org.inspirenxe.strata.api.event.input.InputEvents;
  * final value of a request. A handler may register or remove handlers while it runs; the change applies from the
  * next event.</p>
  *
- * <p>Only Strata implements this interface.</p>
+ * <p>Do not implement this interface. A component of your own gets it from
+ * {@link org.inspirenxe.strata.api.extension.CustomComponent} and the other {@code Custom*} bases.</p>
  *
  * @param <S> the type registration returns, for chaining
  */

@@ -20,7 +20,7 @@
  * {@link org.inspirenxe.strata.core.node.Node} (or a {@link org.inspirenxe.strata.core.node.ContainerNode} for
  * composites and containers). Strata's own components extend {@link org.inspirenxe.strata.core.node.BuiltInComponent},
  * {@link org.inspirenxe.strata.core.node.BuiltInComposite} or {@link org.inspirenxe.strata.core.node.BuiltInContainer},
- * which make their node themselves. A developer's extend
+ * which make their node themselves. A developer's components extend
  * {@link org.inspirenxe.strata.api.extension.CustomComponent} or its subclasses, whose peer is the node. Both kinds
  * reach the node through the same hooks, and only the built-in bases add calls that core alone answers. The host's
  * {@link org.inspirenxe.strata.core.node.ComponentFactoryImpl} makes those nodes and maps components back to them,

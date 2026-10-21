@@ -2,17 +2,17 @@
 
 Strata is a GUI library for Java games that does not depend on any engine. You build screens from a tree of components, and an adapter draws them and feeds them input on a particular engine. Strata has:
 
-- two-pass layout with four containers: `AnchorPanel`, `StackPanel`, `GridPanel` and `AbsolutePanel`
-- labels, images, buttons, checkboxes, sliders and a single-line text box
+- two-pass layout with five containers: `AnchorPanel`, `StackPanel`, `GridPanel`, `AbsolutePanel` and `ScrollPanel`
+- a full set of standard controls, from labels and buttons to text fields, lists, tables, trees, menus, date pickers and dialogs
 - click counting, dragging, focus and tab order
 - typed events that handlers can cancel
-- themes that map style keys to colors, gradients and sprites
+- themes that map style keys to colors, gradients and sprites, built in code or read from JSON theme files
 
 This repository holds the library alone. Adapters live in their own repositories: the Java2D/Swing adapter in Strata-Swing and the Minecraft adapter in [Strata-Minecraft](https://github.com/InspireNXE/Strata-Minecraft).
 
 | Module | What it is |
 |---|---|
-| `api` | What developers compile against: interfaces, value records, the `ComponentFactory`, the controls (`Label`, `Image`, `Button`, `CheckBox`, `Slider`, `TextBox`, `PasswordTextBox`, `ListView`, `ComboBox`, `Window`, `MessageBox`, `TabBar`, `ProgressBar`, `Separator`, `RadioButton`, `ToggleSwitch`, `Spinner`, `TextArea`, `TableView`, `TreeView`, `Menu`, `MenuBar`, `Expander`, `SplitPane`, `GridView`) and the attributes they share (`Toggle`, `SingleSelection`, `TextInput` and others), the containers (including `ScrollPanel`), overlays and tooltips, and the extension points (`CustomComponent`, `CustomComposite`, `CustomContainer`, `Painter`, `Environment`). |
+| `api` | What developers compile against: interfaces, value records, the `ComponentFactory`, the controls in `api.control`, grouped by role into `display`, `button`, `field`, `collection`, `menu`, `pane` and `window`, and the attributes they share (`Toggle`, `SingleSelection`, `TextInput` and others), the containers (including `ScrollPanel`), overlays and tooltips, and the extension points (`CustomComponent`, `CustomComposite`, `CustomContainer`, `Painter`, `Environment`). |
 | `spi` | What engine adapters implement (`Canvas`, `Platform`) and drive (`ScreenHost`, `ScreenStack`), plus contract tests for adapters. |
 | `core` | The implementation behind both. Only adapters use it directly. |
 

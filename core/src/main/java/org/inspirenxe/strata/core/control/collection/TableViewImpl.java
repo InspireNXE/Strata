@@ -282,8 +282,9 @@ public final class TableViewImpl<T> extends BuiltInComposite<TableView<T>> imple
     }
 
     /**
-     * Sorts as a request ended, unless the sort is null or names neither null nor a sortable column of this table,
-     * which a handler can cause by rewriting the sort or removing the comparator.
+     * Sorts as a request ended, or goes back to the set order when the sort names no column. A null sort, or one that
+     * names a column this table does not hold or cannot sort by, is ignored; a handler can cause either by rewriting
+     * the sort or removing the comparator.
      */
     @SuppressWarnings("unchecked")
     private void applySort(final Sort sort) {

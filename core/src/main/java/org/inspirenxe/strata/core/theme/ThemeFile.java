@@ -162,7 +162,7 @@ record ThemeFile(String layer, Optional<ThemeId> parent, Map<String, Paint> pain
     }
 
     /**
-     * Parses {@code #RRGGBB} (opaque) or {@code #AARRGGBB}.
+     * Parses a size written as {@code [width, height]}.
      */
     private static Size size(final Object value, final String where) {
         final List<?> parts = list(value, where);

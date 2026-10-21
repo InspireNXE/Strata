@@ -40,10 +40,12 @@ import java.util.function.Function;
  * and Enter, Space or Alt+Down open the list. While open: Up and Down move the highlight, Enter or Space selects it,
  * and Escape closes. A disabled box ignores input.</p>
  *
- * <p>Options are drawn with the {@linkplain #setLabelFunction label function}, {@code toString} by default. When
- * options are set, the selection moves to the option with the selected option's {@linkplain #setKeyFunction key}, or
- * to the first option if there is none. Code can clear the selection with {@link #clearSelection()}; the box then
- * shows no text until something is selected.</p>
+ * <p>Options are drawn with the {@linkplain #setLabelFunction label function}. The one that
+ * {@link org.inspirenxe.strata.api.ComponentFactory#comboBox()} sets shows each option by its appearance's name, or
+ * by {@link String#valueOf(Object)} when it has no appearance. When options are set, the selection moves to the
+ * option with the selected option's {@linkplain #setKeyFunction key}, or to the first option if there is none.
+ * Code can clear the selection with {@link #clearSelection()}; the box then shows no text until something is
+ * selected.</p>
  *
  * <p>The selection events carry option indexes, so read the option from the box:
  * {@code box.items().get(e.value())}. The open list is private to the box and fires no events of its own. The box
@@ -56,7 +58,7 @@ import java.util.function.Function;
  * <h2>Events</h2>
  * <ul>
  *     <li>{@link Openable#OPEN}: Asked before the user opens the list: a click on the closed box, or Enter, Space or
- *     Alt and Down while it has focus. It fires only when the list can open, which needs the box attached, enabled and
+ *     Alt+Down while it has focus. It fires only when the list can open, which needs the box attached, enabled and
  *     with options. A handler may change the options before the list opens; the box checks again afterwards and stays
  *     closed if it has no options left. Fires only for the user's actions.</li>
  *     <li>{@link Openable#OPENED}: Told after the list opened. Fires for {@link #open()} called from code too.</li>

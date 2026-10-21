@@ -60,8 +60,10 @@ import java.util.function.Function;
  *     Page Up, Page Down, Home and End keys while focus is in the tree, Right while an expanded item is selected, which
  *     moves to its first child, or Left while an item that is not expanded is selected, which moves to its parent. It
  *     fires only when the selection would change. The value is the row of {@link #shownItems()} about to be selected.
- *     The user never clears the selection, but a handler may rewrite the value to -1 to clear it, or to another row;
- *     any other index outside the rows is ignored. Fires only for the user's actions.</li>
+ *     It is -1 when the user clears the selection of a {@linkplain #setDeselectable deselectable} tree. A handler
+ *     may rewrite the value to another row or to -1; any other index outside the rows is ignored. In
+ *     {@link SelectionMode#MULTIPLE} mode the user's changes ask {@link MultiSelection#SELECT_MANY} instead, as in a
+ *     {@link ListView}. Fires only for the user's actions.</li>
  *     <li>{@link Selection#SELECTED}: Told after the selected row changed. The value is the selected row of
  *     {@link #shownItems()}, or -1 when nothing is selected, and the previous value is the row before. It fires once
  *     per change, also when expanding or collapsing moves the selected item to another row, and when the rows are
@@ -119,9 +121,9 @@ public interface TreeView<T> extends Component<TreeView<T>>, HasCursor<TreeView<
     /**
      * Told after an item was expanded or collapsed. The value names the item and its new state, and the previous
      * value the same item and its old state. {@link #expandAll()} and {@link #collapseAll()} fire it once for each
-     * item that changed, and {@link #selectItem} once for each ancestor it expanded. {@link #collapseAll()} reports only
-     * items it can still reach from the roots; it forgets other expanded keys without an event. Fires for changes
-     * made from code too.
+     * item that changed, and {@link #selectItem} once for each ancestor it expanded. {@link #collapseAll()} reports
+     * only items it can still reach from the roots; it forgets other expanded keys without an event. Fires for
+     * changes made from code too.
      */
     EventType<ValueEvent<TreeView<?>, Expansion<?>>> EXPANDED = EventType.valueReport("tree_view.expanded");
 
@@ -183,8 +185,9 @@ public interface TreeView<T> extends Component<TreeView<T>>, HasCursor<TreeView<
     boolean isExpanded(T item);
 
     /**
-     * Expands or collapses an item. Collapsing an item that holds the selection moves the selection to it.
-     * {@link #EXPANDED} fires if the item changed.
+     * Expands or collapses an item. In {@link SelectionMode#SINGLE} mode, collapsing an item that holds the
+     * selection moves the selection to it; in {@link SelectionMode#MULTIPLE} mode the rows it hides leave the
+     * selection. {@link #EXPANDED} fires if the item changed.
      *
      * @param item the item
      * @param expanded true to show its children
@@ -200,7 +203,8 @@ public interface TreeView<T> extends Component<TreeView<T>>, HasCursor<TreeView<
     TreeView<T> expandAll();
 
     /**
-     * Collapses every item, leaving only the roots shown. A selection below the roots moves to its root.
+     * Collapses every item, leaving only the roots shown. In {@link SelectionMode#SINGLE} mode a selection below the
+     * roots moves to its root; in {@link SelectionMode#MULTIPLE} mode the hidden rows leave the selection.
      *
      * @return this tree
      */

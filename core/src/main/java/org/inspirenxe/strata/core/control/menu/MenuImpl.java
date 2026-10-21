@@ -51,8 +51,8 @@ import java.util.Set;
 import java.util.function.Consumer;
 
 /**
- * The core {@link Menu}. It draws its entries itself rather than holding a component per entry, and opens as a popup
- * of its host's overlays. A submenu opens with its top-left corner at the right edge of its item.
+ * The core {@link Menu}. It draws its entries itself, with no component per entry, and opens as a popup of its host's
+ * overlays. A submenu opens with its top-left corner at the right edge of its item.
  *
  * <p>Opening a menu lays out its host's overlays at once, so its bounds and items are known before the next frame.
  * The first menu of a chain remembers what had focus when it opened and gives focus back when it closes, if that

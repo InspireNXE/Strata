@@ -37,7 +37,7 @@ import java.util.Objects;
  * the {@linkplain #setTextScale text scale}.</p>
  *
  * <p>The text is {@link Text}: its plain parts are drawn in the label's {@linkplain #style() style}, and styled
- * parts change that style, such as a white item name followed by a gray count. Styled parts wrap and break like plain
+ * parts change that style, such as a name followed by a gray count. Styled parts wrap and break like plain
  * text.</p>
  *
  * <p>With {@link TextOverflow#ELLIPSIS}, a line wider than the label's bounds is cut short and ends in
@@ -57,8 +57,7 @@ import java.util.Objects;
  *         .setStyle(TextStyle.DEFAULT.withBold(true));
  * Label help = factory.label(longText).setWrap(true);
  * help.setAlignment(HorizontalAlignment.STRETCH, VerticalAlignment.TOP);
- * Label row = factory.label("").setSpans(List.of(
- *         new TextSpan("Diamond", white), new TextSpan(" x 64", gray)));
+ * Label row = factory.label(Text.concat(Text.of("Ruby"), Text.of(" x 12").color(0xFFAAAAAA)));
  * }</pre>
  *
  * <p>Get one from {@link org.inspirenxe.strata.api.ComponentFactory#label(String)}. Do not implement this
@@ -66,7 +65,7 @@ import java.util.Objects;
  */
 public interface Label extends Component<Label>, HasCursor<Label>, HasTooltip<Label>, HasText<Label> {
     /**
-     * Style key for the label's text style.
+     * Style key for the label's text style (text style, optional).
      */
     String STYLE_TEXT = "label.text";
 

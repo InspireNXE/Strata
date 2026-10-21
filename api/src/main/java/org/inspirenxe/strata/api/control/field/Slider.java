@@ -51,10 +51,10 @@ import java.util.function.DoubleFunction;
  * is 8 units wide and as tall as the slider; the thumb's left edge moves from the slider's left edge (at the
  * minimum) to the slider's right edge minus the thumb width (at the maximum). A vertical slider wants 20 by 150
  * units, and its thumb is 8 units tall and as wide as the slider; the thumb's bottom edge moves from the slider's
- * bottom edge (at the minimum) to its top edge plus the thumb height (at the maximum). An optional
+ * bottom edge (at the minimum) to one thumb height below its top edge (at the maximum). An optional
  * {@linkplain #setLabel label} is drawn centered over the track, in either orientation, to show the setting. It is
  * drawn last, over the thumb, so its text style should stay readable on the thumb as well as the track; the flat
- * theme gives it a shadow, as vanilla-style sliders do.</p>
+ * theme gives it a shadow.</p>
  *
  * <h2>Events</h2>
  * <ul>
@@ -66,8 +66,7 @@ import java.util.function.DoubleFunction;
  *     only for the user's actions: {@link #setValue}, {@link #setRange} and {@link #setStep} fire none.</li>
  *     <li>{@link Ranged#CHANGED}: Fired after the value changed: by the user, by {@link #setValue}, or by
  *     {@link #setRange} or {@link #setStep} moving it. The value is the new value and {@code previous()} the value
- *     before; neither is null. During a drag it fires for each move that changes the value. Fires for changes made from
- *     code too.</li>
+ *     before; neither is null. During a drag it fires for each move that changes the value.</li>
  * </ul>
  *
  * <h2>Theme keys</h2>

@@ -23,10 +23,10 @@
  * it, and the same thing has the same name on every control.</p>
  *
  * <ul>
- *     <li>{@code text}: {@code HasText}, {@code Titled} and {@code TextInput}.</li>
- *     <li>{@code value}: {@code Toggle}, {@code Ranged} and {@code Stepped}.</li>
- *     <li>{@code item}: {@code ItemSource}, {@code CellSource}, {@code SingleSelection}, {@code Activatable} and
- *     {@code RowView}.</li>
+ *     <li>{@code text}: {@code HasText}, {@code Titled}, {@code TextEntry} and {@code TextInput}.</li>
+ *     <li>{@code value}: {@code Toggle}, {@code Ranged}, {@code Stepped}, {@code HasDate} and {@code HasTime}.</li>
+ *     <li>{@code item}: {@code ItemSource}, {@code CellSource}, {@code Selection}, {@code SingleSelection},
+ *     {@code MultiSelection}, {@code Activatable} and {@code RowView}.</li>
  *     <li>{@code popup}: {@code Closable}, {@code Openable} and {@code Popup}.</li>
  * </ul>
  *
@@ -36,6 +36,6 @@
  * {@link org.inspirenxe.strata.api.event.EventTarget}; those without do not, so entries that are not event targets,
  * such as a menu item or a table column, can have them too.</p>
  *
- * <p>Only Strata implements these interfaces. Code may hold controls by them and call them.</p>
+ * <p>Do not implement these interfaces. Code may hold controls by them and call them.</p>
  */
 package org.inspirenxe.strata.api.control.attribute;

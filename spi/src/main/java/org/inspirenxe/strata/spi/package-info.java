@@ -19,7 +19,7 @@
  * <h2>Writing an adapter</h2>
  * <ol>
  *     <li>Implement {@link org.inspirenxe.strata.spi.Platform}: text measurement, a clock, the clipboard, text input
- *     signalling and {@link org.inspirenxe.strata.spi.Capabilities}.</li>
+ *     signaling and {@link org.inspirenxe.strata.spi.Capabilities}.</li>
  *     <li>Implement {@link org.inspirenxe.strata.spi.Canvas} on the engine's 2D drawing.</li>
  *     <li>Create a host with {@code StrataCore.createScreenHost} (one screen) or {@code StrataCore.createScreenStack}
  *     (a stack of screens), from the {@code core} module.</li>

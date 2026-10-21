@@ -131,7 +131,7 @@ class FlyoutTest {
             flyout.open(FlyoutTest.this.behind.bounds());
             final DropDownButtonTest.Recording canvas = new DropDownButtonTest.Recording();
             FlyoutTest.this.test.host().render(canvas);
-            // Without flyout.background, the combo box's popup paint
+            // Without flyout.background, it fills with the combo box's popup paint
             assertTrue(canvas.fills.contains(new DropDownButtonTest.Fill(new Rect(10, 30, 38, 17), POPUP)));
 
             final Theme theme = Themes.flat().toBuilder()

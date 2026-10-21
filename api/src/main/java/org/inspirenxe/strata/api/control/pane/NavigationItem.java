@@ -125,9 +125,9 @@ public non-sealed interface NavigationItem extends NavigationEntry, HasText<Navi
     boolean isSelectable();
 
     /**
-     * Sets whether a pick selects the item. An item that is not selectable only activates when picked, which
-     * {@link org.inspirenxe.strata.api.control.attribute.item.Activatable#ACTIVATED} reports, as a Sign out item
-     * does, and an item with children that is not selectable expands or collapses instead. Code can still select it.
+     * Sets whether a pick selects the item. An item that is not selectable, such as Sign out, only activates when
+     * picked, which {@link org.inspirenxe.strata.api.control.attribute.item.Activatable#ACTIVATED} reports; one with
+     * children expands or collapses instead. Code can still select it.
      *
      * @param selectable false to only activate it
      * @return this item

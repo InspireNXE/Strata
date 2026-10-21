@@ -29,7 +29,7 @@ import org.inspirenxe.strata.api.text.Text;
  * and dialogs as their box.
  *
  * <h2>Layout</h2>
- * <p>The title bar runs along the top, one line plus {@link #TITLE_PADDING} units above and below tall. Children are
+ * <p>The title bar runs along the top, one line tall plus {@link #TITLE_PADDING} units above and below. Children are
  * laid out below it as in an {@code AnchorPanel}, inside the {@linkplain #padding() padding} (3 units by default).
  * A new window is centered in its slot.</p>
  *
@@ -38,11 +38,11 @@ import org.inspirenxe.strata.api.text.Text;
  *     <li>Dragging the title bar moves the window by its {@linkplain #setOffset offset}, kept inside the slot its
  *     parent gives it, while it {@linkplain #setMovable is movable}.</li>
  *     <li>A click on the close button {@linkplain #close closes} it while it {@linkplain #setClosable is
- *     closable}. So does an Escape press nothing inside consumed, if a handler for {@link #CLOSE} or
+ *     closable}. So does an Escape press that nothing inside consumed, if a handler for {@link #CLOSE} or
  *     {@link #CLOSED} is registered on the window or an ancestor, or the window is shown in an overlay; otherwise
  *     Escape goes on to the engine, which usually closes the screen. Either way the window fires {@link #CLOSE}
  *     first.</li>
- *     <li>While the window {@linkplain #setResizable is resizable}, dragging the grip, a {@value #GRIP_SIZE} unit
+ *     <li>While the window {@linkplain #setResizable is resizable}, dragging the grip, a {@value #GRIP_SIZE}-unit
  *     square in the bottom-right corner, resizes it with its top-left corner in place. With
  *     {@linkplain #setEdgeResizable edge resizing} on, dragging any edge within {@value #EDGE_SIZE} units resizes it
  *     too, and so does a corner, the part of an edge within {@value #GRIP_SIZE} units of the next edge; the edge
@@ -61,9 +61,9 @@ import org.inspirenxe.strata.api.text.Text;
  *     press that the window acts on as described above. An Escape press reaches the window when focus is inside it, or
  *     when nothing has focus and the window is the content of the top dialog. Unless a handler cancels the request, the
  *     window does what {@link #close()} does. Cancel it to keep the window open, for example to ask about unsaved
- *     changes first; the Escape press is used either way. An overlay that closes without the window, such as a popup
- *     closed by a press outside it or by an Escape press that never reached the window, fires no request. Fires only
- *     for the user's actions.</li>
+ *     changes first; the Escape press is consumed either way. An overlay that closes without the window, such as a
+ *     popup closed by a press outside it or by an Escape press that never reached the window, fires no request. Fires
+ *     only for the user's actions.</li>
  *     <li>{@link Closable#CLOSED}: Reported each time the window closes, before the overlay showing it closes. Fires
  *     for {@link #close()} called from code too.</li>
  *     <li>{@link #RESIZE}: Requested on each move of a resize drag that would change the window's size. Cancel it to

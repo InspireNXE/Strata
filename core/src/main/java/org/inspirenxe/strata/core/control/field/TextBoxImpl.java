@@ -62,7 +62,7 @@ import java.util.function.UnaryOperator;
  * asks for {@link #DEFAULT_WIDTH} units of width, so give it a fixed width or stretch it to change that. Text sits
  * 4 units in from the left and right edges and 5 from the top and bottom unless the padding is changed. Text wider
  * than the box scrolls sideways to keep the caret in view. The caret, the selection, the scroll and the key and
- * pointer handling are a {@code LineEditor} over a {@code PlainBuffer}, which the password box shares.</p>
+ * pointer handling are a {@code LineEditor}, which the password box also uses, over a {@code PlainBuffer}.</p>
  *
  * <p>Every user edit that would change the text fires {@link TextBox#MODIFY} and then {@link TextBox#EDIT} when a
  * handler for either is on its path. While the handlers run the box still holds the text and selection from before

@@ -59,8 +59,8 @@ import java.util.function.Predicate;
  * in each of the four day styles. The cell rectangles and the 42 dates of the month grid are worked out when the
  * bounds, the month in view or the first day of the week change, and the title and the twelve years of a decade when
  * they change, so a frame allocates nothing beyond the rings it outlines. Hover is tracked from pointer moves against
- * the cached rectangles. Today is read from the platform's wall clock when the calendar is made and then at most once
- * a minute, by {@code Platform.clock().millis()}, while it paints.</p>
+ * the cached rectangles. Today is read from the platform's wall clock when the calendar is made, and again while it
+ * paints once a minute has passed since the last reading, timed by {@code Platform.clock().millis()}.</p>
  *
  * <p>The cells share the room they are given: each is a seventh of the width less the padding and an eighth of the
  * height, rounded down to whole units, and the grid is centered across. The year and decade grids fill the area of

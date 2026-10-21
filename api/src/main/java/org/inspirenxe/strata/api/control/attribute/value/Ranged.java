@@ -26,7 +26,7 @@ import org.inspirenxe.strata.api.event.control.ValueRequestEvent;
  * <p>The value always lies within the range. Setting a value outside it clamps the value, and setting a range
  * that leaves the value outside it moves the value to the nearest end.</p>
  *
- * <p>Only Strata implements this interface.</p>
+ * <p>Do not implement this interface.</p>
  *
  * @param <S> the control's own type, which the setters return
  */

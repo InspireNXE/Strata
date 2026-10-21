@@ -212,7 +212,7 @@ class ParentTest {
     }
 
     /**
-     * A card with a heading of its own and a body its user gives, written as a developer would write it.
+     * A card with a heading of its own and a body passed in by whoever makes it, written as a developer would write it.
      */
     static final class Card extends CustomComposite<Card> {
         final Label heading;

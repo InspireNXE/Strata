@@ -229,7 +229,7 @@ class NavigationViewTest {
             assertEquals(List.of("activate? 1", "select? 1", "selected 1", "activated 1"), NavigationViewTest.this.heard);
             assertEquals(1, NavigationViewTest.this.view.selectedIndex());
             assertSame(NavigationViewTest.this.item("Sound"), NavigationViewTest.this.view.selected().orElseThrow());
-            // Clicking the selected item activates it again and asks no selection
+            // Clicking the selected item activates it again and requests no selection
             NavigationViewTest.this.heard.clear();
             NavigationViewTest.this.clickRow(1);
             assertEquals(List.of("activate? 1", "activated 1"), NavigationViewTest.this.heard);

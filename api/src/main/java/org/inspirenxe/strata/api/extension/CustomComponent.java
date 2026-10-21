@@ -65,14 +65,14 @@ import java.util.function.Consumer;
  * it here:</p>
  *
  * <pre>{@code
- * public interface ColorPicker extends Component<ColorPicker>, Focusable<ColorPicker> {
+ * public interface ColorSwatch extends Component<ColorSwatch>, Focusable<ColorSwatch> {
  *     int color();
  * }
  *
- * final class ColorPickerImpl extends CustomComponent<ColorPicker> implements ColorPicker {
+ * final class ColorSwatchImpl extends CustomComponent<ColorSwatch> implements ColorSwatch {
  *     private int color = 0xFFFF0000;
  *
- *     ColorPickerImpl(ComponentFactory factory) {
+ *     ColorSwatchImpl(ComponentFactory factory) {
  *         super(factory);
  *     }
  *
@@ -100,7 +100,7 @@ import java.util.function.Consumer;
  * behaves like every other one in layout, focus and events.</p>
  *
  * <p>The methods of {@link Focusable}, {@link HasCursor} and {@link HasTooltip} are here too, so a subclass takes
- * part in focus, chooses a cursor or shows a tooltip just by declaring the interface, as {@code ColorPicker} does
+ * part in focus, chooses a cursor or shows a tooltip just by declaring the interface, as {@code ColorSwatch} does
  * above. Strata ignores them on a subclass that does not declare the interface. A component that implements
  * {@link Focusable} starts out focusable and tabbable.</p>
  *
@@ -954,7 +954,7 @@ public abstract class CustomComponent<T extends Component<T>> implements Compone
 
     /**
      * Returns whether a handler for a type is on this component's path: on the component itself or, for a
-     * bubbling type, on any ancestor. Use it to skip work that only an event needs.
+     * bubbling type, on any ancestor the event would reach. Use it to skip work that only an event needs.
      *
      * @param type the event type
      * @return true if firing the type would reach a handler
@@ -966,7 +966,7 @@ public abstract class CustomComponent<T extends Component<T>> implements Compone
     /**
      * Returns the class name, for debugging.
      *
-     * @return for example {@code ColorPickerImpl}
+     * @return for example {@code ColorSwatchImpl}
      */
     @Override
     public String toString() {

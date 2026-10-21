@@ -20,7 +20,7 @@ import org.inspirenxe.strata.api.text.Text;
 /**
  * A control or entry with a title over its content, such as a window, an expander or a table column.
  *
- * <p>Only Strata implements this interface.</p>
+ * <p>Do not implement this interface.</p>
  *
  * @param <S> the control's own type, which the setter returns
  */

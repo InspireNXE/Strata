@@ -53,8 +53,8 @@ import java.util.Set;
  * height does not count, so a 16 by 16 icon gives 20 by 20.</p>
  *
  * <p>A link draws no face and no focus ring, has no default padding and no minimum size, and draws its caption in
- * the link text style. That is the hovered one while the link is hovered or focused, or else the link text with an
- * underline when the theme has no hovered link style.</p>
+ * the link text style. While the link is hovered or focused it uses the hovered link style, which is the link text
+ * style underlined when the theme sets none.</p>
  *
  * <p>The keys, the caption and the icon, and how they measure and draw, live in a helper that
  * {@link DropDownButtonImpl} shares, so the two buttons look and measure alike.</p>
