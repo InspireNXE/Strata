@@ -25,7 +25,7 @@ import java.util.Objects;
  * own, and code can define more with {@link ThemeRegistry#define}. Any other id names a theme made only from theme
  * files, which the adapter finds in its asset roots.</p>
  *
- * @param namespace the owner, usually a mod or game id; not empty
+ * @param namespace the owner, usually the id of the application, mod or plugin; not empty
  * @param path the theme's name within the namespace; not empty
  */
 public record ThemeId(String namespace, String path) {
