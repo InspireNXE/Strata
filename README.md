@@ -1,28 +1,25 @@
+<p align="center"><img src=".github/assets/logo.svg" width="128" alt="Strata logo"></p>
+
 # Strata
 
-Strata is a GUI library for Java games that does not depend on any engine. You build screens from a tree of components, and an adapter draws them and feeds them input on a particular engine. Strata has:
+Strata is a GUI library for Java games that works with any engine. You build screens from layout panels and a full set of controls, style them with themes, and a thin adapter draws them and feeds them input on your engine. The same screen runs everywhere Strata has an adapter.
 
-- two-pass layout with five containers: `AnchorPanel`, `StackPanel`, `GridPanel`, `AbsolutePanel` and `ScrollPanel`
-- a full set of standard controls, from labels and buttons to text fields, lists, tables, trees, menus, date pickers and dialogs
-- click counting, dragging, focus and tab order
-- typed events that handlers can cancel
-- themes that map style keys to colors, gradients and sprites, built in code or read from JSON theme files
+- Five layout panels: anchor, stack, grid, absolute and scroll.
+- Controls from labels and buttons to text fields, lists, tables, trees, menus, date pickers and dialogs.
+- One event system for input and for every change to a control. Handlers can cancel or rewrite what the user asks for.
+- Themes that map style keys to colors, gradients and sprites, written in code or JSON and resolved in layers.
 
-This repository holds the library alone. Adapters live in their own repositories: the Java2D/Swing adapter in Strata-Swing and the Minecraft adapter in [Strata-Minecraft](https://github.com/InspireNXE/Strata-Minecraft).
+## Platforms
 
-| Module | What it is |
-|---|---|
-| `api` | What developers compile against: interfaces, value records, the `ComponentFactory`, the controls in `api.control`, grouped by role into `display`, `button`, `field`, `collection`, `menu`, `pane` and `window`, and the attributes they share (`Toggle`, `SingleSelection`, `TextInput` and others), the containers (including `ScrollPanel`), overlays and tooltips, and the extension points (`CustomComponent`, `CustomComposite`, `CustomContainer`, `Painter`, `Environment`). |
-| `spi` | What engine adapters implement (`Canvas`, `Platform`) and drive (`ScreenHost`, `ScreenStack`), plus contract tests for adapters. |
-| `core` | The implementation behind both. Only adapters use it directly. |
+| | Platform | Repository | Versions |
+|---|---|---|---|
+| <img src=".github/assets/platform-swing.svg" width="40" alt=""> | Java2D | [Strata-Swing](https://github.com/InspireNXE/Strata-Swing) | Java 25 |
+| <img src=".github/assets/platform-minecraft.svg" width="40" alt=""> | Minecraft | [Strata-Minecraft](https://github.com/InspireNXE/Strata-Minecraft) | 26.3 on NeoForge, Forge, Fabric and SpongeVanilla |
+| <img src=".github/assets/platform-engine.svg" width="40" alt=""> | Your engine | [Writing an adapter](https://inspirenxe.github.io/Strata/platforms/writing-an-adapter/) | |
 
-[docs/design-implemented.md](docs/design-implemented.md) covers the design as built and where its ideas come from (MalisisCore and Wintergreen), [docs/design-pending.md](docs/design-pending.md) holds the proposals awaiting review and the open questions, and [docs/ROADMAP.md](docs/ROADMAP.md) tracks what is built and what is next. The Javadoc of `api` and `spi` is the contract, including what adapters must guarantee.
+Nothing is published yet.
 
-The documentation site (guides, reference, platform notes and the compiled examples the pages show) is in the Strata-Docs repository, a sibling of this one at `../Strata-Docs`. It builds against this checkout, so check the two out side by side. Nothing is published yet.
-
-## Writing a screen
-
-A screen builds its tree from the factory its host passes in:
+## A screen
 
 ```java
 public final class SettingsScreen implements Screen {
@@ -36,24 +33,15 @@ public final class SettingsScreen implements Screen {
 }
 ```
 
-You can extend Strata in three ways, from lightest to heaviest:
+Open it with `Strata.screens().open(new SettingsScreen())` on any platform.
 
-- Change a built-in through its events, with `onEvent(type, handler)` and an optional priority. Pre events (`TextInput.EDIT`, `Closable.CLOSE`) can be canceled or rewritten, Post events (`TextInput.EDITED`) report every change, and drawing and sizing are events too (`Component.PAINTED`, `Component.MEASURED`).
-- Compose built-ins inside a container and expose the group through an interface of your own.
-- Write a new type by extending `CustomComponent<T>`, or `CustomContainer<T>` for a layout. The class can implement an interface of your own, so other code sees it as its own type.
+## Modules
 
-Do not implement the component interfaces directly. Strata rejects such a class when it is added to a container.
-
-## Showing it in Swing
-
-`StrataPanel` is a `JPanel` that shows a stack of screens. The last argument is the number of pixels per UI unit. Mark it as the default panel, and `Strata.screens()` opens screens on it:
-
-```java
-StrataPanel panel = new StrataPanel(new SwingPlatform(SwingTextMetrics.defaults()), Themes.flat(), 2f);
-panel.setDefault();
-frame.setContentPane(panel);
-Strata.screens().open(new SettingsScreen());
-```
+| Module | What it is |
+|---|---|
+| `api` | What developers compile against: the factory, controls, panels, events, themes and extension points. |
+| `spi` | What engine adapters implement and drive, plus contract tests for adapters. |
+| `core` | The implementation. Only adapters use it directly. |
 
 ## Building
 
@@ -63,11 +51,11 @@ Building needs JDK 25.
 ./gradlew build
 ```
 
-Every control has a page in the gallery, which runs on the Java2D adapter from Strata-Swing and lives in the Strata-Gallery repository, a sibling of this one at `../Strata-Gallery`. From there:
+Strata-Swing, Strata-Minecraft, Strata-Gallery and Strata-Docs build against a checkout of this repository beside them, so clone them side by side.
 
-```bash
-./gradlew run
-```
+## Documentation
+
+The [documentation site](https://inspirenxe.github.io/Strata/) has the guides, the reference and the Javadoc. Its source is in [Strata-Docs](https://github.com/InspireNXE/Strata-Docs). The design and plans live here: [docs/design-implemented.md](docs/design-implemented.md) describes the design as built, [docs/design-pending.md](docs/design-pending.md) holds proposals and open questions, and [docs/ROADMAP.md](docs/ROADMAP.md) tracks what comes next. To try every control, run [Strata-Gallery](https://github.com/InspireNXE/Strata-Gallery).
 
 ## License
 
