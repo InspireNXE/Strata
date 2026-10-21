@@ -38,6 +38,8 @@ import org.inspirenxe.strata.api.geometry.Size;
 import org.inspirenxe.strata.api.input.TextInputKind;
 import org.inspirenxe.strata.api.layout.HorizontalAlignment;
 import org.inspirenxe.strata.api.layout.VerticalAlignment;
+import org.inspirenxe.strata.api.state.PropertyKey;
+import org.inspirenxe.strata.api.state.Source;
 import org.inspirenxe.strata.api.theme.Border;
 import org.inspirenxe.strata.api.theme.Paint;
 import org.inspirenxe.strata.api.theme.Theme;
@@ -51,7 +53,10 @@ import org.inspirenxe.strata.core.event.RequestEventImpl;
 import org.inspirenxe.strata.core.event.ValueEventImpl;
 import org.inspirenxe.strata.core.event.ValueRequestEventImpl;
 import org.inspirenxe.strata.core.paint.CanvasPainter;
+import org.inspirenxe.strata.core.state.Binding;
 
+import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
@@ -88,6 +93,8 @@ public class Node implements ComponentPeer {
     private ContainerNode parent;
     private Root root;
     private EventDispatcher dispatcher;
+    // By key name, made on the first bind
+    private Map<String, Binding<?>> bindings;
     private PaintEventImpl paintEvent;
     private boolean content;
     private MeasureEventImpl measureEvent;
@@ -477,6 +484,30 @@ public class Node implements ComponentPeer {
         return this.dispatcher.subscribe(type, priority, handler);
     }
 
+    /**
+     * Binds a property, replacing any binding with the same key name. On an attached node the binding starts and
+     * sets the property at once; otherwise it starts when the node is attached. See {@link Binding}.
+     *
+     * @param <V> the type of the property's value
+     * @param key the property
+     * @param source the source
+     */
+    @Override
+    public final <V> void bind(final PropertyKey<?, V> key, final Source<V> source) {
+        final Binding<V> binding = new Binding<>(this.facade, key, source);
+        if (this.bindings == null) {
+            this.bindings = new LinkedHashMap<>();
+        }
+        final Binding<?> replaced = this.bindings.put(key.name(), binding);
+        if (replaced != null) {
+            replaced.detach();
+        }
+        if (this.root != null) {
+            binding.attach(this.root.bindingQueue());
+            binding.evaluate();
+        }
+    }
+
     @Override
     public final boolean isHandled(final EventType<?> type) {
         // Control events stop at the first composite above, as EventRouter.next does
@@ -706,6 +737,12 @@ public class Node implements ComponentPeer {
         if (root.theme() != null) {
             this.applyTheme(root.theme());
         }
+        if (this.bindings != null) {
+            for (final Binding<?> binding : this.bindings.values()) {
+                binding.attach(root.bindingQueue());
+                root.bindingAttached(binding);
+            }
+        }
     }
 
     /**
@@ -716,6 +753,11 @@ public class Node implements ComponentPeer {
     }
 
     final void detach() {
+        if (this.bindings != null) {
+            for (final Binding<?> binding : this.bindings.values()) {
+                binding.detach();
+            }
+        }
         this.root = null;
         this.hovered = false;
         this.pressed = false;

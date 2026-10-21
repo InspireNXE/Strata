@@ -162,6 +162,13 @@ public final class ScreenStackImpl implements ScreenStack {
     }
 
     @Override
+    public void flush() {
+        for (final ScreenHostImpl host : List.copyOf(this.hosts)) {
+            host.flush();
+        }
+    }
+
+    @Override
     public void render(final Canvas canvas) {
         int first = 0;
         for (int i = this.hosts.size() - 1; i >= 0; i--) {

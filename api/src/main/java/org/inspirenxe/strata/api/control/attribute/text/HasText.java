@@ -15,6 +15,7 @@
  */
 package org.inspirenxe.strata.api.control.attribute.text;
 
+import org.inspirenxe.strata.api.state.PropertyKey;
 import org.inspirenxe.strata.api.text.Text;
 
 /**
@@ -26,6 +27,11 @@ import org.inspirenxe.strata.api.text.Text;
  * @param <S> the control's own type, which the setter returns
  */
 public interface HasText<S extends HasText<S>> {
+    /**
+     * The text, as {@link #text()} and {@link #setText(Text)} say. Binds one way. Only components bind, so an
+     * entry such as a tab or a menu item takes no binding.
+     */
+    PropertyKey<HasText<?>, Text> TEXT = PropertyKey.of("has_text.text", HasText::text, HasText::setText);
 
     /**
      * Returns the text.

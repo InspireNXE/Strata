@@ -106,6 +106,11 @@ public interface ScreenStack extends InputSink {
     void setTooltipDelay(long millis);
 
     /**
+     * Flushes the bindings of every screen in the stack, bottom to top, as {@link ScreenHost#flush()} does.
+     */
+    void flush();
+
+    /**
      * Draws the visible screens, bottom to top.
      *
      * @param canvas the engine canvas for this frame

@@ -17,9 +17,11 @@ package org.inspirenxe.strata.core;
 
 import org.inspirenxe.strata.api.Strata;
 import org.inspirenxe.strata.api.appearance.Appearances;
+import org.inspirenxe.strata.api.state.StateFactory;
 import org.inspirenxe.strata.api.text.TextFactory;
 import org.inspirenxe.strata.api.theme.ThemeRegistry;
 import org.inspirenxe.strata.core.appearance.AppearancesImpl;
+import org.inspirenxe.strata.core.state.StateFactoryImpl;
 import org.inspirenxe.strata.core.text.TextFactoryImpl;
 import org.inspirenxe.strata.core.theme.ThemeRegistryImpl;
 
@@ -48,5 +50,10 @@ public final class CoreProvider implements Strata.Provider {
     @Override
     public ThemeRegistry themes() {
         return ThemeRegistryImpl.INSTANCE;
+    }
+
+    @Override
+    public StateFactory states() {
+        return StateFactoryImpl.INSTANCE;
     }
 }

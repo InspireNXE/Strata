@@ -19,6 +19,7 @@ import org.inspirenxe.strata.api.event.EventTarget;
 import org.inspirenxe.strata.api.event.EventType;
 import org.inspirenxe.strata.api.event.control.ValueEvent;
 import org.inspirenxe.strata.api.event.control.ValueRequestEvent;
+import org.inspirenxe.strata.api.state.PropertyKey;
 
 /**
  * A control that shows a number within a range, such as a slider, a spinner or a progress bar.
@@ -43,6 +44,11 @@ public interface Ranged<S extends Ranged<S>> extends EventTarget<S> {
      * made from code too, including a change of range that moved the value.
      */
     EventType<ValueEvent<Ranged<?>, Double>> CHANGED = EventType.valueReport("ranged.changed");
+    /**
+     * The value, as {@link #value()} and {@link #setValue} say; a bound value outside the range is clamped in the
+     * control. Binds two ways through {@link #CHANGED} on a control the user can change.
+     */
+    PropertyKey<Ranged<?>, Double> VALUE = PropertyKey.of("ranged.value", Ranged::value, Ranged::setValue, CHANGED);
 
     /**
      * Returns the value.

@@ -217,10 +217,17 @@ public final class ScreenHostImpl implements ScreenHost {
     }
 
     @Override
+    public void flush() {
+        this.rebuildIfNeeded();
+        // Step 2 of the frame, firing recorded continuous requests, goes here once coalescing is built (design 4.14)
+        this.root.flushBindings();
+    }
+
+    @Override
     public void layout() {
         this.refreshTheme();
         this.refreshText();
-        this.rebuildIfNeeded();
+        this.flush();
         this.root.layout();
     }
 
@@ -228,7 +235,7 @@ public final class ScreenHostImpl implements ScreenHost {
     public void render(final Canvas canvas) {
         this.refreshTheme();
         this.refreshText();
-        this.rebuildIfNeeded();
+        this.flush();
         this.root.render(canvas);
     }
 

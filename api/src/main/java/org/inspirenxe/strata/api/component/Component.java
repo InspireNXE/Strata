@@ -24,6 +24,9 @@ import org.inspirenxe.strata.api.geometry.Rect;
 import org.inspirenxe.strata.api.layout.Anchor;
 import org.inspirenxe.strata.api.layout.HorizontalAlignment;
 import org.inspirenxe.strata.api.layout.VerticalAlignment;
+import org.inspirenxe.strata.api.state.PropertyKey;
+import org.inspirenxe.strata.api.state.Source;
+import org.inspirenxe.strata.api.state.State;
 
 import java.util.Optional;
 
@@ -67,6 +70,11 @@ import java.util.Optional;
  * component's own default behavior (a button pressing, a text box inserting a character) unless a handler canceled
  * the event. A handler can read the state components had when the event fired; see {@link ComponentSnapshot}.</p>
  *
+ * <h2>Binding</h2>
+ * <p>A property can follow a {@link State} or a computed {@link Source} instead of being set by hand, with
+ * {@link #bind}. The properties are named by {@link PropertyKey} constants beside the events of the attribute that
+ * has them, such as {@link #ENABLED} here.</p>
+ *
  * <h2>Threading</h2>
  * <p>Call components only from the engine's UI thread.</p>
  *
@@ -90,6 +98,18 @@ public interface Component<T extends Component<T>> extends EventTarget<T> {
      * {@link MeasureEvent}.
      */
     EventType<MeasureEvent> MEASURED = EventType.direct("measured", MeasureEvent.class);
+
+    /**
+     * Whether the component is enabled, as {@link #isEnabled()} and {@link #setEnabled} say. Binds one way.
+     */
+    PropertyKey<Component<?>, Boolean> ENABLED = PropertyKey.of("component.enabled", Component::isEnabled,
+            Component::setEnabled);
+
+    /**
+     * Whether the component is shown, as {@link #isVisible()} and {@link #setVisible} say. Binds one way.
+     */
+    PropertyKey<Component<?>, Boolean> VISIBLE = PropertyKey.of("component.visible", Component::isVisible,
+            Component::setVisible);
 
     // Tree
 
@@ -377,6 +397,43 @@ public interface Component<T extends Component<T>> extends EventTarget<T> {
      * @return this component
      */
     T setZIndex(int zIndex);
+
+    // Binding
+
+    /**
+     * Keeps a property of this component in step with a source while the component is attached.
+     *
+     * <pre>{@code
+     * music.bind(Toggle.SELECTED, model.music);               // two way: a State and a key with a report
+     * save.bind(Component.ENABLED, model::canSave);            // one way: a computed source
+     * }</pre>
+     *
+     * <p>When the component is attached, the binding reads the source and sets the property, and from then on sets
+     * it again whenever a state the source read changes. Those updates happen on the UI thread before the next frame
+     * is laid out, or when the host is flushed. Setting the property works as the control's setter does: it reports
+     * the change and fires no request. A value equal to the property's current one is not set.</p>
+     *
+     * <p>When the source is a {@link State} and the key has a {@linkplain PropertyKey#report() report}, the binding is
+     * two way. A change the user makes still asks the control's request first, so a handler can refuse or rewrite it,
+     * and the value the control accepted is written to the state when the control reports it. A report the binding
+     * itself caused is not written back, and a value equal to the state's is not written, so a binding cannot loop. Nor
+     * is a report that fires after attach before the binding first read its source, so the state wins over what the
+     * control held, such as the first item a combo box selects when its items arrive. A value the control adjusts as
+     * the binding sets it, such as a slider clamping to its range, stays adjusted in the control and is not written
+     * back either.</p>
+     *
+     * <p>A binding lives as long as the component holds it. It follows its sources only while the component is
+     * attached: it starts on attach and lets go of every state on detach, so a closed screen leaks nothing and there is
+     * nothing to unsubscribe. A component holds one binding per {@linkplain PropertyKey#name() key name}; binding the
+     * same key again replaces the earlier binding. On attach a component sets its bound properties in the order they
+     * were first bound, so bind a list's items before its selection.</p>
+     *
+     * @param <V> the type of the property's value
+     * @param key the property, such as {@link #ENABLED} or {@code Toggle.SELECTED}
+     * @param source the source, a {@link State} or a lambda that computes from states
+     * @return this component
+     */
+    <V> T bind(PropertyKey<? super T, V> key, Source<V> source);
 
     // Events
 }

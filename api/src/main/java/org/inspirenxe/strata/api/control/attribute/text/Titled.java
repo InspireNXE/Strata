@@ -15,6 +15,7 @@
  */
 package org.inspirenxe.strata.api.control.attribute.text;
 
+import org.inspirenxe.strata.api.state.PropertyKey;
 import org.inspirenxe.strata.api.text.Text;
 
 /**
@@ -25,6 +26,11 @@ import org.inspirenxe.strata.api.text.Text;
  * @param <S> the control's own type, which the setter returns
  */
 public interface Titled<S extends Titled<S>> {
+    /**
+     * The title, as {@link #title()} and {@link #setTitle(Text)} say. Binds one way. Only components bind, so a
+     * table column takes no binding.
+     */
+    PropertyKey<Titled<?>, Text> TITLE = PropertyKey.of("titled.title", Titled::title, Titled::setTitle);
 
     /**
      * Returns the title.

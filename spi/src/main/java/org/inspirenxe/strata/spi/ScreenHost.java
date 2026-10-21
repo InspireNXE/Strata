@@ -122,14 +122,23 @@ public interface ScreenHost extends InputSink {
     void setTooltipDelay(long millis);
 
     /**
-     * Builds a pending screen and runs layout now if anything changed. {@link #render} does this itself; call it to
-     * read bounds before the first frame.
+     * Builds a pending screen and brings bound components up to date without laying out or drawing: every binding
+     * whose states changed since the last frame, from any thread, sets its component, and bindings those changes
+     * mark dirty run too, until none is left. {@link #layout} and {@link #render} do this first; tests call it to see
+     * a state change reach a component. A cycle of bindings that never settles is cut off after a fixed number of
+     * rounds, with an error logged through {@link System.Logger}, and its remaining updates are dropped.
+     */
+    void flush();
+
+    /**
+     * Builds a pending screen, {@linkplain #flush() flushes} bindings and runs layout now if anything changed.
+     * {@link #render} does this itself; call it to read bounds before the first frame.
      */
     void layout();
 
     /**
-     * Draws a frame: rebuilds the screen if it asked to be, synthesizes due key repeats, runs layout if needed,
-     * paints the tree and requests the cursor.
+     * Draws a frame: rebuilds the screen if it asked to be, {@linkplain #flush() flushes} bindings, synthesizes due
+     * key repeats, runs layout if needed, paints the tree and requests the cursor.
      *
      * @param canvas the engine canvas for this frame
      */

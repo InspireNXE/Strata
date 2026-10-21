@@ -19,6 +19,7 @@ import org.inspirenxe.strata.api.event.EventTarget;
 import org.inspirenxe.strata.api.event.EventType;
 import org.inspirenxe.strata.api.event.control.ValueEvent;
 import org.inspirenxe.strata.api.event.control.ValueRequestEvent;
+import org.inspirenxe.strata.api.state.PropertyKey;
 
 /**
  * A control that is on or off, such as a checkbox, a switch or a radio button.
@@ -29,6 +30,8 @@ import org.inspirenxe.strata.api.event.control.ValueRequestEvent;
  * <pre>{@code
  * settings.onEvent(Toggle.TOGGLED, event -> save());
  * }</pre>
+ *
+ * <p>Bind {@link #SELECTED} to keep the state in step with a model.</p>
  *
  * <p>Do not implement this interface.</p>
  *
@@ -46,6 +49,12 @@ public interface Toggle<S extends Toggle<S>> extends EventTarget<S> {
      * Fires for changes made from code too.
      */
     EventType<ValueEvent<Toggle<?>, Boolean>> TOGGLED = EventType.valueReport("toggle.toggled");
+    /**
+     * Whether the control is on, as {@link #isSelected()} and {@link #setSelected} say. Binds two ways through
+     * {@link #TOGGLED}.
+     */
+    PropertyKey<Toggle<?>, Boolean> SELECTED = PropertyKey.of("toggle.selected", Toggle::isSelected,
+            Toggle::setSelected, TOGGLED);
 
     /**
      * Returns whether the control is on.

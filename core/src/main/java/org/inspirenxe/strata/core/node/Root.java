@@ -50,6 +50,8 @@ import org.inspirenxe.strata.core.event.ScrollEventImpl;
 import org.inspirenxe.strata.core.input.ClickCounter;
 import org.inspirenxe.strata.core.input.KeyRepeater;
 import org.inspirenxe.strata.core.paint.CanvasPainter;
+import org.inspirenxe.strata.core.state.Binding;
+import org.inspirenxe.strata.core.state.BindingQueue;
 import org.inspirenxe.strata.spi.Canvas;
 import org.inspirenxe.strata.spi.Platform;
 
@@ -126,6 +128,9 @@ public final class Root {
     private final List<Layer> layers;
     private final List<Node> arrangeRequests;
     private final OverlaysImpl overlays;
+    private final BindingQueue bindingQueue;
+    // Bindings of nodes attached since attachTree last evaluated them
+    private final List<Binding<?>> attachedBindings;
 
     private Theme theme;
     private Node content;
@@ -168,6 +173,8 @@ public final class Root {
         this.layers = new ArrayList<>();
         this.arrangeRequests = new ArrayList<>();
         this.overlays = new OverlaysImpl();
+        this.bindingQueue = new BindingQueue();
+        this.attachedBindings = new ArrayList<>();
         this.modifiers = Modifiers.NONE;
         this.layoutRequested = true;
         this.tooltipDelay = Tooltip.DEFAULT_DELAY_MILLIS;
@@ -331,6 +338,50 @@ public final class Root {
         this.validateTheme(this.theme, subtree);
         visit(subtree, node -> node.attach(this));
         this.treeChanged();
+        this.evaluateAttachedBindings();
+    }
+
+    /**
+     * Returns the queue of this root's dirty bindings.
+     *
+     * @return the queue
+     */
+    BindingQueue bindingQueue() {
+        return this.bindingQueue;
+    }
+
+    /**
+     * Notes a binding whose node was just attached, so {@link #attachTree} sets its property once the whole subtree
+     * is attached.
+     */
+    void bindingAttached(final Binding<?> binding) {
+        this.attachedBindings.add(binding);
+    }
+
+    /**
+     * Sets the properties of the bindings attached since the last call, so a component shows its bound values as
+     * soon as it joins the tree. Other dirty bindings wait for {@link #flushBindings()}. A binding that attaches
+     * more nodes as it sets its property has their bindings evaluated by the nested {@code attachTree}.
+     */
+    private void evaluateAttachedBindings() {
+        if (this.attachedBindings.isEmpty()) {
+            return;
+        }
+        final List<Binding<?>> attached = List.copyOf(this.attachedBindings);
+        this.attachedBindings.clear();
+        for (final Binding<?> binding : attached) {
+            binding.evaluate();
+        }
+    }
+
+    /**
+     * Evaluates every dirty binding until none is left, as {@link BindingQueue#flush()} describes, so the next
+     * layout sees the bound values. The host calls this at the start of each layout and render.
+     *
+     * @return false if a binding cycle was reported and updates were dropped, true otherwise
+     */
+    public boolean flushBindings() {
+        return this.bindingQueue.flush();
     }
 
     void detachTree(final Node subtree) {

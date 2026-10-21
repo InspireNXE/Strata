@@ -19,6 +19,7 @@ import org.inspirenxe.strata.api.event.EventTarget;
 import org.inspirenxe.strata.api.event.EventType;
 import org.inspirenxe.strata.api.event.control.ValueEvent;
 import org.inspirenxe.strata.api.event.control.ValueRequestEvent;
+import org.inspirenxe.strata.api.state.PropertyKey;
 
 import java.util.Optional;
 
@@ -43,6 +44,8 @@ import java.util.Optional;
  * form.onEvent(Selection.SELECTED, event -> updateButtons());
  * }</pre>
  *
+ * <p>Bind {@link #selectedItem()} or {@link #SELECTED_INDEX} to keep the current entry in step with a model.</p>
+ *
  * <p>Do not implement this interface.</p>
  *
  * @param <T> the type of the entries
@@ -63,6 +66,38 @@ public interface Selection<T, S extends Selection<T, S>> extends EventTarget<S> 
      * Fires for changes made from code too, after {@link MultiSelection#SELECTED_MANY} on a control that has it.
      */
     EventType<ValueEvent<Selection<?, ?>, Integer>> SELECTED = EventType.valueReport("selection.selected");
+    /**
+     * The selected index, as {@link #selectedIndex()} and {@link #select} say, -1 for none. Binds two ways through
+     * {@link #SELECTED}. A bound index the control does not show throws as {@code select} does, so bind
+     * {@link #selectedItem()} instead where the items change too.
+     */
+    PropertyKey<Selection<?, ?>, Integer> SELECTED_INDEX = PropertyKey.of("selection.selected_index",
+            Selection::selectedIndex, Selection::select, SELECTED);
+
+    /**
+     * Returns the key for the selected entry, as {@link #selected()} and {@link #selectItem} say. Binds two ways
+     * through {@link #SELECTED}. Null stands for no selection both ways: a control with nothing selected writes
+     * null, and a null value clears the selection. A value the control does not show clears it too, as
+     * {@code selectItem} does, so where the items are bound too, bind them first. It is a method because a constant
+     * cannot carry the entry type. Every call returns a key with the same name.
+     *
+     * <pre>{@code
+     * listings.bind(Selection.selectedItem(), model.chosen);
+     * }</pre>
+     *
+     * @param <T> the type of the entries
+     * @return the key
+     */
+    static <T> PropertyKey<Selection<T, ?>, T> selectedItem() {
+        return PropertyKey.of("selection.selected_item", selection -> selection.selected().orElse(null),
+                (selection, item) -> {
+                    if (item == null) {
+                        selection.clearSelection();
+                    } else {
+                        selection.selectItem(item);
+                    }
+                }, SELECTED);
+    }
 
     /**
      * Returns the selected index.

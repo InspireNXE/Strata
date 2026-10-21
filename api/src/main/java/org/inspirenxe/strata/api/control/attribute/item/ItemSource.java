@@ -15,6 +15,8 @@
  */
 package org.inspirenxe.strata.api.control.attribute.item;
 
+import org.inspirenxe.strata.api.state.PropertyKey;
+
 import java.util.List;
 import java.util.function.Function;
 
@@ -30,6 +32,24 @@ import java.util.function.Function;
  * @param <S> the control's own type, which the setters return
  */
 public interface ItemSource<T, S extends ItemSource<T, S>> {
+
+    /**
+     * Returns the key for the items, as {@link #items()} and {@link #setItems} say. Binds one way: a change to the
+     * bound list replaces the items as a whole with {@code setItems}, which keeps the selection by
+     * {@linkplain #setKeyFunction key}. A list equal to the items the control holds is not set again. It is a
+     * method because a constant cannot carry the item type, and is not named {@code items} because that is the
+     * getter's name. Every call returns a key with the same name.
+     *
+     * <pre>{@code
+     * offers.bind(ItemSource.itemsKey(), market.offers);       // a State<List<Offer>>
+     * }</pre>
+     *
+     * @param <T> the type of the items
+     * @return the key
+     */
+    static <T> PropertyKey<ItemSource<T, ?>, List<T>> itemsKey() {
+        return PropertyKey.of("item_source.items", ItemSource::items, ItemSource::setItems);
+    }
 
     /**
      * Returns the items. For a tree these are its roots.

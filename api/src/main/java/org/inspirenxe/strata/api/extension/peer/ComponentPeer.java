@@ -27,6 +27,8 @@ import org.inspirenxe.strata.api.geometry.Insets;
 import org.inspirenxe.strata.api.geometry.Rect;
 import org.inspirenxe.strata.api.layout.HorizontalAlignment;
 import org.inspirenxe.strata.api.layout.VerticalAlignment;
+import org.inspirenxe.strata.api.state.PropertyKey;
+import org.inspirenxe.strata.api.state.Source;
 import org.inspirenxe.strata.api.theme.Border;
 import org.inspirenxe.strata.api.theme.Paint;
 import org.inspirenxe.strata.api.theme.Theme;
@@ -422,6 +424,15 @@ public interface ComponentPeer {
      * @return a subscription that removes the handler
      */
     <E extends Event> Subscription subscribe(EventType<E> type, int priority, EventHandler<? super E> handler);
+
+    /**
+     * See {@link Component#bind}. The component's own {@code bind} checked that the key applies to it.
+     *
+     * @param <V> the type of the property's value
+     * @param key the property
+     * @param source the source
+     */
+    <V> void bind(PropertyKey<?, V> key, Source<V> source);
 
     /**
      * Fires a request without a value. See {@code CustomComponent.request(EventType)}.

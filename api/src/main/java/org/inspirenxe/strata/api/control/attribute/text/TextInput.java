@@ -18,6 +18,7 @@ package org.inspirenxe.strata.api.control.attribute.text;
 import org.inspirenxe.strata.api.event.EventType;
 import org.inspirenxe.strata.api.event.control.ValueEvent;
 import org.inspirenxe.strata.api.event.control.ValueRequestEvent;
+import org.inspirenxe.strata.api.state.PropertyKey;
 import org.inspirenxe.strata.api.text.TextHighlighter;
 
 /**
@@ -50,6 +51,13 @@ public interface TextInput<S extends TextInput<S>> extends TextEntry<S> {
      * text and the previous value the text before; neither is null.
      */
     EventType<ValueEvent<TextInput<?>, String>> EDITED = EventType.valueReport("text_input.edited");
+    /**
+     * The text, as {@link #text()} and {@link #setText} say. Binds two ways through {@link #EDITED}, so a bound
+     * state takes each edit the user makes once {@link #EDIT} accepted it. A text set from the binding moves the
+     * caret to the end, as {@code setText} does.
+     */
+    PropertyKey<TextInput<?>, String> TEXT = PropertyKey.of("text_input.text", TextInput::text, TextInput::setText,
+            EDITED);
 
     /**
      * Returns the text.

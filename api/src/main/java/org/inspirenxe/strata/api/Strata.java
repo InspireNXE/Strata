@@ -16,6 +16,7 @@
 package org.inspirenxe.strata.api;
 
 import org.inspirenxe.strata.api.appearance.Appearances;
+import org.inspirenxe.strata.api.state.StateFactory;
 import org.inspirenxe.strata.api.text.TextFactory;
 import org.inspirenxe.strata.api.theme.ThemeRegistry;
 
@@ -64,6 +65,16 @@ public final class Strata {
     }
 
     /**
+     * Returns the factory that makes {@linkplain org.inspirenxe.strata.api.state.State states}.
+     *
+     * @return the factory
+     * @throws IllegalStateException if Strata's core is not on the class path, or more than one provider is
+     */
+    public static StateFactory states() {
+        return Strata.provider().states();
+    }
+
+    /**
      * What Strata's core provides, listed in its {@code META-INF/services}. Do not implement this interface.
      */
     public interface Provider {
@@ -87,6 +98,13 @@ public final class Strata {
          * @return the registry, the same one every time
          */
         ThemeRegistry themes();
+
+        /**
+         * Returns the state factory.
+         *
+         * @return the factory, the same one every time
+         */
+        StateFactory states();
     }
 
     private static Provider provider() {

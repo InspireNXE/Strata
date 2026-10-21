@@ -47,6 +47,8 @@ import org.inspirenxe.strata.api.geometry.Size;
 import org.inspirenxe.strata.api.input.TextInputKind;
 import org.inspirenxe.strata.api.layout.HorizontalAlignment;
 import org.inspirenxe.strata.api.layout.VerticalAlignment;
+import org.inspirenxe.strata.api.state.PropertyKey;
+import org.inspirenxe.strata.api.state.Source;
 import org.inspirenxe.strata.api.theme.Border;
 import org.inspirenxe.strata.api.theme.Paint;
 import org.inspirenxe.strata.api.theme.Theme;
@@ -904,6 +906,12 @@ public abstract class CustomComponent<T extends Component<T>> implements Compone
     public final <E extends Event> Subscription subscribe(final EventType<E> type, final int priority,
                                                           final EventHandler<? super E> handler) {
         return this.peer.subscribe(type, priority, handler);
+    }
+
+    @Override
+    public final <V> T bind(final PropertyKey<? super T, V> key, final Source<V> source) {
+        this.peer.bind(key, source);
+        return this.self();
     }
 
     /**
