@@ -16,7 +16,6 @@
 package org.inspirenxe.strata.core.node;
 
 import org.inspirenxe.strata.api.component.Component;
-import org.inspirenxe.strata.api.component.Container;
 import org.inspirenxe.strata.api.component.CursorKind;
 import org.inspirenxe.strata.api.component.Focusable;
 import org.inspirenxe.strata.api.component.HasCursor;
@@ -53,6 +52,7 @@ import org.inspirenxe.strata.api.theme.Paint;
 import org.inspirenxe.strata.api.theme.Theme;
 
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import java.util.function.Consumer;
 
@@ -508,8 +508,18 @@ public abstract class BuiltInComponent<T extends Component<T>> implements Compon
     // ------------------------------------------------------------------
 
     @Override
-    public final Container<?> parent() {
+    public final Component<?> parent() {
         return this.node.parent();
+    }
+
+    @Override
+    public final <P> Optional<P> parent(final Class<P> type) {
+        return this.node.parent(type);
+    }
+
+    @Override
+    public final <A> Optional<A> ancestor(final Class<A> type) {
+        return this.node.ancestor(type);
     }
 
     @Override

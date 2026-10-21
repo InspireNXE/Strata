@@ -17,7 +17,6 @@ package org.inspirenxe.strata.core.node;
 
 import org.inspirenxe.strata.api.component.Component;
 import org.inspirenxe.strata.api.component.ComponentSnapshot;
-import org.inspirenxe.strata.api.component.Container;
 import org.inspirenxe.strata.api.component.CursorKind;
 import org.inspirenxe.strata.api.component.Focusable;
 import org.inspirenxe.strata.api.component.HasCursor;
@@ -54,6 +53,7 @@ import org.inspirenxe.strata.core.event.ValueRequestEventImpl;
 import org.inspirenxe.strata.core.paint.CanvasPainter;
 
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -639,17 +639,37 @@ public class Node implements ComponentPeer {
     // ------------------------------------------------------------------
 
     /**
-     * Returns the node of the container holding this component.
+     * Returns the node of the container or composite holding this component.
      *
-     * @return the parent node, or {@code null} for a root's content or a component not in any container
+     * @return the parent node, or {@code null} for a root's content, an overlay's content or a component not added
+     *     anywhere
      */
     public final ContainerNode parentNode() {
         return this.parent;
     }
 
     @Override
-    public final Container<?> parent() {
-        return this.parent == null ? null : (Container<?>) this.parent.facade();
+    public final Component<?> parent() {
+        return this.parent == null ? null : this.parent.facade();
+    }
+
+    @Override
+    public final <P> Optional<P> parent(final Class<P> type) {
+        Objects.requireNonNull(type, "type");
+        final Component<?> parent = this.parent();
+        return type.isInstance(parent) ? Optional.of(type.cast(parent)) : Optional.empty();
+    }
+
+    @Override
+    public final <A> Optional<A> ancestor(final Class<A> type) {
+        Objects.requireNonNull(type, "type");
+        for (ContainerNode node = this.parent; node != null; node = node.parentNode()) {
+            final Component<?> facade = node.facade();
+            if (type.isInstance(facade)) {
+                return Optional.of(type.cast(facade));
+            }
+        }
+        return Optional.empty();
     }
 
     final void setParent(final ContainerNode parent) {

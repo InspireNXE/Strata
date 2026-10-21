@@ -114,7 +114,7 @@ public final class ExpanderImpl extends BuiltInComposite<Expander> implements Ex
 
     @Override
     public Expander setContent(final Component<?> content) {
-        if (content != null && content.parent() != null && content != this.content) {
+        if (content != null && this.nodeOf(content).parentNode() != null && content != this.content) {
             throw new IllegalArgumentException(content + " already has a parent");
         }
         if (this.content != null && this.expanded) {

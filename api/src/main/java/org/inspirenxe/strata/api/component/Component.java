@@ -25,6 +25,8 @@ import org.inspirenxe.strata.api.layout.Anchor;
 import org.inspirenxe.strata.api.layout.HorizontalAlignment;
 import org.inspirenxe.strata.api.layout.VerticalAlignment;
 
+import java.util.Optional;
+
 /**
  * An element of a Strata UI tree.
  *
@@ -86,11 +88,38 @@ public interface Component<T extends Component<T>> extends EventTarget<T> {
     // Tree
 
     /**
-     * Returns the container this component was added to.
+     * Returns the component this component was added to: a {@link Container} such as a panel, or a composite control
+     * that holds it as content or as one of its own parts, as an expander holds its content and a navigation view its
+     * page. Code that needs something from its parent should ask for that capability, an attribute or
+     * {@code Container}, with {@link #parent(Class)} or {@link #ancestor(Class)}, and not assume the parent's type.
      *
-     * @return the parent, or {@code null} for a screen's root component or a component not added anywhere
+     * @return the parent, or {@code null} for a screen's root component, an overlay's content or a component not
+     *     added anywhere
      */
-    Container<?> parent();
+    Component<?> parent();
+
+    /**
+     * Returns the parent if it is an instance of the given type. The type is usually a raw interface, such as
+     * {@code Container.class} or an attribute like {@code Openable.class}, so the result's own type argument is not
+     * checked.
+     *
+     * @param type the type the parent must have
+     * @param <P> the type
+     * @return the parent as that type, or empty when there is no parent or it is not an instance of {@code type}
+     */
+    <P> Optional<P> parent(Class<P> type);
+
+    /**
+     * Returns the nearest ancestor that is an instance of the given type, looking at the parent first, then its
+     * parent, and so on up to the root. Composites count as ancestors, so a component on a navigation view's page
+     * finds the navigation view. The type is usually a raw interface, such as {@code Container.class} or an attribute
+     * like {@code Openable.class}, so the result's own type argument is not checked.
+     *
+     * @param type the type the ancestor must have
+     * @param <A> the type
+     * @return the nearest ancestor of that type, or empty when none has it
+     */
+    <A> Optional<A> ancestor(Class<A> type);
 
     /**
      * Returns whether the component is in a tree that a host is showing. Hover, focus and press state only change

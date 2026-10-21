@@ -239,7 +239,7 @@ class EntriesTest {
             assertNull(image.visual());
             final MessageBox box = ui.messageBox();
             assertEquals(MessageBox.Buttons.OK, box.buttons());
-            assertEquals("", box.message().plain());
+            assertEquals("", box.text().plain());
         }
 
         @Test
@@ -273,11 +273,11 @@ class EntriesTest {
             assertEquals(Orientation.VERTICAL, split.orientation());
             final MessageBox box = EntriesTest.this.ui.messageBox()
                     .setTitle("Delete?")
-                    .setMessage("This cannot be undone.")
+                    .setText("This cannot be undone.")
                     .setButtonText(MessageBox.Result.NO, "Keep")
                     .setButtons(MessageBox.Buttons.YES_NO);
             assertEquals("Delete?", box.window().title().plain());
-            assertEquals("This cannot be undone.", box.message().plain());
+            assertEquals("This cannot be undone.", box.text().plain());
             assertEquals(MessageBox.Buttons.YES_NO, box.buttons());
         }
     }

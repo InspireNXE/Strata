@@ -102,7 +102,7 @@ public final class ContainerNode extends Node implements ContainerPeer {
         Objects.checkIndex(index, this.childNodes.size() + 1);
         final Node node = this.factory().nodeOf(child);
         if (node.parentNode() != null) {
-            throw new IllegalArgumentException(child + " already belongs to " + node.parent());
+            throw new IllegalArgumentException(child + " already belongs to " + node.parentNode().facade());
         }
         if (node == this || this.isDescendantOf(node)) {
             throw new IllegalArgumentException("Adding " + child + " to " + this.facade() + " would create a cycle");

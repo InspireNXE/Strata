@@ -135,12 +135,12 @@ public final class MessageBoxImpl extends BuiltInComposite<MessageBox> implement
     }
 
     @Override
-    public Text message() {
+    public Text text() {
         return this.text.text();
     }
 
     @Override
-    public MessageBox setMessage(final Text message) {
+    public MessageBox setText(final Text message) {
         this.text.setText(message);
         return this;
     }

@@ -110,7 +110,7 @@ public final class SplitPaneImpl extends BuiltInComposite<SplitPane> implements 
     }
 
     private Component<?> swap(final Component<?> old, final Component<?> next) {
-        if (next != null && next != old && next.parent() != null) {
+        if (next != null && next != old && this.nodeOf(next).parentNode() != null) {
             throw new IllegalArgumentException(next + " already has a parent");
         }
         if (old != null && old != next) {

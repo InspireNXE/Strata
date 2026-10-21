@@ -15,7 +15,7 @@
  */
 package org.inspirenxe.strata.api.extension.peer;
 
-import org.inspirenxe.strata.api.component.Container;
+import org.inspirenxe.strata.api.component.Component;
 import org.inspirenxe.strata.api.component.CursorKind;
 import org.inspirenxe.strata.api.component.Tooltip;
 import org.inspirenxe.strata.api.event.Event;
@@ -31,6 +31,7 @@ import org.inspirenxe.strata.api.theme.Border;
 import org.inspirenxe.strata.api.theme.Paint;
 import org.inspirenxe.strata.api.theme.Theme;
 
+import java.util.Optional;
 import java.util.function.Consumer;
 
 /**
@@ -46,9 +47,27 @@ public interface ComponentPeer {
     /**
      * See {@link org.inspirenxe.strata.api.component.Component#parent()}.
      *
-     * @return the parent container, or null
+     * @return the parent, or null
      */
-    Container<?> parent();
+    Component<?> parent();
+
+    /**
+     * See {@link org.inspirenxe.strata.api.component.Component#parent(Class)}.
+     *
+     * @param type the type the parent must have
+     * @param <P> the type
+     * @return the parent as that type, or empty
+     */
+    <P> Optional<P> parent(Class<P> type);
+
+    /**
+     * See {@link org.inspirenxe.strata.api.component.Component#ancestor(Class)}.
+     *
+     * @param type the type the ancestor must have
+     * @param <A> the type
+     * @return the nearest ancestor of that type, or empty
+     */
+    <A> Optional<A> ancestor(Class<A> type);
 
     /**
      * See {@link org.inspirenxe.strata.api.component.Component#isAttached()}.

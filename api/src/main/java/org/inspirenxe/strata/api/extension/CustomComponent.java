@@ -18,7 +18,6 @@ package org.inspirenxe.strata.api.extension;
 import org.inspirenxe.strata.api.ComponentFactory;
 import org.inspirenxe.strata.api.component.Component;
 import org.inspirenxe.strata.api.component.ComponentSnapshot;
-import org.inspirenxe.strata.api.component.Container;
 import org.inspirenxe.strata.api.component.CursorKind;
 import org.inspirenxe.strata.api.component.Focusable;
 import org.inspirenxe.strata.api.component.HasCursor;
@@ -53,6 +52,7 @@ import org.inspirenxe.strata.api.theme.Paint;
 import org.inspirenxe.strata.api.theme.Theme;
 
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import java.util.function.Consumer;
 
@@ -509,8 +509,18 @@ public abstract class CustomComponent<T extends Component<T>> implements Compone
     // ------------------------------------------------------------------
 
     @Override
-    public final Container<?> parent() {
+    public final Component<?> parent() {
         return this.peer.parent();
+    }
+
+    @Override
+    public final <P> Optional<P> parent(final Class<P> type) {
+        return this.peer.parent(type);
+    }
+
+    @Override
+    public final <A> Optional<A> ancestor(final Class<A> type) {
+        return this.peer.ancestor(type);
     }
 
     @Override

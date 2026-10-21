@@ -18,6 +18,7 @@ package org.inspirenxe.strata.api.control.window;
 import org.inspirenxe.strata.api.component.Component;
 import org.inspirenxe.strata.api.component.HasCursor;
 import org.inspirenxe.strata.api.component.HasTooltip;
+import org.inspirenxe.strata.api.control.attribute.text.HasText;
 import org.inspirenxe.strata.api.control.attribute.text.Titled;
 import org.inspirenxe.strata.api.control.button.Button;
 import org.inspirenxe.strata.api.control.display.Label;
@@ -55,7 +56,7 @@ import java.util.List;
  * interface.</p>
  */
 public interface MessageBox extends Component<MessageBox>, HasCursor<MessageBox>, HasTooltip<MessageBox>,
-        Titled<MessageBox> {
+        Titled<MessageBox>, HasText<MessageBox> {
     /**
      * The width the message wraps at, in UI units.
      */
@@ -112,7 +113,8 @@ public interface MessageBox extends Component<MessageBox>, HasCursor<MessageBox>
      *
      * @return the message, never null
      */
-    Text message();
+    @Override
+    Text text();
 
     /**
      * Replaces the message. It wraps at {@value #MESSAGE_WIDTH} units, and {@code \n} starts a new line.
@@ -120,17 +122,8 @@ public interface MessageBox extends Component<MessageBox>, HasCursor<MessageBox>
      * @param message the message
      * @return this box
      */
-    MessageBox setMessage(Text message);
-
-    /**
-     * Does the same as {@link #setMessage(Text)} with literal text.
-     *
-     * @param message the message
-     * @return this box
-     */
-    default MessageBox setMessage(final String message) {
-        return this.setMessage(Text.of(message));
-    }
+    @Override
+    MessageBox setText(Text message);
 
     /**
      * Returns which buttons the box has.
