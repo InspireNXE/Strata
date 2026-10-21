@@ -18,6 +18,7 @@ package org.inspirenxe.strata.core.control.menu;
 import org.inspirenxe.strata.api.control.menu.Menu;
 import org.inspirenxe.strata.api.control.menu.MenuBar;
 import org.inspirenxe.strata.api.control.menu.SubmenuItem;
+import org.inspirenxe.strata.api.event.cause.CauseFrame;
 import org.inspirenxe.strata.api.event.input.PointerButtonEvent;
 import org.inspirenxe.strata.api.event.input.PointerEvent;
 import org.inspirenxe.strata.api.extension.MeasureContext;
@@ -157,6 +158,13 @@ public final class MenuBarImpl extends BuiltInComponent<MenuBar> implements Menu
         return this.entries.get(index).submenu();
     }
 
+    // The bar closes the menu, so it is on the cause chain of the menu's reports
+    private void closeMenu(final int index) {
+        try (CauseFrame _ = this.node().causes().pushFrame().push(this)) {
+            this.menuAt(index).close();
+        }
+    }
+
     @Override
     public int selectedIndex() {
         return this.openIndex;
@@ -171,7 +179,7 @@ public final class MenuBarImpl extends BuiltInComponent<MenuBar> implements Menu
     public MenuBar select(final int index) {
         if (index == -1) {
             if (this.openIndex >= 0) {
-                this.menuAt(this.openIndex).close();
+                this.closeMenu(this.openIndex);
             }
             return this;
         }
@@ -231,7 +239,7 @@ public final class MenuBarImpl extends BuiltInComponent<MenuBar> implements Menu
         if (previous >= 0) {
             this.switching = true;
             try {
-                this.menuAt(previous).close();
+                this.closeMenu(previous);
             } finally {
                 this.switching = false;
             }
@@ -342,7 +350,7 @@ public final class MenuBarImpl extends BuiltInComponent<MenuBar> implements Menu
             return;
         }
         if (index == this.openIndex) {
-            this.menuAt(index).close();
+            this.closeMenu(index);
         } else if (this.entries.get(index).usable() && this.menuAt(index) != null) {
             this.userOpen(index, false);
         }

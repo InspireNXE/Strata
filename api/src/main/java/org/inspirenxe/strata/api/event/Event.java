@@ -17,6 +17,8 @@ package org.inspirenxe.strata.api.event;
 
 import org.inspirenxe.strata.api.component.Component;
 import org.inspirenxe.strata.api.component.ComponentSnapshot;
+import org.inspirenxe.strata.api.event.cause.Cause;
+import org.inspirenxe.strata.api.event.cause.Origin;
 
 import java.util.Optional;
 
@@ -91,6 +93,23 @@ public interface Event {
         return this.snapshotOf(this.current()).orElseThrow(() -> new IllegalStateException(
                 "No snapshot was taken of " + this.current() + " for this event"));
     }
+
+    /**
+     * Returns what led to the event: the objects the change passed through and the context, such as who caused it
+     * and with which device. Strata makes the cause when this is called, from the frames open at that moment. During
+     * delivery those are the frames that were open when the event fired, so call it before opening a frame of your
+     * own.
+     *
+     * @return the cause; never null
+     */
+    Cause cause();
+
+    /**
+     * Returns who caused the event, without making the whole {@linkplain #cause() cause}.
+     *
+     * @return the origin the innermost open frame put, or {@link Origin#CODE} when none did
+     */
+    Origin origin();
 
     /**
      * Keeps the event from reaching any further ancestor. The current component's remaining handlers and default

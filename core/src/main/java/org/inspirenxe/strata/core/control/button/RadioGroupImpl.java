@@ -15,12 +15,14 @@
  */
 package org.inspirenxe.strata.core.control.button;
 
+import org.inspirenxe.strata.api.control.attribute.item.Selection;
 import org.inspirenxe.strata.api.control.button.RadioButton;
 import org.inspirenxe.strata.api.control.button.RadioGroup;
 import org.inspirenxe.strata.api.event.Event;
 import org.inspirenxe.strata.api.event.EventHandler;
 import org.inspirenxe.strata.api.event.EventType;
 import org.inspirenxe.strata.api.event.Subscription;
+import org.inspirenxe.strata.api.event.cause.CauseFrame;
 import org.inspirenxe.strata.api.text.Text;
 import org.inspirenxe.strata.core.event.EventDispatcher;
 import org.inspirenxe.strata.core.event.ValueEventImpl;
@@ -138,14 +140,19 @@ public final class RadioGroupImpl<T> implements RadioGroup<T> {
         }
         this.selected = button;
         if (previous != null) {
-            previous.reportToggled(false);
+            // The group deselects the old button, so it is on that report's cause chain
+            try (CauseFrame _ = this.ui.causes().pushFrame().push(this)) {
+                previous.reportToggled(false);
+            }
         }
         if (button != null) {
             button.reportToggled(true);
         }
         if (this.dispatcher != null && this.dispatcher.hasHandlers(SELECTED)) {
-            this.dispatcher.fire(SELECTED, new ValueEventImpl<>(button == null ? previous : button, this,
-                    this.buttons.indexOf(button), this.buttons.indexOf(previous)));
+            final ValueEventImpl<Selection<?, ?>, Integer> event = new ValueEventImpl<>(
+                    button == null ? previous : button, this, this.buttons.indexOf(button), this.buttons.indexOf(previous));
+            event.setCauses(this.ui.causes());
+            this.dispatcher.fire(SELECTED, event);
         }
     }
 

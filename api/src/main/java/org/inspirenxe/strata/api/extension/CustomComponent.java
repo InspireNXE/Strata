@@ -921,9 +921,10 @@ public abstract class CustomComponent<T extends Component<T>> implements Compone
 
     /**
      * Asks whether the user may do something this component is about to do, by firing one of its request events
-     * (a type made with {@link EventType#request}) through its path. Call it only for the user's actions, never for
-     * changes made from code. With no handler for the type on the path, it fires nothing, allocates nothing and
-     * returns true.
+     * (a type made with {@link EventType#request}) through its path. Call it for the user's actions, from the
+     * component's input handlers. It fires only when the current origin is {@code Origin.User}, which the host puts
+     * for every input; for any other origin, such as code or a binding, it fires nothing and returns true. With no
+     * handler for the type on the path, it fires nothing, allocates nothing and returns true.
      *
      * @param type the request type
      * @return true if the component should go ahead, false if a handler canceled the request
@@ -936,8 +937,9 @@ public abstract class CustomComponent<T extends Component<T>> implements Compone
     /**
      * Asks whether the user may make a change, and with which value, by firing one of this component's value
      * requests (a type made with {@link EventType#valueRequest}) through its path, then applies the final value
-     * unless a handler canceled the request. Call it only for the user's actions. With no handler for the type on
-     * the path, it applies the value at once without firing anything.
+     * unless a handler canceled the request. Call it for the user's actions. Like the other {@code request}, it
+     * fires only when the current origin is {@code Origin.User}. Otherwise, or with no handler for the type on the
+     * path, it applies the value at once without firing anything.
      *
      * @param <V> the value type
      * @param type the request type

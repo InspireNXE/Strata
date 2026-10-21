@@ -18,6 +18,9 @@ package org.inspirenxe.strata.core.event;
 import org.inspirenxe.strata.api.component.Component;
 import org.inspirenxe.strata.api.component.ComponentSnapshot;
 import org.inspirenxe.strata.api.event.Event;
+import org.inspirenxe.strata.api.event.cause.Cause;
+import org.inspirenxe.strata.api.event.cause.CauseStack;
+import org.inspirenxe.strata.api.event.cause.Origin;
 
 import java.util.Objects;
 import java.util.Optional;
@@ -25,7 +28,8 @@ import java.util.Optional;
 /**
  * The base of every core event. It holds the target, the component currently handling the event, the canceled
  * and propagation flags, and the snapshots taken when it fired. Only {@link EventRouter} moves
- * {@link #current()} and sets the snapshots.
+ * {@link #current()} and sets the snapshots. Its cause and origin are read from the cause stack of the target's
+ * factory, which the router sets, or the thread's own stack for an event fired without it.
  */
 public abstract class EventImpl implements Event {
     private final Component<?> target;
@@ -33,6 +37,7 @@ public abstract class EventImpl implements Event {
     private boolean cancelled;
     private boolean propagationStopped;
     private ComponentSnapshot[] snapshots;
+    private CauseStack causes;
 
     /**
      * Creates an event aimed at a component. {@link #current()} starts as the target.
@@ -74,6 +79,29 @@ public abstract class EventImpl implements Event {
 
     final void setSnapshots(final ComponentSnapshot[] snapshots) {
         this.snapshots = snapshots;
+    }
+
+    /**
+     * Sets the stack {@link #cause()} and {@link #origin()} read: the one of the target's factory.
+     *
+     * @param causes the stack
+     */
+    public final void setCauses(final CauseStack causes) {
+        this.causes = causes;
+    }
+
+    private CauseStack causes() {
+        return this.causes != null ? this.causes : CauseStackImpl.forThread();
+    }
+
+    @Override
+    public final Cause cause() {
+        return this.causes().current();
+    }
+
+    @Override
+    public final Origin origin() {
+        return this.causes().origin();
     }
 
     /**

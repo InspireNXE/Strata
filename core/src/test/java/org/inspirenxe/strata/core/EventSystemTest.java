@@ -19,6 +19,9 @@ import org.inspirenxe.strata.api.ComponentFactory;
 import org.inspirenxe.strata.api.component.Component;
 import org.inspirenxe.strata.api.event.EventType;
 import org.inspirenxe.strata.api.event.Subscription;
+import org.inspirenxe.strata.api.event.cause.CauseFrame;
+import org.inspirenxe.strata.api.event.cause.CauseKeys;
+import org.inspirenxe.strata.api.event.cause.Origin;
 import org.inspirenxe.strata.api.event.control.ControlEvent;
 import org.inspirenxe.strata.api.event.control.RequestEvent;
 import org.inspirenxe.strata.api.event.control.ValueEvent;
@@ -67,10 +70,17 @@ class EventSystemTest {
     }
 
     static final class CounterImpl extends CustomComponent<Counter> implements Counter {
+        private final ComponentFactory ui;
         private int count;
 
         CounterImpl(final ComponentFactory ui) {
             super(ui);
+            this.ui = ui;
+        }
+
+        // What an input handler runs in: requests fire only when the user is the origin
+        private CauseFrame asUser() {
+            return this.ui.causes().pushFrame().put(CauseKeys.ORIGIN, new Origin.User(null));
         }
 
         void relayout() {
@@ -93,13 +103,22 @@ class EventSystemTest {
         }
 
         void userStep() {
+            try (CauseFrame _ = this.asUser()) {
+                this.request(STEP, this.count + 1, this::setCount);
+            }
+        }
+
+        // A request made without the user's frame, as code or a remote change would
+        void remoteStep() {
             this.request(STEP, this.count + 1, this::setCount);
         }
 
         void userClear() {
-            if (this.request(CLEAR)) {
-                this.count = 0;
-                this.report(CLEARED);
+            try (CauseFrame _ = this.asUser()) {
+                if (this.request(CLEAR)) {
+                    this.count = 0;
+                    this.report(CLEARED);
+                }
             }
         }
 

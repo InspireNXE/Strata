@@ -26,6 +26,8 @@ import org.inspirenxe.strata.api.event.Event;
 import org.inspirenxe.strata.api.event.EventHandler;
 import org.inspirenxe.strata.api.event.EventType;
 import org.inspirenxe.strata.api.event.Subscription;
+import org.inspirenxe.strata.api.event.cause.CauseStack;
+import org.inspirenxe.strata.api.event.cause.Origin;
 import org.inspirenxe.strata.api.event.control.ControlEvent;
 import org.inspirenxe.strata.api.event.control.RequestEvent;
 import org.inspirenxe.strata.api.event.control.ValueEvent;
@@ -188,6 +190,15 @@ public class Node implements ComponentPeer {
     }
 
     /**
+     * Returns the cause stack of this node's factory, which its events read their cause from.
+     *
+     * @return the stack
+     */
+    public final CauseStack causes() {
+        return this.ui.causes();
+    }
+
+    /**
      * Returns the public component this node implements. Events and callers see this object, never the node.
      *
      * @return the component
@@ -259,6 +270,7 @@ public class Node implements ComponentPeer {
         if (handlers != null && handlers.hasHandlers(Component.MEASURED)) {
             if (this.measureEvent == null) {
                 this.measureEvent = new MeasureEventImpl(this.facade);
+                this.measureEvent.setCauses(this.ui.causes());
             }
             final MeasureEventImpl event = this.measureEvent.begin(pass, w, h, contentWidth, contentHeight);
             handlers.fire(Component.MEASURED, event);
@@ -444,6 +456,7 @@ public class Node implements ComponentPeer {
     private PaintEventImpl paintEvent() {
         if (this.paintEvent == null) {
             this.paintEvent = new PaintEventImpl(this.facade);
+            this.paintEvent.setCauses(this.ui.causes());
         }
         return this.paintEvent;
     }
@@ -494,7 +507,7 @@ public class Node implements ComponentPeer {
      */
     @Override
     public final <V> void bind(final PropertyKey<?, V> key, final Source<V> source) {
-        final Binding<V> binding = new Binding<>(this.facade, key, source);
+        final Binding<V> binding = new Binding<>(this.facade, key, source, this.ui::causes);
         if (this.bindings == null) {
             this.bindings = new LinkedHashMap<>();
         }
@@ -526,7 +539,8 @@ public class Node implements ComponentPeer {
     @Override
     public final boolean request(final EventType<?> type) {
         Node.requireClass(type, RequestEvent.class);
-        if (!this.isHandled(type)) {
+        // Requests are the user's: from any other origin the change goes ahead without asking
+        if (!this.isHandled(type) || !(this.ui.causes().origin() instanceof Origin.User)) {
             return true;
         }
         return !Node.dispatchControl(type, new RequestEventImpl<>(this.facade), this).isCancelled();
@@ -537,7 +551,7 @@ public class Node implements ComponentPeer {
     public final <V> void request(final EventType<?> type, final V value, final Consumer<? super V> apply) {
         Node.requireClass(type, ValueRequestEvent.class);
         Objects.requireNonNull(apply, "apply");
-        if (!this.isHandled(type)) {
+        if (!this.isHandled(type) || !(this.ui.causes().origin() instanceof Origin.User)) {
             apply.accept(value);
             return;
         }

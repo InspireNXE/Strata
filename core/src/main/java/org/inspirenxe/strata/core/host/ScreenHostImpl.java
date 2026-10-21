@@ -145,6 +145,7 @@ public final class ScreenHostImpl implements ScreenHost {
         final Handle opened = new Handle(screen);
         this.screen = screen;
         this.handle = opened;
+        this.root.setScreen(screen);
         this.rebuild = false;
         screen.opened(opened);
         return opened;
@@ -160,6 +161,7 @@ public final class ScreenHostImpl implements ScreenHost {
         this.handle = null;
         closing.closed();
         this.root.setContent(null);
+        this.root.setScreen(null);
     }
 
     @Override

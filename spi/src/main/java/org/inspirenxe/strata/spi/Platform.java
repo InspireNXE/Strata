@@ -15,7 +15,11 @@
  */
 package org.inspirenxe.strata.spi;
 
+import org.inspirenxe.strata.api.event.cause.CauseStack;
+import org.inspirenxe.strata.api.event.cause.Origin;
 import org.inspirenxe.strata.api.text.TextMetrics;
+
+import java.util.Optional;
 
 /**
  * Everything a host needs from the engine besides drawing. An adapter passes one to
@@ -73,4 +77,28 @@ public interface Platform {
      * @return the theme source, or {@link ThemeSource#NONE} if the engine has no themes or theme files of its own
      */
     ThemeSource themes();
+
+    /**
+     * Returns the engine's own cause stack, when it has one Strata's causes should follow, such as Sponge's. Hosts
+     * then push their input frames on it and hand it to developers through {@code ComponentFactory.causes()}.
+     *
+     * <p>A stack returned here must keep frames for the UI thread, close them in the order {@code CauseFrame}
+     * states, and answer {@code current()} and {@code context} from the frames open at the time of the call. Strata
+     * reads it only on the UI thread.</p>
+     *
+     * @return the engine's stack, or empty for Strata's own, one per thread; the default
+     */
+    default Optional<CauseStack> causes() {
+        return Optional.empty();
+    }
+
+    /**
+     * Returns the engine's object for the person at the screen, which hosts put in every {@link Origin.User} origin
+     * so handlers can tell who acted, such as the local player's profile. Strata never reads it.
+     *
+     * @return the identity, or empty if the engine does not name its user; the default
+     */
+    default Optional<Object> user() {
+        return Optional.empty();
+    }
 }
