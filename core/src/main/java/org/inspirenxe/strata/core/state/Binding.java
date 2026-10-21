@@ -40,7 +40,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * equals it.</p>
  *
  * <p>When the source is a state and the key has a report, the binding also handles that report on the component,
- * after every other handler, and writes the property's value to the state unless the two are equal. It skips
+ * at the highest priority, so after the component's other handlers and before the handlers of the ancestors the
+ * report bubbles to, and writes the property's value to the state unless the two are equal. It skips
  * reports that fire while it writes the property itself, so a value it set never comes back to the state, and
  * reports that fire after attach before its first evaluation, so a value the control had before it read the source,
  * such as a combo box selecting its first item when the items arrive, never replaces the state's.</p>
@@ -115,7 +116,7 @@ public final class Binding<V> {
     }
 
     private <E extends ControlEvent<?>> Subscription subscribe(final EventType<E> report) {
-        // After every other handler, so they all see the change before the state does
+        // After the control's own handlers, so they see the change before the state does; ancestors' handlers run later
         return this.component.subscribe(report, Integer.MAX_VALUE, this::reported);
     }
 

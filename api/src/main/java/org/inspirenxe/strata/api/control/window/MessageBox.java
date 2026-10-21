@@ -34,14 +34,17 @@ import java.util.List;
  * {@link org.inspirenxe.strata.api.overlay.Overlays#dialog}.
  *
  * <p>The message wraps at {@link #MESSAGE_WIDTH} units. The buttons sit at the bottom right, in the order of the
- * {@link Buttons} set, the first one focused when the dialog opens. A button press, the close button or Escape
+ * {@link Buttons} set, the first one focused when the dialog opens. A box made without a set has
+ * {@link Buttons#OK}. A button press, the close button or Escape
  * answers once: the box reports a {@link Result} through {@link #ANSWERED} and closes the overlay showing it. The
  * close button and Escape answer {@link Buttons#dismissResult()}.</p>
  *
  * <p>The box is a composite: the events of its window and buttons reach handlers on those parts and on the box,
  * and nothing outside it. To hear the user's answer, handle {@link #ANSWER} and {@link #ANSWERED}.</p>
  *
- * <p>It uses the theme keys of {@link Window}, {@link Label} and {@link Button}.</p>
+ * <p>It uses the theme keys of {@link Window}, {@link Label} and {@link Button}, and one of its own:
+ * {@value #STYLE_PADDING} (insets, optional), the space between the window's padding and the message and buttons,
+ * 4 on every side by default.</p>
  *
  * <pre>{@code
  * factory.overlays().dialog(factory.messageBox("Delete", "Delete this exchange?", MessageBox.Buttons.YES_NO)
@@ -142,8 +145,10 @@ public interface MessageBox extends Component<MessageBox>, HasCursor<MessageBox>
     MessageBox setButtons(Buttons buttons);
 
     /**
-     * Replaces a button's caption, such as to translate it. The default captions are {@code OK}, {@code Cancel},
-     * {@code Yes}, {@code No} and {@code Close}.
+     * Replaces a button's caption. The default captions are the translated {@code strata.button.ok},
+     * {@code strata.button.cancel}, {@code strata.button.yes}, {@code strata.button.no} and
+     * {@code strata.button.close}, which read OK, Cancel, Yes, No and Close in English. A caption set for a result the
+     * box has no button for is kept, and used if {@link #setButtons} adds that button.
      *
      * @param result the result of the button
      * @param caption the caption

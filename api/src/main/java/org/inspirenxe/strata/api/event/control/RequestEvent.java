@@ -34,7 +34,7 @@ public interface RequestEvent<C> extends Cancelable {
     /**
      * Returns the control that fired the event, which is also its {@linkplain #target() target}.
      *
-     * @return the control
+     * @return the control, typed as the attribute or control that declares the event type
      */
     C control();
 }

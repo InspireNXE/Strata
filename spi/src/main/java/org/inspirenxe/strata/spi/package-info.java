@@ -18,13 +18,22 @@
  *
  * <h2>Writing an adapter</h2>
  * <ol>
- *     <li>Implement {@link org.inspirenxe.strata.spi.Platform}: text measurement, a clock, the clipboard, text input
- *     signaling and {@link org.inspirenxe.strata.spi.Capabilities}.</li>
+ *     <li>Implement {@link org.inspirenxe.strata.spi.Platform}: text measurement, a
+ *     {@link org.inspirenxe.strata.spi.Clock}, the {@link org.inspirenxe.strata.spi.Clipboard}, a
+ *     {@link org.inspirenxe.strata.spi.TextInputSink}, {@link org.inspirenxe.strata.spi.Capabilities} and a
+ *     {@link org.inspirenxe.strata.spi.ThemeSource} for themes named by id.</li>
  *     <li>Implement {@link org.inspirenxe.strata.spi.Canvas} on the engine's 2D drawing.</li>
+ *     <li>When the adapter starts, before any project code runs, hand core what is shared by the whole process, from
+ *     the {@code core} module's {@code StrataCore}: a {@link org.inspirenxe.strata.spi.Translator} with
+ *     {@code setTranslator}, the screen controller {@code Strata.screens()} returns with {@code setScreenController},
+ *     and appearances for the engine's own types with {@code registerDefaultAppearance}. Wrap engine text with
+ *     {@code StrataCore.text} and a {@link org.inspirenxe.strata.spi.TextSource}.</li>
  *     <li>Create a host with {@code StrataCore.createScreenHost} (one screen) or {@code StrataCore.createScreenStack}
- *     (a stack of screens), from the {@code core} module.</li>
+ *     (a stack of screens).</li>
  *     <li>Each frame, call {@code render} with your canvas. Forward window size changes to {@code resize}, and input
- *     to the {@link org.inspirenxe.strata.spi.InputSink} methods, converted to UI units and Strata's input types.</li>
+ *     to the {@link org.inspirenxe.strata.spi.InputSink} methods, converted to UI units and Strata's input types.
+ *     {@link org.inspirenxe.strata.spi.HeldKeys} tells repeats from presses for engines that report both as
+ *     presses.</li>
  * </ol>
  *
  * <h2>Rules for every adapter</h2>

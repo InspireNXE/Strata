@@ -144,6 +144,9 @@ import java.util.Objects;
  *     {@value org.inspirenxe.strata.api.control.collection.ComboBox#STYLE_POPUP}.</li>
  *     <li>{@value #STYLE_SUGGESTION_TEXT} (text style, optional): the text of each suggestion. Falls back to
  *     {@value #STYLE_TEXT}.</li>
+ *     <li>{@value #STYLE_PADDING} (insets, optional): the space between the box's edges and its text, unless
+ *     {@link #setTextPadding(org.inspirenxe.strata.api.geometry.Insets)} sets one. Defaults to 4 at the sides and
+ *     5 at the top and bottom.</li>
  * </ul>
  * <p>The suggestion rows are drawn with the {@link org.inspirenxe.strata.api.control.collection.ListView} row keys,
  * the highlighted one as the selected row.</p>

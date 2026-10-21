@@ -57,7 +57,7 @@ public final class StrataCore {
     /**
      * Sets the platform's screen controller for the whole process: the one {@code Strata.screens()} returns, and the
      * one handles open screens with when their host has no opener of its own ({@link ScreenHost#setOpener}).
-     * Adapters call this when they load, before any mod code can ask for it, and may call it again to replace the
+     * Adapters call this when they load, before any other code can ask for it, and may call it again to replace the
      * controller. The controller's {@code open(screen)} must use the default theme the adapter's
      * {@link ThemeSource#defaultTheme()} names, which the interface's default method does by passing
      * {@code ThemeRef.platform()}.

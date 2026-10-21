@@ -33,8 +33,9 @@ import java.util.Objects;
  * repeated). It consumes those inputs. Each flip by the user fires {@link Toggle#TOGGLE}, and every change fires
  * {@link Toggle#TOGGLED}. A disabled switch does neither and draws its disabled look.</p>
  *
- * <p>It is focusable and tabbable and shows the hand cursor. The track is the caption's line height plus 4 units
- * tall and twice that wide. The knob is a square 2 units in from the track's edges. The caption sits 4 units right
+ * <p>It is focusable and tabbable and shows the hand cursor. With the theme's default paddings, the track is the
+ * caption's line height plus 4 units tall and twice that wide, and the knob is a square 2 units in from the track's
+ * edges. The caption sits 4 units right
  * of the track, centered on it vertically. The desired size is the track, the gap and the caption's width wide (just
  * the track when the caption is empty), and the taller of the track and the caption.</p>
  *
@@ -53,6 +54,10 @@ import java.util.Objects;
  *     <li>{@value #STYLE_TEXT} (text style, optional): the caption. Falls back to the default text style.</li>
  *     <li>{@value #STYLE_TEXT_DISABLED} (text style, optional): the caption when disabled. Falls back to
  *     {@value #STYLE_TEXT}.</li>
+ *     <li>{@value #STYLE_TRACK_PADDING} (insets, optional): how far the track reaches past a box a line tall and two
+ *     lines wide. Defaults to 4 at the sides and 2 at the top and bottom.</li>
+ *     <li>{@value #STYLE_KNOB_PADDING} (insets, optional): the space between the knob and the track's edges.
+ *     Defaults to 2 on every side.</li>
  * </ul>
  *
  * <pre>{@code

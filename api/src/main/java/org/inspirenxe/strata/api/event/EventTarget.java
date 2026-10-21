@@ -19,7 +19,9 @@ import org.inspirenxe.strata.api.event.input.InputEvents;
 
 /**
  * Something handlers can be registered on. Every {@link org.inspirenxe.strata.api.component.Component} is one, and
- * so are the few things with events that are not components, such as a radio group.
+ * so are the two things with events that are not components: a
+ * {@link org.inspirenxe.strata.api.control.button.RadioGroup} and an {@link org.inspirenxe.strata.api.overlay.Overlay}.
+ * Their events reach only the handlers registered on them and do not travel through any tree.
  *
  * <p>On one target, handlers for a type run in ascending priority, and in registration order when priorities are
  * equal: the highest number runs last. A handler registered without a priority has priority 0. Use a lower number

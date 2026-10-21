@@ -50,6 +50,8 @@ import java.util.Objects;
  *     style.</li>
  *     <li>{@value #STYLE_TEXT_DISABLED} (text style, optional): the title and the arrow when disabled. Falls back
  *     to {@value #STYLE_TEXT}.</li>
+ *     <li>{@value #STYLE_HEADER_PADDING} (insets, optional): the space between the header's edges and its arrow
+ *     and text. Defaults to 4 at the sides and 3 at the top and bottom.</li>
  * </ul>
  *
  * <pre>{@code

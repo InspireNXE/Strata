@@ -84,6 +84,8 @@ import java.util.function.DoubleFunction;
  *     <li>{@value #STYLE_TEXT} (text style, optional): the label. Falls back to the default text style.</li>
  *     <li>{@value #STYLE_TEXT_DISABLED} (text style, optional): the label when disabled. Falls back to
  *     {@value #STYLE_TEXT}.</li>
+ *     <li>{@value #STYLE_PADDING} (insets, optional): the space between the slider's edges and its label, which
+ *     centers inside it and is cut to it. Defaults to none.</li>
  * </ul>
  *
  * <pre>{@code

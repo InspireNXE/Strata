@@ -88,6 +88,8 @@ import java.util.function.Function;
  *     text style.</li>
  *     <li>{@value #STYLE_GRID} (paint, optional): a one-unit line between columns, in the header and the body.
  *     Nothing if missing.</li>
+ *     <li>{@value #STYLE_HEADER_PADDING} (insets, optional): the space between a column's edges and its title and
+ *     sort arrow. Defaults to 4 at the sides and none at the top and bottom.</li>
  * </ul>
  *
  * <pre>{@code

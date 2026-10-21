@@ -28,8 +28,9 @@ import java.util.Optional;
  * {@link org.inspirenxe.strata.api.ComponentFactory#appearances()} inside a screen; both return the same registry.
  *
  * <p>A value's appearance is the one registered for its class, else for its nearest superclass that has one, else
- * for the nearest of its interfaces that has one, searching each interface's superinterfaces before the next
- * interface. Of two interfaces at the same distance, the one registered first wins. A later registration for the
+ * for the nearest of its interfaces that has one. Interfaces are searched breadth first: those the class and its
+ * superclasses implement directly, then the interfaces those extend, and so on. Of two interfaces at the same
+ * distance, the one whose type was first registered wins. A later registration for the
  * same type hides an earlier one until it is removed. A value with no appearance has no icon and no tooltip, and its
  * name is {@link String#valueOf(Object)}.</p>
  *

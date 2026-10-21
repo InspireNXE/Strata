@@ -51,8 +51,11 @@ import org.inspirenxe.strata.api.layout.Orientation;
  *         .setFirst(categories).setSecond(offers).setPosition(0.3f);
  * }</pre>
  *
- * <p>Get one from {@link org.inspirenxe.strata.api.ComponentFactory#splitPane(Orientation)}. Do not implement this
- * interface.</p>
+ * <p>It fires no events of its own beyond {@link #MOVE} and {@link #MOVED}; the events of the two sides are content
+ * and pass the pane on to its ancestors.</p>
+ *
+ * <p>Get one from {@link org.inspirenxe.strata.api.ComponentFactory#splitPane()}, which is side by side, or
+ * {@link org.inspirenxe.strata.api.ComponentFactory#splitPane(Orientation)}. Do not implement this interface.</p>
  */
 public interface SplitPane extends Component<SplitPane>, HasCursor<SplitPane>, HasTooltip<SplitPane> {
     /**

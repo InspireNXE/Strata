@@ -78,7 +78,8 @@ public interface Screen {
     }
 
     /**
-     * Called once the screen is open and its first tree is built. The default does nothing.
+     * Called once the screen is open and its first tree is built. A rebuild after {@link ScreenHandle#invalidate()}
+     * does not call it again: the handle stays the same for the whole opening. The default does nothing.
      *
      * @param handle lets the screen ask the host for a rebuild or to close; valid until the screen closes, after
      *               which its methods do nothing

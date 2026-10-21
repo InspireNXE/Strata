@@ -19,7 +19,9 @@ import org.inspirenxe.strata.api.control.menu.MenuEntry;
 import org.inspirenxe.strata.api.control.menu.MenuSeparator;
 
 /**
- * The core {@link MenuSeparator}.
+ * The core {@link MenuSeparator}. It holds no state beyond the menu that holds it; the menu gives it
+ * {@link MenuImpl#SEPARATOR_HEIGHT} units and draws a one-unit line across its middle, and the highlight passes over
+ * it.
  */
 public final class MenuSeparatorImpl extends MenuEntryImpl implements MenuSeparator {
 

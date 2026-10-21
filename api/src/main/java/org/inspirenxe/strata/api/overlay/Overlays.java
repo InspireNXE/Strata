@@ -40,7 +40,8 @@ import java.util.Optional;
  *
  * <p>Toasts are short notices that close themselves. They stack down the top-right corner, {@value #TOAST_MARGIN}
  * units in from the edges and {@value #TOAST_MARGIN} apart, in the order they opened, above the overlays opened
- * before them. A press elsewhere does not close them, and a click on one closes it. They take no focus.</p>
+ * before them. A press elsewhere does not close them, and a click on one closes it unless a handler canceled the
+ * click or something inside the toast stopped it from bubbling. They take no focus.</p>
  *
  * <p>Opening a dialog moves focus to the first tabbable component in it, and closing it puts focus back where it
  * was if that component can still take it. Closing the screen closes every overlay.</p>

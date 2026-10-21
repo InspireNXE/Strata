@@ -79,6 +79,11 @@ import java.util.function.Consumer;
  *     {@value #STYLE_TEXT_DISABLED}.</li>
  *     <li>{@value #STYLE_SEPARATOR} (paint, optional): the line of a separator. Falls back to
  *     {@value Separator#STYLE_LINE}.</li>
+ *     <li>{@value #STYLE_ITEM_PADDING} (insets, optional): the space around an item's text. The left side also
+ *     holds the check mark and the right side the submenu arrow. Defaults to 14 at the sides and 3 at the top and
+ *     bottom.</li>
+ *     <li>{@value #STYLE_PADDING} (insets, optional): the space between the menu's edges and its items. Defaults
+ *     to 2 on every side.</li>
  * </ul>
  *
  * <pre>{@code

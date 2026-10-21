@@ -22,7 +22,8 @@ import org.inspirenxe.strata.api.input.MouseButton;
 import org.inspirenxe.strata.api.input.ScrollKind;
 
 /**
- * Where an adapter sends the engine's input. Implemented by Strata's hosts and called by adapters.
+ * Where an adapter sends the engine's input. {@link ScreenHost} and {@link ScreenStack} extend it, and adapters call
+ * it. Do not implement this interface.
  *
  * <p>Each method returns true when Strata consumed the input: a component acted on it, or the pointer is over
  * Strata's UI. Pass input that returns false on to the engine's own UI or game controls.</p>
@@ -37,6 +38,9 @@ import org.inspirenxe.strata.api.input.ScrollKind;
  *     more presses, track held keys and turn the second and later presses into {@code REPEAT}.</li>
  *     <li>Send typed characters separately through {@link #charTyped}, as code points, after the keyboard layout and
  *     input method. Do not send control characters (below U+0020, or U+007F to U+009F).</li>
+ *     <li>Call {@link #pointerLeft()} when the pointer leaves the host's area, so nothing stays hovered.</li>
+ *     <li>Use Strata's scroll directions whatever the engine's: vertical is positive when the wheel turns away from
+ *     the user, horizontal positive toward the left.</li>
  *     <li>Call on the UI thread only.</li>
  * </ul>
  */

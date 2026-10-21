@@ -26,8 +26,9 @@ import java.util.ServiceLoader;
 
 /**
  * Services that work before any screen exists, such as making {@link org.inspirenxe.strata.api.text.Text} in a static
- * field. They come from Strata's core, found on the class path with {@link ServiceLoader} the first time one is
- * asked for. Every method may be called from any thread.
+ * field, registering appearances and themes, making states, and opening screens. They come from Strata's core, a
+ * {@link Provider} found on the class path with {@link ServiceLoader} the first time one is asked for. Every method
+ * may be called from any thread; what the returned objects allow is documented on each of them.
  */
 public final class Strata {
     private static volatile Provider provider;
@@ -89,7 +90,10 @@ public final class Strata {
     }
 
     /**
-     * What Strata's core provides, listed in its {@code META-INF/services}. Do not implement this interface.
+     * What Strata's core provides, listed in its {@code META-INF/services}. {@link Strata} loads it with
+     * {@link ServiceLoader} through the class loader that loaded {@code Strata}, the first time any of its methods is
+     * called, and keeps it for the life of the process. Exactly one provider must be found; with none or several,
+     * every method of {@code Strata} throws {@link IllegalStateException}. Do not implement this interface.
      */
     public interface Provider {
         /**

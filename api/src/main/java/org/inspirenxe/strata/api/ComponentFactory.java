@@ -122,7 +122,8 @@ public interface ComponentFactory {
     Theme theme();
 
     /**
-     * Returns the overlays of the host this factory belongs to, for opening popups and dialogs over its screen.
+     * Returns the overlays of the host this factory belongs to, for opening popups, dialogs and toasts over its
+     * screen.
      *
      * @return the host's overlays
      */
@@ -698,8 +699,8 @@ public interface ComponentFactory {
     }
 
     /**
-     * Makes a {@link TableColumn}, weighted 1, that shows {@link String#valueOf(Object)} of each item as text and is
-     * not sortable.
+     * Makes a {@link TableColumn}, weighted 1, that shows each item by its {@linkplain Appearances#nameOf appearance
+     * name} and is not sortable.
      *
      * @param <T> the type of the table's items
      * @param title the header title

@@ -23,8 +23,10 @@ import java.util.List;
 /**
  * Strata's half of a {@link org.inspirenxe.strata.api.extension.CustomComposite} or
  * {@link org.inspirenxe.strata.api.extension.CustomContainer}. Each method has the meaning of the
- * {@link org.inspirenxe.strata.api.component.Container} method of the same name, with setters returning nothing. Not
- * for use outside Strata.
+ * {@link org.inspirenxe.strata.api.component.Container} method of the same name, with setters returning nothing.
+ * Only Strata's implementation provides container peers, through
+ * {@link org.inspirenxe.strata.api.ComponentFactory#createContainerPeer}. Not for use outside Strata. Do not
+ * implement this interface.
  */
 public interface ContainerPeer extends ComponentPeer {
 

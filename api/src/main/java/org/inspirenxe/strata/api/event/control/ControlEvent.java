@@ -28,9 +28,12 @@ import org.inspirenxe.strata.api.event.Event;
 public interface ControlEvent<C> extends Event {
 
     /**
-     * Returns the control that fired the event, which is also its {@linkplain #target() target}.
+     * Returns the control that fired the event. For a control that is a component this is also the event's
+     * {@linkplain #target() target}. For one that is not, the target is a component that stands for it: a radio
+     * group's {@code SELECTED} is aimed at the button newly selected, or at the one that lost the selection when it
+     * was cleared, and an overlay's {@code CLOSED} at the overlay's content.
      *
-     * @return the control
+     * @return the control, typed as the attribute or control that declares the event type
      */
     C control();
 }

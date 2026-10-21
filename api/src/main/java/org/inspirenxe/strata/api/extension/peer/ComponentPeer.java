@@ -42,7 +42,8 @@ import java.util.function.Consumer;
  * {@link org.inspirenxe.strata.api.component.Component} method of the same name, with setters returning nothing.
  *
  * <p>Only Strata's implementation provides peers, through
- * {@link org.inspirenxe.strata.api.ComponentFactory#createPeer}. Not for use outside Strata.</p>
+ * {@link org.inspirenxe.strata.api.ComponentFactory#createPeer}. Not for use outside Strata. Do not implement this
+ * interface.</p>
  */
 public interface ComponentPeer {
 

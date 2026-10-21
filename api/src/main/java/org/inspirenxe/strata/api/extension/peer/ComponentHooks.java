@@ -31,7 +31,8 @@ import java.util.Set;
 /**
  * The calls a peer makes into its component's protected hooks. Each
  * {@link org.inspirenxe.strata.api.extension.CustomComponent} hands a private instance to its peer; each method
- * forwards to the hook of the same name. Not for use outside Strata.
+ * forwards to the hook of the same name, so the peer can reach hooks that are {@code protected} on the component.
+ * Not for use outside Strata. Do not implement this interface.
  */
 public interface ComponentHooks {
 

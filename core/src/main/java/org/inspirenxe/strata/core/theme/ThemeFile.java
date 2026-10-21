@@ -240,6 +240,7 @@ record ThemeFile(String layer, Optional<ThemeId> parent, Map<String, Paint> pain
      * @param underline underline, or null
      * @param strikethrough strikethrough, or null
      * @param shadow shadow, or null
+     * @param monospace monospace, or null
      */
     record TextPatch(Integer color, Boolean bold, Boolean italic, Boolean underline, Boolean strikethrough,
                      Boolean shadow, Boolean monospace) {

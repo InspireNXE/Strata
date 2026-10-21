@@ -16,8 +16,11 @@
 package org.inspirenxe.strata.api.event;
 
 /**
- * Code that reacts to an event. Runs on the UI thread. An exception thrown by a handler propagates out of the
- * input call that caused the event, so handle your own errors.
+ * Code that reacts to an event, registered with {@link EventTarget#onEvent} or {@link EventTarget#subscribe}. Runs on
+ * the UI thread. A lambda or method reference fits, and one handler may be registered on several targets.
+ *
+ * <p>An exception thrown by a handler is not caught: the handlers after it for the same event do not run, and the
+ * exception propagates out of the input call or setter that caused the event, so handle your own errors.</p>
  *
  * @param <E> the event interface
  */

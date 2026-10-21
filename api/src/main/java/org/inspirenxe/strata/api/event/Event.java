@@ -67,7 +67,8 @@ public interface Event {
 
     /**
      * Returns the snapshot of the {@linkplain #target() target}. Present for every cancelable event that reaches a
-     * handler, so such a handler can always call this.
+     * handler, except {@link org.inspirenxe.strata.api.component.Component#PAINT}, so such a handler can always call
+     * this.
      *
      * @return the target's snapshot; never null
      * @throws IllegalStateException if no snapshot was taken for this event; see {@link #snapshotOf(Component)}
@@ -78,8 +79,9 @@ public interface Event {
     }
 
     /**
-     * Returns the snapshot of the {@linkplain #current() current} component. Present for a cancelable event whose
-     * handler is running on the current component.
+     * Returns the snapshot of the {@linkplain #current() current} component. Present for a cancelable event other
+     * than {@link org.inspirenxe.strata.api.component.Component#PAINT} whose handler is running on the current
+     * component.
      *
      * @return the current component's snapshot; never null
      * @throws IllegalStateException if no snapshot was taken of the current component; see

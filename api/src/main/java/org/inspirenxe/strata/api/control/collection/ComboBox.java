@@ -88,6 +88,8 @@ import java.util.function.Function;
  *     {@value #STYLE_TEXT}.</li>
  *     <li>The row keys of {@link ListView} and the scroll bar keys of
  *     {@link org.inspirenxe.strata.api.layout.ScrollPanel}, for the open list.</li>
+ *     <li>{@value #STYLE_PADDING} (insets, optional): the space between the box's edges and its shown value on the
+ *     left and its arrow on the right. Defaults to 4 at the sides and 3 at the top and bottom.</li>
  * </ul>
  *
  * <pre>{@code

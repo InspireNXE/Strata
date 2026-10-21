@@ -16,5 +16,11 @@
 /**
  * The hosts adapters drive: {@link org.inspirenxe.strata.core.host.ScreenHostImpl} shows one screen, and
  * {@link org.inspirenxe.strata.core.host.ScreenStackImpl} stacks hosts for engines without a screen system.
+ * {@link org.inspirenxe.strata.core.host.PlatformScreens} holds the screen controller an adapter hands over, which
+ * {@code Strata.screens()} returns and which a screen handle opens through when its host has no opener of its own.
+ *
+ * <p>A host runs a frame in a fixed order: it resolves its theme again if the theme source or the themes added in
+ * code changed, lays the tree out again if the translations changed, rebuilds the screen if its handle asked for it,
+ * updates bound properties, and then lays out and draws through its {@link org.inspirenxe.strata.core.node.Root}.</p>
  */
 package org.inspirenxe.strata.core.host;

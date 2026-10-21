@@ -103,6 +103,10 @@ import java.util.function.Function;
  *     {@value #STYLE_ROW}.</li>
  *     <li>{@value #STYLE_PLACEHOLDER} (text style, optional): the {@linkplain #setPlaceholder placeholder}. Falls
  *     back to the default style.</li>
+ *     <li>{@value #STYLE_CELL_PADDING} (insets, optional): the margin of the cell labels that
+ *     {@link org.inspirenxe.strata.api.ComponentFactory#cellLabel(String)} makes. Defaults to
+ *     {@value org.inspirenxe.strata.api.ComponentFactory#CELL_PADDING} at the sides and none at the top and
+ *     bottom.</li>
  *     <li>The scroll bar keys of {@link org.inspirenxe.strata.api.layout.ScrollPanel}.</li>
  * </ul>
  *

@@ -81,13 +81,15 @@ import java.util.Set;
  * }
  * }</pre>
  * <p>Colors are {@code #RRGGBB}, which is opaque, or {@code #AARRGGBB}. A paint is a color, {@code "none"} for
- * {@link Paint#NONE}, or an object holding exactly one of {@code sprite}, {@code nine_slice} or {@code gradient}.
- * {@code tint} is optional and defaults to opaque white. A nine-slice {@code border} is one number,
+ * {@link Paint#NONE}, or an object: {@code {"sprite": id}}, {@code {"tiled": id, "size": [w, h]}},
+ * {@code {"nine_slice": id, "border": ...}} with an optional {@code size} and {@code "tiled": true}, which needs the
+ * size, or {@code {"gradient": [top, bottom]}}. Sprites, tiled sprites and nine-slices take an optional
+ * {@code tint}, which defaults to opaque white. A nine-slice {@code border} is one number,
  * {@code [horizontal, vertical]} or {@code [left, top, right, bottom]}. A text style sets any of {@code color},
- * {@code bold}, {@code italic}, {@code underline}, {@code strikethrough} and {@code shadow}; the rest keep the
- * inherited style for that key, or {@link TextStyle#DEFAULT} if there is none. Insets take the same forms as a
- * border, in UI units. Unknown members are errors. Overrides from code and from the ref replace a key's whole text
- * style.</p>
+ * {@code bold}, {@code italic}, {@code underline}, {@code strikethrough}, {@code shadow} and {@code monospace}; the
+ * rest keep the inherited style for that key, or {@link TextStyle#DEFAULT} if there is none. Insets take the same
+ * forms as a border, in UI units. Unknown members are errors. Overrides from code and from the ref replace a key's
+ * whole text style.</p>
  *
  * <p>A theme file from {@link ThemeSource#documents} that cannot be parsed is skipped and logged, so one broken
  * pack does not hide the others. A base file that cannot be parsed throws, since it ships with the adapter. The

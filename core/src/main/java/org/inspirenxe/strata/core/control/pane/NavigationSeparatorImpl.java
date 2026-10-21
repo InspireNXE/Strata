@@ -19,7 +19,8 @@ import org.inspirenxe.strata.api.control.pane.NavigationEntry;
 import org.inspirenxe.strata.api.control.pane.NavigationSeparator;
 
 /**
- * The core {@link NavigationSeparator}.
+ * The core {@link NavigationSeparator}. It holds no state of its own; a view that holds it draws a one-unit line in its
+ * separator paint, inset from the pane's edges, and the keyboard cursor passes over it.
  */
 public final class NavigationSeparatorImpl extends NavigationEntryImpl implements NavigationSeparator {
 

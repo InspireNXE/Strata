@@ -26,7 +26,8 @@ public interface Cancelable extends Event {
     /**
      * Refuses what the event asks for. For an input event, the default behavior of the current component and of
      * every ancestor the event still reaches is skipped. For a request event, the control does not make the change.
-     * Handlers keep running, and the event keeps bubbling unless stopped too.
+     * For {@link org.inspirenxe.strata.api.component.Component#PAINT}, the component skips its own drawing. Handlers
+     * keep running, and the event keeps bubbling unless stopped too.
      */
     void cancel();
 

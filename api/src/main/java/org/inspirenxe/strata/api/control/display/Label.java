@@ -44,7 +44,7 @@ import java.util.Objects;
  * {@code ...}, and the label asks for no more width than it is offered.</p>
  *
  * <p>A label is not focusable and has no default behavior for input, so clicks and keys pass through to its
- * ancestors.</p>
+ * ancestors. It fires no events; {@link #setText} reports nothing.</p>
  *
  * <h2>Theme keys</h2>
  * <ul>

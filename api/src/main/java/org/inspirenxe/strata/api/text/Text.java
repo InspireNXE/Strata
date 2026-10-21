@@ -143,8 +143,9 @@ public interface Text {
     }
 
     /**
-     * Makes text that shows an engine visual at its natural size, in the line where it lands. A label makes the line
-     * tall enough for it, and the text beside it is centered on the line. In {@link #plain()} it is
+     * Makes text that shows an engine visual at its natural size, untinted, in the line where it lands. Labels,
+     * one-line captions, tooltips and toasts make the line tall enough for it and center the text beside it on the
+     * line; controls whose rows have a fixed height, such as menus, keep it. In {@link #plain()} it is
      * {@link TextSpan#OBJECT_REPLACEMENT}.
      *
      * @param visual the visual
@@ -155,8 +156,8 @@ public interface Text {
     }
 
     /**
-     * Makes text that shows a sprite as a square as tall as the line height of the style where it lands, so it sits
-     * in the text like a character. In {@link #plain()} it is {@link TextSpan#OBJECT_REPLACEMENT}.
+     * Makes text that shows a sprite, untinted, as a square as tall as the line height of the style where it lands,
+     * so it sits in the text like a character. In {@link #plain()} it is {@link TextSpan#OBJECT_REPLACEMENT}.
      *
      * @param sprite the sprite
      * @return the text
@@ -166,8 +167,8 @@ public interface Text {
     }
 
     /**
-     * Makes text that shows a sprite at a given size. A label makes the line tall enough for it, and the text beside
-     * it is centered on the line. In {@link #plain()} it is {@link TextSpan#OBJECT_REPLACEMENT}.
+     * Makes text that shows a sprite at a given size, untinted. Lines grow to fit it as they do for
+     * {@link #visual(Visual)}. In {@link #plain()} it is {@link TextSpan#OBJECT_REPLACEMENT}.
      *
      * @param sprite the sprite
      * @param width its width in UI units

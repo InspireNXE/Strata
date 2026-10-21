@@ -89,10 +89,10 @@ import java.util.function.Consumer;
  * content may have moved under the pointer.</p>
  *
  * <p>Keyboard rules: key events go to the focused node, or else to the top dialog, or else to the content. An
- * unhandled Escape press closes the top overlay. An unhandled Tab press or repeat without Ctrl or Alt moves focus,
- * backwards with Shift, among the nodes of the top dialog or, with no dialog, of the content. Typed characters go
- * only to the focused node. When the platform does not send key repeats, the root makes them with a
- * {@link KeyRepeater}; each repeat goes to whatever has focus when it fires.</p>
+ * unhandled Escape press closes the top overlay that is not a toast. An unhandled Tab press or repeat without Ctrl
+ * or Alt moves focus, backwards with Shift, among the nodes of the top dialog or, with no dialog, of the content.
+ * Typed characters go only to the focused node. When the platform does not send key repeats, the root makes them
+ * with a {@link KeyRepeater}; each repeat goes to whatever has focus when it fires.</p>
  *
  * <p>A popup opened next to an anchor takes its desired size below or above the anchor. A popup opened in an area
  * is measured with the area's size and arranged into it, where its own alignment places it, as a dialog is in the

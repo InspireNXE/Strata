@@ -27,7 +27,8 @@ import java.util.Optional;
 
 /**
  * Shows one {@link Screen} at a time. Implemented by Strata and created with {@code StrataCore.createScreenHost};
- * adapters drive it. Engines that keep their own stack of screens use one host per engine screen.
+ * adapters drive it. Engines that keep their own stack of screens use one host per engine screen. Do not implement
+ * this interface.
  *
  * <h2>Requirements for callers (adapters)</h2>
  * <ul>

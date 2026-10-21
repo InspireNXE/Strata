@@ -38,7 +38,8 @@ import java.util.function.Function;
  *
  * <p>There is one cell per entry in the items, null entries being empty cells, laid out left to right in rows of
  * {@linkplain #setColumns a set number of columns}. Each filled cell shows the component its cell factory makes for
- * the item, inset by one unit, and the tooltip its tooltip function gives. Cells are rebuilt when the items, the
+ * the item, inset by the theme's {@value #STYLE_CELL_PADDING}, one unit by default, and the tooltip its tooltip
+ * function gives. Cells are rebuilt when the items, the
  * cell factory or the tooltip function change. Unlike a list, the grid is positional: {@link #setItems} keeps the
  * selection on the same index, and {@link #setKeyFunction} only affects {@link #selectItem}.</p>
  *
@@ -71,6 +72,8 @@ import java.util.function.Function;
  *     content. Nothing if missing.</li>
  *     <li>{@value #STYLE_CELL_SELECTED} (paint, optional): drawn over the selected cell, in front of its content.
  *     Falls back to {@value #STYLE_CELL_HOVERED}.</li>
+ *     <li>{@value #STYLE_CELL_PADDING} (insets, optional): the space between a cell's edges and the component its
+ *     cell factory made. Defaults to 1 on every side.</li>
  * </ul>
  *
  * <pre>{@code

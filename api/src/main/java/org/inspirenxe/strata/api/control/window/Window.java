@@ -89,6 +89,10 @@ import org.inspirenxe.strata.api.text.Text;
  *     2 by 2 squares in a triangle against the bottom-right corner. Nothing is drawn if it is missing.</li>
  *     <li>{@value #STYLE_GRIP_HOVERED} (paint, optional): the grip while the pointer is over the grip or an edge that
  *     resizes, and during a resize. Falls back to {@value #STYLE_GRIP}.</li>
+ *     <li>{@value #STYLE_TITLE_PADDING} (insets, optional): the space around the title in the title bar. Defaults to
+ *     {@value #TITLE_PADDING} on every side.</li>
+ *     <li>{@value #STYLE_PADDING} (insets, optional): the space between the window's edges, below the title bar, and
+ *     its content. Defaults to 3 on every side. Padding set with {@link #setPadding} wins over it.</li>
  * </ul>
  *
  * <pre>{@code

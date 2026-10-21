@@ -39,7 +39,7 @@ import java.util.Optional;
 /**
  * Draws a text toast: the message wrapped to fit a third of the width offered, inside the theme's toast padding or
  * {@link #PADDING}. Its background and text style come from the toast keys when the theme has them and from the
- * tooltip keys otherwise. Without either background it draws a dark box with a light one-unit edge.
+ * tooltip keys otherwise. Without either background it draws a dark box with a purple one-unit edge.
  */
 final class ToastView extends BuiltInComponent<ToastView> {
     /**

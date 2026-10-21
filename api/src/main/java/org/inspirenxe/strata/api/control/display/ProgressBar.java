@@ -42,6 +42,8 @@ import org.inspirenxe.strata.api.text.Text;
  *     <li>{@value #STYLE_SEGMENT} (paint, optional): the moving segment of an indeterminate bar. Falls back to
  *     {@value #STYLE_FILL}.</li>
  *     <li>{@value #STYLE_TEXT} (text style, optional): the caption. Falls back to the default style.</li>
+ *     <li>{@value #STYLE_PADDING} (insets, optional): the space around the caption. Defaults to 2 on every
+ *     side.</li>
  * </ul>
  *
  * <pre>{@code

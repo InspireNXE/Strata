@@ -25,7 +25,7 @@ import java.util.Optional;
 
 /**
  * A stack of screens, for engines with no screen system of their own. Implemented by Strata and created with
- * {@code StrataCore.createScreenStack}; adapters drive it.
+ * {@code StrataCore.createScreenStack}; adapters drive it. Do not implement this interface.
  *
  * <p>Only the top screen receives input. Rendering starts at the topmost screen that
  * {@linkplain Screen#hidesBackground() hides the background} (or the bottom screen if none does) and draws each

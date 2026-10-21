@@ -17,16 +17,20 @@
  * Themes: how components look.
  *
  * <p>A {@link org.inspirenxe.strata.api.theme.Theme} maps style keys, such as {@code button.hovered}, to
- * {@link org.inspirenxe.strata.api.theme.Paint}s and {@link org.inspirenxe.strata.api.text.TextStyle}s. Each control
+ * {@link org.inspirenxe.strata.api.theme.Paint}s, {@link org.inspirenxe.strata.api.text.TextStyle}s and
+ * {@link org.inspirenxe.strata.api.geometry.Insets}. Paints fill rectangles with colors, gradients or sprites named
+ * by {@link org.inspirenxe.strata.api.theme.SpriteId}; insets say where a control puts its content. Each control
  * documents the keys it reads as constants on its interface ({@code Button.STYLE_HOVERED}). Some keys are required:
  * a host refuses a tree whose theme lacks them and lists every missing key in a
  * {@link org.inspirenxe.strata.api.theme.ThemeException}. Other keys are optional and fall back to a documented
  * default.</p>
  *
  * <p>Every component in one host shares the host's theme. Change it on the host; components re-read their keys and
- * a new layout runs.</p>
+ * a new layout runs. A container's own background and {@link org.inspirenxe.strata.api.theme.Border} are set on
+ * the container, outside the theme.</p>
  *
- * <p>A {@link org.inspirenxe.strata.api.theme.ThemeRef} names a theme by id, so the engine's packs can restyle it.
+ * <p>A {@link org.inspirenxe.strata.api.theme.ThemeRef} names a theme by
+ * {@link org.inspirenxe.strata.api.theme.ThemeId}, so the engine's packs can restyle it.
  * {@link org.inspirenxe.strata.api.theme.ThemeRegistry}, from {@link org.inspirenxe.strata.api.Strata#themes()},
  * changes such a theme for every screen, or defines a new one on top of another, with
  * {@link org.inspirenxe.strata.api.theme.ThemeOverrides}.</p>

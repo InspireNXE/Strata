@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 /**
- * The appearance registry.
+ * The appearance registry: {@link org.inspirenxe.strata.core.appearance.AppearancesImpl}, the one
+ * {@link org.inspirenxe.strata.api.appearance.Appearances} of the process, which keeps each type's registrations,
+ * the defaults engine adapters register beneath them, and a cache of lookups per class.
  */
 package org.inspirenxe.strata.core.appearance;

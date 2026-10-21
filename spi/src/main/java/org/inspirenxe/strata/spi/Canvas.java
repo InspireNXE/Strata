@@ -120,8 +120,10 @@ public interface Canvas {
 
     /**
      * Draws one line of text with the top-left corner of its line box at the given point. The span holds no line
-     * breaks. Apply every part of the span's style the engine supports: color, bold, italic, underline,
-     * strikethrough and shadow.
+     * breaks, and never holds an {@linkplain TextSpan#element() inline element}: core draws sprites and visuals in
+     * text itself, through {@link #sprite} and {@link #visual}. Apply every part of the span's style the engine
+     * supports: color, bold, italic, underline, strikethrough and shadow, in the monospaced font when the style asks
+     * for it and the platform's {@link Capabilities#monospaceFont()} is true.
      *
      * @param span the text and its style
      * @param x the left edge

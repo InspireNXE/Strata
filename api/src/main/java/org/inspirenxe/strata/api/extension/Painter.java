@@ -29,8 +29,8 @@ import org.inspirenxe.strata.api.visual.Visual;
  * <p>Colors are ARGB ({@code 0xAARRGGBB}); a color with alpha 0 draws nothing. Later calls draw over earlier ones.
  * The engine may round coordinates to whole pixels.</p>
  *
- * <p>Clipping and translation are scoped to a callback, so the engine's state is always restored, even if the
- * callback throws.</p>
+ * <p>Clipping, translation and scaling are scoped to a callback, so the engine's state is always restored, even if
+ * the callback throws.</p>
  *
  * <p>Strata provides the painter, which is valid only during the paint call. Do not implement this
  * interface.</p>

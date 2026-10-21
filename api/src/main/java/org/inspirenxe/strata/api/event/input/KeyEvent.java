@@ -25,7 +25,8 @@ import org.inspirenxe.strata.api.input.Modifiers;
  * A physical key going down, repeating or coming up. Used by {@link InputEvents#KEY}.
  *
  * <p>Key events say which key, not which character: for typed text use {@link CharEvent}. A key event goes to the
- * focused component, or to the screen's root when nothing has focus, and bubbles.</p>
+ * focused component or, when nothing has focus, to the content of the top dialog, or else to the screen's content,
+ * and bubbles. See {@link InputEvents#KEY} for what the host does with keys nothing consumed.</p>
  *
  * <p>Only Strata creates events. Do not implement this interface.</p>
  */

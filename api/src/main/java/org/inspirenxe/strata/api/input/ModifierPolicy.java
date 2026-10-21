@@ -17,7 +17,8 @@ package org.inspirenxe.strata.api.input;
 
 /**
  * How a keyboard shortcut treats the modifiers held when its key is pressed. See
- * {@link org.inspirenxe.strata.api.event.input.KeyEvent#is}.
+ * {@link org.inspirenxe.strata.api.event.input.KeyEvent#is}. {@link #matches} works on the modifiers of any event, so
+ * pointer input can use it too, such as a click that does something else with Control held.
  */
 public enum ModifierPolicy {
     /**

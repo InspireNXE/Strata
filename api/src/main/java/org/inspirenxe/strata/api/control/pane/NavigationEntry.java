@@ -21,8 +21,9 @@ package org.inspirenxe.strata.api.control.pane;
  *
  * <p>Entries are made by the {@link org.inspirenxe.strata.api.ComponentFactory}, or by the view's shorthands. They
  * are mutable, and a change to one lays out or redraws its view. An entry belongs to at most one view, or for an
- * item one parent item, at a time. Entries are not components and not event targets; the view's events carry the
- * item instead.</p>
+ * item one parent item, at a time. Entries are not components and not event targets; the view fires events
+ * for them. The view's selection and activation events carry an item's index in {@link NavigationView#allItems()},
+ * and {@link NavigationView#EXPAND_ITEM} and {@link NavigationView#ITEM_EXPANDED} carry the item.</p>
  *
  * <p>Call entries on the UI thread. Do not implement this interface.</p>
  */

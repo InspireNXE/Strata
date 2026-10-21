@@ -22,15 +22,16 @@ import org.inspirenxe.strata.api.layout.Orientation;
  * A thin line that divides a panel, across or down.
  *
  * <p>A horizontal separator is {@linkplain #setThickness thickness} units tall and stretches across its slot; a
- * vertical one is that wide and stretches down it. It is not focusable and has no default behavior for input.</p>
+ * vertical one is that wide and stretches down it. Along the line it asks for no length, so it takes the length of
+ * the slot it stretches over. It is not focusable, has no default behavior for input and fires no events.</p>
  *
  * <h2>Theme keys</h2>
  * <ul>
  *     <li>{@value #STYLE_LINE} (paint, required): the line.</li>
  * </ul>
  *
- * <p>Get one from {@link org.inspirenxe.strata.api.ComponentFactory#separator(Orientation)}. Do not implement
- * this interface.</p>
+ * <p>Get one from {@link org.inspirenxe.strata.api.ComponentFactory#separator()}, which is horizontal, or
+ * {@link org.inspirenxe.strata.api.ComponentFactory#separator(Orientation)}. Do not implement this interface.</p>
  */
 public interface Separator extends Component<Separator> {
     /**

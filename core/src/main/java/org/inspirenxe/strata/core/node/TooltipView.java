@@ -36,9 +36,9 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * Draws a {@link Tooltip.Text} or {@link Tooltip.Lines} tooltip: lines of spans one line height plus one unit apart,
- * inside {@link #PADDING} units of padding, on the theme's tooltip background. Without that key it draws a dark box
- * with a light one-unit edge.
+ * Draws a {@link Tooltip.Lines} tooltip: lines of spans one line height plus one unit apart, inside the theme's
+ * tooltip padding or {@link #PADDING}, on the theme's tooltip background. Without that key it draws a dark box with
+ * a purple one-unit edge.
  */
 final class TooltipView extends BuiltInComponent<TooltipView> {
     /**

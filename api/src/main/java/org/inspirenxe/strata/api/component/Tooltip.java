@@ -28,18 +28,20 @@ import java.util.function.Function;
  * <p>The host shows a tooltip once the pointer has rested on its component for the host's tooltip delay,
  * {@value #DEFAULT_DELAY_MILLIS} milliseconds unless the adapter sets another, or at once when the pointer moves
  * straight from another component's tooltip. It moves with the pointer: 12 units right of and 12 units above the
- * pointer, flipped to the left side when it would leave the host on the right, and kept inside the host. Tooltips
- * take no input. Text tooltips draw on the {@value #STYLE_BACKGROUND} paint inside the {@value #STYLE_PADDING}
- * insets, 4 units on every side by default. Their plain parts are drawn in the {@value #STYLE_TEXT} text style, and
- * styled parts change it; see {@link Text}.</p>
+ * pointer, flipped to the left side when it would leave the host on the right, and kept inside the host. It hides
+ * while a drag is in progress. A tooltip draws above the screen and every overlay, and takes no input.</p>
  *
- * <p>The {@link Lines} kind is drawn by Strata. Engine adapters can offer factory methods that build tooltips from
- * engine objects, such as the lines an engine shows for one of its items.</p>
+ * <p>There are two kinds. {@link Lines}, made by {@link #text(Text)}, {@link #text(String)} and {@link #lines},
+ * is drawn by Strata: on the {@value #STYLE_BACKGROUND} paint inside the {@value #STYLE_PADDING} insets, 4 units on
+ * every side by default, with its plain parts in the {@value #STYLE_TEXT} text style and styled parts changing it
+ * (see {@link Text}). {@link Custom}, made by {@link #of}, is a component built afresh each time the tooltip shows,
+ * drawn with no box around it. Engine adapters can offer factory methods that build tooltips from engine objects,
+ * such as the lines an engine shows for one of its items.</p>
  */
 public sealed interface Tooltip {
     /**
-     * Style key for the box behind a tooltip (paint, optional). The flat look is used if it is missing: a dark box
-     * with a light edge.
+     * Style key for the box behind a {@link Lines} tooltip (paint, optional). If it is missing, the box is a dark
+     * fill with a one-unit purple edge.
      */
     String STYLE_BACKGROUND = "tooltip.background";
     /**
@@ -47,8 +49,8 @@ public sealed interface Tooltip {
      */
     String STYLE_TEXT = "tooltip.text";
     /**
-     * Style key for the space between a text tooltip's edges and its text (insets, optional). Defaults to 4 on
-     * every side.
+     * Style key for the space between a {@link Lines} tooltip's edges and its text (insets, optional). Defaults to
+     * 4 on every side.
      */
     String STYLE_PADDING = "tooltip.padding";
     /**

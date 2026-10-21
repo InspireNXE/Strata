@@ -19,7 +19,8 @@ import java.util.List;
 
 /**
  * Makes {@link Text}. The static methods on {@code Text} call the factory that {@link org.inspirenxe.strata.api.Strata}
- * finds, so code rarely uses this interface directly. Each method is described on the {@code Text} method of the same
+ * finds on the class path the first time one is used, so text can be made in a static field before any screen exists,
+ * and code rarely uses this interface directly. Each method is described on the {@code Text} method of the same
  * name. Implementations may be called from any thread.
  *
  * <p>Strata's core implements this interface. Do not implement it.</p>

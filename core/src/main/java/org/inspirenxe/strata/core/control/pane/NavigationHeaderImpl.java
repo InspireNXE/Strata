@@ -22,7 +22,8 @@ import org.inspirenxe.strata.api.text.Text;
 import java.util.Objects;
 
 /**
- * The core {@link NavigationHeader}.
+ * The core {@link NavigationHeader}: its text and nothing else. A view that holds it draws it through a private row
+ * of its own in the header text style, skips it when the keyboard cursor moves, and hides it in the column of icons.
  */
 public final class NavigationHeaderImpl extends NavigationEntryImpl implements NavigationHeader {
     private Text text;

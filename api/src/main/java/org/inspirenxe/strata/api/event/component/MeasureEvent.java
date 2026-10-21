@@ -38,14 +38,16 @@ public interface MeasureEvent extends Event {
     MeasureContext context();
 
     /**
-     * Returns the width offered for the content, after the margin and any fixed width. May be infinite.
+     * Returns the width offered for the content: the space the parent offers less the margin, or the fixed width
+     * where one is set, capped at the maximum width and never negative. May be infinite.
      *
      * @return the available width
      */
     float availableWidth();
 
     /**
-     * Returns the height offered for the content, after the margin and any fixed height. May be infinite.
+     * Returns the height offered for the content: the space the parent offers less the margin, or the fixed height
+     * where one is set, capped at the maximum height and never negative. May be infinite.
      *
      * @return the available height
      */

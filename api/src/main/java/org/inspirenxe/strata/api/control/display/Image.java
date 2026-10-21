@@ -33,14 +33,17 @@ import java.util.Objects;
  * the engine's placeholder. An image shows either a sprite or a visual, never both.</p>
  *
  * <p>An image is not focusable, reads no theme keys and has no default behavior for input, so clicks pass through to
- * its ancestors. A disabled image draws the same as an enabled one; tint it to show the difference.</p>
+ * its ancestors. A disabled image draws the same as an enabled one; tint it to show the difference. It fires no
+ * events.</p>
  *
  * <pre>{@code
  * Image icon = factory.image(SpriteId.of("examplemod", "icon/gear")).setImageSize(9, 9);
  * }</pre>
  *
- * <p>Get one from {@link org.inspirenxe.strata.api.ComponentFactory#image(SpriteId)} or
- * {@link org.inspirenxe.strata.api.ComponentFactory#image(Visual)}. Do not implement this interface.</p>
+ * <p>Get one from {@link org.inspirenxe.strata.api.ComponentFactory#image()},
+ * {@link org.inspirenxe.strata.api.ComponentFactory#image(SpriteId)},
+ * {@link org.inspirenxe.strata.api.ComponentFactory#image(Visual)} or
+ * {@link org.inspirenxe.strata.api.ComponentFactory#image(Object)}. Do not implement this interface.</p>
  */
 public interface Image extends Component<Image>, HasCursor<Image>, HasTooltip<Image> {
 

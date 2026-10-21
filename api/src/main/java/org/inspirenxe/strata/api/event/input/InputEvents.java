@@ -40,7 +40,8 @@ public final class InputEvents {
     public static final EventType<PointerEvent> POINTER_MOVE = EventType.bubbling("pointer_move", PointerEvent.class);
     /**
      * A mouse button went down over the target. Bubbles. Before it fires, focus moves to the target or its nearest
-     * focusable ancestor, or is cleared if there is none. Default behavior: a text box moves its caret or selects.
+     * focusable ancestor, or is cleared if there is none. A press outside an open popup that closes on such a press
+     * only closes the popup, and fires nothing. Default behavior: a text box moves its caret or selects.
      */
     public static final EventType<PointerButtonEvent> POINTER_PRESS = EventType.bubbling("pointer_press", PointerButtonEvent.class);
     /**
@@ -73,9 +74,11 @@ public final class InputEvents {
      */
     public static final EventType<ScrollEvent> SCROLL = EventType.bubbling("scroll", ScrollEvent.class);
     /**
-     * A key went down, repeated or came up. Fired at the focused component, or the screen's root when nothing has
-     * focus. Bubbles. If nothing consumes a Tab press, focus moves to the next tabbable component (Shift+Tab: the
-     * previous). Default behavior: a button presses on Enter or Space; a text box edits and moves its caret.
+     * A key went down, repeated or came up. Fired at the focused component or, when nothing has focus, at the
+     * content of the top dialog, or else at the screen's content. Bubbles. If nothing consumes an Escape press, the
+     * top overlay that is not a toast closes. If nothing consumes a Tab press or repeat without Control or Alt, focus
+     * moves to the next tabbable component (with Shift, the previous). Default behavior: a button presses on Enter or
+     * Space; a text box edits and moves its caret.
      */
     public static final EventType<KeyEvent> KEY = EventType.bubbling("key", KeyEvent.class);
     /**

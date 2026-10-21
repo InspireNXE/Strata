@@ -27,8 +27,9 @@ import java.util.Optional;
 import java.util.function.Function;
 
 /**
- * The core {@link TableColumn}: weighted 1, showing {@link String#valueOf(Object)} of each item as text, not
- * sortable. A table that holds it is told of every change.
+ * The core {@link TableColumn}: weighted 1, showing each item's appearance name as text, which is
+ * {@link String#valueOf(Object)} for an item with no appearance, and not sortable. Text cells are
+ * {@linkplain ComponentFactory#cellLabel(Text) cell labels}. A table that holds it is told of every change.
  *
  * @param <T> the type of the table's items
  */

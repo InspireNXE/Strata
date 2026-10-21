@@ -38,21 +38,24 @@ import java.util.List;
  *     }
  *
  *     protected Size measure(MeasureContext context, float availableWidth, float availableHeight) {
+ *         Insets padding = this.padding();
  *         float width = 0, height = 0;
  *         for (Component<?> child : this.children()) {
- *             Size outer = context.measure(child, availableWidth, availableHeight);
+ *             Size outer = context.measure(child, availableWidth - padding.horizontal(),
+ *                     availableHeight - padding.vertical());
  *             width += outer.width();
  *             height = Math.max(height, outer.height());
  *         }
- *         return new Size(width, height);
+ *         return new Size(width + padding.horizontal(), height + padding.vertical());
  *     }
  *
  *     protected void arrange(ArrangeContext context, Rect bounds) {
- *         float right = bounds.right();
+ *         Rect content = this.contentBox();
+ *         float right = content.right();
  *         for (Component<?> child : this.children()) {
  *             Size outer = context.outerSize(child);
  *             right -= outer.width();
- *             context.arrange(child, new Rect(right, bounds.y(), outer.width(), outer.height()));
+ *             context.arrange(child, new Rect(right, content.y(), outer.width(), content.height()));
  *         }
  *     }
  * }

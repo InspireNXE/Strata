@@ -21,5 +21,15 @@
  * one of its properties in step with a source through
  * {@link org.inspirenxe.strata.api.component.Component#bind}, named by a
  * {@link org.inspirenxe.strata.api.state.PropertyKey} declared beside the property's events.</p>
+ *
+ * <p>States may be read and set from any thread. A change marks the bindings that read the state, and the host
+ * brings their components up to date on the UI thread before it next lays out, or when it is flushed, so many
+ * changes in one frame cost one update. A binding to a state with a key that has a report is two way: the user's
+ * accepted changes go back into the state. Bindings that keep changing each other's states for too many rounds in
+ * one flush, 100 in Strata's core, are taken for a cycle, logged as an error through {@link java.lang.System.Logger}, and dropped until one of
+ * their states changes again.</p>
+ *
+ * <p>{@link org.inspirenxe.strata.api.state.State#of} makes states through the
+ * {@link org.inspirenxe.strata.api.state.StateFactory} that Strata's core provides.</p>
  */
 package org.inspirenxe.strata.api.state;

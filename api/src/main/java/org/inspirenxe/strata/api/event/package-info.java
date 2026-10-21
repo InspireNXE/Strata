@@ -28,12 +28,14 @@
  *     caused it. They cannot be canceled.</li>
  * </ul>
  * <p>For every component an input event reaches, its handlers run, then its default behavior unless the event was
- * canceled. A <em>bubbling</em> event then moves to the parent and repeats, up to the screen's root, unless
- * something {@linkplain org.inspirenxe.strata.api.event.Event#stopPropagation() stopped} it. A <em>direct</em> event
- * stays at its target. A control fires its request through its whole path first and acts afterwards, unless a
- * handler canceled it; a control's events stop at the first composite above it, unless they came from content the
- * composite holds for its user. When an input event finishes, the host reports it as consumed if it was canceled or
- * stopped; an adapter then keeps the input from reaching the engine's own UI.</p>
+ * canceled. A <em>bubbling</em> event then moves to the parent and repeats, up to the top of the tree it is in (the
+ * screen's content or an overlay's content), unless something
+ * {@linkplain org.inspirenxe.strata.api.event.Event#stopPropagation() stopped} it. A <em>direct</em> event stays at
+ * its target. A control fires its request through its whole path first and acts afterwards, unless a handler
+ * canceled it; a control's events stop at the first composite above it, unless they came from content the composite
+ * holds for its user. A control fires a request or report only when a handler for its type is on that path, so an
+ * event nobody handles costs nothing. When an input event finishes, the host reports it as consumed if it was
+ * canceled or stopped; an adapter then keeps the input from reaching the engine's own UI.</p>
  *
  * <pre>{@code
  * button.onEvent(Button.PRESS, event -> {

@@ -182,9 +182,12 @@ public abstract class CustomComponent<T extends Component<T>> implements Compone
     // ------------------------------------------------------------------
 
     /**
-     * Returns the size the content needs within the given space. Strata has already removed the margin and applied
-     * the maximum size; it applies the minimum size and any fixed size to what you return. Containers must measure
-     * each child here with {@link MeasureContext#measure}.
+     * Returns the size the content needs within the given space. Strata has already removed the margin, put a fixed
+     * size in place of the space offered on an axis that has one, and applied the maximum size; it applies the
+     * minimum size and any fixed size to what you return. Containers must measure each child here with
+     * {@link MeasureContext#measure}. Strata calls this during layout only when something changed: a component that
+     * did not {@linkplain #invalidateLayout() invalidate its layout} and is offered the same space as last time keeps
+     * its last size without this hook running.
      *
      * @param context text measurement and child measuring
      * @param availableWidth the width offered; may be {@link Float#POSITIVE_INFINITY}
@@ -359,8 +362,10 @@ public abstract class CustomComponent<T extends Component<T>> implements Compone
     }
 
     /**
-     * Default behavior for event types other than those in {@link InputEvents} and the focus events. The default
-     * does nothing.
+     * Default behavior for an event type that has no hook of its own here, such as
+     * {@link InputEvents#MODIFIERS_CHANGED}, which reaches the screen's content and each overlay's. Control events,
+     * the requests and reports controls fire, have no default behavior and never reach this hook. The default does
+     * nothing.
      *
      * @param type the event's type
      * @param event the event

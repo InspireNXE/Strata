@@ -43,7 +43,8 @@ public record EventType<E extends Event>(String name, Class<E> eventClass, boole
     }
 
     /**
-     * Creates a type whose events travel from the target up to the screen's root.
+     * Creates a type whose events travel from the target up through its ancestors, to the top of the tree it is in:
+     * the screen's content, or an overlay's content.
      *
      * @param <E> the event interface
      * @param name a readable name
@@ -67,7 +68,9 @@ public record EventType<E extends Event>(String name, Class<E> eventClass, boole
     }
 
     /**
-     * Creates a bubbling type for a control's request without a value, such as a press.
+     * Creates a bubbling type for a control's request without a value, such as a press. Like every request and
+     * report, its events stop at the first composite above the control, unless they come from content the composite
+     * holds for its user. Fire it with {@code CustomComponent.request}.
      *
      * @param <C> the control type
      * @param name a readable name
@@ -79,7 +82,8 @@ public record EventType<E extends Event>(String name, Class<E> eventClass, boole
     }
 
     /**
-     * Creates a bubbling type for a control's request that carries a value, such as an edit.
+     * Creates a bubbling type for a control's request that carries a value, such as an edit. Its events stop at the
+     * first composite above the control, as {@link #request} says. Fire it with {@code CustomComponent.request}.
      *
      * @param <C> the control type
      * @param <V> the value type
@@ -92,7 +96,9 @@ public record EventType<E extends Event>(String name, Class<E> eventClass, boole
     }
 
     /**
-     * Creates a bubbling type for a control's report without a value, such as a press having happened.
+     * Creates a bubbling type for a control's report without a value, such as a press having happened. Its events
+     * stop at the first composite above the control, as {@link #request} says. Fire it with
+     * {@code CustomComponent.report}.
      *
      * @param <C> the control type
      * @param name a readable name
@@ -104,7 +110,9 @@ public record EventType<E extends Event>(String name, Class<E> eventClass, boole
     }
 
     /**
-     * Creates a bubbling type for a control's report that carries a value, such as the text after an edit.
+     * Creates a bubbling type for a control's report that carries a value, such as the text after an edit. Its
+     * events stop at the first composite above the control, as {@link #request} says. Fire it with
+     * {@code CustomComponent.report}.
      *
      * @param <C> the control type
      * @param <V> the value type

@@ -41,7 +41,7 @@ import java.time.LocalTime;
  * time's.</p>
  *
  * <h2>The popup</h2>
- * <p>The button, Alt and Down, and F4 open a row of lists: hours (1 to 12 or 0 to 23), minutes in the minute step,
+ * <p>The button, Alt and Down, and F4 open a row of lists: hours (12, then 1 to 11, or 0 to 23), minutes in the minute step,
  * seconds while shown, and the halves of the day on a 12-hour clock. Each row is a line plus 4 units tall, at most
  * seven show, and the row of the current value starts in the middle where the column allows. Picking a row sets
  * that part of the time at once; when the time was empty, the other parts start at zero. Focus stays in the field,

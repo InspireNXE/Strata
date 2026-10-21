@@ -18,8 +18,9 @@ package org.inspirenxe.strata.spi;
 import org.inspirenxe.strata.api.text.TextMetrics;
 
 /**
- * Everything a host needs from the engine besides drawing. An adapter creates one per host and passes it to
- * {@code StrataCore.createScreenHost}.
+ * Everything a host needs from the engine besides drawing. An adapter passes one to
+ * {@code StrataCore.createScreenHost} or {@code StrataCore.createScreenStack}. Hosts may share a platform: a screen
+ * stack gives its own to the host of every screen in it.
  *
  * <h2>Requirements for implementors</h2>
  * <ul>
