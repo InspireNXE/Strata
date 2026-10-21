@@ -15,9 +15,9 @@ Strata is a GUI library for Java that works with any engine. You build screens f
 |---|---|---|---|
 | <img src=".github/assets/platform-swing.svg" width="40" alt=""> | Java2D | [Strata-Swing](https://github.com/InspireNXE/Strata-Swing) | Java 25 |
 | <img src=".github/assets/platform-minecraft.svg" width="40" alt=""> | Minecraft | [Strata-Minecraft](https://github.com/InspireNXE/Strata-Minecraft) | 26.3 on NeoForge, Forge, Fabric and SpongeVanilla |
-| <img src=".github/assets/platform-engine.svg" width="40" alt=""> | Your engine | [Writing an adapter](https://inspirenxe.github.io/Strata/platforms/writing-an-adapter/) | |
+| <img src=".github/assets/platform-engine.svg" width="40" alt=""> | Your engine | [Writing an adapter](https://inspirenxe.github.io/Strata-Docs/platforms/writing-an-adapter/) | |
 
-Every artifact is published to Maven Central under the group `org.inspirenxe`. Until 0.1.0 is released, there are snapshots only, in Central's snapshot repository. [Installation](https://inspirenxe.github.io/Strata/getting-started/installation/) has the setup.
+Every artifact is published to Maven Central under the group `org.inspirenxe`. Until 0.1.0 is released, there are snapshots only, in Central's snapshot repository. [Installation](https://inspirenxe.github.io/Strata-Docs/getting-started/installation/) has the setup.
 
 ## A screen
 
@@ -55,7 +55,7 @@ Strata-Swing, Strata-Minecraft and Strata-Gallery build against a Strata checkou
 
 ## Documentation
 
-The [documentation site](https://inspirenxe.github.io/Strata/) has the guides, the reference and the Javadoc. Its source is in [Strata-Docs](https://github.com/InspireNXE/Strata-Docs). The design and plans live here: [docs/design-implemented.md](docs/design-implemented.md) describes the design as built, [docs/design-pending.md](docs/design-pending.md) holds proposals and open questions, and [docs/ROADMAP.md](docs/ROADMAP.md) tracks what comes next. To try every control, run [Strata-Gallery](https://github.com/InspireNXE/Strata-Gallery).
+The [documentation site](https://inspirenxe.github.io/Strata-Docs/) has the guides, the reference and the Javadoc. Its source is in [Strata-Docs](https://github.com/InspireNXE/Strata-Docs). The design and plans live here: [docs/design-implemented.md](docs/design-implemented.md) describes the design as built, [docs/design-pending.md](docs/design-pending.md) holds proposals and open questions, and [docs/ROADMAP.md](docs/ROADMAP.md) tracks what comes next. To try every control, run [Strata-Gallery](https://github.com/InspireNXE/Strata-Gallery).
 
 ## License
 
