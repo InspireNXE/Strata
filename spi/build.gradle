@@ -15,3 +15,10 @@ dependencies {
     testFixturesApi('org.junit.jupiter:junit-jupiter')
 
 }
+
+// Gradle names the test fixtures' capability after the project (spi-test-fixtures). Builds that take Strata from Maven
+// ask for testFixtures("org.inspirenxe:strata-spi"), which looks for the artifact's name, so the variants declare that too.
+// The publishing plugin adds the sources variant later, so match by name as each one appears.
+configurations.matching { it.name.startsWith('testFixtures') && it.name.endsWith('Elements') }.configureEach {
+    outgoing.capability("${project.group}:strata-spi-test-fixtures:${project.version}")
+}
