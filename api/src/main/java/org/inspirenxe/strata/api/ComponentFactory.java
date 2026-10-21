@@ -17,6 +17,8 @@ package org.inspirenxe.strata.api;
 
 import org.inspirenxe.strata.api.appearance.Appearances;
 import org.inspirenxe.strata.api.component.Component;
+import org.inspirenxe.strata.api.component.registry.ComponentId;
+import org.inspirenxe.strata.api.component.registry.ComponentRegistry;
 import org.inspirenxe.strata.api.control.attribute.popup.Popup;
 import org.inspirenxe.strata.api.control.button.Button;
 import org.inspirenxe.strata.api.control.button.CheckBox;
@@ -86,6 +88,7 @@ import org.inspirenxe.strata.api.visual.Visual;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.util.Optional;
 import java.util.function.Function;
 
 /**
@@ -99,8 +102,10 @@ import java.util.function.Function;
  * <p>Each call returns a new component, detached and with default settings. Call factories on the UI thread
  * only.</p>
  *
- * <p>What the factory makes is Strata's own and is never an instance of
- * {@link org.inspirenxe.strata.api.extension.CustomComponent}; a component that is one was written outside Strata.</p>
+ * <p>What the named methods make ({@link #button()}, {@link #listView()} and the rest) is Strata's own and is never
+ * an instance of {@link org.inspirenxe.strata.api.extension.CustomComponent}; a component that is one was written
+ * outside Strata. {@link #create(Class)} and {@link #create(ComponentId)} make whatever is registered with the
+ * {@linkplain #components() component registry}, which can be a library's component as well as Strata's.</p>
  *
  * <p>Strata provides the factory. Do not implement this interface.</p>
  */
@@ -250,6 +255,67 @@ public interface ComponentFactory {
     default Appearances appearances() {
         return Strata.appearances();
     }
+
+    /**
+     * Returns the components registered for the process, the same registry as {@link Strata#components()}.
+     *
+     * @return the registry
+     */
+    default ComponentRegistry components() {
+        return Strata.components();
+    }
+
+    /**
+     * Makes the component registered for a type, or for the newest registered subtype of it when the type itself
+     * has no registration. Strata's controls are registered, so {@code create(Slider.class)} is the same as
+     * {@link #slider()}; a library's components are made the same way.
+     *
+     * @param <T> the type
+     * @param type the type to make, a component interface or an attribute the component implements
+     * @return a new component
+     * @throws IllegalStateException if nothing is registered for the type or its subtypes, or the registered maker
+     *     returns {@code null}, a component of the wrong type, or one made with another factory
+     */
+    <T> T create(Class<T> type);
+
+    /**
+     * Makes the component registered for a type if there is one. Use it for components from a library that may
+     * not be installed, with a fallback of your own.
+     *
+     * @param <T> the type
+     * @param type the type to make
+     * @return a new component, or empty if nothing is registered for the type or its subtypes
+     * @throws IllegalStateException if the registered maker returns {@code null}, a component of the wrong type, or
+     *     one made with another factory
+     */
+    <T> Optional<T> tryCreate(Class<T> type);
+
+    /**
+     * Makes the component registered under an id. Code that does not compile against the component's library can
+     * use the result through the attributes it implements:
+     *
+     * <pre>{@code
+     * if (factory.create(ComponentId.of("fancy", "gauge")) instanceof Ranged<?> ranged) {
+     *     ranged.setValue(0.5);
+     * }
+     * }</pre>
+     *
+     * @param id the id
+     * @return a new component
+     * @throws IllegalStateException if nothing is registered under the id, or the registered maker returns
+     *     {@code null}, a component of the wrong type, or one made with another factory
+     */
+    Component<?> create(ComponentId id);
+
+    /**
+     * Makes the component registered under an id if there is one.
+     *
+     * @param id the id
+     * @return a new component, or empty if nothing is registered under the id
+     * @throws IllegalStateException if the registered maker returns {@code null}, a component of the wrong type, or
+     *     one made with another factory
+     */
+    Optional<Component<?>> tryCreate(ComponentId id);
 
     /**
      * Makes the row a list, tree or grid shows for a value by default: a {@linkplain #cellLabel(Text) cell label}

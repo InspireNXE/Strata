@@ -17,6 +17,7 @@ package org.inspirenxe.strata.api;
 
 import org.inspirenxe.strata.api.appearance.Appearances;
 import org.inspirenxe.strata.api.screen.ScreenController;
+import org.inspirenxe.strata.api.component.registry.ComponentRegistry;
 import org.inspirenxe.strata.api.state.StateFactory;
 import org.inspirenxe.strata.api.text.TextFactory;
 import org.inspirenxe.strata.api.theme.ThemeRegistry;
@@ -26,7 +27,7 @@ import java.util.ServiceLoader;
 
 /**
  * Services that work before any screen exists, such as making {@link org.inspirenxe.strata.api.text.Text} in a static
- * field, registering appearances and themes, making states, and opening screens. They come from Strata's core, a
+ * field, registering appearances, themes and components, making states, and opening screens. They come from Strata's core, a
  * {@link Provider} found on the class path with {@link ServiceLoader} the first time one is asked for. Every method
  * may be called from any thread; what the returned objects allow is documented on each of them.
  */
@@ -77,6 +78,17 @@ public final class Strata {
     }
 
     /**
+     * Returns the components registered for the process, which any
+     * {@link ComponentFactory#create(Class) ComponentFactory} makes by type or id.
+     *
+     * @return the registry
+     * @throws IllegalStateException if Strata's core is not on the class path, or more than one provider is
+     */
+    public static ComponentRegistry components() {
+        return Strata.provider().components();
+    }
+
+    /**
      * Returns the platform's screen controller, which opens screens wherever the engine adapter shows them. The
      * adapter hands its controller to Strata when it loads; on an engine without screens of its own, such as
      * Swing, the panel marked as the default is the controller.
@@ -123,6 +135,13 @@ public final class Strata {
          * @return the factory, the same one every time
          */
         StateFactory states();
+
+        /**
+         * Returns the component registry.
+         *
+         * @return the registry, the same one every time
+         */
+        ComponentRegistry components();
 
         /**
          * Returns the controller the engine adapter handed over.

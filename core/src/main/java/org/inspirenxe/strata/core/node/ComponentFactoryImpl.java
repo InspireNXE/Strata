@@ -18,6 +18,8 @@ package org.inspirenxe.strata.core.node;
 import org.inspirenxe.strata.api.ComponentFactory;
 import org.inspirenxe.strata.api.appearance.Appearances;
 import org.inspirenxe.strata.api.component.Component;
+import org.inspirenxe.strata.api.component.registry.ComponentId;
+import org.inspirenxe.strata.api.component.registry.ComponentRegistry;
 import org.inspirenxe.strata.api.control.button.Button;
 import org.inspirenxe.strata.api.control.button.CheckBox;
 import org.inspirenxe.strata.api.control.button.CycleButton;
@@ -141,6 +143,7 @@ import org.inspirenxe.strata.core.layout.GridPanelImpl;
 import org.inspirenxe.strata.core.layout.ScrollPanelImpl;
 import org.inspirenxe.strata.core.layout.SpacerImpl;
 import org.inspirenxe.strata.core.layout.StackPanelImpl;
+import org.inspirenxe.strata.core.registry.ComponentRegistryImpl;
 import org.inspirenxe.strata.spi.Platform;
 
 import java.util.Objects;
@@ -149,7 +152,9 @@ import java.util.function.Function;
 import java.util.function.Supplier;
 
 /**
- * The component factory for one host. Everything it makes is a {@link BuiltInComponent}. It also guards the tree:
+ * The component factory for one host. Everything its named methods make is a {@link BuiltInComponent};
+ * {@link #create(Class)} and {@link #create(ComponentId)} make what the {@link ComponentRegistryImpl} holds, which
+ * may be a library's {@link CustomComponent}, and check it before returning it. It also guards the tree:
  * {@link #nodeOf} is how core turns a public component back into its node, whether Strata made it or a developer
  * wrote it on {@link CustomComponent}, and it rejects any component without a node, or that another host's factory
  * made.
@@ -571,6 +576,55 @@ public final class ComponentFactoryImpl implements ComponentFactory {
     public ContainerPeer createContainerPeer(final CustomComponent<?> owner, final ComponentHooks hooks) {
         return new ContainerNode(this, owner, new ExtensionHooks(hooks),
                 owner instanceof CustomComposite<?> && !(owner instanceof CustomContainer<?>));
+    }
+
+    @Override
+    public ComponentRegistry components() {
+        return ComponentRegistryImpl.INSTANCE;
+    }
+
+    @Override
+    public <T> T create(final Class<T> type) {
+        return this.tryCreate(type).orElseThrow(() -> new IllegalStateException("No component is registered for "
+                + type.getName() + "; is the library that provides it installed?"));
+    }
+
+    @Override
+    public <T> Optional<T> tryCreate(final Class<T> type) {
+        return ComponentRegistryImpl.INSTANCE.entry(type).map(entry -> type.cast(this.make(entry, type)));
+    }
+
+    @Override
+    public Component<?> create(final ComponentId id) {
+        return this.tryCreate(id).orElseThrow(() -> new IllegalStateException("No component is registered as " + id
+                + "; is the library that provides it installed?"));
+    }
+
+    @Override
+    public Optional<Component<?>> tryCreate(final ComponentId id) {
+        return ComponentRegistryImpl.INSTANCE.entry(id).map(entry -> this.make(entry, entry.type()));
+    }
+
+    /**
+     * Calls a registration's maker and checks that the result is a component of the registered type and of the type
+     * asked for, made with this factory.
+     */
+    private Component<?> make(final ComponentRegistryImpl.Entry entry, final Class<?> asked) {
+        final Component<?> component = entry.maker().make(this);
+        if (component == null) {
+            throw new IllegalStateException("The maker registered for " + entry.describe() + " returned null");
+        }
+        if (!entry.type().isInstance(component) || !asked.isInstance(component)) {
+            throw new IllegalStateException("The maker registered for " + entry.describe() + " returned a "
+                    + component.getClass().getName() + ", which is not a " + entry.type().getName());
+        }
+        try {
+            this.nodeOf(component);
+        } catch (final IllegalArgumentException e) {
+            throw new IllegalStateException("The maker registered for " + entry.describe()
+                    + " must make its component with the factory it is given", e);
+        }
+        return component;
     }
 
     /**
