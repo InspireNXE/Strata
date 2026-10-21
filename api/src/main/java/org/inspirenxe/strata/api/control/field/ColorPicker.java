@@ -21,6 +21,7 @@ import org.inspirenxe.strata.api.component.HasTooltip;
 import org.inspirenxe.strata.api.event.EventType;
 import org.inspirenxe.strata.api.event.control.ValueEvent;
 import org.inspirenxe.strata.api.event.control.ValueRequestEvent;
+import org.inspirenxe.strata.api.state.PropertyKey;
 
 /**
  * Picks an ARGB color: a square for saturation and brightness, a strip for hue, an optional strip for alpha, and a
@@ -133,6 +134,11 @@ public interface ColorPicker extends Component<ColorPicker>, HasCursor<ColorPick
      * the color before.
      */
     EventType<ValueEvent<ColorPicker, Integer>> PICKED = EventType.valueReport("color_picker.picked");
+    /**
+     * The color as ARGB, as {@link #color()} and {@link #setColor} say. Binds two ways through {@link #PICKED}.
+     */
+    PropertyKey<ColorPicker, Integer> COLOR = PropertyKey.of("color_picker.color", ColorPicker::color,
+            ColorPicker::setColor, PICKED);
 
     /**
      * Returns the color.

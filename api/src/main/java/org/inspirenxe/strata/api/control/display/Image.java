@@ -18,6 +18,7 @@ package org.inspirenxe.strata.api.control.display;
 import org.inspirenxe.strata.api.component.Component;
 import org.inspirenxe.strata.api.component.HasCursor;
 import org.inspirenxe.strata.api.component.HasTooltip;
+import org.inspirenxe.strata.api.state.PropertyKey;
 import org.inspirenxe.strata.api.theme.SpriteId;
 import org.inspirenxe.strata.api.visual.Visual;
 
@@ -46,6 +47,15 @@ import java.util.Objects;
  * {@link org.inspirenxe.strata.api.ComponentFactory#image(Object)}. Do not implement this interface.</p>
  */
 public interface Image extends Component<Image>, HasCursor<Image>, HasTooltip<Image> {
+    /**
+     * The value shown, as {@link #value()} and {@link #setValue} say, null for none. Binds one way.
+     */
+    PropertyKey<Image, Object> VALUE = PropertyKey.of("image.value", Image::value, Image::setValue);
+    /**
+     * The sprite, as {@link #sprite()} and {@link #setSprite} say. Binds one way. A null value throws as
+     * {@code setSprite} does.
+     */
+    PropertyKey<Image, SpriteId> SPRITE = PropertyKey.of("image.sprite", Image::sprite, Image::setSprite);
 
     /**
      * Returns the sprite.

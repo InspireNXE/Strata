@@ -413,7 +413,7 @@ public interface Component<T extends Component<T>> extends EventTarget<T> {
      * is laid out, or when the host is flushed. Setting the property works as the control's setter does: it reports
      * the change and fires no request. A value equal to the property's current one is not set.</p>
      *
-     * <p>When the source is a {@link State} and the key has a {@linkplain PropertyKey#report() report}, the binding is
+     * <p>When the source is a {@link State} and the key has {@linkplain PropertyKey#reports() reports}, the binding is
      * two way. A change the user makes still asks the control's request first, so a handler can refuse or rewrite it,
      * and the value the control accepted is written to the state when the control reports it. A report the binding
      * itself caused is not written back, and a value equal to the state's is not written, so a binding cannot loop. Nor

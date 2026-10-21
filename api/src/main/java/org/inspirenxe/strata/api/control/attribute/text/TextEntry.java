@@ -20,6 +20,7 @@ import org.inspirenxe.strata.api.event.EventType;
 import org.inspirenxe.strata.api.event.control.RequestEvent;
 import org.inspirenxe.strata.api.event.control.ValueEvent;
 import org.inspirenxe.strata.api.geometry.Insets;
+import org.inspirenxe.strata.api.state.PropertyKey;
 
 /**
  * A control the user types into, without access to what was typed: a text box, a text area or a password box.
@@ -52,6 +53,11 @@ public interface TextEntry<S extends TextEntry<S>> extends EventTarget<S> {
      * previous value the length before; they are equal when an edit replaced text with text as long.
      */
     EventType<ValueEvent<TextEntry<?>, Integer>> MODIFIED = EventType.valueReport("text_entry.modified");
+    /**
+     * Whether the control is read-only, as {@link #isReadOnly()} and {@link #setReadOnly} say. Binds one way.
+     */
+    PropertyKey<TextEntry<?>, Boolean> READ_ONLY = PropertyKey.of("text_entry.read_only", TextEntry::isReadOnly,
+            TextEntry::setReadOnly);
 
     /**
      * Returns how long the text is.

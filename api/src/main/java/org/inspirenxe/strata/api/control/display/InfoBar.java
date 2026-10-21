@@ -22,6 +22,7 @@ import org.inspirenxe.strata.api.control.attribute.popup.Closable;
 import org.inspirenxe.strata.api.control.attribute.popup.Openable;
 import org.inspirenxe.strata.api.control.attribute.text.HasText;
 import org.inspirenxe.strata.api.control.attribute.text.Titled;
+import org.inspirenxe.strata.api.state.PropertyKey;
 import org.inspirenxe.strata.api.text.Text;
 
 import java.util.Objects;
@@ -178,6 +179,22 @@ public interface InfoBar extends Component<InfoBar>, HasCursor<InfoBar>, HasTool
      * The width of the accent strip down the left edge, in UI units.
      */
     float ACCENT_WIDTH = 3f;
+    /**
+     * Whether the bar shows, as {@link #isOpen()}, {@link #open()} and {@link #close()} say. Binds two ways through
+     * {@link Openable#OPENED} and {@link Closable#CLOSED}, so a press on the close button writes false.
+     */
+    PropertyKey<InfoBar, Boolean> IS_OPEN = PropertyKey.of("info_bar.is_open", InfoBar::isOpen, (bar, open) -> {
+        if (open) {
+            bar.open();
+        } else {
+            bar.close();
+        }
+    }, OPENED, CLOSED);
+    /**
+     * The severity, as {@link #severity()} and {@link #setSeverity} say. Binds one way.
+     */
+    PropertyKey<InfoBar, Severity> SEVERITY = PropertyKey.of("info_bar.severity", InfoBar::severity,
+            InfoBar::setSeverity);
 
     /**
      * Returns the severity.

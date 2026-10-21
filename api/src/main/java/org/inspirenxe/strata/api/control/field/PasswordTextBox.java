@@ -25,6 +25,7 @@ import org.inspirenxe.strata.api.event.control.ControlEvent;
 import org.inspirenxe.strata.api.event.control.RequestEvent;
 import org.inspirenxe.strata.api.event.control.ValueEvent;
 import org.inspirenxe.strata.api.event.control.ValueRequestEvent;
+import org.inspirenxe.strata.api.state.PropertyKey;
 import org.inspirenxe.strata.api.text.Text;
 
 import java.util.function.Function;
@@ -179,6 +180,13 @@ public interface PasswordTextBox extends Component<PasswordTextBox>, Focusable<P
      * A wipe fires nothing.
      */
     EventType<ValueEvent<PasswordTextBox, Boolean>> REVEALED = EventType.valueReport("password_text_box.revealed");
+    /**
+     * Whether the text shows, as {@link #isRevealed()} and {@link #setRevealed} say. Binds two ways through
+     * {@link #REVEALED}. It is named after the getter because the report has the property's name. No key binds the
+     * password itself, so that it is never held in a state.
+     */
+    PropertyKey<PasswordTextBox, Boolean> IS_REVEALED = PropertyKey.of("password_text_box.is_revealed",
+            PasswordTextBox::isRevealed, PasswordTextBox::setRevealed, REVEALED);
     /**
      * Fired when the user presses Enter or keypad Enter while the box has focus. A held key's repeats do not fire
      * it. Cancel it to ignore the key, which is still consumed. Enter is consumed only when a handler for this or

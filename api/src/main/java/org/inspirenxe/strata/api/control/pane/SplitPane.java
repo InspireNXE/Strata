@@ -23,6 +23,7 @@ import org.inspirenxe.strata.api.event.EventType;
 import org.inspirenxe.strata.api.event.control.ValueEvent;
 import org.inspirenxe.strata.api.event.control.ValueRequestEvent;
 import org.inspirenxe.strata.api.layout.Orientation;
+import org.inspirenxe.strata.api.state.PropertyKey;
 
 /**
  * Two components side by side, or one above the other, with a divider between them that the user drags to share
@@ -88,6 +89,12 @@ public interface SplitPane extends Component<SplitPane>, HasCursor<SplitPane>, H
      * fraction of the space the first side gets. Fires for changes made from code too.
      */
     EventType<ValueEvent<SplitPane, Float>> MOVED = EventType.valueReport("split_pane.moved");
+    /**
+     * Where the divider is, from 0 to 1, as {@link #position()} and {@link #setPosition} say. Binds two ways through
+     * {@link #MOVED}. A value outside 0 to 1 throws as {@code setPosition} does.
+     */
+    PropertyKey<SplitPane, Float> POSITION = PropertyKey.of("split_pane.position", SplitPane::position,
+            SplitPane::setPosition, MOVED);
 
     /**
      * Returns the direction of the split.

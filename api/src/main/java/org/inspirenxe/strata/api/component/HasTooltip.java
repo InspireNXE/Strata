@@ -15,6 +15,7 @@
  */
 package org.inspirenxe.strata.api.component;
 
+import org.inspirenxe.strata.api.state.PropertyKey;
 import org.inspirenxe.strata.api.text.Text;
 
 /**
@@ -30,6 +31,11 @@ import org.inspirenxe.strata.api.text.Text;
  * @param <S> the component's own type, which the setters return
  */
 public interface HasTooltip<S extends HasTooltip<S>> {
+    /**
+     * The tooltip, as {@link #tooltip()} and {@link #setTooltip(Tooltip)} say, null for none. Binds one way.
+     */
+    PropertyKey<HasTooltip<?>, Tooltip> TOOLTIP = PropertyKey.of("has_tooltip.tooltip", HasTooltip::tooltip,
+            HasTooltip::setTooltip);
 
     /**
      * Returns the tooltip.

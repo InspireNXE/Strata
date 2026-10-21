@@ -20,6 +20,7 @@ import org.inspirenxe.strata.api.component.HasCursor;
 import org.inspirenxe.strata.api.component.HasTooltip;
 import org.inspirenxe.strata.api.control.attribute.text.HasText;
 import org.inspirenxe.strata.api.control.attribute.value.Ranged;
+import org.inspirenxe.strata.api.state.PropertyKey;
 import org.inspirenxe.strata.api.text.Text;
 
 /**
@@ -80,6 +81,12 @@ public interface ProgressBar extends Component<ProgressBar>, HasCursor<ProgressB
      * padding. Defaults to 2 on every side.
      */
     String STYLE_PADDING = "progress.padding";
+    /**
+     * Whether the bar shows a moving segment instead of its value, as {@link #isIndeterminate()} and
+     * {@link #setIndeterminate} say. Binds one way.
+     */
+    PropertyKey<ProgressBar, Boolean> INDETERMINATE = PropertyKey.of("progress_bar.indeterminate",
+            ProgressBar::isIndeterminate, ProgressBar::setIndeterminate);
 
     /**
      * Returns whether the bar shows a moving segment instead of its value.

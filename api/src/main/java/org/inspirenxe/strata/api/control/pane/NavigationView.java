@@ -27,6 +27,7 @@ import org.inspirenxe.strata.api.control.attribute.text.Titled;
 import org.inspirenxe.strata.api.event.EventType;
 import org.inspirenxe.strata.api.event.control.ValueEvent;
 import org.inspirenxe.strata.api.event.control.ValueRequestEvent;
+import org.inspirenxe.strata.api.state.PropertyKey;
 import org.inspirenxe.strata.api.text.Text;
 
 import java.util.List;
@@ -276,6 +277,14 @@ public interface NavigationView extends Component<NavigationView>, Focusable<Nav
      */
     EventType<ValueEvent<NavigationView, Expansion>> ITEM_EXPANDED =
             EventType.valueReport("navigation_view.item_expanded");
+    /**
+     * Whether the pane is open over the content, as {@link #isExpanded()} and {@link #setExpanded} say. Binds two ways
+     * through {@link #EXPANDED}, so the pane closing on a press outside or a pick writes false. A true value does
+     * nothing where {@code setExpanded} cannot open the pane, and is not written back. It is named after the getter
+     * because the report has the property's name.
+     */
+    PropertyKey<NavigationView, Boolean> IS_EXPANDED = PropertyKey.of("navigation_view.is_expanded",
+            NavigationView::isExpanded, NavigationView::setExpanded, EXPANDED);
 
     /**
      * Returns the entries of the pane above the footer.

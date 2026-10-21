@@ -19,6 +19,7 @@ import org.inspirenxe.strata.api.event.EventTarget;
 import org.inspirenxe.strata.api.event.EventType;
 import org.inspirenxe.strata.api.event.control.ValueEvent;
 import org.inspirenxe.strata.api.event.control.ValueRequestEvent;
+import org.inspirenxe.strata.api.state.PropertyKey;
 
 import java.time.LocalTime;
 import java.util.Optional;
@@ -50,6 +51,12 @@ public interface HasTime<S extends HasTime<S>> extends EventTarget<S> {
      * empty. Fires for changes made from code too, including hiding seconds, which drops them.
      */
     EventType<ValueEvent<HasTime<?>, LocalTime>> TIME_PICKED = EventType.valueReport("has_time.picked");
+    /**
+     * The time, as {@link #time()} and {@link #setTime} say, null for none. Binds two ways through
+     * {@link #TIME_PICKED}. A null value clears the time, and a control with no time writes null.
+     */
+    PropertyKey<HasTime<?>, LocalTime> TIME = PropertyKey.of("has_time.time", control -> control.time().orElse(null),
+            HasTime::setTime, TIME_PICKED);
 
     /**
      * Returns the time.

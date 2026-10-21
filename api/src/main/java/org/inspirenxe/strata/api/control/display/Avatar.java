@@ -18,6 +18,7 @@ package org.inspirenxe.strata.api.control.display;
 import org.inspirenxe.strata.api.component.Component;
 import org.inspirenxe.strata.api.component.HasCursor;
 import org.inspirenxe.strata.api.component.HasTooltip;
+import org.inspirenxe.strata.api.state.PropertyKey;
 import org.inspirenxe.strata.api.text.Text;
 import org.inspirenxe.strata.api.theme.SpriteId;
 import org.inspirenxe.strata.api.visual.Visual;
@@ -128,6 +129,20 @@ public interface Avatar extends Component<Avatar>, HasCursor<Avatar>, HasTooltip
      * The largest count a badge shows as it is. A larger count shows as this number followed by {@code +}.
      */
     int MAX_BADGE = 99;
+    /**
+     * The value shown, as {@link #value()} and {@link #setValue} say, null for none. Binds one way.
+     */
+    PropertyKey<Avatar, Object> VALUE = PropertyKey.of("avatar.value", Avatar::value, Avatar::setValue);
+    /**
+     * The name the initials are worked out from, as {@link #name()} and {@link #setName(Text)} say. Binds one way.
+     * Null or {@link Text#empty()} goes back to the value's name.
+     */
+    PropertyKey<Avatar, Text> NAME = PropertyKey.of("avatar.name", Avatar::name, Avatar::setName);
+    /**
+     * The count the badge shows, as {@link #badge()} and {@link #setBadge} say. Binds one way. A negative count
+     * throws as {@code setBadge} does.
+     */
+    PropertyKey<Avatar, Integer> BADGE = PropertyKey.of("avatar.badge", Avatar::badge, Avatar::setBadge);
 
     /**
      * Returns the value shown.

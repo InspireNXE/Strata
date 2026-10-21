@@ -478,6 +478,46 @@ public final class TreeViewImpl<T> extends BuiltInComposite<TreeView<T>> impleme
     }
 
     @Override
+    public TreeView<T> selectItems(final Collection<? extends T> items) {
+        final List<List<T>> paths = new ArrayList<>(items.size());
+        final Set<Object> found = new HashSet<>();
+        for (final T item : items) {
+            final List<T> path = new ArrayList<>();
+            if (item != null && this.findPath(this.roots, this.key(item), path, new HashSet<>())) {
+                paths.add(path);
+                found.add(this.key(item));
+            }
+        }
+        if (found.size() > 1 && this.list.selectionMode() == SelectionMode.SINGLE) {
+            throw new IllegalArgumentException("A tree in SINGLE mode selects at most one item: " + found.size()
+                    + " found");
+        }
+        this.changeSelection(() -> {
+            final List<T> opened = new ArrayList<>();
+            for (final List<T> path : paths) {
+                for (int i = 0; i < path.size() - 1; i++) {
+                    if (this.expanded.add(this.key(path.get(i)))) {
+                        opened.add(path.get(i));
+                    }
+                }
+            }
+            if (!opened.isEmpty()) {
+                this.flattenShown();
+                this.reportExpansions(opened, true);
+            }
+            final List<Integer> indexes = new ArrayList<>(paths.size());
+            for (final List<T> path : paths) {
+                final int index = this.indexOf(this.key(path.getLast()));
+                if (index >= 0) {
+                    indexes.add(index);
+                }
+            }
+            this.list.selectIndexes(indexes);
+        });
+        return this;
+    }
+
+    @Override
     public TreeView<T> selectAll() {
         this.list.selectAll();
         return this;

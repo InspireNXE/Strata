@@ -28,6 +28,7 @@ import org.inspirenxe.strata.api.event.EventType;
 import org.inspirenxe.strata.api.event.control.ValueEvent;
 import org.inspirenxe.strata.api.event.control.ValueRequestEvent;
 import org.inspirenxe.strata.api.layout.GridLength;
+import org.inspirenxe.strata.api.state.PropertyKey;
 import org.inspirenxe.strata.api.text.Text;
 
 import java.util.List;
@@ -142,6 +143,13 @@ public interface TableView<T> extends Component<TableView<T>>, HasCursor<TableVi
      * removing the comparator of the sort column, or {@link #removeColumn} removing the sort column.
      */
     EventType<ValueEvent<TableView<?>, Sort>> SORTED = EventType.valueReport("table_view.sorted");
+    /**
+     * The sort, as {@link #sortColumn()}, {@link #isSortAscending()} and {@link #sortBy} say, null while the rows are
+     * in their set order. Binds two ways through {@link #SORTED}. A sort whose column is not a sortable column of this
+     * table throws as {@code sortBy} does. It is not named {@code SORT} because that is the request's name.
+     */
+    PropertyKey<TableView<?>, Sort> SORT_ORDER = PropertyKey.of("table_view.sort_order", TableView::currentSort,
+            TableView::applySort, SORTED);
 
     /**
      * Returns the columns, left to right.
@@ -337,6 +345,19 @@ public interface TableView<T> extends Component<TableView<T>>, HasCursor<TableVi
      * @return this table
      */
     TableView<T> selectItem(T item);
+
+    private static Sort currentSort(final TableView<?> table) {
+        return table.sortColumn().<Sort>map(column -> new Sort(column, table.isSortAscending())).orElse(null);
+    }
+
+    @SuppressWarnings("unchecked")
+    private static <T> void applySort(final TableView<T> table, final Sort sort) {
+        if (sort == null || sort.column() == null) {
+            table.sortBy(null, true);
+        } else {
+            table.sortBy((TableColumn<T>) sort.column(), sort.ascending());
+        }
+    }
 
     /**
      * How the rows of a table are sorted.

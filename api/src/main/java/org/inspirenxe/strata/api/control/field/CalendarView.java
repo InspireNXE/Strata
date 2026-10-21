@@ -23,6 +23,7 @@ import org.inspirenxe.strata.api.control.attribute.value.HasDate;
 import org.inspirenxe.strata.api.event.EventType;
 import org.inspirenxe.strata.api.event.control.ValueEvent;
 import org.inspirenxe.strata.api.event.control.ValueRequestEvent;
+import org.inspirenxe.strata.api.state.PropertyKey;
 
 import java.time.LocalDate;
 import java.time.YearMonth;
@@ -207,6 +208,12 @@ public interface CalendarView extends Component<CalendarView>, Focusable<Calenda
      * value the old one.
      */
     EventType<ValueEvent<CalendarView, YearMonth>> BROWSED = EventType.valueReport("calendar_view.browsed");
+    /**
+     * The month in view, as {@link #shownMonth()} and {@link #setShownMonth} say. Binds two ways through
+     * {@link #BROWSED}. The picked date has its own key, {@link HasDate#DATE}.
+     */
+    PropertyKey<CalendarView, YearMonth> SHOWN_MONTH = PropertyKey.of("calendar_view.shown_month",
+            CalendarView::shownMonth, CalendarView::setShownMonth, BROWSED);
 
     /**
      * Returns the month in view. In the year and decade views, its year is the one shown or the one the decade holds.

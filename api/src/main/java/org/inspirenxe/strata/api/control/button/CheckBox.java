@@ -24,6 +24,7 @@ import org.inspirenxe.strata.api.control.attribute.value.Toggle;
 import org.inspirenxe.strata.api.event.EventType;
 import org.inspirenxe.strata.api.event.control.ValueEvent;
 import org.inspirenxe.strata.api.event.control.ValueRequestEvent;
+import org.inspirenxe.strata.api.state.PropertyKey;
 import org.inspirenxe.strata.api.text.Text;
 
 import java.util.Objects;
@@ -150,6 +151,12 @@ public interface CheckBox extends Component<CheckBox>, Focusable<CheckBox>, HasC
      * state before.
      */
     EventType<ValueEvent<CheckBox, CheckState>> CHANGED = EventType.valueReport("checkbox.changed");
+    /**
+     * The state, as {@link #state()} and {@link #setState} say. Binds two ways through {@link #CHANGED}. Bind
+     * {@link Toggle#SELECTED} instead where the box never shows {@link CheckState#MIXED}.
+     */
+    PropertyKey<CheckBox, CheckState> STATE = PropertyKey.of("checkbox.state", CheckBox::state, CheckBox::setState,
+            CHANGED);
 
     /**
      * Returns the state.

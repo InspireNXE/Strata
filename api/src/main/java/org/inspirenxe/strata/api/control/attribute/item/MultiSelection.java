@@ -18,6 +18,7 @@ package org.inspirenxe.strata.api.control.attribute.item;
 import org.inspirenxe.strata.api.event.EventType;
 import org.inspirenxe.strata.api.event.control.ValueEvent;
 import org.inspirenxe.strata.api.event.control.ValueRequestEvent;
+import org.inspirenxe.strata.api.state.PropertyKey;
 
 import java.util.Collection;
 import java.util.List;
@@ -53,6 +54,37 @@ public interface MultiSelection<T, S extends MultiSelection<T, S>> extends Selec
      * in order and the previous value the indexes before.
      */
     EventType<ValueEvent<MultiSelection<?, ?>, List<Integer>>> SELECTED_MANY = EventType.valueReport("selection.selected_many");
+    /**
+     * The selected indexes, as {@link #selectedIndexes()} and {@link #selectIndexes} say. Binds two ways through
+     * {@link #SELECTED_MANY}. A null value clears the selection. An index the control does not show throws as
+     * {@code selectIndexes} does, and so do several indexes in {@link SelectionMode#SINGLE} mode, so bind
+     * {@link #selectedItemsKey()} instead where the items change too.
+     */
+    PropertyKey<MultiSelection<?, ?>, List<Integer>> SELECTED_INDEXES = PropertyKey.of("selection.selected_indexes",
+            MultiSelection::selectedIndexes,
+            (selection, indexes) -> selection.selectIndexes(indexes == null ? List.of() : indexes), SELECTED_MANY);
+
+    /**
+     * Returns the key for the selected entries, as {@link #selectedItems()} and {@link #selectItems} say. Binds two
+     * ways through {@link #SELECTED_MANY}. A null value clears the selection. Items the control does not show are
+     * skipped, as {@code selectItems} skips them, so where the items are bound too, bind them first. Several items in
+     * {@link SelectionMode#SINGLE} mode throw as {@code selectItems} does. It is a method because a constant cannot
+     * carry the entry type, and is not named {@code selectedItems} because that is the getter's name. Every call
+     * returns a key with the same name.
+     *
+     * <pre>{@code
+     * cart.setSelectionMode(SelectionMode.MULTIPLE)
+     *         .bind(ItemSource.itemsKey(), model.offers)
+     *         .bind(MultiSelection.selectedItemsKey(), model.picked);
+     * }</pre>
+     *
+     * @param <T> the type of the entries
+     * @return the key
+     */
+    static <T> PropertyKey<MultiSelection<T, ?>, List<T>> selectedItemsKey() {
+        return PropertyKey.of("selection.selected_items", MultiSelection::selectedItems,
+                (selection, items) -> selection.selectItems(items == null ? List.of() : items), SELECTED_MANY);
+    }
 
     /**
      * Returns the selection mode.
@@ -94,6 +126,17 @@ public interface MultiSelection<T, S extends MultiSelection<T, S>> extends Selec
      * @throws IllegalArgumentException if more than one index is given in {@link SelectionMode#SINGLE} mode
      */
     S selectIndexes(Collection<Integer> indexes);
+
+    /**
+     * Replaces the selected set with the entries for some items, each found as {@link Selection#selectItem} finds
+     * one, and then works as {@link #selectIndexes} does. Items the control does not hold are skipped. A tree expands
+     * the ancestors of each item it finds, as its {@code selectItem} does.
+     *
+     * @param items the items to select; an empty collection clears the selection
+     * @return this control
+     * @throws IllegalArgumentException if more than one of the items is found in {@link SelectionMode#SINGLE} mode
+     */
+    S selectItems(Collection<? extends T> items);
 
     /**
      * Selects every entry in {@link SelectionMode#MULTIPLE} mode. Does nothing in {@link SelectionMode#SINGLE} mode.

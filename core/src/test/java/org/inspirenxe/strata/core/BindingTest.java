@@ -17,22 +17,44 @@ package org.inspirenxe.strata.core;
 
 import org.inspirenxe.strata.api.ComponentFactory;
 import org.inspirenxe.strata.api.component.Component;
+import org.inspirenxe.strata.api.component.HasTooltip;
+import org.inspirenxe.strata.api.component.Tooltip;
 import org.inspirenxe.strata.api.control.attribute.item.ItemSource;
+import org.inspirenxe.strata.api.control.attribute.item.MultiSelection;
 import org.inspirenxe.strata.api.control.attribute.item.Selection;
+import org.inspirenxe.strata.api.control.attribute.item.SelectionMode;
 import org.inspirenxe.strata.api.control.attribute.text.HasText;
+import org.inspirenxe.strata.api.control.attribute.text.TextEntry;
 import org.inspirenxe.strata.api.control.attribute.text.TextInput;
 import org.inspirenxe.strata.api.control.attribute.text.Titled;
+import org.inspirenxe.strata.api.control.attribute.value.HasDate;
+import org.inspirenxe.strata.api.control.attribute.value.HasTime;
 import org.inspirenxe.strata.api.control.attribute.value.Ranged;
 import org.inspirenxe.strata.api.control.attribute.value.Toggle;
 import org.inspirenxe.strata.api.control.button.Button;
 import org.inspirenxe.strata.api.control.button.CheckBox;
+import org.inspirenxe.strata.api.control.button.CheckState;
 import org.inspirenxe.strata.api.control.collection.ComboBox;
 import org.inspirenxe.strata.api.control.collection.ListView;
+import org.inspirenxe.strata.api.control.collection.TableView;
+import org.inspirenxe.strata.api.control.collection.TreeView;
+import org.inspirenxe.strata.api.control.display.Avatar;
+import org.inspirenxe.strata.api.control.display.InfoBar;
 import org.inspirenxe.strata.api.control.display.Label;
+import org.inspirenxe.strata.api.control.display.ProgressBar;
+import org.inspirenxe.strata.api.control.field.CalendarView;
+import org.inspirenxe.strata.api.control.field.ColorPicker;
+import org.inspirenxe.strata.api.control.field.DatePicker;
+import org.inspirenxe.strata.api.control.field.DateTimePicker;
+import org.inspirenxe.strata.api.control.field.PasswordTextBox;
 import org.inspirenxe.strata.api.control.field.Slider;
 import org.inspirenxe.strata.api.control.field.TextBox;
+import org.inspirenxe.strata.api.control.field.TimePicker;
 import org.inspirenxe.strata.api.control.pane.Expander;
+import org.inspirenxe.strata.api.control.pane.NavigationView;
+import org.inspirenxe.strata.api.control.pane.SplitPane;
 import org.inspirenxe.strata.api.event.EventType;
+import org.inspirenxe.strata.api.event.control.ControlEvent;
 import org.inspirenxe.strata.api.event.control.ValueEvent;
 import org.inspirenxe.strata.api.event.control.ValueRequestEvent;
 import org.inspirenxe.strata.api.event.input.PointerButtonEvent;
@@ -43,6 +65,7 @@ import org.inspirenxe.strata.api.geometry.Size;
 import org.inspirenxe.strata.api.input.Key;
 import org.inspirenxe.strata.api.input.KeyAction;
 import org.inspirenxe.strata.api.input.Modifiers;
+import org.inspirenxe.strata.api.layout.GridLength;
 import org.inspirenxe.strata.api.layout.StackPanel;
 import org.inspirenxe.strata.api.state.PropertyKey;
 import org.inspirenxe.strata.api.state.Source;
@@ -53,6 +76,10 @@ import org.inspirenxe.strata.core.state.StateImpl;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.time.YearMonth;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -507,6 +534,241 @@ class BindingTest {
             assertEquals(2, list.selectedIndex());
             list.select(0);
             assertEquals(0, index.get());
+        }
+    }
+
+    @Nested
+    class ControlKeys {
+        @Test
+        void aKeyWithTwoReportsWritesBoth() {
+            final State<Boolean> shown = State.of(false);
+            final InfoBar bar = BindingTest.this.ui.infoBar(InfoBar.Severity.WARNING, "Low funds", "Top up first")
+                    .bind(InfoBar.IS_OPEN, shown);
+            BindingTest.this.test.show(BindingTest.this.ui.stackPanel().add(bar));
+            assertFalse(bar.isOpen(), "the state closes the bar on attach");
+
+            bar.open();
+            assertTrue(shown.get(), "OPENED writes true");
+            bar.close();
+            assertFalse(shown.get(), "CLOSED writes false");
+
+            shown.set(true);
+            BindingTest.this.flush();
+            assertTrue(bar.isOpen());
+        }
+
+        @Test
+        void theReportsOfAKeyAreCopied() {
+            final List<EventType<? extends ControlEvent<?>>> reports = new ArrayList<>(List.of(Rating.RATED));
+            final PropertyKey<Rating, Integer> key = new PropertyKey<>("rating.copy", Rating::stars, Rating::setStars,
+                    reports);
+            reports.clear();
+            assertEquals(List.of(Rating.RATED), key.reports());
+        }
+
+        @Test
+        void aCheckBoxBindsItsMixedState() {
+            final State<CheckState> all = State.of(CheckState.MIXED);
+            final CheckBox box = BindingTest.this.ui.checkBox("All").setAllowsMixed(true).bind(CheckBox.STATE, all);
+            BindingTest.this.test.show(BindingTest.this.ui.stackPanel().add(box));
+            assertEquals(CheckState.MIXED, box.state());
+            box.setState(CheckState.CHECKED);
+            assertEquals(CheckState.CHECKED, all.get());
+        }
+
+        @Test
+        void anExpanderWritesTheUsersClick() {
+            final State<Boolean> details = State.of(true);
+            final Expander expander = BindingTest.this.ui.expander("Details")
+                    .setContent(BindingTest.this.ui.label("Body"))
+                    .bind(Expander.IS_EXPANDED, details);
+            BindingTest.this.test.show(BindingTest.this.ui.stackPanel().add(expander));
+            assertTrue(expander.isExpanded());
+            expander.toggle();
+            assertFalse(details.get());
+        }
+
+        @Test
+        void datesAndTimesBindWithNullForNone() {
+            final State<LocalDate> due = State.of(LocalDate.of(2026, 3, 14));
+            final State<LocalTime> at = State.of(null);
+            final State<LocalDateTime> when = State.of(LocalDateTime.of(2026, 5, 1, 9, 30));
+            final DatePicker date = BindingTest.this.ui.datePicker().bind(HasDate.DATE, due);
+            final TimePicker time = BindingTest.this.ui.timePicker().setTime(LocalTime.NOON).bind(HasTime.TIME, at);
+            final DateTimePicker both = BindingTest.this.ui.dateTimePicker().bind(DateTimePicker.DATE_TIME, when);
+            BindingTest.this.test.show(BindingTest.this.ui.stackPanel().add(date).add(time).add(both));
+            assertEquals(LocalDate.of(2026, 3, 14), date.date().orElseThrow());
+            assertTrue(time.time().isEmpty(), "a null state clears the time");
+            assertEquals(LocalDateTime.of(2026, 5, 1, 9, 30), both.dateTime().orElseThrow());
+
+            date.clearDate();
+            assertEquals(null, due.get(), "a picker with no date writes null");
+            time.setTime(LocalTime.of(8, 15));
+            assertEquals(LocalTime.of(8, 15), at.get());
+            both.setDateTime(LocalDateTime.of(2026, 5, 2, 10, 0));
+            assertEquals(LocalDateTime.of(2026, 5, 2, 10, 0), when.get());
+        }
+
+        @Test
+        void aCalendarBindsItsMonthApartFromItsDate() {
+            final State<YearMonth> month = State.of(YearMonth.of(2026, 7));
+            final State<LocalDate> day = State.of(null);
+            final CalendarView calendar = BindingTest.this.ui.calendarView()
+                    .bind(CalendarView.SHOWN_MONTH, month)
+                    .bind(HasDate.DATE, day);
+            BindingTest.this.test.show(BindingTest.this.ui.stackPanel().add(calendar));
+            assertEquals(YearMonth.of(2026, 7), calendar.shownMonth());
+
+            calendar.setDate(LocalDate.of(2026, 9, 3));
+            assertEquals(LocalDate.of(2026, 9, 3), day.get());
+            assertEquals(YearMonth.of(2026, 9), month.get(), "picking a date shows its month");
+        }
+
+        @Test
+        void aColorPickerASplitPaneAndAPasswordBoxWriteCodeChanges() {
+            final State<Integer> color = State.of(0xFF3366CC);
+            final State<Float> divider = State.of(0.25f);
+            final State<Boolean> revealed = State.of(false);
+            final ColorPicker picker = BindingTest.this.ui.colorPicker().bind(ColorPicker.COLOR, color);
+            final SplitPane split = BindingTest.this.ui.splitPane().setFirst(BindingTest.this.ui.label("Left"))
+                    .setSecond(BindingTest.this.ui.label("Right")).bind(SplitPane.POSITION, divider);
+            final PasswordTextBox password = BindingTest.this.ui.passwordTextBox()
+                    .bind(PasswordTextBox.IS_REVEALED, revealed);
+            BindingTest.this.test.show(BindingTest.this.ui.stackPanel().add(picker).add(split).add(password));
+            assertEquals(0xFF3366CC, picker.color());
+            assertEquals(0.25f, split.position());
+
+            picker.setColor(0xFF00FF00);
+            split.setPosition(0.6f);
+            password.setRevealed(true);
+            assertEquals(0xFF00FF00, color.get());
+            assertEquals(0.6f, divider.get());
+            assertTrue(revealed.get());
+        }
+
+        @Test
+        void theNavigationPaneWritesWhenItCloses() {
+            final State<Boolean> open = State.of(false);
+            final NavigationView view = BindingTest.this.ui.navigationView()
+                    .addItem(BindingTest.this.ui.navigationItem("General"))
+                    .setDisplayMode(NavigationView.DisplayMode.COMPACT);
+            BindingTest.this.test.show(view);
+            view.bind(NavigationView.IS_EXPANDED, open);
+
+            open.set(true);
+            BindingTest.this.flush();
+            assertTrue(view.isExpanded());
+            view.setExpanded(false);
+            assertFalse(open.get());
+        }
+
+        @Test
+        void aTableBindsItsSort() {
+            final State<TableView.Sort> sort = State.of(null);
+            final TableView<String> table = BindingTest.this.ui.<String>tableView()
+                    .addTextColumn("Name", GridLength.weighted(1), name -> name)
+                    .setItems(List.of("Cleo", "Ana", "Ben"))
+                    .bind(TableView.SORT_ORDER, sort);
+            BindingTest.this.test.show(table);
+            assertTrue(table.sortColumn().isEmpty());
+
+            table.sortBy(table.columns().getFirst(), false);
+            assertEquals(new TableView.Sort(table.columns().getFirst(), false), sort.get());
+            assertEquals(List.of("Cleo", "Ben", "Ana"), table.shownItems());
+
+            sort.set(new TableView.Sort(table.columns().getFirst(), true));
+            BindingTest.this.flush();
+            assertEquals(List.of("Ana", "Ben", "Cleo"), table.shownItems());
+            sort.set(null);
+            BindingTest.this.flush();
+            assertTrue(table.sortColumn().isEmpty(), "null shows the set order");
+        }
+
+        @Test
+        void selectedItemsFollowTheItemsByKey() {
+            final State<List<String>> names = State.of(List.of("Ana", "Ben", "Cleo", "Dev"));
+            final State<List<String>> picked = State.of(List.of("Ben", "Dev", "Eli"));
+            final ListView<String> list = BindingTest.this.ui.<String>listView()
+                    .setSelectionMode(SelectionMode.MULTIPLE)
+                    .bind(ItemSource.itemsKey(), names)
+                    .bind(MultiSelection.selectedItemsKey(), picked);
+            BindingTest.this.test.show(list);
+            assertEquals(List.of(1, 3), list.selectedIndexes(), "an item the list does not hold is skipped");
+            assertEquals(List.of("Ben", "Dev", "Eli"), picked.get(), "setting the state is not a report");
+
+            names.set(List.of("Dev", "Cleo", "Ben"));
+            BindingTest.this.flush();
+            assertEquals(List.of("Dev", "Ben"), list.selectedItems());
+            assertEquals(List.of("Dev", "Ben"), picked.get(), "the selection moving with its items is written");
+            list.selectIndexes(List.of(1));
+            assertEquals(List.of("Cleo"), picked.get());
+            picked.set(null);
+            BindingTest.this.flush();
+            assertTrue(list.selectedIndexes().isEmpty(), "null clears the selection");
+        }
+
+        @Test
+        void selectedIndexesBindBothWays() {
+            final State<List<Integer>> indexes = State.of(List.of(0, 2));
+            final ListView<String> list = BindingTest.this.ui.<String>listView()
+                    .setItems(List.of("Ana", "Ben", "Cleo"))
+                    .setSelectionMode(SelectionMode.MULTIPLE)
+                    .bind(MultiSelection.SELECTED_INDEXES, indexes);
+            BindingTest.this.test.show(list);
+            assertEquals(List.of("Ana", "Cleo"), list.selectedItems());
+            list.selectAll();
+            assertEquals(List.of(0, 1, 2), indexes.get());
+        }
+
+        @Test
+        void aTreeExpandsTheAncestorsOfBoundItems() {
+            final State<List<String>> picked = State.of(List.of("Ana's notes", "Ben"));
+            final TreeView<String> tree = BindingTest.this.ui.<String>treeView()
+                    .setChildren(name -> name.equals("Ana") ? List.of("Ana's notes") : List.of())
+                    .setItems(List.of("Ana", "Ben"))
+                    .setSelectionMode(SelectionMode.MULTIPLE)
+                    .bind(MultiSelection.selectedItemsKey(), picked);
+            BindingTest.this.test.show(tree);
+            assertTrue(tree.isExpanded("Ana"));
+            assertEquals(List.of("Ana's notes", "Ben"), tree.selectedItems());
+        }
+
+        @Test
+        void severalItemsInSingleModeThrow() {
+            final ListView<String> list = BindingTest.this.ui.<String>listView().setItems(List.of("Ana", "Ben"));
+            final IllegalArgumentException thrown = org.junit.jupiter.api.Assertions.assertThrows(
+                    IllegalArgumentException.class, () -> list.selectItems(List.of("Ana", "Ben")));
+            assertTrue(thrown.getMessage().contains("SINGLE"));
+            list.selectItems(List.of("Ben", "Eli"));
+            assertEquals(1, list.selectedIndex(), "one item found is fine in SINGLE mode");
+        }
+
+        @Test
+        void displayPropertiesBindOneWay() {
+            final State<Integer> unread = State.of(3);
+            final State<Boolean> busy = State.of(true);
+            final State<Boolean> locked = State.of(true);
+            final State<InfoBar.Severity> severity = State.of(InfoBar.Severity.ERROR);
+            final Avatar avatar = BindingTest.this.ui.avatar("Ana Lima").bind(Avatar.BADGE, unread)
+                    .bind(HasTooltip.TOOLTIP, unread.map(count -> Tooltip.text(count + " unread")));
+            final ProgressBar progress = BindingTest.this.ui.progressBar().bind(ProgressBar.INDETERMINATE, busy);
+            final TextBox note = BindingTest.this.ui.textBox().bind(TextEntry.READ_ONLY, locked);
+            final InfoBar bar = BindingTest.this.ui.infoBar().bind(InfoBar.SEVERITY, severity);
+            BindingTest.this.test.show(BindingTest.this.ui.stackPanel().add(avatar).add(progress).add(note).add(bar));
+            assertEquals(3, avatar.badge());
+            assertEquals(Tooltip.text("3 unread"), avatar.tooltip());
+            assertTrue(progress.isIndeterminate());
+            assertTrue(note.isReadOnly());
+            assertEquals(InfoBar.Severity.ERROR, bar.severity());
+
+            unread.set(0);
+            busy.set(false);
+            severity.set(InfoBar.Severity.SUCCESS);
+            BindingTest.this.flush();
+            assertEquals(0, avatar.badge());
+            assertEquals(Tooltip.text("0 unread"), avatar.tooltip());
+            assertFalse(progress.isIndeterminate());
+            assertEquals(InfoBar.Severity.SUCCESS, bar.severity());
         }
     }
 

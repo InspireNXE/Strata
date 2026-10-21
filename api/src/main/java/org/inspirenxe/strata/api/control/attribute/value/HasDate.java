@@ -19,6 +19,7 @@ import org.inspirenxe.strata.api.event.EventTarget;
 import org.inspirenxe.strata.api.event.EventType;
 import org.inspirenxe.strata.api.event.control.ValueEvent;
 import org.inspirenxe.strata.api.event.control.ValueRequestEvent;
+import org.inspirenxe.strata.api.state.PropertyKey;
 
 import java.time.DayOfWeek;
 import java.time.LocalDate;
@@ -54,6 +55,12 @@ public interface HasDate<S extends HasDate<S>> extends EventTarget<S> {
      * empty. Fires for changes made from code too, including a change of range that moved the date.
      */
     EventType<ValueEvent<HasDate<?>, LocalDate>> DATE_PICKED = EventType.valueReport("has_date.picked");
+    /**
+     * The date, as {@link #date()} and {@link #setDate} say, null for none. Binds two ways through
+     * {@link #DATE_PICKED}. A null value clears the date, and a control with no date writes null.
+     */
+    PropertyKey<HasDate<?>, LocalDate> DATE = PropertyKey.of("has_date.date", control -> control.date().orElse(null),
+            HasDate::setDate, DATE_PICKED);
 
     /**
      * Returns the date.

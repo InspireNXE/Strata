@@ -320,6 +320,23 @@ public final class ListViewImpl<T> extends BuiltInComposite<ListView<T>> impleme
     }
 
     @Override
+    public ListView<T> selectItems(final Collection<? extends T> items) {
+        // The first row of each key, as selectItem finds it
+        final Map<Object, Integer> rows = new HashMap<>();
+        for (int i = 0; i < this.items.size(); i++) {
+            rows.putIfAbsent(this.keyFunction.apply(this.items.get(i)), i);
+        }
+        final List<Integer> indexes = new ArrayList<>(items.size());
+        for (final T item : items) {
+            final Integer index = item == null ? null : rows.get(this.keyFunction.apply(item));
+            if (index != null) {
+                indexes.add(index);
+            }
+        }
+        return this.selectIndexes(indexes);
+    }
+
+    @Override
     public ListView<T> selectAll() {
         if (this.mode == SelectionMode.MULTIPLE && !this.items.isEmpty()) {
             final List<Integer> all = new ArrayList<>(this.items.size());

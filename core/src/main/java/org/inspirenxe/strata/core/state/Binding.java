@@ -22,8 +22,10 @@ import org.inspirenxe.strata.api.event.control.ControlEvent;
 import org.inspirenxe.strata.api.state.PropertyKey;
 import org.inspirenxe.strata.api.state.Source;
 
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
@@ -39,7 +41,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * dependencies are replaced by what it read, and the value is written to the property unless the property already
  * equals it.</p>
  *
- * <p>When the source is a state and the key has a report, the binding also handles that report on the component,
+ * <p>When the source is a state and the key has reports, the binding also handles each report on the component,
  * at the highest priority, so after the component's other handlers and before the handlers of the ancestors the
  * report bubbles to, and writes the property's value to the state unless the two are equal. It skips
  * reports that fire while it writes the property itself, so a value it set never comes back to the state, and
@@ -56,7 +58,7 @@ public final class Binding<V> {
     private final AtomicBoolean dirty;
     private final Set<StateImpl<?>> dependencies;
     private volatile BindingQueue queue;
-    private Subscription reportSubscription;
+    private final List<Subscription> reportSubscriptions;
     private boolean writing;
     // Whether the source was read since the last attach; reports are not written back until it was
     private boolean evaluated;
@@ -73,7 +75,8 @@ public final class Binding<V> {
         this.component = Objects.requireNonNull(component, "component");
         this.key = (PropertyKey<Object, V>) Objects.requireNonNull(key, "key");
         this.source = Objects.requireNonNull(source, "source");
-        this.writable = source instanceof StateImpl<V> state && key.report().isPresent() ? state : null;
+        this.writable = source instanceof StateImpl<V> state && !key.reports().isEmpty() ? state : null;
+        this.reportSubscriptions = new ArrayList<>(key.reports().size());
         this.dirty = new AtomicBoolean();
         this.dependencies = new HashSet<>();
     }
@@ -97,7 +100,7 @@ public final class Binding<V> {
     }
 
     /**
-     * Starts following the source: handles the key's report if the binding is two way, and marks the binding dirty
+     * Starts following the source: handles the key's reports if the binding is two way, and marks the binding dirty
      * on the queue. The caller evaluates it once the tree it joined is attached. Does nothing if already attached.
      * Call on the UI thread.
      *
@@ -110,7 +113,9 @@ public final class Binding<V> {
         this.queue = Objects.requireNonNull(queue, "queue");
         this.evaluated = false;
         if (this.writable != null) {
-            this.reportSubscription = this.subscribe(this.key.report().orElseThrow());
+            for (final EventType<? extends ControlEvent<?>> report : this.key.reports()) {
+                this.reportSubscriptions.add(this.subscribe(report));
+            }
         }
         this.invalidate();
     }
@@ -121,7 +126,7 @@ public final class Binding<V> {
     }
 
     /**
-     * Stops following the source: drops the report handler and every dependency, so no state refers to this
+     * Stops following the source: drops the report handlers and every dependency, so no state refers to this
      * binding any more. Does nothing if not attached. Call on the UI thread.
      */
     public void detach() {
@@ -129,10 +134,10 @@ public final class Binding<V> {
             return;
         }
         this.queue = null;
-        if (this.reportSubscription != null) {
-            this.reportSubscription.unsubscribe();
-            this.reportSubscription = null;
+        for (final Subscription subscription : this.reportSubscriptions) {
+            subscription.unsubscribe();
         }
+        this.reportSubscriptions.clear();
         for (final StateImpl<?> dependency : this.dependencies) {
             dependency.removeDependent(this);
         }

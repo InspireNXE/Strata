@@ -23,6 +23,7 @@ import org.inspirenxe.strata.api.control.attribute.text.Titled;
 import org.inspirenxe.strata.api.event.EventType;
 import org.inspirenxe.strata.api.event.control.ValueEvent;
 import org.inspirenxe.strata.api.event.control.ValueRequestEvent;
+import org.inspirenxe.strata.api.state.PropertyKey;
 import org.inspirenxe.strata.api.text.Text;
 
 import java.util.Objects;
@@ -96,6 +97,12 @@ public interface Expander extends Component<Expander>, Focusable<Expander>, HasC
      * value the old one. Fires for changes made from code too.
      */
     EventType<ValueEvent<Expander, Boolean>> EXPANDED = EventType.valueReport("expander.expanded");
+    /**
+     * Whether the content shows, as {@link #isExpanded()} and {@link #setExpanded} say. Binds two ways through
+     * {@link #EXPANDED}. It is named after the getter because the report has the property's name.
+     */
+    PropertyKey<Expander, Boolean> IS_EXPANDED = PropertyKey.of("expander.is_expanded", Expander::isExpanded,
+            Expander::setExpanded, EXPANDED);
 
     /**
      * Returns the title.

@@ -471,6 +471,12 @@ public final class TableViewImpl<T> extends BuiltInComposite<TableView<T>> imple
     }
 
     @Override
+    public TableView<T> selectItems(final Collection<? extends T> items) {
+        this.list.selectItems(items);
+        return this;
+    }
+
+    @Override
     public TableView<T> selectAll() {
         this.list.selectAll();
         return this;

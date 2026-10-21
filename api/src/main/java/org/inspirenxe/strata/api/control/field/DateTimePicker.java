@@ -26,6 +26,7 @@ import org.inspirenxe.strata.api.control.attribute.value.HasTime;
 import org.inspirenxe.strata.api.event.EventType;
 import org.inspirenxe.strata.api.event.control.ValueEvent;
 import org.inspirenxe.strata.api.event.control.ValueRequestEvent;
+import org.inspirenxe.strata.api.state.PropertyKey;
 import org.inspirenxe.strata.api.text.Text;
 
 import java.time.LocalDateTime;
@@ -128,6 +129,12 @@ public interface DateTimePicker extends Component<DateTimePicker>, Focusable<Dat
      * old one; either is null when empty.
      */
     EventType<ValueEvent<DateTimePicker, LocalDateTime>> PICKED = EventType.valueReport("date_time_picker.picked");
+    /**
+     * The date and time, as {@link #dateTime()} and {@link #setDateTime} say, null for none. Binds two ways through
+     * {@link #PICKED}. A null value clears the picker, and a picker with nothing picked writes null.
+     */
+    PropertyKey<DateTimePicker, LocalDateTime> DATE_TIME = PropertyKey.of("date_time_picker.date_time",
+            picker -> picker.dateTime().orElse(null), DateTimePicker::setDateTime, PICKED);
 
     /**
      * Returns the value.
