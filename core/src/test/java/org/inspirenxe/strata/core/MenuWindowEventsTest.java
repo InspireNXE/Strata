@@ -153,7 +153,7 @@ class MenuWindowEventsTest {
         void aRewrittenEntryRunsThatItem() {
             this.show();
             final List<Integer> chosen = new ArrayList<>();
-            this.menu.onEvent(Menu.CHOOSE, e -> e.setValue(this.menu.items().getFirst()))
+            this.menu.onEvent(Menu.CHOOSE, e -> e.setValue(this.menu.items().get(0)))
                     .onEvent(Menu.CHOSEN, e -> chosen.add(this.index(e.value())));
             this.clickTwo();
             assertEquals(List.of("one"), MenuWindowEventsTest.this.heard);
@@ -170,7 +170,7 @@ class MenuWindowEventsTest {
                     .onEvent(Menu.CHOSEN, e -> chosen.add(this.index(e.value())));
             // Null, another menu's item, a separator, a submenu item and a disabled item
             final List<MenuEntry> items = this.menu.items();
-            for (final MenuEntry entry : java.util.Arrays.asList(null, this.more.items().getFirst(), items.get(1), items.get(4),
+            for (final MenuEntry entry : java.util.Arrays.asList(null, this.more.items().get(0), items.get(1), items.get(4),
                     items.get(5))) {
                 rewrite[0] = entry;
                 this.clickTwo();

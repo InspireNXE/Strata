@@ -183,7 +183,7 @@ class ScreenControllerTest {
         void aHandleOpensAboveItsScreenAndClosingReturnsToIt() {
             final Counting first = new Counting();
             this.stack.push(first);
-            final Component<?> tree = first.built.getFirst();
+            final Component<?> tree = first.built.get(0);
 
             final Counting second = new Counting();
             final ScreenHandle opened = first.handle.open(second);

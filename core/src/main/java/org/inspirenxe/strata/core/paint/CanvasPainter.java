@@ -19,6 +19,7 @@ import org.inspirenxe.strata.api.extension.Painter;
 import org.inspirenxe.strata.api.geometry.Insets;
 import org.inspirenxe.strata.api.geometry.Rect;
 import org.inspirenxe.strata.api.geometry.Size;
+import org.inspirenxe.strata.api.text.InlineElement;
 import org.inspirenxe.strata.api.text.InlineSprite;
 import org.inspirenxe.strata.api.text.InlineVisual;
 import org.inspirenxe.strata.api.text.TextMetrics;
@@ -230,19 +231,18 @@ public final class CanvasPainter implements Painter {
 
     @Override
     public void text(final TextSpan span, final float x, final float y) {
-        switch (span.element()) {
-            case null -> this.canvas.text(span, x, y);
-            case final InlineVisual visual -> {
-                final Size size = visual.visual().size();
-                this.canvas.visual(visual.visual(), new Rect(x, y, size.width(), size.height()), WHITE);
-            }
-            case final InlineSprite sprite -> {
-                if (!sprite.fitsLine()) {
-                    this.canvas.sprite(sprite.sprite(), new Rect(x, y, sprite.width(), sprite.height()), WHITE);
-                } else if (this.metrics != null) {
-                    final float side = this.metrics.lineHeight(span.style());
-                    this.canvas.sprite(sprite.sprite(), new Rect(x, y, side, side), WHITE);
-                }
+        final InlineElement element = span.element();
+        if (element == null) {
+            this.canvas.text(span, x, y);
+        } else if (element instanceof final InlineVisual visual) {
+            final Size size = visual.visual().size();
+            this.canvas.visual(visual.visual(), new Rect(x, y, size.width(), size.height()), WHITE);
+        } else if (element instanceof final InlineSprite sprite) {
+            if (!sprite.fitsLine()) {
+                this.canvas.sprite(sprite.sprite(), new Rect(x, y, sprite.width(), sprite.height()), WHITE);
+            } else if (this.metrics != null) {
+                final float side = this.metrics.lineHeight(span.style());
+                this.canvas.sprite(sprite.sprite(), new Rect(x, y, side, side), WHITE);
             }
         }
     }

@@ -162,7 +162,7 @@ class LookCapabilitiesTest {
             final Button button = test.factory().button(caption).setWidth(60f);
             test.show(test.factory().absolutePanel().add(button, 0, 0));
             test.platform().advanceMillis(millis);
-            return textAt(render(test), caption).getFirst().split(",")[0];
+            return textAt(render(test), caption).get(0).split(",")[0];
         }
 
         @Test
@@ -400,7 +400,7 @@ class LookCapabilitiesTest {
                 return label;
             }).setItems(List.of("a", "b"));
             test.show(ui.absolutePanel().add(list.setSize(300f, 100f), 0, 0));
-            final Rect first = cells.getFirst().bounds();
+            final Rect first = cells.get(0).bounds();
             // The column starts at 40; the default cell sits 4 in from each side of its row
             assertEquals(44f, first.x());
         }
@@ -463,7 +463,7 @@ class LookCapabilitiesTest {
             }).setItems(List.of("a", "b"));
             test.show(ui.absolutePanel().add(list.setSize(100f, 100f), 0, 0));
             // The row starts 2 down; the 9-tall label is centered in its 20-tall row
-            assertEquals(7.5f, cells.getFirst().bounds().y());
+            assertEquals(7.5f, cells.get(0).bounds().y());
         }
     }
 

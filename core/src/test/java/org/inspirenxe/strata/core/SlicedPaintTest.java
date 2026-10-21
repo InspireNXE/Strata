@@ -143,7 +143,7 @@ class SlicedPaintTest {
             final Recording canvas = new Recording();
             canvas.regionsFallBack = true;
             canvas.spriteRegion(SPRITE, new Rect(2, 0, 26, 2), 0.2f, 0, 0.8f, 0.2f, -1);
-            final Drawn top = canvas.sprites.getFirst();
+            final Drawn top = canvas.sprites.get(0);
             assertEquals(new Rect(2, 0, 26, 2), top.clip());
             assertEquals(2 - 2 * 26f / 6f, top.image().x(), 1e-4);
             assertEquals(10 * 26f / 6f, top.image().width(), 1e-4);

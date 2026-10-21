@@ -93,7 +93,7 @@ final class ToastView extends BuiltInComponent<ToastView> {
         this.lines.addAll(RichText.wrap(spans, wrapAt, metrics));
         if (this.titleStyle != null && !this.lines.isEmpty()) {
             final List<TextSpan> title = new ArrayList<>();
-            for (final TextSpan span : this.lines.getFirst()) {
+            for (final TextSpan span : this.lines.get(0)) {
                 title.add(new TextSpan(span.text(), this.titleStyle));
             }
             this.lines.set(0, title);

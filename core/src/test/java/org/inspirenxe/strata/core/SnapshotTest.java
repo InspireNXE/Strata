@@ -59,7 +59,7 @@ class SnapshotTest {
         this.test.host().charTyped('a', Modifiers.NONE);
 
         assertEquals(1, seen.size());
-        assertTrue(seen.getFirst().isPresent());
+        assertTrue(seen.get(0).isPresent());
     }
 
     @Test
@@ -77,7 +77,7 @@ class SnapshotTest {
         this.test.host().charTyped('c', Modifiers.NONE);
 
         assertEquals(List.of("ab"), previous);
-        assertThrows(IllegalStateException.class, events.getFirst()::snapshot);
+        assertThrows(IllegalStateException.class, events.get(0)::snapshot);
     }
 
     @Test
@@ -182,7 +182,7 @@ class SnapshotTest {
         this.test.click(5, 5);
         button.setText("Changed").setEnabled(false);
 
-        final ComponentSnapshot snapshot = kept.getFirst();
+        final ComponentSnapshot snapshot = kept.get(0);
         assertTrue(snapshot.enabled());
         assertEquals(Optional.of(new Button.State(Text.of("Go"))), snapshot.state(Button.State.class));
         assertEquals(Optional.empty(), snapshot.state(TextBox.State.class), "a state of another type is empty");

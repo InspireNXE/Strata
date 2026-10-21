@@ -94,7 +94,7 @@ class TimePickerTest {
 
     @SuppressWarnings("unchecked")
     private ListView<Integer> column(final int index) {
-        final Component<?> content = this.test.factory().overlays().open().getFirst().content();
+        final Component<?> content = this.test.factory().overlays().open().get(0).content();
         return (ListView<Integer>) ((Container<?>) content).children().get(index);
     }
 
@@ -236,7 +236,7 @@ class TimePickerTest {
         assertEquals(24, this.column(0).items().size());
         assertEquals(List.of(0, 15, 30, 45), this.column(1).items());
         assertEquals(60, this.column(2).items().size());
-        assertEquals(3, ((Container<?>) this.test.factory().overlays().open().getFirst().content()).children().size());
+        assertEquals(3, ((Container<?>) this.test.factory().overlays().open().get(0).content()).children().size());
     }
 
     @Test

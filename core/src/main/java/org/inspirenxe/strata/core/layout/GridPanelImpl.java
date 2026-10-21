@@ -269,16 +269,17 @@ public final class GridPanelImpl extends BuiltInContainer<GridPanel> implements 
         float used = spacing * (count - 1);
         float totalWeight = 0f;
         for (int i = 0; i < count; i++) {
-            switch (tracks.get(i)) {
-                case GridLength.Fixed fixed -> {
-                    sizes[i] = fixed.size();
-                    used += fixed.size();
-                }
-                case GridLength.Auto ignored -> {
-                    sizes[i] = needs[i];
-                    used += needs[i];
-                }
-                case GridLength.Weighted weighted -> totalWeight += weighted.weight();
+            final GridLength track = tracks.get(i);
+            if (track instanceof GridLength.Fixed fixed) {
+                sizes[i] = fixed.size();
+                used += fixed.size();
+            } else if (track instanceof GridLength.Auto) {
+                sizes[i] = needs[i];
+                used += needs[i];
+            } else if (track instanceof GridLength.Weighted weighted) {
+                totalWeight += weighted.weight();
+            } else {
+                throw new NullPointerException("track");
             }
         }
         final float remaining = Math.max(0f, inner - used);
@@ -329,11 +330,14 @@ public final class GridPanelImpl extends BuiltInContainer<GridPanel> implements 
             }
         }
         for (int i = 0; i < tracks.size(); i++) {
-            sizes[i] = switch (tracks.get(i)) {
-                case GridLength.Fixed fixed -> fixed.size();
-                case GridLength.Auto ignored -> needs[i];
-                case GridLength.Weighted weighted -> unit * weighted.weight();
-            };
+            final GridLength track = tracks.get(i);
+            if (track instanceof GridLength.Fixed fixed) {
+                sizes[i] = fixed.size();
+            } else if (track instanceof GridLength.Auto) {
+                sizes[i] = needs[i];
+            } else {
+                sizes[i] = unit * ((GridLength.Weighted) track).weight();
+            }
         }
     }
 

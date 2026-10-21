@@ -289,7 +289,7 @@ public final class TreeViewImpl<T> extends BuiltInComposite<TreeView<T>> impleme
         final List<T> pending = new ArrayList<>(this.roots);
         final Set<Object> seen = new HashSet<>();
         while (!pending.isEmpty()) {
-            final T item = pending.removeLast();
+            final T item = pending.remove(pending.size() - 1);
             final List<? extends T> kids = this.childrenOf(item);
             if (!kids.isEmpty() && seen.add(this.key(item))) {
                 if (this.expanded.add(this.key(item)) && opened != null) {
@@ -507,7 +507,7 @@ public final class TreeViewImpl<T> extends BuiltInComposite<TreeView<T>> impleme
             }
             final List<Integer> indexes = new ArrayList<>(paths.size());
             for (final List<T> path : paths) {
-                final int index = this.indexOf(this.key(path.getLast()));
+                final int index = this.indexOf(this.key(path.get(path.size() - 1)));
                 if (index >= 0) {
                     indexes.add(index);
                 }
@@ -569,7 +569,7 @@ public final class TreeViewImpl<T> extends BuiltInComposite<TreeView<T>> impleme
             if (seen.add(candidateKey) && this.findPath(this.childrenOf(candidate), key, path, seen)) {
                 return true;
             }
-            path.removeLast();
+            path.remove(path.size() - 1);
         }
         return false;
     }

@@ -141,7 +141,7 @@ public final class RadioGroupImpl<T> implements RadioGroup<T> {
         this.selected = button;
         if (previous != null) {
             // The group deselects the old button, so it is on that report's cause chain
-            try (CauseFrame _ = this.ui.causes().pushFrame().push(this)) {
+            try (CauseFrame ignored = this.ui.causes().pushFrame().push(this)) {
                 previous.reportToggled(false);
             }
         }

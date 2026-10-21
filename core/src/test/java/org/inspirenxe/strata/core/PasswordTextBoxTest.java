@@ -195,7 +195,7 @@ class PasswordTextBoxTest {
         final List<ComponentSnapshot> taken = new ArrayList<>();
         this.box.onEvent(InputEvents.KEY, event -> taken.add(event.snapshot()));
         this.press(Key.HOME, Modifiers.NONE);
-        return taken.getFirst();
+        return taken.get(0);
     }
 
     @Test

@@ -101,7 +101,7 @@ class DatePickerTest {
 
     @Test
     void anEmptyPickerShowsItsPlaceholderAndAsksForItsWidestText() {
-        assertEquals("Pick a date", this.texts().getFirst());
+        assertEquals("Pick a date", this.texts().get(0));
         assertTrue(this.picker.date().isEmpty());
         // "Pick a date" is wider than "MM/DD/YYYY": 4 + 66 + 4, then the button
         assertEquals(86f, this.picker.desiredWidth());
@@ -234,7 +234,7 @@ class DatePickerTest {
         assertTrue(this.picker.date().isEmpty(), "18 October 2026 is a Sunday");
         this.other.requestFocus();
         assertTrue(this.picker.date().isEmpty());
-        assertEquals("Pick a date", this.texts().getFirst());
+        assertEquals("Pick a date", this.texts().get(0));
     }
 
     @Test
@@ -359,7 +359,7 @@ class DatePickerTest {
     @Test
     void thePlaceholderCanBeReplaced() {
         this.picker.setPlaceholder("Due");
-        assertEquals("Due", this.texts().getFirst());
+        assertEquals("Due", this.texts().get(0));
         assertEquals("Due", this.picker.placeholder().plain());
     }
 
@@ -370,7 +370,7 @@ class DatePickerTest {
         this.picker.setDate(LocalDate.of(2026, 1, 1));
         this.picker.requestFocus();
         this.press(Key.DELETE);
-        assertEquals(new DatePicker.State(LocalDate.of(2026, 1, 1), false), seen.getFirst().state());
+        assertEquals(new DatePicker.State(LocalDate.of(2026, 1, 1), false), seen.get(0).state());
     }
 
     @Test

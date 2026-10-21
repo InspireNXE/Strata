@@ -1,4 +1,4 @@
-// Every Strata project: Java 25, JUnit, sources jar, shared jar metadata
+// Every Strata project: the Java of java_version, JUnit, sources jar, shared jar metadata
 plugins {
     id 'java-library'
     id 'maven-publish'
@@ -25,7 +25,9 @@ dependencies {
 
 tasks.withType(JavaCompile).configureEach {
     options.encoding = 'UTF-8'
-    options.compilerArgs.addAll(['-Xlint:all', '-Xlint:-serial', '-Xlint:-processing', '-Xlint:-classfile'])
+    options.compilerArgs.addAll(['-Xlint:all', '-Xlint:-serial', '-Xlint:-processing', '-Xlint:-classfile',
+            // Resources main leaves unnamed with _ are named here, which Java 17 would warn about
+            '-Xlint:-try'])
 }
 
 tasks.named('test', Test) {

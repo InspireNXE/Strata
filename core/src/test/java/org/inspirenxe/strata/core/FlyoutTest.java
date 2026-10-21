@@ -210,7 +210,7 @@ class FlyoutTest {
             flyout.onEvent(InputEvents.POINTER_PRESS, event -> seen.add(event.snapshot()));
             flyout.openAt(50, 50);
             FlyoutTest.this.test.click(52, 52);
-            assertEquals(new Flyout.State(true), seen.getFirst().state());
+            assertEquals(new Flyout.State(true), seen.get(0).state());
         }
     }
 

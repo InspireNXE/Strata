@@ -223,7 +223,7 @@ public final class FlyoutImpl extends BuiltInComposite<Flyout> implements Flyout
             return;
         }
         final List<Node> order = root.tabOrderWithin(this.node());
-        if (order.isEmpty() || !order.getFirst().requestFocus()) {
+        if (order.isEmpty() || !order.get(0).requestFocus()) {
             this.requestFocus();
         }
     }

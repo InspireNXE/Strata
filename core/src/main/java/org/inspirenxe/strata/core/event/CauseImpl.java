@@ -44,7 +44,7 @@ final class CauseImpl implements Cause {
 
     @Override
     public Optional<Object> root() {
-        return this.chain.isEmpty() ? Optional.empty() : Optional.of(this.chain.getFirst());
+        return this.chain.isEmpty() ? Optional.empty() : Optional.of(this.chain.get(0));
     }
 
     @Override

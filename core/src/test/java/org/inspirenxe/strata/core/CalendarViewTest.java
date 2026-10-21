@@ -130,7 +130,7 @@ class CalendarViewTest {
         // 27 September to 7 November
         assertEquals(42, texts.size() - 8);
         assertEquals("27", texts.get(8));
-        assertEquals("7", texts.getLast());
+        assertEquals("7", texts.get(texts.size() - 1));
     }
 
     @Test
@@ -223,7 +223,7 @@ class CalendarViewTest {
     void aCanceledBrowseStaysAndARewrittenOneGoesElsewhere() {
         final List<Boolean> cancel = new ArrayList<>(List.of(true));
         this.calendar.onEvent(CalendarView.BROWSE, event -> {
-            if (cancel.getFirst()) {
+            if (cancel.get(0)) {
                 event.cancel();
             } else {
                 event.setValue(YearMonth.of(2030, 1));
@@ -363,7 +363,7 @@ class CalendarViewTest {
         this.render();
         this.clickDay(LocalDate.of(2026, 10, 14));
         assertEquals(new CalendarView.State(LocalDate.of(2026, 10, 2), YearMonth.of(2026, 10), Zoom.MONTH),
-                seen.getFirst().state());
+                seen.get(0).state());
     }
 
     @Test

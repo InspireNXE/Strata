@@ -46,8 +46,8 @@ public final class RichText {
      */
     public static List<List<TextSpan>> wrap(final List<TextSpan> spans, final float maxWidth, final TextMetrics metrics) {
         final List<List<TextSpan>> lines = new ArrayList<>();
-        if (spans.size() == 1 && !spans.getFirst().isInline()) {
-            final TextSpan only = spans.getFirst();
+        if (spans.size() == 1 && !spans.get(0).isInline()) {
+            final TextSpan only = spans.get(0);
             for (final String line : TextWrap.wrap(only.text(), only.style(), maxWidth, metrics)) {
                 lines.add(line.isEmpty() ? List.of() : List.of(only.withText(line)));
             }
@@ -179,7 +179,7 @@ public final class RichText {
         }
         // The dots do not fit in this span's style, so end on an earlier span instead
         while (!kept.isEmpty()) {
-            final TextSpan last = kept.removeLast();
+            final TextSpan last = kept.remove(kept.size() - 1);
             final float before = width(kept, metrics);
             final float dots = metrics.width(new TextSpan(ELLIPSIS, last.style()));
             if (before + dots <= maxWidth) {

@@ -39,7 +39,7 @@ public final class Spans {
      */
     public static String plain(final List<TextSpan> spans) {
         if (spans.size() == 1) {
-            return spans.getFirst().text();
+            return spans.get(0).text();
         }
         final StringBuilder joined = new StringBuilder();
         for (final TextSpan span : spans) {
@@ -60,9 +60,9 @@ public final class Spans {
             if (span.text().isEmpty()) {
                 continue;
             }
-            if (!out.isEmpty() && !span.isInline() && !out.getLast().isInline()
-                    && out.getLast().style().equals(span.style())) {
-                final TextSpan last = out.removeLast();
+            if (!out.isEmpty() && !span.isInline() && !out.get(out.size() - 1).isInline()
+                    && out.get(out.size() - 1).style().equals(span.style())) {
+                final TextSpan last = out.remove(out.size() - 1);
                 out.add(last.withText(last.text() + span.text()));
             } else {
                 out.add(span);
@@ -110,8 +110,8 @@ public final class Spans {
         for (final TextSpan span : spans) {
             final String text = span.text();
             final int spanEnd = offset + text.length();
-            final int from = Math.clamp(start - offset, 0, text.length());
-            final int to = Math.clamp(end - offset, 0, text.length());
+            final int from = clamp(start - offset, 0, text.length());
+            final int to = clamp(end - offset, 0, text.length());
             if (from >= to) {
                 out.add(span);
             } else {
@@ -146,5 +146,15 @@ public final class Spans {
             start = end;
         }
         return fallback;
+    }
+
+    /**
+     * Does what {@code Math.clamp(long, int, int)} does, which Java 17 lacks.
+     */
+    private static int clamp(final long value, final int min, final int max) {
+        if (min > max) {
+            throw new IllegalArgumentException(min + " > " + max);
+        }
+        return (int) Math.min(max, Math.max(value, min));
     }
 }

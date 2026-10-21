@@ -672,11 +672,11 @@ class BindingTest {
             BindingTest.this.test.show(table);
             assertTrue(table.sortColumn().isEmpty());
 
-            table.sortBy(table.columns().getFirst(), false);
-            assertEquals(new TableView.Sort(table.columns().getFirst(), false), sort.get());
+            table.sortBy(table.columns().get(0), false);
+            assertEquals(new TableView.Sort(table.columns().get(0), false), sort.get());
             assertEquals(List.of("Cleo", "Ben", "Ana"), table.shownItems());
 
-            sort.set(new TableView.Sort(table.columns().getFirst(), true));
+            sort.set(new TableView.Sort(table.columns().get(0), true));
             BindingTest.this.flush();
             assertEquals(List.of("Ana", "Ben", "Cleo"), table.shownItems());
             sort.set(null);

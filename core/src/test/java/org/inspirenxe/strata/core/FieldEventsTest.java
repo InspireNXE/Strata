@@ -389,7 +389,7 @@ class FieldEventsTest {
             this.changes.rewrite = value -> value + 1000;
             this.slider.requestFocus();
             this.key(Key.RIGHT);
-            assertEquals(5d, this.changes.seen.getFirst());
+            assertEquals(5d, this.changes.seen.get(0));
             assertEquals(100d, this.slider.value());
 
             this.changes.rewrite = value -> 41;

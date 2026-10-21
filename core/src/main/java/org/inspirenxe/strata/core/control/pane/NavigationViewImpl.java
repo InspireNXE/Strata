@@ -1139,7 +1139,7 @@ public final class NavigationViewImpl extends BuiltInComposite<NavigationView> i
         final List<NavigationItemImpl> stops = this.cursorStops();
         if (!stops.contains(this.cursor)) {
             final NavigationItemImpl shownSelection = this.shownSelection();
-            this.cursor = stops.contains(shownSelection) ? shownSelection : stops.isEmpty() ? null : stops.getFirst();
+            this.cursor = stops.contains(shownSelection) ? shownSelection : stops.isEmpty() ? null : stops.get(0);
         }
     }
 
@@ -1197,10 +1197,10 @@ public final class NavigationViewImpl extends BuiltInComposite<NavigationView> i
         }
         final int at = stops.indexOf(this.cursor);
         final NavigationItemImpl next = switch (key) {
-            case HOME -> stops.getFirst();
-            case END -> stops.getLast();
-            case UP -> at < 0 ? stops.getLast() : stops.get(Math.max(0, at - 1));
-            default -> at < 0 ? stops.getFirst() : stops.get(Math.min(stops.size() - 1, at + 1));
+            case HOME -> stops.get(0);
+            case END -> stops.get(stops.size() - 1);
+            case UP -> at < 0 ? stops.get(stops.size() - 1) : stops.get(Math.max(0, at - 1));
+            default -> at < 0 ? stops.get(0) : stops.get(Math.min(stops.size() - 1, at + 1));
         };
         this.cursor = next;
         this.scrollTo(next);

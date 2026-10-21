@@ -179,7 +179,7 @@ class ThemePaddingTest {
         }).setItems(List.of("a"));
         place(test, grid);
         // The label keeps its own size at the cell's top-left less the padding
-        final Rect bounds = made.getFirst().bounds();
+        final Rect bounds = made.get(0).bounds();
         assertEquals(2, bounds.x());
         assertEquals(3, bounds.y());
     }

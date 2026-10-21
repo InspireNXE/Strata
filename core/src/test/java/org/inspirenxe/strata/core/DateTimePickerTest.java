@@ -165,8 +165,8 @@ class DateTimePickerTest {
         this.picker.requestFocus();
         this.press(Key.F4);
         this.test.host().layout();
-        final Component<?> content = this.test.factory().overlays().open().getFirst().content();
-        final CalendarView calendar = (CalendarView) ((Container<?>) content).children().getFirst();
+        final Component<?> content = this.test.factory().overlays().open().get(0).content();
+        final CalendarView calendar = (CalendarView) ((Container<?>) content).children().get(0);
         final Rect bounds = calendar.bounds();
         // 14 October 2026 sits in the third row, fourth column, of a grid that starts on Sunday 27 September
         this.test.click(bounds.x() + 4f + 3 * 24f + 12f, bounds.y() + 30f + 2 * 13f + 6f);
@@ -182,6 +182,6 @@ class DateTimePickerTest {
         this.type("10202026");
         this.press(Key.TAB);
         assertTrue(this.picker.dateTime().isEmpty());
-        assertEquals("Pick a date and time", this.texts().getFirst());
+        assertEquals("Pick a date and time", this.texts().get(0));
     }
 }

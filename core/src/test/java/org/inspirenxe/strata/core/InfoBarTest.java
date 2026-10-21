@@ -302,7 +302,7 @@ class InfoBarTest {
             InfoBarTest.this.test.host().layout();
             final List<Component<?>> order = InfoBarTest.this.test.tabOrder();
             assertEquals(2, order.size());
-            assertSame(retry, order.getFirst());
+            assertSame(retry, order.get(0));
         }
 
         @Test
@@ -402,7 +402,7 @@ class InfoBarTest {
             final DrawLog canvas = InfoBarTest.this.render();
             assertEquals(List.of("text Title 9,4 #FF112233", "text Message 43,4 #FF112233", "text x 285,4 #FFA0A0A0"),
                     canvas.lines("text"));
-            assertEquals(TextStyle.DEFAULT.withColor(0xFF112233).withBold(true), canvas.textStyles().getFirst());
+            assertEquals(TextStyle.DEFAULT.withColor(0xFF112233).withBold(true), canvas.textStyles().get(0));
             assertEquals(TextStyle.DEFAULT.withColor(0xFF112233), canvas.textStyles().get(1));
             InfoBarTest.this.test.host().setTheme(Themes.flat().toBuilder()
                     .textStyle(InfoBar.STYLE_TITLE, TextStyle.DEFAULT.withColor(0xFF445566))
@@ -468,7 +468,7 @@ class InfoBarTest {
         bar.onEvent(Closable.CLOSE, event -> snapshots.add(event.snapshot()));
         this.test.click(288, 8);
         assertEquals(new InfoBar.State(Severity.WARNING, Text.of("Low"), Text.of("Pears"), true),
-                snapshots.getFirst().state());
+                snapshots.get(0).state());
         assertFalse(bar.isOpen());
     }
 }

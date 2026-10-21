@@ -302,16 +302,16 @@ class ButtonVariantsTest {
             final NullCanvas canvas = this.render();
             assertEquals(List.of(), canvas.fills());
             assertEquals(1, canvas.texts().size());
-            assertFalse(canvas.texts().getFirst().style().underline());
+            assertFalse(canvas.texts().get(0).style().underline());
         }
 
         @Test
         void aLinkUnderlinesWhileHovered() {
             this.show();
             ButtonVariantsTest.this.test.host().pointerMoved(5, 4, Modifiers.NONE);
-            assertTrue(this.render().texts().getFirst().style().underline());
+            assertTrue(this.render().texts().get(0).style().underline());
             ButtonVariantsTest.this.test.host().pointerMoved(200, 90, Modifiers.NONE);
-            assertFalse(this.render().texts().getFirst().style().underline());
+            assertFalse(this.render().texts().get(0).style().underline());
         }
 
         @Test

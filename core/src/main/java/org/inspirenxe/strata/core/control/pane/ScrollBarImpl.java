@@ -120,7 +120,7 @@ public final class ScrollBarImpl extends BuiltInComponent<ScrollBar> implements 
         if (Double.isNaN(value)) {
             throw new IllegalArgumentException("Value must not be NaN");
         }
-        this.apply(Math.clamp(value, this.min, this.max));
+        this.apply(clamp(value, this.min, this.max));
         return this;
     }
 
@@ -142,7 +142,7 @@ public final class ScrollBarImpl extends BuiltInComponent<ScrollBar> implements 
         this.min = min;
         this.max = max;
         this.stale = true;
-        this.apply(Math.clamp(this.value, min, max));
+        this.apply(clamp(this.value, min, max));
         return this;
     }
 
@@ -234,7 +234,7 @@ public final class ScrollBarImpl extends BuiltInComponent<ScrollBar> implements 
      * @return true if the offset changed
      */
     private boolean change(final double requested) {
-        final double clamped = Math.clamp(requested, this.min, this.max);
+        final double clamped = clamp(requested, this.min, this.max);
         if (clamped == this.value) {
             return false;
         }
@@ -419,5 +419,15 @@ public final class ScrollBarImpl extends BuiltInComponent<ScrollBar> implements 
     @Override
     protected Object snapshotState() {
         return new ScrollBar.State(this.value, this.min, this.max, this.visible);
+    }
+
+    /**
+     * Does what {@code Math.clamp(double, double, double)} does, which Java 17 lacks.
+     */
+    private static double clamp(final double value, final double min, final double max) {
+        if (!(min <= max)) {
+            throw new IllegalArgumentException(min + " > " + max);
+        }
+        return Math.min(max, Math.max(value, min));
     }
 }

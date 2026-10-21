@@ -309,7 +309,7 @@ class CollectionEventsTest {
          * Listens for every list event on the open popup's list.
          */
         private void watchPopup(final List<String> leaked) {
-            final Component<?> popup = CollectionEventsTest.this.ui.overlays().open().getFirst().content();
+            final Component<?> popup = CollectionEventsTest.this.ui.overlays().open().get(0).content();
             popup.onEvent(SingleSelection.SELECT, e -> leaked.add("select"));
             popup.onEvent(SingleSelection.SELECTED, e -> leaked.add("selected"));
             popup.onEvent(Activatable.ACTIVATE, e -> leaked.add("activate"));
@@ -370,7 +370,7 @@ class CollectionEventsTest {
         }
 
         private TableColumn<Offer> name() {
-            return this.table.columns().getFirst();
+            return this.table.columns().get(0);
         }
 
         @Test
@@ -716,7 +716,7 @@ class CollectionEventsTest {
             assertEquals(-1, this.grid.selectedIndex());
             assertEquals(List.of(2, 0), this.asked);
             assertEquals(2, this.clicks.size());
-            assertEquals(new GridView.Click<>(2, "c", MouseButton.RIGHT, Modifiers.NONE), this.clicks.getFirst());
+            assertEquals(new GridView.Click<>(2, "c", MouseButton.RIGHT, Modifiers.NONE), this.clicks.get(0));
         }
 
         @Test

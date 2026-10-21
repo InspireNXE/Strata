@@ -498,19 +498,15 @@ public final class MenuImpl extends BuiltInComponent<Menu> implements Menu, Core
         if (!(chosen instanceof MenuEntryImpl entry) || entry.owner() != this || !entry.usable()) {
             return;
         }
-        switch (chosen) {
-            case MenuItemImpl item -> {
-                this.top().close();
-                item.action().run();
-            }
-            case CheckMenuItemImpl item -> {
-                this.top().close();
-                item.setSelected(!item.isSelected());
-                item.action().accept(item.isSelected());
-            }
-            default -> {
-                return;
-            }
+        if (chosen instanceof MenuItemImpl item) {
+            this.top().close();
+            item.action().run();
+        } else if (chosen instanceof CheckMenuItemImpl item) {
+            this.top().close();
+            item.setSelected(!item.isSelected());
+            item.action().accept(item.isSelected());
+        } else {
+            return;
         }
         this.report(CHOSEN, chosen, chosen);
     }

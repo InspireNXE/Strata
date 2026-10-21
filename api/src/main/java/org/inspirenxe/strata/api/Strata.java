@@ -174,6 +174,6 @@ public final class Strata {
             throw new IllegalStateException("Expected one Strata provider on the class path, found " + found.size()
                     + "; is strata-core missing or present twice?");
         }
-        return found.getFirst();
+        return found.get(0);
     }
 }

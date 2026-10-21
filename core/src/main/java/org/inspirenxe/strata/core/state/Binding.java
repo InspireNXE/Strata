@@ -220,14 +220,14 @@ public final class Binding<V> {
             return;
         }
         // Its own reports carry this origin, so reported() leaves them alone, and the control's requests do not fire
-        try (CauseFrame _ = this.causes.get().pushFrame().put(CauseKeys.ORIGIN, this.origin)) {
+        try (CauseFrame ignored = this.causes.get().pushFrame().put(CauseKeys.ORIGIN, this.origin)) {
             this.key.writer().accept(this.component, value);
         }
     }
 
     private void reported(final ControlEvent<?> event) {
         if (!this.evaluated || this.queue == null || event.target() != this.component
-                || event.origin() instanceof Origin.Binding(final Object written) && written == this.source) {
+                || event.origin() instanceof final Origin.Binding binding && binding.source() == this.source) {
             return;
         }
         final V value = this.key.reader().apply(this.component);

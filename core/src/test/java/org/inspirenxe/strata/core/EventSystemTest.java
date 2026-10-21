@@ -103,7 +103,7 @@ class EventSystemTest {
         }
 
         void userStep() {
-            try (CauseFrame _ = this.asUser()) {
+            try (CauseFrame ignored = this.asUser()) {
                 this.request(STEP, this.count + 1, this::setCount);
             }
         }
@@ -114,7 +114,7 @@ class EventSystemTest {
         }
 
         void userClear() {
-            try (CauseFrame _ = this.asUser()) {
+            try (CauseFrame ignored = this.asUser()) {
                 if (this.request(CLEAR)) {
                     this.count = 0;
                     this.report(CLEARED);

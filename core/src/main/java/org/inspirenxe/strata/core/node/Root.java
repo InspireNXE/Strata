@@ -701,7 +701,7 @@ public final class Root {
         }
         final Key key = this.keyRepeater.poll(this.platform.clock().millis());
         if (key != null) {
-            try (CauseFrame _ = this.inputFrame(Device.KEYBOARD, this.keyRepeater.modifiers())) {
+            try (CauseFrame ignored = this.inputFrame(Device.KEYBOARD, this.keyRepeater.modifiers())) {
                 this.dispatchKey(key, KeyAction.REPEAT, this.keyRepeater.modifiers());
             }
         }
@@ -744,7 +744,7 @@ public final class Root {
      * @return true if a drag is in progress or the pointer is over a node
      */
     public boolean pointerMoved(final float x, final float y, final Modifiers modifiers) {
-        try (CauseFrame _ = this.inputFrame(Device.MOUSE, modifiers)) {
+        try (CauseFrame ignored = this.inputFrame(Device.MOUSE, modifiers)) {
             return this.handlePointerMoved(x, y, modifiers);
         }
     }
@@ -793,7 +793,7 @@ public final class Root {
      */
     public boolean pointerButton(final float x, final float y, final MouseButton button, final boolean pressed,
                                  final Modifiers modifiers) {
-        try (CauseFrame _ = this.inputFrame(Device.MOUSE, modifiers).put(CauseKeys.BUTTON, button)) {
+        try (CauseFrame ignored = this.inputFrame(Device.MOUSE, modifiers).put(CauseKeys.BUTTON, button)) {
             return this.handlePointerButton(x, y, button, pressed, modifiers);
         }
     }
@@ -852,7 +852,7 @@ public final class Root {
         final int clicks = this.clickCounter.press(target, button, x, y, this.platform.clock().millis());
         this.presses.put(button, new Press(target, clicks, x, y));
         target.setPressed(true);
-        try (CauseFrame _ = this.ui.causes().pushFrame().put(CauseKeys.CLICKS, clicks)) {
+        try (CauseFrame ignored = this.ui.causes().pushFrame().put(CauseKeys.CLICKS, clicks)) {
             target.fire(InputEvents.POINTER_PRESS, new PointerButtonEventImpl(target.facade(), x, y, modifiers, button,
                     clicks));
         }
@@ -876,7 +876,7 @@ public final class Root {
             return true;
         }
 
-        try (CauseFrame _ = this.ui.causes().pushFrame().put(CauseKeys.CLICKS, press.clicks)) {
+        try (CauseFrame ignored = this.ui.causes().pushFrame().put(CauseKeys.CLICKS, press.clicks)) {
             target.fire(InputEvents.POINTER_RELEASE, new PointerButtonEventImpl(target.facade(), x, y, modifiers, button,
                     press.clicks));
             if (press.dragging) {
@@ -905,7 +905,7 @@ public final class Root {
      */
     public boolean scroll(final float x, final float y, final float scrollX, final float scrollY,
                           final ScrollKind kind, final Modifiers modifiers) {
-        try (CauseFrame _ = this.inputFrame(Device.MOUSE, modifiers)) {
+        try (CauseFrame ignored = this.inputFrame(Device.MOUSE, modifiers)) {
             return this.handleScroll(x, y, scrollX, scrollY, kind, modifiers);
         }
     }
@@ -934,7 +934,7 @@ public final class Root {
      * tooltip hides. Presses stay tracked, so a drag can continue when the pointer comes back.
      */
     public void pointerLeft() {
-        try (CauseFrame _ = this.inputFrame(Device.MOUSE, this.modifiers)) {
+        try (CauseFrame ignored = this.inputFrame(Device.MOUSE, this.modifiers)) {
             this.handlePointerLeft();
         }
     }
@@ -1066,10 +1066,9 @@ public final class Root {
     private void showTooltip(final Node owner) {
         this.tooltipPending = null;
         final Tooltip tooltip = owner.tooltip();
-        final Node node = switch (tooltip) {
-            case Tooltip.Lines lines -> this.ui.nodeOf(new TooltipView(this.ui, lines));
-            case Tooltip.Custom custom -> this.ui.nodeOf(custom.builder().apply(this.ui));
-        };
+        final Node node = tooltip instanceof Tooltip.Lines lines
+                ? this.ui.nodeOf(new TooltipView(this.ui, lines))
+                : this.ui.nodeOf(((Tooltip.Custom) tooltip).builder().apply(this.ui));
         if (node.parentNode() != null || node.root() != null) {
             throw new IllegalArgumentException("A tooltip builder must return a new component, not one already in a tree");
         }
@@ -1113,7 +1112,7 @@ public final class Root {
      * @return true if a node handled the key, it closed an overlay, or it moved focus
      */
     public boolean key(final Key key, final KeyAction action, final Modifiers modifiers) {
-        try (CauseFrame _ = this.inputFrame(Device.KEYBOARD, modifiers)) {
+        try (CauseFrame ignored = this.inputFrame(Device.KEYBOARD, modifiers)) {
             return this.handleKey(key, action, modifiers);
         }
     }
@@ -1157,7 +1156,7 @@ public final class Root {
      * @return true if a node handled it; false when nothing has focus
      */
     public boolean charTyped(final int codePoint, final Modifiers modifiers) {
-        try (CauseFrame _ = this.inputFrame(Device.KEYBOARD, modifiers)) {
+        try (CauseFrame ignored = this.inputFrame(Device.KEYBOARD, modifiers)) {
             return this.handleCharTyped(codePoint, modifiers);
         }
     }
@@ -1439,7 +1438,7 @@ public final class Root {
         if (modal) {
             this.layout();
             final List<Node> order = this.tabOrder();
-            this.changeFocus(order.isEmpty() ? null : order.getFirst());
+            this.changeFocus(order.isEmpty() ? null : order.get(0));
         }
         return layer;
     }
@@ -1648,7 +1647,7 @@ public final class Root {
         @Override
         public void closeAll() {
             while (!Root.this.layers.isEmpty()) {
-                Root.this.layers.getLast().close();
+                Root.this.layers.get(Root.this.layers.size() - 1).close();
             }
         }
     }

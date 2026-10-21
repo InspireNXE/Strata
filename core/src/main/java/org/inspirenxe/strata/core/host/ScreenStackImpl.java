@@ -131,7 +131,7 @@ public final class ScreenStackImpl implements ScreenStack {
         if (this.entries.isEmpty()) {
             return Optional.empty();
         }
-        final ScreenHostImpl host = this.entries.removeLast().host();
+        final ScreenHostImpl host = this.entries.remove(this.entries.size() - 1).host();
         final Optional<Screen> screen = host.screen();
         host.close();
         return screen;
@@ -154,7 +154,7 @@ public final class ScreenStackImpl implements ScreenStack {
 
     @Override
     public Optional<Screen> top() {
-        return this.entries.isEmpty() ? Optional.empty() : this.entries.getLast().host().screen();
+        return this.entries.isEmpty() ? Optional.empty() : this.entries.get(this.entries.size() - 1).host().screen();
     }
 
     @Override
@@ -237,7 +237,7 @@ public final class ScreenStackImpl implements ScreenStack {
     }
 
     private Optional<ScreenHostImpl> input() {
-        return this.entries.isEmpty() ? Optional.empty() : Optional.of(this.entries.getLast().host());
+        return this.entries.isEmpty() ? Optional.empty() : Optional.of(this.entries.get(this.entries.size() - 1).host());
     }
 
     @Override

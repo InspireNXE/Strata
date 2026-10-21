@@ -99,13 +99,13 @@ class StyledTextTest {
         test.host().render(canvas);
 
         assertEquals(List.of("if", " x"), canvas.texts);
-        final TextStyle keyword = canvas.styles.getFirst();
+        final TextStyle keyword = canvas.styles.get(0);
         assertEquals(KEYWORD, keyword.color());
         assertTrue(keyword.monospace());
         // The rest of the keyword's style is the field's own
         assertEquals(canvas.styles.get(1), keyword.withColor(canvas.styles.get(1).color()).withMonospace(false));
         // The second span starts after the monospaced keyword, measured in its own style
-        assertEquals(2 * TestPlatform.MONO_CHAR_WIDTH, canvas.xs.get(1) - canvas.xs.getFirst());
+        assertEquals(2 * TestPlatform.MONO_CHAR_WIDTH, canvas.xs.get(1) - canvas.xs.get(0));
     }
 
     @Test

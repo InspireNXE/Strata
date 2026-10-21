@@ -126,21 +126,21 @@ public sealed interface Paint {
      * @param rect the area to cover
      */
     default void paint(final Painter painter, final Rect rect) {
-        switch (this) {
-            case Solid solid -> {
-                if ((solid.argb >>> 24) != 0) {
-                    painter.fill(rect, solid.argb);
-                }
+        if (this instanceof Solid solid) {
+            if ((solid.argb >>> 24) != 0) {
+                painter.fill(rect, solid.argb);
             }
-            case Gradient gradient -> painter.fillGradient(rect, gradient.topArgb, gradient.bottomArgb);
-            case Sprite sprite -> painter.sprite(sprite.sprite, rect, sprite.tint);
-            case Tiled tiled -> painter.tiled(tiled.sprite, rect, tiled.size, tiled.tint);
-            case NineSlice slice -> {
-                if (slice.size == null) {
-                    painter.nineSlice(slice.sprite, rect, slice.border, slice.tint);
-                } else {
-                    painter.nineSlice(slice.sprite, rect, slice.size, slice.border, slice.tiled, slice.tint);
-                }
+        } else if (this instanceof Gradient gradient) {
+            painter.fillGradient(rect, gradient.topArgb, gradient.bottomArgb);
+        } else if (this instanceof Sprite sprite) {
+            painter.sprite(sprite.sprite, rect, sprite.tint);
+        } else if (this instanceof Tiled tiled) {
+            painter.tiled(tiled.sprite, rect, tiled.size, tiled.tint);
+        } else if (this instanceof NineSlice slice) {
+            if (slice.size == null) {
+                painter.nineSlice(slice.sprite, rect, slice.border, slice.tint);
+            } else {
+                painter.nineSlice(slice.sprite, rect, slice.size, slice.border, slice.tiled, slice.tint);
             }
         }
     }

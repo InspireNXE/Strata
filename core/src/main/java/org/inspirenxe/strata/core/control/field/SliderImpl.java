@@ -214,7 +214,7 @@ public final class SliderImpl extends BuiltInComponent<Slider> implements Slider
     }
 
     private double normalize(final double requested) {
-        final double clamped = Math.clamp(requested, this.min, this.max);
+        final double clamped = clamp(requested, this.min, this.max);
         if (this.step <= 0d) {
             return clamped;
         }
@@ -397,5 +397,15 @@ public final class SliderImpl extends BuiltInComponent<Slider> implements Slider
     @Override
     protected Object snapshotState() {
         return new Slider.State(this.value, this.min, this.max, this.step);
+    }
+
+    /**
+     * Does what {@code Math.clamp(double, double, double)} does, which Java 17 lacks.
+     */
+    private static double clamp(final double value, final double min, final double max) {
+        if (!(min <= max)) {
+            throw new IllegalArgumentException(min + " > " + max);
+        }
+        return Math.min(max, Math.max(value, min));
     }
 }

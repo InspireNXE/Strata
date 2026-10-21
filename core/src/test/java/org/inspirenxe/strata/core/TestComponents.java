@@ -90,7 +90,7 @@ public final class TestComponents {
 
         @Override
         public Gauge setValue(final double value) {
-            final double clamped = Math.clamp(value, this.min, this.max);
+            final double clamped = clamp(value, this.min, this.max);
             final double previous = this.value;
             if (clamped != previous) {
                 this.value = clamped;
@@ -153,5 +153,15 @@ public final class TestComponents {
             registry.register(BROKEN, Gauge.class, GaugeImpl::new);
             throw new IllegalStateException("broken on purpose");
         }
+    }
+
+    /**
+     * Does what {@code Math.clamp(double, double, double)} does, which Java 17 lacks.
+     */
+    private static double clamp(final double value, final double min, final double max) {
+        if (!(min <= max)) {
+            throw new IllegalArgumentException(min + " > " + max);
+        }
+        return Math.min(max, Math.max(value, min));
     }
 }

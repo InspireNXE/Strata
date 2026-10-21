@@ -72,18 +72,22 @@ public final class InlineMetrics implements TextMetrics {
      */
     public float height(final TextSpan span) {
         final InlineElement element = span.element();
-        return switch (element) {
-            case null -> this.engine.lineHeight(span.style());
-            case final InlineVisual visual -> visual.visual().size().height();
-            case final InlineSprite sprite -> sprite.fitsLine() ? this.engine.lineHeight(span.style()) : sprite.height();
-        };
+        if (element == null) {
+            return this.engine.lineHeight(span.style());
+        }
+        if (element instanceof final InlineVisual visual) {
+            return visual.visual().size().height();
+        }
+        final InlineSprite sprite = (InlineSprite) element;
+        return sprite.fitsLine() ? this.engine.lineHeight(span.style()) : sprite.height();
     }
 
     private float elementWidth(final InlineElement element, final TextStyle style) {
-        return switch (element) {
-            case final InlineVisual visual -> visual.visual().size().width();
-            case final InlineSprite sprite -> sprite.fitsLine() ? this.engine.lineHeight(style) : sprite.width();
-        };
+        if (element instanceof final InlineVisual visual) {
+            return visual.visual().size().width();
+        }
+        final InlineSprite sprite = (InlineSprite) element;
+        return sprite.fitsLine() ? this.engine.lineHeight(style) : sprite.width();
     }
 
     /**

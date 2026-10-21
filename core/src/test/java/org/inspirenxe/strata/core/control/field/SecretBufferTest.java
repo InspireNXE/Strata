@@ -164,9 +164,9 @@ class SecretBufferTest {
         test.host().layout();
 
         assertEquals(2, built.size());
-        assertTrue(built.getFirst().isEmpty());
-        assertTrue(zeroed(((PasswordTextBoxImpl) built.getFirst()).secretBuffer().storage()));
-        assertEquals(5, built.getLast().length());
+        assertTrue(built.get(0).isEmpty());
+        assertTrue(zeroed(((PasswordTextBoxImpl) built.get(0)).secretBuffer().storage()));
+        assertEquals(5, built.get(built.size() - 1).length());
     }
 
     @Test

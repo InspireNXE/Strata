@@ -10,6 +10,10 @@ java {
 }
 
 tasks.named('javadoc', Javadoc) {
+    // The newest javadoc reads the docs as main writes them (Java 17's wants @param on compact record
+    // constructors); --release keeps the links to the Java 17 API
+    javadocTool = javaToolchains.javadocToolFor { languageVersion = JavaLanguageVersion.of(javadoc_java_version) }
+    options.addStringOption('-release', java_version)
     options.encoding = 'UTF-8'
     options.addBooleanOption('Xdoclint:all', true)
     options.addBooleanOption('Werror', true)

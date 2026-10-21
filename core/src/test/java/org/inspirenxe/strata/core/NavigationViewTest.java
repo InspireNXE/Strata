@@ -185,9 +185,9 @@ class NavigationViewTest {
             NavigationViewTest.this.show();
             final NavigationItem news = NavigationViewTest.this.ui.navigationItem("News");
             NavigationViewTest.this.view.addItem(0, news);
-            assertEquals("News", NavigationViewTest.this.view.allItems().getFirst().text().plain());
+            assertEquals("News", NavigationViewTest.this.view.allItems().get(0).text().plain());
             NavigationViewTest.this.view.removeItem(news);
-            assertEquals("General", NavigationViewTest.this.view.allItems().getFirst().text().plain());
+            assertEquals("General", NavigationViewTest.this.view.allItems().get(0).text().plain());
             // A removed entry can join another view
             NavigationViewTest.this.ui.navigationView().addItem(news);
             NavigationViewTest.this.view.clearItems();
@@ -377,7 +377,7 @@ class NavigationViewTest {
                     .addItem("Paged", ui -> ui.label("Page " + built.incrementAndGet()));
             NavigationViewTest.this.test.show(view);
             view.select(0);
-            final NavigationItem paged = view.allItems().getFirst();
+            final NavigationItem paged = view.allItems().get(0);
             paged.setPage(ui -> ui.label("New " + built.incrementAndGet()));
             assertEquals(2, built.get());
             view.removeItem(paged);
@@ -556,7 +556,7 @@ class NavigationViewTest {
             assertTrue(NavigationViewTest.this.view.isExpanded());
             final List<Overlay> open = NavigationViewTest.this.overlays();
             assertEquals(1, open.size());
-            assertEquals(new Rect(0, 0, 120, 300), open.getFirst().content().bounds());
+            assertEquals(new Rect(0, 0, 120, 300), open.get(0).content().bounds());
             // The full pane shows over the content, its toggle in the same place
             assertTrue(NavigationViewTest.this.render().lines("text").contains("text General 21,26 #FFE0E0E0"));
             NavigationViewTest.this.test.click(10, 10);
@@ -607,7 +607,7 @@ class NavigationViewTest {
             NavigationViewTest.this.view.setExpanded(true);
             NavigationViewTest.this.test.host().resize(300, 200);
             NavigationViewTest.this.layout();
-            assertEquals(new Rect(0, 0, 120, 200), NavigationViewTest.this.overlays().getFirst().content().bounds());
+            assertEquals(new Rect(0, 0, 120, 200), NavigationViewTest.this.overlays().get(0).content().bounds());
             NavigationViewTest.this.heard.clear();
             NavigationViewTest.this.test.host().resize(500, 200);
             NavigationViewTest.this.layout();
@@ -634,7 +634,7 @@ class NavigationViewTest {
             NavigationViewTest.this.test.click(10, 95);
             final List<Overlay> open = NavigationViewTest.this.overlays();
             assertEquals(1, open.size());
-            final Menu menu = (Menu) open.getFirst().content();
+            final Menu menu = (Menu) open.get(0).content();
             assertEquals(2, menu.items().size());
             assertEquals(new Rect(23, 87, menu.bounds().width(), menu.bounds().height()), menu.bounds());
             NavigationViewTest.this.heard.clear();
@@ -823,7 +823,7 @@ class NavigationViewTest {
         final List<ComponentSnapshot> snapshots = new ArrayList<>();
         this.view.onEvent(Activatable.ACTIVATE, event -> snapshots.add(event.snapshot()));
         this.clickRow(0);
-        assertEquals(new NavigationView.State(1, DisplayMode.EXPANDED, false), snapshots.getFirst().state());
+        assertEquals(new NavigationView.State(1, DisplayMode.EXPANDED, false), snapshots.get(0).state());
         assertNotNull(new Expansion(this.item("Account"), true).item());
         assertNotSame(this.item("General"), this.item("Sound"));
     }

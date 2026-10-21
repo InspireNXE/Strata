@@ -395,7 +395,7 @@ class AvatarTest {
         final AbsolutePanel panel = (AbsolutePanel) avatar.parent();
         panel.onEvent(InputEvents.CLICK, event -> snapshots.add(event.snapshotOf(avatar).orElseThrow()));
         this.test.click(20, 20);
-        assertEquals(new Avatar.State(ana, Text.empty(), "AL", true, 2), snapshots.getFirst().state());
+        assertEquals(new Avatar.State(ana, Text.empty(), "AL", true, 2), snapshots.get(0).state());
         assertFalse(snapshots.isEmpty());
     }
 

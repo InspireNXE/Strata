@@ -243,7 +243,7 @@ class InputControlsTest {
         }
 
         private TextBox field() {
-            return (TextBox) InputControlsTest.this.test.tabOrder().getFirst();
+            return (TextBox) InputControlsTest.this.test.tabOrder().get(0);
         }
 
         private void press(final float x, final float y) {

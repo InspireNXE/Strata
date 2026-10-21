@@ -168,7 +168,7 @@ class AppearanceTest {
         final Label label = assertInstanceOf(Label.class, row);
         test.show(label);
         final List<TextSpan> spans = label.text().resolve(TextStyle.DEFAULT);
-        assertEquals(new InlineVisual(new Icon("kiwi")), spans.getFirst().element());
+        assertEquals(new InlineVisual(new Icon("kiwi")), spans.get(0).element());
         assertEquals(" KIWI", spans.get(1).text());
         assertEquals(Tooltip.text("Fresh kiwi"), label.tooltip());
     }

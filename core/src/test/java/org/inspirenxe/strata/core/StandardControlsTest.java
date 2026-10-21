@@ -388,7 +388,7 @@ class StandardControlsTest {
         void theSelectionFollowsItsItemThroughASort() {
             this.show();
             this.table.select(0);
-            this.table.sortBy(this.table.columns().getFirst(), false);
+            this.table.sortBy(this.table.columns().get(0), false);
             assertEquals(Optional.of(this.apple), this.table.selected());
             assertEquals(2, this.table.selectedIndex());
         }
@@ -396,8 +396,8 @@ class StandardControlsTest {
         @Test
         void sortingByAColumnWithoutAComparatorThrows() {
             this.show();
-            this.table.columns().getFirst().setComparator(null);
-            assertThrows(IllegalArgumentException.class, () -> this.table.sortBy(this.table.columns().getFirst(), true));
+            this.table.columns().get(0).setComparator(null);
+            assertThrows(IllegalArgumentException.class, () -> this.table.sortBy(this.table.columns().get(0), true));
         }
 
         @Test
@@ -549,7 +549,7 @@ class StandardControlsTest {
         @Test
         void aClickChoosesAndDisabledItemsDoNothing() {
             this.show();
-            ((MenuItem) this.menu.items().getFirst()).setEnabled(false);
+            ((MenuItem) this.menu.items().get(0)).setEnabled(false);
             this.menu.openAt(10, 10);
             StandardControlsTest.this.test.host().layout();
             // Items start 2 units in; each is 15 tall
@@ -730,8 +730,8 @@ class StandardControlsTest {
             StandardControlsTest.this.test.click(5, 20 + 5);
             StandardControlsTest.this.test.click(20 + 5, 5);
             assertEquals(2, clicks.size());
-            assertEquals(3, clicks.getFirst().index());
-            assertEquals("d", clicks.getFirst().item());
+            assertEquals(3, clicks.get(0).index());
+            assertEquals("d", clicks.get(0).item());
             assertEquals(1, clicks.get(1).index());
             assertEquals(null, clicks.get(1).item());
             assertEquals(1, grid.selectedIndex());

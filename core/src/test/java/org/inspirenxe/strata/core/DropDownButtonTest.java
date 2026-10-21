@@ -183,9 +183,9 @@ class DropDownButtonTest {
         void drawsTheCaptionCenteredAndTheArrowAtTheRight() {
             DropDownButtonTest.this.show(DropDownButtonTest.this.ui.dropDownButton("Sort"));
             final Recording canvas = DropDownButtonTest.this.render();
-            assertEquals(new Fill(new Rect(10, 10, 51, 20), NORMAL), canvas.fills.getFirst());
+            assertEquals(new Fill(new Rect(10, 10, 51, 20), NORMAL), canvas.fills.get(0));
             // Inside the padding less the gap and the arrow, which is exactly the caption's width
-            assertEquals(new Drawn("Sort", 18, 15.5f), canvas.texts.getFirst());
+            assertEquals(new Drawn("Sort", 18, 15.5f), canvas.texts.get(0));
             // The same arrow as the combo box: four shrinking lines, 7 by 4, against the right padding
             assertEquals(List.of(new Fill(new Rect(46, 18, 7, 1), TEXT), new Fill(new Rect(47, 19, 5, 1), TEXT),
                     new Fill(new Rect(48, 20, 3, 1), TEXT), new Fill(new Rect(49, 21, 1, 1), TEXT)),
@@ -198,8 +198,8 @@ class DropDownButtonTest {
             button.setWidth(101);
             DropDownButtonTest.this.show(button);
             final Recording canvas = DropDownButtonTest.this.render();
-            assertEquals(new Drawn("Sort", 18 + 25, 15.5f), canvas.texts.getFirst());
-            assertEquals(new Fill(new Rect(10 + 101 - 8 - 7, 18, 7, 1), TEXT), canvas.fillsAfter(1, 1).getFirst());
+            assertEquals(new Drawn("Sort", 18 + 25, 15.5f), canvas.texts.get(0));
+            assertEquals(new Fill(new Rect(10 + 101 - 8 - 7, 18, 7, 1), TEXT), canvas.fillsAfter(1, 1).get(0));
         }
 
         @Test
@@ -210,12 +210,12 @@ class DropDownButtonTest {
             host.show(host.factory().absolutePanel().add(button, 10, 10));
             final Recording canvas = new Recording();
             host.host().render(canvas);
-            assertEquals(new Fill(new Rect(46, 18, 7, 1), 0xFF00FF00), canvas.fillsAfter(1, 1).getFirst());
+            assertEquals(new Fill(new Rect(46, 18, 7, 1), 0xFF00FF00), canvas.fillsAfter(1, 1).get(0));
             // Disabled, the arrow takes the disabled caption's color whatever the key says
             button.setEnabled(false);
             final Recording disabled = new Recording();
             host.host().render(disabled);
-            assertEquals(new Fill(new Rect(46, 18, 7, 1), TEXT_DISABLED), disabled.fillsAfter(1, 1).getFirst());
+            assertEquals(new Fill(new Rect(46, 18, 7, 1), TEXT_DISABLED), disabled.fillsAfter(1, 1).get(0));
         }
 
         @Test
@@ -223,9 +223,9 @@ class DropDownButtonTest {
             final DropDownButton button = DropDownButtonTest.this.ui.dropDownButton("Sort");
             DropDownButtonTest.this.show(button.setEnabled(false));
             final Recording canvas = DropDownButtonTest.this.render();
-            assertEquals(new Fill(new Rect(10, 10, 51, 20), DISABLED), canvas.fills.getFirst());
-            assertEquals(TEXT_DISABLED, canvas.styles.getFirst());
-            assertEquals(new Fill(new Rect(46, 18, 7, 1), TEXT_DISABLED), canvas.fillsAfter(1, 1).getFirst());
+            assertEquals(new Fill(new Rect(10, 10, 51, 20), DISABLED), canvas.fills.get(0));
+            assertEquals(TEXT_DISABLED, canvas.styles.get(0));
+            assertEquals(new Fill(new Rect(46, 18, 7, 1), TEXT_DISABLED), canvas.fillsAfter(1, 1).get(0));
         }
 
         @Test
@@ -234,7 +234,7 @@ class DropDownButtonTest {
             DropDownButtonTest.this.show(button);
             button.open();
             final Recording canvas = DropDownButtonTest.this.render();
-            assertEquals(new Fill(new Rect(10, 10, 51, 20), PRESSED), canvas.fills.getFirst());
+            assertEquals(new Fill(new Rect(10, 10, 51, 20), PRESSED), canvas.fills.get(0));
         }
     }
 
@@ -656,7 +656,7 @@ class DropDownButtonTest {
             DropDownButtonTest.this.show(button);
             DropDownButtonTest.this.clickButton();
             assertEquals(new DropDownButton.State(Text.of("Sort"), false),
-                    seen.getFirst().state());
+                    seen.get(0).state());
         }
     }
 

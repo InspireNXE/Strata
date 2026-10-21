@@ -379,9 +379,9 @@ public final class InfoBarImpl extends BuiltInComposite<InfoBar> implements Info
         Size actionSize = this.action == null ? Size.ZERO
                 : context.measure(this.action, Float.POSITIVE_INFINITY, availableHeight);
 
-        final TextLine titleLine = titleWhole.size() == 1 ? TextLine.of(titleWhole.getFirst(), this.titleStyle, metrics)
+        final TextLine titleLine = titleWhole.size() == 1 ? TextLine.of(titleWhole.get(0), this.titleStyle, metrics)
                 : null;
-        final TextLine textLine = textWhole.size() == 1 ? TextLine.of(textWhole.getFirst(), this.textStyle, metrics)
+        final TextLine textLine = textWhole.size() == 1 ? TextLine.of(textWhole.get(0), this.textStyle, metrics)
                 : null;
         float oneLine = left + right;
         int parts = 0;
@@ -442,7 +442,7 @@ public final class InfoBarImpl extends BuiltInComposite<InfoBar> implements Info
                 this.actionY = y > 0f ? y + GAP : 0f;
                 y = this.actionY + actionSize.height();
             }
-            final float first = this.lines.isEmpty() ? lineHeight : this.lines.getFirst().height();
+            final float first = this.lines.isEmpty() ? lineHeight : this.lines.get(0).height();
             this.closeY = Math.max(0f, (first - close.height()) * 0.5f);
             this.iconY = Math.max(0f, (first - this.iconSize) * 0.5f);
             height = Math.max(y, Math.max(this.closeY + close.height(), this.iconY + this.iconSize));

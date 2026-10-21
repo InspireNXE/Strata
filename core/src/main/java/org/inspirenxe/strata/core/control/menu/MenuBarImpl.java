@@ -160,7 +160,7 @@ public final class MenuBarImpl extends BuiltInComponent<MenuBar> implements Menu
 
     // The bar closes the menu, so it is on the cause chain of the menu's reports
     private void closeMenu(final int index) {
-        try (CauseFrame _ = this.node().causes().pushFrame().push(this)) {
+        try (CauseFrame ignored = this.node().causes().pushFrame().push(this)) {
             this.menuAt(index).close();
         }
     }

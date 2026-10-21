@@ -84,7 +84,7 @@ class EntriesTest {
                     .addSubmenu("More", submenu);
             final List<MenuEntry> items = menu.items();
             assertEquals(4, items.size());
-            final MenuItem copy = (MenuItem) items.getFirst();
+            final MenuItem copy = (MenuItem) items.get(0);
             assertEquals("Copy", copy.text().plain());
             assertEquals("Ctrl+C", copy.shortcut().plain());
             assertTrue(((CheckMenuItem) items.get(2)).isSelected());
@@ -111,7 +111,7 @@ class EntriesTest {
             final Menu menu = ui.menu().addSubmenu("A", shared);
             assertThrows(IllegalArgumentException.class, () -> ui.menu().addSubmenu("B", shared));
             assertThrows(IllegalArgumentException.class, () -> shared.addSubmenu("Loop", menu));
-            menu.removeItem(menu.items().getFirst());
+            menu.removeItem(menu.items().get(0));
             ui.menu().addSubmenu("B", shared);
         }
 
@@ -164,7 +164,7 @@ class EntriesTest {
             bar.removeTab(sell);
             assertEquals("Buy", bar.selected().orElseThrow().text().plain());
             assertEquals(List.of("0->1", "1->2", "2->1"), EntriesTest.this.heard);
-            assertThrows(IllegalArgumentException.class, () -> ui.tabBar().addTab(bar.tabs().getFirst()));
+            assertThrows(IllegalArgumentException.class, () -> ui.tabBar().addTab(bar.tabs().get(0)));
         }
 
         @Test
@@ -204,8 +204,8 @@ class EntriesTest {
             price.setComparator(null);
             assertEquals(Optional.empty(), table.sortColumn());
             assertEquals(List.of(apple, pear), table.shownItems());
-            table.sortBy(table.columns().getFirst(), false);
-            table.removeColumn(table.columns().getFirst());
+            table.sortBy(table.columns().get(0), false);
+            table.removeColumn(table.columns().get(0));
             assertEquals(List.of(price), table.columns());
             assertEquals(4, EntriesTest.this.heard.size());
             assertThrows(IllegalArgumentException.class, () -> table.sortBy(price, true));

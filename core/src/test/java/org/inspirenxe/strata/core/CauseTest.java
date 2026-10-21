@@ -92,7 +92,7 @@ class CauseTest {
             clickCenterOf(this.test, box);
 
             assertEquals(1, causes.size(), "the request fired for the user's click");
-            final Cause cause = causes.getFirst();
+            final Cause cause = causes.get(0);
             assertEquals(new Origin.User(ANA), cause.origin(), "the platform's user is the identity");
             assertEquals(Optional.of(Device.MOUSE), cause.context(CauseKeys.DEVICE));
             assertEquals(Optional.of(MouseButton.LEFT), cause.context(CauseKeys.BUTTON));
@@ -114,9 +114,9 @@ class CauseTest {
             this.test.host().key(Key.SPACE, KeyAction.RELEASE, Modifiers.NONE);
 
             assertEquals(1, causes.size(), "space toggled the box");
-            assertInstanceOf(Origin.User.class, causes.getFirst().origin());
-            assertEquals(Optional.of(Device.KEYBOARD), causes.getFirst().context(CauseKeys.DEVICE));
-            assertTrue(causes.getFirst().context(CauseKeys.BUTTON).isEmpty(), "keys have no mouse button");
+            assertInstanceOf(Origin.User.class, causes.get(0).origin());
+            assertEquals(Optional.of(Device.KEYBOARD), causes.get(0).context(CauseKeys.DEVICE));
+            assertTrue(causes.get(0).context(CauseKeys.BUTTON).isEmpty(), "keys have no mouse button");
         }
 
         @Test
@@ -132,9 +132,9 @@ class CauseTest {
             clickCenterOf(this.test, second);
 
             assertEquals(1, causes.size(), "the first button reported its deselection");
-            assertEquals(new Origin.User(ANA), causes.getFirst().origin(), "the user's click is still the origin");
-            assertSame(group, causes.getFirst().first(RadioGroup.class).orElseThrow(), "the group deselected it");
-            assertSame(group, causes.getFirst().root().orElseThrow(), "the group is the direct cause");
+            assertEquals(new Origin.User(ANA), causes.get(0).origin(), "the user's click is still the origin");
+            assertSame(group, causes.get(0).first(RadioGroup.class).orElseThrow(), "the group deselected it");
+            assertSame(group, causes.get(0).root().orElseThrow(), "the group is the direct cause");
         }
 
         @Test
@@ -178,7 +178,7 @@ class CauseTest {
             final List<Origin> told = new ArrayList<>();
             box.onEvent(Toggle.TOGGLED, event -> told.add(event.origin()));
 
-            try (CauseFrame _ = this.ui.causes().pushFrame().put(CauseKeys.ORIGIN, new Origin.Remote("Ben"))) {
+            try (CauseFrame ignored = this.ui.causes().pushFrame().put(CauseKeys.ORIGIN, new Origin.Remote("Ben"))) {
                 box.setSelected(true);
             }
 
@@ -192,7 +192,7 @@ class CauseTest {
             this.test.show(this.ui.absolutePanel().add(counter));
             counter.onEvent(EventSystemTest.Counter.STEP, event -> event.cancel());
 
-            try (CauseFrame _ = this.ui.causes().pushFrame().put(CauseKeys.ORIGIN, new Origin.Remote("Ben"))) {
+            try (CauseFrame ignored = this.ui.causes().pushFrame().put(CauseKeys.ORIGIN, new Origin.Remote("Ben"))) {
                 counter.remoteStep();
             }
 
@@ -226,8 +226,8 @@ class CauseTest {
 
         @Test
         void anInnerFrameHidesAnOuterValueUntilItCloses() {
-            try (CauseFrame _ = this.stack.pushFrame().put(this.note, "outer")) {
-                try (CauseFrame _ = this.stack.pushFrame().put(this.note, "inner")) {
+            try (CauseFrame ignored = this.stack.pushFrame().put(this.note, "outer")) {
+                try (CauseFrame ignoredInner = this.stack.pushFrame().put(this.note, "inner")) {
                     assertEquals(Optional.of("inner"), this.stack.context(this.note));
                     assertEquals(Optional.of("inner"), this.stack.current().context(this.note));
                 }
@@ -241,7 +241,7 @@ class CauseTest {
         void theChainListsTheMostRecentFirst() {
             try (CauseFrame outer = this.stack.pushFrame().push("a")) {
                 outer.push("b");
-                try (CauseFrame _ = this.stack.pushFrame().push(1)) {
+                try (CauseFrame ignored = this.stack.pushFrame().push(1)) {
                     final Cause cause = this.stack.current();
                     assertEquals(List.of(1, "b", "a"), cause.all());
                     assertEquals(Optional.of(1), cause.root());
@@ -303,7 +303,7 @@ class CauseTest {
             clickCenterOf(test, box);
 
             assertTrue(recording.pushed > 0, "the host opened its frames on the platform's stack");
-            assertInstanceOf(Origin.User.class, told.getFirst(), "events read the platform's stack");
+            assertInstanceOf(Origin.User.class, told.get(0), "events read the platform's stack");
         }
     }
 

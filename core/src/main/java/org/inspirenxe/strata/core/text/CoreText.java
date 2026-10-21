@@ -281,7 +281,7 @@ sealed interface CoreText extends Text {
                     flat.add(Objects.requireNonNull(part, "part"));
                 }
             }
-            return flat.size() == 1 ? flat.getFirst() : new Concat(flat);
+            return flat.size() == 1 ? flat.get(0) : new Concat(flat);
         }
 
         @Override
