@@ -16,13 +16,16 @@
 package org.inspirenxe.strata.api.control.collection;
 
 import org.inspirenxe.strata.api.component.Component;
+import org.inspirenxe.strata.api.component.Focusable;
 import org.inspirenxe.strata.api.component.HasCursor;
 import org.inspirenxe.strata.api.component.HasTooltip;
 import org.inspirenxe.strata.api.component.Tooltip;
 import org.inspirenxe.strata.api.control.attribute.item.Activatable;
 import org.inspirenxe.strata.api.control.attribute.item.CellSource;
 import org.inspirenxe.strata.api.control.attribute.item.ItemSource;
-import org.inspirenxe.strata.api.control.attribute.item.SingleSelection;
+import org.inspirenxe.strata.api.control.attribute.item.MultiSelection;
+import org.inspirenxe.strata.api.control.attribute.item.Selection;
+import org.inspirenxe.strata.api.control.attribute.item.SelectionMode;
 import org.inspirenxe.strata.api.event.EventType;
 import org.inspirenxe.strata.api.event.control.ValueEvent;
 import org.inspirenxe.strata.api.event.control.ValueRequestEvent;
@@ -34,34 +37,57 @@ import java.util.Objects;
 import java.util.function.Function;
 
 /**
- * A grid of equal square cells over a list of items, such as an inventory, an icon picker or an image gallery.
+ * A grid of equal square cells over a list of items, such as an icon picker, an image gallery or a palette.
  *
  * <p>There is one cell per entry in the items, null entries being empty cells, laid out left to right in rows of
  * {@linkplain #setColumns a set number of columns}. Each filled cell shows the component its cell factory makes for
  * the item, inset by the theme's {@value #STYLE_CELL_PADDING}, one unit by default, and the tooltip its tooltip
- * function gives. Cells are rebuilt when the items, the
- * cell factory or the tooltip function change. Unlike a list, the grid is positional: {@link #setItems} keeps the
- * selection on the same index, and {@link #setKeyFunction} only affects {@link #selectItem}, which finds filled
+ * function gives. Unlike a list, the grid is positional: {@link #setItems} keeps the selected cells that still
+ * exist, and {@link #setKeyFunction} only affects {@link #selectItem} and {@link #selectItems}, which find filled
  * cells only. {@code selectItem(null)} clears the selection; select an empty cell by its index.</p>
  *
- * <p>Clicking a cell with any button fires {@link #CLICK} and then {@link #CLICKED}, empty cells included, and
- * consumes the click. A {@linkplain #setSelectable selectable} grid also selects the cell clicked with the left
- * button. A double click with the left button activates the cell, or a single click with
- * {@link #setActivateOnClick}. The grid is not focusable, so it has no keyboard selection. The desired size is the
- * columns and rows of cells with the spacing between them.</p>
+ * <h2>Rows in view</h2>
+ * <p>The grid asks for the height of all its rows, but no more than it is offered. Given less, by a fixed or maximum
+ * height or by stretching, it builds cells only for the rows in view, as a {@link ListView} does, and drops a row's
+ * cells when it scrolls out, so a grid of thousands of pictures costs no more than a screenful. It then scrolls with
+ * the wheel and a scroll bar of its own, which reads the scroll bar keys of
+ * {@link org.inspirenxe.strata.api.layout.ScrollPanel}, and {@link #scrollY}, {@link #setScrollY} and
+ * {@link #scrollToIndex} work as on a list. Cells are built again when the items, the cell factory or the tooltip
+ * function change. Keep nothing in a cell that must survive scrolling.</p>
+ *
+ * <h2>Selection and input</h2>
+ * <ul>
+ *     <li>Clicking a cell with any button fires {@link #CLICK} and then {@link #CLICKED}, empty cells included, and
+ *     consumes the click. A {@linkplain #setSelectable selectable} grid also selects the cell clicked with the left
+ *     button first. In {@link SelectionMode#MULTIPLE} mode Control and a click adds or removes a cell, Shift and a
+ *     click selects the range from the anchor in cell order, and Control+A selects every cell, as in a list. A double
+ *     click with the left button activates the cell, or a single click with {@link #setActivateOnClick}.</li>
+ *     <li>The grid is focusable and tabbable, and has a cursor cell while focused, ringed with
+ *     {@value #STYLE_FOCUS}. It starts on the selected cell, or the first. The arrows move it cell by cell, Left and
+ *     Right going on across the ends of rows; Home and End move it to the ends of its row, and with Control to the
+ *     first and last cell; Page Up and Page Down move it by the rows in view. The grid scrolls to keep it in view.
+ *     Enter and Space ask {@link Activatable#ACTIVATE} for it. While the grid is selectable the cursor selects as it
+ *     moves, and Shift extends the range in {@link SelectionMode#MULTIPLE} mode. Held keys repeat, except Enter and
+ *     Space. Keys with Alt are left alone, and so are keys with Control other than Home, End and Control+A.</li>
+ * </ul>
+ *
+ * <p>The desired size is the columns and rows of cells with the spacing between them, and the scroll bar's gutter
+ * while the rows overflow the height offered.</p>
  *
  * <h2>Events</h2>
  * <ul>
- *     <li>{@link SingleSelection#SELECT}: Asked before the user changes the selection: a left click on a cell other
- *     than the selected one, when the grid is selectable. The value is the cell about to be selected. A handler may
- *     rewrite it to another cell or to -1, which clears the selection; any other index outside the cells is ignored.
- *     Fires only for the user's actions.</li>
- *     <li>{@link SingleSelection#SELECTED}: Told after the selection changed. The value is the selected cell, or -1
- *     when none is selected, and the previous value is the cell before. Fires for changes made from code too,
- *     including {@link #setItems} clearing a selection whose cell no longer exists.</li>
- *     <li>{@link Activatable#ACTIVATE}: Asked before the user activates a cell, empty cells included. It fires after
- *     the click's {@link #CLICK}. The value is the cell. A handler may rewrite it to another cell; an index outside
- *     the cells is ignored. Fires only for the user's actions.</li>
+ *     <li>{@link Selection#SELECT}: Asked before the user changes the selected cell in {@link SelectionMode#SINGLE}
+ *     mode: a left click on a cell other than the selected one, or a move of the cursor, when the grid is selectable.
+ *     The value is the cell about to be selected. A handler may rewrite it to another cell or to -1, which clears the
+ *     selection; any other index outside the cells is ignored. Fires only for the user's actions.</li>
+ *     <li>{@link MultiSelection#SELECT_MANY}: Asked instead of {@code SELECT} in {@link SelectionMode#MULTIPLE}
+ *     mode, with the cells about to be selected, as in a {@link ListView}.</li>
+ *     <li>{@link Selection#SELECTED} and {@link MultiSelection#SELECTED_MANY}: Told after the current cell or the
+ *     selected cells changed, from the user or code, including {@link #setItems} dropping cells that no longer
+ *     exist.</li>
+ *     <li>{@link Activatable#ACTIVATE}: Asked before the user activates a cell, empty cells included: after the
+ *     click's {@link #CLICK}, or for Enter or Space on the cursor cell. The value is the cell. A handler may rewrite
+ *     it to another cell; an index outside the cells is ignored. Fires only for the user's actions.</li>
  *     <li>{@link Activatable#ACTIVATED}: Told after the user activated a cell. The value is the cell, and the previous
  *     value is the same cell.</li>
  * </ul>
@@ -71,18 +97,23 @@ import java.util.function.Function;
  *     <li>{@value #STYLE_CELL} (paint, required): each cell, behind its content.</li>
  *     <li>{@value #STYLE_CELL_HOVERED} (paint, optional): drawn over the cell under the pointer, in front of its
  *     content. Nothing if missing.</li>
- *     <li>{@value #STYLE_CELL_SELECTED} (paint, optional): drawn over the selected cell, in front of its content.
+ *     <li>{@value #STYLE_CELL_SELECTED} (paint, optional): drawn over each selected cell, in front of its content.
  *     Falls back to {@value #STYLE_CELL_HOVERED}.</li>
+ *     <li>{@value #STYLE_FOCUS} (paint, optional): drawn over the cursor cell while the grid has focus. Falls back to
+ *     {@value org.inspirenxe.strata.api.control.button.Button#STYLE_FOCUS}.</li>
  *     <li>{@value #STYLE_CELL_PADDING} (insets, optional): the space between a cell's edges and the component its
  *     cell factory made. Defaults to 1 on every side.</li>
+ *     <li>The scroll bar keys of {@link org.inspirenxe.strata.api.layout.ScrollPanel}.</li>
  * </ul>
  *
  * <pre>{@code
- * GridView<Item> inventory = factory.<Item>gridView(item -> factory.image(item.icon()))
- *         .setColumns(9)
- *         .setTooltips(item -> Tooltip.text(item.name()))
- *         .setItems(storage.contents())
- *         .onEvent(GridView.CLICKED, e -> this.take(e.value().index(), e.value().button()));
+ * GridView<Picture> gallery = factory.<Picture>gridView(picture -> factory.image(picture.thumbnail()))
+ *         .setColumns(6)
+ *         .setCellSize(48)
+ *         .setTooltips(picture -> Tooltip.text(picture.title()))
+ *         .setItems(album.pictures())
+ *         .onEvent(Activatable.ACTIVATED, e -> this.open(e.value()));
+ * gallery.setHeight(200);
  * }</pre>
  *
  * <p>Get one from {@link org.inspirenxe.strata.api.ComponentFactory#gridView}. Do not implement this
@@ -90,9 +121,14 @@ import java.util.function.Function;
  *
  * @param <T> the type of the items
  */
-public interface GridView<T> extends Component<GridView<T>>, HasCursor<GridView<T>>, HasTooltip<GridView<T>>,
-        ItemSource<T, GridView<T>>, CellSource<T, GridView<T>>,
-        SingleSelection<T, GridView<T>>, Activatable<GridView<T>> {
+public interface GridView<T> extends Component<GridView<T>>, Focusable<GridView<T>>, HasCursor<GridView<T>>,
+        HasTooltip<GridView<T>>, ItemSource<T, GridView<T>>, CellSource<T, GridView<T>>,
+        MultiSelection<T, GridView<T>>, Activatable<GridView<T>> {
+    /**
+     * Style key drawn over the cursor cell while the grid has focus (paint, optional). Falls back to
+     * {@value org.inspirenxe.strata.api.control.button.Button#STYLE_FOCUS}.
+     */
+    String STYLE_FOCUS = "grid.focus";
     /**
      * Style key for each cell (paint, required).
      */
@@ -130,10 +166,11 @@ public interface GridView<T> extends Component<GridView<T>>, HasCursor<GridView<
     int DEFAULT_COLUMNS = 9;
     /**
      * Asked when the user clicks a cell with any button, empty cells included. For a left click that changes the
-     * selection it fires after {@link SingleSelection#SELECT}, whether or not that request was canceled. The value
+     * selection it fires after {@link Selection#SELECT} or {@link MultiSelection#SELECT_MANY}, whether or not that
+     * request was canceled. The value
      * is the cell, its item, the button and the modifiers. A handler may rewrite it; the grid reports the final click
      * with {@link #CLICKED} as given, unless its index is not a cell's, which is ignored. Canceling it skips
-     * {@link #CLICKED}. If a {@link SingleSelection#SELECT} handler replaced the items so that the clicked cell is
+     * {@link #CLICKED}. If a selection handler replaced the items so that the clicked cell is
      * gone, neither this nor {@link Activatable#ACTIVATE} fires for the click. Fires only for the user's actions.
      */
     EventType<ValueRequestEvent<GridView<?>, Click<?>>> CLICK = EventType.valueRequest("grid_view.click");
@@ -152,8 +189,8 @@ public interface GridView<T> extends Component<GridView<T>>, HasCursor<GridView<
     List<T> items();
 
     /**
-     * Replaces the items. The selection is kept if its index still exists, and cleared otherwise, which fires
-     * {@link SingleSelection#SELECTED}.
+     * Replaces the items. Selected cells whose index still exists stay selected and the rest leave the selection,
+     * which fires {@link MultiSelection#SELECTED_MANY} and, if the current cell went, {@link Selection#SELECTED}.
      *
      * @param items the items, one per cell, copied; null entries are empty cells
      * @return this grid
@@ -261,8 +298,8 @@ public interface GridView<T> extends Component<GridView<T>>, HasCursor<GridView<
     GridView<T> setSelectable(boolean selectable);
 
     /**
-     * Selects a cell, whether or not the grid is selectable. {@link SingleSelection#SELECTED} fires if the selection
-     * changed.
+     * Selects a cell alone, whether or not the grid is selectable, and scrolls it into view.
+     * {@link MultiSelection#SELECTED_MANY} and {@link Selection#SELECTED} fire if the selection changed.
      *
      * @param index the cell index, or -1 to select none
      * @return this grid
@@ -270,6 +307,33 @@ public interface GridView<T> extends Component<GridView<T>>, HasCursor<GridView<
      */
     @Override
     GridView<T> select(int index);
+
+    /**
+     * Returns the vertical offset, as {@link org.inspirenxe.strata.api.control.attribute.item.RowView#scrollY()}
+     * describes for a list. It stays 0 while every row fits.
+     *
+     * @return how far the rows are scrolled down, in UI units
+     */
+    float scrollY();
+
+    /**
+     * Scrolls to an offset, as {@link org.inspirenxe.strata.api.control.attribute.item.RowView#setScrollY} describes
+     * for a list.
+     *
+     * @param scrollY the vertical offset
+     * @return this grid
+     * @throws IllegalArgumentException if the offset is NaN
+     */
+    GridView<T> setScrollY(float scrollY);
+
+    /**
+     * Scrolls the least distance that shows a cell's row, at the next layout.
+     *
+     * @param index the cell index
+     * @return this grid
+     * @throws IndexOutOfBoundsException if there is no such cell
+     */
+    GridView<T> scrollToIndex(int index);
 
     /**
      * Returns the cell under the pointer.

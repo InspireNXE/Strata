@@ -17,26 +17,32 @@ package org.inspirenxe.strata.core;
 
 import org.inspirenxe.strata.api.ComponentFactory;
 import org.inspirenxe.strata.api.component.Focusable;
+import org.inspirenxe.strata.api.control.attribute.item.Activatable;
 import org.inspirenxe.strata.api.control.attribute.item.MultiSelection;
 import org.inspirenxe.strata.api.control.attribute.item.Selection;
 import org.inspirenxe.strata.api.control.attribute.item.SelectionMode;
 import org.inspirenxe.strata.api.control.button.Button;
 import org.inspirenxe.strata.api.control.collection.ComboBox;
+import org.inspirenxe.strata.api.control.collection.GridView;
 import org.inspirenxe.strata.api.control.collection.ListView;
 import org.inspirenxe.strata.api.control.collection.TableView;
 import org.inspirenxe.strata.api.control.collection.TreeView;
 import org.inspirenxe.strata.api.control.field.TextBox;
 import org.inspirenxe.strata.api.input.Key;
 import org.inspirenxe.strata.api.input.KeyAction;
+import org.inspirenxe.strata.api.input.Modifier;
 import org.inspirenxe.strata.api.input.Modifiers;
 import org.inspirenxe.strata.api.layout.AbsolutePanel;
 import org.inspirenxe.strata.api.layout.GridLength;
+import org.inspirenxe.strata.api.theme.Paint;
+import org.inspirenxe.strata.api.theme.Themes;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.IntStream;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -201,6 +207,84 @@ class CollectionKeyboardTest {
             CollectionKeyboardTest.this.type("d");
             assertEquals(-1, list.selectedIndex());
             assertEquals("d", boxes.getFirst().text());
+        }
+    }
+
+    @Nested
+    class GridKeys {
+        private GridView<Integer> grid;
+
+        private void show(final boolean selectable) {
+            final ComponentFactory ui = CollectionKeyboardTest.this.ui;
+            this.grid = ui.<Integer>gridView(n -> ui.label(String.valueOf(n))).setColumns(4).setCellSize(20)
+                    .setItems(IntStream.range(0, 10).boxed().toList()).setSelectable(selectable)
+                    .onEvent(Selection.SELECT, e -> CollectionKeyboardTest.this.heard.add("select " + e.value()))
+                    .onEvent(Activatable.ACTIVATE, e -> CollectionKeyboardTest.this.heard.add("activate " + e.value()));
+            CollectionKeyboardTest.this.test.show(CollectionKeyboardTest.this.panel.add(this.grid, 0, 0));
+            assertTrue(this.grid.requestFocus());
+        }
+
+        private void key(final Key key, final Modifier... modifiers) {
+            CollectionKeyboardTest.this.test.host().key(key, KeyAction.PRESS,
+                    modifiers.length == 0 ? Modifiers.NONE : Modifiers.of(modifiers));
+        }
+
+        @Test
+        void theArrowsMoveTheCursorAndSelectAsItMoves() {
+            this.show(true);
+            this.key(Key.RIGHT);
+            this.key(Key.DOWN);
+            this.key(Key.DOWN);
+            assertEquals(9, this.grid.selectedIndex());
+            this.key(Key.DOWN);
+            assertEquals(9, this.grid.selectedIndex());
+            this.key(Key.HOME);
+            assertEquals(8, this.grid.selectedIndex());
+            this.key(Key.LEFT);
+            assertEquals(7, this.grid.selectedIndex());
+            this.key(Key.END, Modifier.CONTROL);
+            assertEquals(9, this.grid.selectedIndex());
+            this.key(Key.HOME, Modifier.CONTROL);
+            assertEquals(0, this.grid.selectedIndex());
+            assertEquals(List.of("select 1", "select 5", "select 9", "select 8", "select 7", "select 9", "select 0"),
+                    CollectionKeyboardTest.this.heard);
+        }
+
+        @Test
+        void enterActivatesTheCursorCellWithoutSelectingAnUnselectableGrid() {
+            this.show(false);
+            this.key(Key.RIGHT);
+            this.key(Key.RIGHT);
+            this.key(Key.ENTER);
+            this.key(Key.SPACE);
+            assertEquals(-1, this.grid.selectedIndex());
+            assertEquals(List.of("activate 2", "activate 2"), CollectionKeyboardTest.this.heard);
+        }
+
+        @Test
+        void shiftExtendsTheRangeInMultipleMode() {
+            this.show(true);
+            this.grid.setSelectionMode(SelectionMode.MULTIPLE);
+            this.key(Key.RIGHT);
+            this.key(Key.DOWN, Modifier.SHIFT);
+            assertEquals(List.of(1, 2, 3, 4, 5), this.grid.selectedIndexes());
+            this.key(Key.A, Modifier.CONTROL);
+            assertEquals(10, this.grid.selectedIndexes().size());
+        }
+
+        @Test
+        void theCursorIsRingedWhileTheGridHasFocus() {
+            final TestHost host = new TestHost(new TestPlatform(), Themes.flat().toBuilder()
+                    .paint(GridView.STYLE_FOCUS, Paint.solid(0xFF123456)).build(), 300, 300);
+            final GridView<Integer> grid = host.factory().<Integer>gridView().setItems(List.of(1, 2, 3));
+            host.show(host.factory().absolutePanel().add(grid, 0, 0));
+            final DrawLog before = new DrawLog();
+            host.host().render(before);
+            assertTrue(before.lines().stream().noneMatch(line -> line.endsWith("#FF123456")));
+            grid.requestFocus();
+            final DrawLog after = new DrawLog();
+            host.host().render(after);
+            assertEquals(1, after.lines().stream().filter(line -> line.endsWith("#FF123456")).count());
         }
     }
 
