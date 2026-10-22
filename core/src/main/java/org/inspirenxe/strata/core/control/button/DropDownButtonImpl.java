@@ -38,13 +38,13 @@ import org.inspirenxe.strata.core.control.CorePopup;
 import org.inspirenxe.strata.core.control.RectCache;
 import org.inspirenxe.strata.core.control.Rings;
 import org.inspirenxe.strata.core.control.collection.ComboBoxImpl;
+import org.inspirenxe.strata.core.frame.FrameRequests;
 import org.inspirenxe.strata.core.node.BuiltInComponent;
 import org.inspirenxe.strata.core.node.ComponentFactoryImpl;
 
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
-import org.inspirenxe.strata.core.frame.FrameRequests;
 
 /**
  * The core {@link DropDownButton}. It shares its keys, caption, icon and measuring with {@link ButtonImpl}, and adds

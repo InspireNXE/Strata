@@ -29,6 +29,7 @@ import org.inspirenxe.strata.api.theme.SpriteId;
 import org.inspirenxe.strata.api.theme.Theme;
 import org.inspirenxe.strata.api.visual.Visual;
 import org.inspirenxe.strata.core.control.Activation;
+import org.inspirenxe.strata.core.frame.FrameRequests;
 import org.inspirenxe.strata.core.node.BuiltInComponent;
 import org.inspirenxe.strata.core.node.ComponentFactoryImpl;
 import org.inspirenxe.strata.core.text.TextLine;
@@ -36,7 +37,6 @@ import org.inspirenxe.strata.core.text.TextLine;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
-import org.inspirenxe.strata.core.frame.FrameRequests;
 
 /**
  * The core {@link Button}. Its face is the disabled paint when disabled, the pressed paint while held under the

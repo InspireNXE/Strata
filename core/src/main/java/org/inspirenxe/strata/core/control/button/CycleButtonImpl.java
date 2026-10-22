@@ -35,6 +35,7 @@ import org.inspirenxe.strata.api.theme.Theme;
 import org.inspirenxe.strata.core.control.Caption;
 import org.inspirenxe.strata.core.control.Activation;
 import org.inspirenxe.strata.core.control.Rings;
+import org.inspirenxe.strata.core.frame.FrameRequests;
 import org.inspirenxe.strata.core.node.BuiltInComponent;
 import org.inspirenxe.strata.core.node.ComponentFactoryImpl;
 import org.inspirenxe.strata.core.text.TextLine;
@@ -44,7 +45,6 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.function.Function;
-import org.inspirenxe.strata.core.frame.FrameRequests;
 
 /**
  * The core {@link CycleButton}. It draws with the {@link Button} theme keys: the disabled paint when disabled, the

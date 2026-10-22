@@ -39,6 +39,7 @@ import org.inspirenxe.strata.api.theme.Theme;
 import org.inspirenxe.strata.core.control.Activation;
 import org.inspirenxe.strata.core.control.Caption;
 import org.inspirenxe.strata.core.control.RectCache;
+import org.inspirenxe.strata.core.frame.FrameRequests;
 import org.inspirenxe.strata.core.node.BuiltInComponent;
 import org.inspirenxe.strata.core.node.BuiltInComposite;
 import org.inspirenxe.strata.core.node.ComponentFactoryImpl;
@@ -49,7 +50,6 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
-import org.inspirenxe.strata.core.frame.FrameRequests;
 
 /**
  * The core {@link TabBar}. Each {@link TabImpl} is drawn by a private child component, so it can have its own hover
