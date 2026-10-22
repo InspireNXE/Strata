@@ -49,7 +49,8 @@ import java.util.function.Consumer;
  * with its submenus, and focus goes back to the menu it opened from. These keys work with any modifiers held, and the
  * menu consumes them. A left click on an item chooses it. Choosing an item, by click or key, closes the whole chain of menus and then runs the item's action.
  * Clicking outside closes the menus. When the first menu of a chain closes, focus goes back to where it was before
- * the chain opened.</p>
+ * the chain opened. Items are chosen on the click even on a platform whose conventions say buttons act on the press,
+ * since those conventions cover buttons, checkboxes, radio buttons, toggles and tabs.</p>
  *
  * <p>A menu is a component only so it can sit in a popup. Open it with {@link #open} or {@link #openAt} rather than
  * adding it to a container, or give it to a {@link org.inspirenxe.strata.api.control.button.DropDownButton}, which

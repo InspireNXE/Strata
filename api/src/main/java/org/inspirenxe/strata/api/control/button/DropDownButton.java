@@ -42,7 +42,9 @@ import java.util.Optional;
  * button when the user opened it. A menu opened by a key highlights its first item. When the popup closes, for any
  * reason, the button reports {@link Closable#CLOSED} after the popup's own. A click on the button while its popup is
  * open closes the popup; with a popup that closes on a press outside, the press that lands on the button closes it.
- * The button never asks {@link Closable#CLOSE}.</p>
+ * The button never asks {@link Closable#CLOSE}. It acts on the click even on a platform whose conventions say
+ * buttons act on the press, since those conventions cover push buttons, checkboxes, radio buttons, toggles and tabs,
+ * and not controls that open a popup.</p>
  *
  * <p>A menu opens at least as wide as the button, and a flyout at its content's size. With no popup, or one that has
  * nothing to show (a menu with no items, a flyout with no content), the button asks nothing and stays closed. A popup

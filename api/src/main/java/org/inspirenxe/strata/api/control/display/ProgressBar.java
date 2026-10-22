@@ -160,7 +160,7 @@ public interface ProgressBar extends Component<ProgressBar>, HasCursor<ProgressB
     /**
      * Sets the caption drawn centered on the bar.
      *
-     * @param text the caption, or an empty string for none
+     * @param text the caption, or {@link Text#empty()} for none
      * @return this bar
      */
     @Override

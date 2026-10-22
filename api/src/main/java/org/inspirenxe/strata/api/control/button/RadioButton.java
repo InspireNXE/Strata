@@ -29,8 +29,9 @@ import java.util.Objects;
 /**
  * One choice in a {@link RadioGroup}: a box that is selected or not, with a caption to its right.
  *
- * <p>A left click selects it, and so does Enter, keypad Enter or Space while it has focus (not repeated). Clicking a
- * selected button leaves it selected. Arrow keys move the selection through the group, as {@link RadioGroup}
+ * <p>A left click selects it, and so does Enter, keypad Enter or Space while it has focus (not repeated). On a
+ * platform whose conventions say radio buttons act on the press, the left press selects it instead of the click.
+ * Clicking a selected button leaves it selected. Arrow keys move the selection through the group, as {@link RadioGroup}
  * describes. It consumes those inputs. Each selection by the user fires {@link Toggle#TOGGLE} with true on the
  * button about to be selected. Every change fires {@link Toggle#TOGGLED} on each button whose state changed, then
  * {@link SingleSelection#SELECTED} on the group. A disabled button does none of this and draws its disabled

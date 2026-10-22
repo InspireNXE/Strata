@@ -30,7 +30,8 @@ import java.util.Objects;
  * caption to its right.
  *
  * <p>A left click anywhere on it flips it, and so does Enter, keypad Enter or Space while it has focus (not
- * repeated). It consumes those inputs. Each flip by the user fires {@link Toggle#TOGGLE}, and every change fires
+ * repeated). On a platform whose conventions say toggles act on the press, the left press flips it instead of the
+ * click. It consumes those inputs. Each flip by the user fires {@link Toggle#TOGGLE}, and every change fires
  * {@link Toggle#TOGGLED}. A disabled switch does neither and draws its disabled look.</p>
  *
  * <p>It is focusable and tabbable and shows the hand cursor. With the theme's default paddings, the track is the

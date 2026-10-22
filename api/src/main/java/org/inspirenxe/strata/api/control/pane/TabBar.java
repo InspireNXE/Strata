@@ -33,7 +33,8 @@ import java.util.Optional;
  * <p>Tabs share the bar's width equally, with {@linkplain #setSpacing the spacing} between them; when the width
  * left for them is a whole number, each tab is a whole number wide and the spare units go one each to the first
  * tabs. They are one line
- * plus 7 units tall. A left click on an enabled tab selects it. While the bar has focus, Left and Right select the
+ * plus 7 units tall. A left click on an enabled tab selects it, or the left press on a platform whose conventions say
+ * tabs act on the press. While the bar has focus, Left and Right select the
  * previous and next enabled tab, without wrapping, and repeat while held; the bar consumes them even at the ends. Each tab can have its own tooltip, such as one that says why it is disabled. The
  * first tab added is selected; a bar with no tabs has none.</p>
  *

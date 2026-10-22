@@ -34,7 +34,8 @@ import java.util.Objects;
  * A push button with a text caption, an icon, or both.
  *
  * <p>The button is pressed when it is left-clicked, or when it has focus and Enter or Space is pressed (not
- * repeated). It consumes those inputs. Each press fires {@link #PRESS}, then {@link #PRESSED} unless a handler
+ * repeated). On a platform whose conventions say buttons act on the press, the left press presses it instead of the
+ * click. It consumes those inputs. Each press fires {@link #PRESS}, then {@link #PRESSED} unless a handler
  * canceled the request. A disabled button does neither and draws its disabled look.</p>
  *
  * <p>It is focusable and tabbable, shows the hand cursor, and has a minimum width of 20. Its desired size is the

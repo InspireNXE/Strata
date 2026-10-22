@@ -38,13 +38,18 @@ import java.util.Optional;
  * {@link #selected()} returns the entry at the selected index, as each control describes.</p>
  *
  * <p>Handle {@link #SELECT} to refuse or change what the user picks, and {@link #SELECTED} to react to every
- * change. Both carry indexes. One handler on a form hears every selection in it:</p>
+ * change. Both carry indexes. One handler on a form hears every selection of the controls in it:</p>
  *
  * <pre>{@code
  * form.onEvent(Selection.SELECTED, event -> updateButtons());
  * }</pre>
  *
  * <p>Bind {@link #selectedItem()} or {@link #SELECTED_INDEX} to keep the current entry in step with a model.</p>
+ *
+ * <p>A radio group is the exception to both: it is not a component, so its events reach only the handlers
+ * registered on the group itself, not a form around its buttons, and it cannot be bound. Handle {@link #SELECTED}
+ * on the group, and set the model from there, as
+ * {@link org.inspirenxe.strata.api.control.button.RadioGroup} shows.</p>
  *
  * <p>Do not implement this interface.</p>
  *

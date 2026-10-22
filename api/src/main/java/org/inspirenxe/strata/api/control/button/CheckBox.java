@@ -33,7 +33,8 @@ import java.util.Objects;
  * A box that is checked, empty or mixed, with a caption to its right.
  *
  * <p>A left click anywhere on the checkbox changes it, and so does Enter, keypad Enter or Space while it has focus
- * (not repeated). It consumes those inputs. A change checks an empty or mixed box and empties a checked one. With
+ * (not repeated). On a platform whose conventions say checkboxes act on the press, the left press changes it instead
+ * of the click. It consumes those inputs. A change checks an empty or mixed box and empties a checked one. With
  * {@link #setAllowsMixed(boolean) mixed allowed}, the user's changes cycle empty, checked, mixed instead. Code sets
  * the mixed state with {@link #setState}, for example on a box that stands for several others while only some of them
  * are checked. A disabled checkbox takes no changes from the user and draws its disabled look.</p>

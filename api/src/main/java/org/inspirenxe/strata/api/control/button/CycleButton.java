@@ -32,7 +32,8 @@ import java.util.function.Function;
  *
  * <p>A left click, or Enter, keypad Enter or Space while the button has focus (not repeated), selects the next value,
  * and the first after the last. A right click, or Shift held with any of those, selects the previous value, and the
- * last before the first.
+ * last before the first. On a platform whose conventions say buttons act on the press, the press of either button
+ * steps instead of the click.
  * The button consumes those inputs. A disabled button ignores them and draws its disabled face. A step that lands on
  * the value already selected, as with a single value, changes nothing and fires no events.</p>
  *
@@ -90,7 +91,7 @@ public interface CycleButton<T> extends Component<CycleButton<T>>, Focusable<Cyc
     /**
      * Replaces the label that comes before the value. A new layout runs.
      *
-     * @param text the label, on one line, or an empty string for none
+     * @param text the label, on one line, or {@link Text#empty()} for none
      * @return this button
      */
     @Override
