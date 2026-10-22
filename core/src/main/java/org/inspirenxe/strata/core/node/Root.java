@@ -77,14 +77,17 @@ import org.inspirenxe.strata.core.state.BindingQueue;
 import org.inspirenxe.strata.core.state.Watch;
 import org.inspirenxe.strata.core.text.Mnemonics;
 import org.inspirenxe.strata.spi.Canvas;
+import org.inspirenxe.strata.spi.InputContext;
 import org.inspirenxe.strata.spi.Platform;
 
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
-import java.util.EnumMap;
 import java.util.EnumSet;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.IdentityHashMap;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -124,6 +127,16 @@ import java.util.function.Consumer;
  * a node disabled or enabled under a still pointer loses or gains its hover then. A right click that nothing
  * consumed, or a right press where buttons act on the press, opens the context menu of the pressed node or its
  * nearest ancestor that has one, at the pointer.</p>
+ *
+ * <p>Devices: every pointer and key input runs with the device of its {@link InputContext}, {@link Device#MOUSE}
+ * and {@link Device#KEYBOARD} for the forms without one, and pointer events carry its pointer id and pressure. Each
+ * pointer id has its own presses, drags and click counts. A touch hovers nothing: its press hits the node under it,
+ * shows no hover face or tooltip, and its moves drag only its own presses. A first touch held within the drag
+ * threshold for {@link #LONG_PRESS_MILLIS} opens the context menu where it went down, on the first frame rendered
+ * after that time, and its release then clicks nothing. A touch that starts to drag while another is down ends both
+ * presses with no click and turns them into a scroll: each move scrolls the node under the midpoint of the first
+ * two touches by how far the midpoint moved, a {@link ScrollKind#PRECISE} notch per {@link #TOUCH_SCROLL_UNITS}
+ * units, until every touch is up.</p>
  *
  * <p>Transfers: a drag start handler may make its drag carry a transfer (see {@link TransferDrag}). The press then
  * belongs to the source, the node that started it, so the drag survives the pressed node leaving the tree, as a
@@ -183,16 +196,30 @@ public final class Root {
      * How far a drag image sits right of and below the pointer, in UI units.
      */
     public static final float DRAG_IMAGE_OFFSET = 8f;
+    /**
+     * How long, in milliseconds, a first touch held within the drag threshold takes to open the context menu.
+     */
+    public static final long LONG_PRESS_MILLIS = 500L;
+    /**
+     * How far two touches that move together move, in UI units, to scroll one wheel notch.
+     */
+    public static final float TOUCH_SCROLL_UNITS = 10f;
 
     private final Platform platform;
     private final ComponentFactoryImpl ui;
     private final LayoutPass layoutPass;
     private final CanvasPainter painter;
-    private final ClickCounter clickCounter;
+    // Each pointer's own click counts
+    private final Map<Integer, ClickCounter> clickCounters;
     private final KeyRepeater keyRepeater;
-    private final Map<MouseButton, Press> presses;
+    private final Map<PressKey, Press> presses;
     // Buttons whose press closed popups or hit a dialog's backdrop, so their release is swallowed too
-    private final Set<MouseButton> swallowedReleases;
+    private final Set<PressKey> swallowedReleases;
+    // The device, pointer and pressure of the pointer input being handled, which pointer events carry
+    private InputContext pointerContext = InputContext.MOUSE;
+    // The touches that are down, by pointer id, each with where it is, and whether two of them scroll together
+    private final Map<Integer, float[]> touches;
+    private boolean touchScroll;
     private final List<Layer> layers;
     // The layers being painted, copied each frame so a paint handler can close an overlay
     private final List<Layer> paintLayers;
@@ -267,10 +294,11 @@ public final class Root {
         final InlineMetrics metrics = InlineMetrics.of(platform.textMetrics());
         this.layoutPass = new LayoutPass(ui, metrics);
         this.painter = new CanvasPainter(metrics);
-        this.clickCounter = new ClickCounter();
+        this.clickCounters = new HashMap<>();
         this.keyRepeater = new KeyRepeater();
-        this.presses = new EnumMap<>(MouseButton.class);
-        this.swallowedReleases = EnumSet.noneOf(MouseButton.class);
+        this.presses = new LinkedHashMap<>();
+        this.swallowedReleases = new HashSet<>();
+        this.touches = new LinkedHashMap<>();
         this.layers = new ArrayList<>();
         this.paintLayers = new ArrayList<>();
         this.arrangeRequests = new ArrayList<>();
@@ -305,6 +333,21 @@ public final class Root {
      */
     ComponentFactoryImpl factory() {
         return this.ui;
+    }
+
+    /**
+     * Gives a pointer event the pointer and pressure of the input being handled.
+     */
+    <E extends PointerEventImpl> E at(final E event) {
+        event.setPointer(this.pointerContext.pointerId(), this.pointerContext.pressure());
+        return event;
+    }
+
+    /**
+     * Returns whether a device's pointer hovers: the mouse's and a pen's do, a touch's does not.
+     */
+    private static boolean hovers(final InputContext context) {
+        return context.device() != Device.TOUCH;
     }
 
     /**
@@ -1093,6 +1136,7 @@ public final class Root {
     public void render(final Canvas canvas) {
         this.frames.prune(this.platform.clock().nanoTime());
         this.pumpKeyRepeat();
+        this.pumpLongPress();
         this.expireToasts();
         this.showPendingTooltip();
         if (this.transferDrag != null) {
@@ -1283,29 +1327,65 @@ public final class Root {
      * @return true if a drag is in progress or the pointer is over a node
      */
     public boolean pointerMoved(final float x, final float y, final Modifiers modifiers) {
+        return this.pointerMoved(x, y, modifiers, InputContext.MOUSE);
+    }
+
+    /**
+     * Handles a pointer move from a device: as {@link #pointerMoved(float, float, Modifiers)} does for a pointer
+     * that hovers, while a touch drags only its own presses and, with another touch down, scrolls.
+     *
+     * @param x the pointer's x, in UI units
+     * @param y the pointer's y, in UI units
+     * @param modifiers the modifiers held
+     * @param context the device, pointer and pressure
+     * @return true if a drag is in progress, two touches scroll, or the pointer is over a node
+     */
+    public boolean pointerMoved(final float x, final float y, final Modifiers modifiers, final InputContext context) {
         this.frames.request();
-        try (CauseFrame _ = this.inputFrame(Device.MOUSE, modifiers)) {
+        final InputContext previous = this.pointerContext;
+        this.pointerContext = context;
+        try (CauseFrame _ = this.inputFrame(context.device(), modifiers)) {
             return this.handlePointerMoved(x, y, modifiers);
+        } finally {
+            this.pointerContext = previous;
         }
     }
 
     private boolean handlePointerMoved(final float x, final float y, final Modifiers modifiers) {
+        final InputContext context = this.pointerContext;
+        final boolean hovers = hovers(context);
         this.pointerX = x;
         this.pointerY = y;
-        this.pointerInside = true;
+        if (hovers) {
+            this.pointerInside = true;
+        }
         this.updateModifiers(modifiers, null, null);
+        if (!hovers && this.touchMoved(x, y, modifiers, context.pointerId())) {
+            return true;
+        }
 
         boolean dragging = false;
-        for (final Map.Entry<MouseButton, Press> entry : this.presses.entrySet()) {
+        boolean scrollStarts = false;
+        for (final Map.Entry<PressKey, Press> entry : this.presses.entrySet()) {
+            if (entry.getKey().pointer() != context.pointerId()) {
+                continue;
+            }
+            final MouseButton button = entry.getKey().button();
             final Press press = entry.getValue();
             final Node target = press.target;
             // Drags carry the button and click count of the press that started them, as presses and releases do
-            try (CauseFrame _ = this.ui.causes().pushFrame().put(CauseKeys.BUTTON, entry.getKey())
+            try (CauseFrame _ = this.ui.causes().pushFrame().put(CauseKeys.BUTTON, button)
                     .put(CauseKeys.CLICKS, press.clicks)) {
                 if (!press.dragging && (Math.abs(x - press.startX) > DRAG_THRESHOLD || Math.abs(y - press.startY) > DRAG_THRESHOLD)) {
+                    if (press.touch && this.touches.size() > 1) {
+                        // A touch that moves while another is down scrolls with it instead of dragging
+                        scrollStarts = true;
+                        break;
+                    }
+                    press.longPressAt = -1L;
                     press.dragging = true;
-                    final DragEventImpl start = new DragEventImpl(target.facade(), press.startX, press.startY,
-                            modifiers, entry.getKey(), press.clicks, press.startX, press.startY, 0f, 0f);
+                    final DragEventImpl start = this.at(new DragEventImpl(target.facade(), press.startX, press.startY,
+                            modifiers, button, press.clicks, press.startX, press.startY, 0f, 0f));
                     if (this.transferDrag == null) {
                         start.allowTransfer();
                     }
@@ -1318,21 +1398,128 @@ public final class Root {
                     press.transfer.moved(x, y, modifiers);
                     dragging = true;
                 } else if (press.dragging && target.root() == this) {
-                    target.fire(InputEvents.DRAG, new DragEventImpl(target.facade(), x, y, modifiers, entry.getKey(),
-                            press.clicks, press.startX, press.startY, x - press.lastX, y - press.lastY));
+                    target.fire(InputEvents.DRAG, this.at(new DragEventImpl(target.facade(), x, y, modifiers, button,
+                            press.clicks, press.startX, press.startY, x - press.lastX, y - press.lastY)));
                     dragging = true;
                 }
             }
             press.lastX = x;
             press.lastY = y;
         }
+        if (scrollStarts) {
+            this.startTouchScroll(modifiers);
+            this.touchMoved(x, y, modifiers, context.pointerId());
+            return true;
+        }
+        final float[] touch = hovers ? null : this.touches.get(context.pointerId());
+        if (touch != null) {
+            touch[0] = x;
+            touch[1] = y;
+        }
+        if (!hovers) {
+            return dragging || this.hitTest(x, y) != null;
+        }
 
         this.updateHover(x, y, modifiers);
         if (this.hovered != null && this.hoverLive) {
-            this.hovered.fire(InputEvents.POINTER_MOVE, new PointerEventImpl(this.hovered.facade(), x, y, modifiers));
+            this.hovered.fire(InputEvents.POINTER_MOVE, this.at(new PointerEventImpl(this.hovered.facade(), x, y, modifiers)));
         }
         this.updateTooltip();
         return dragging || this.hovered != null;
+    }
+
+    /**
+     * Records where a touch moved and, while two touches scroll together, scrolls by how far their midpoint moved.
+     *
+     * @return true if the move scrolled, so it starts and continues no drag
+     */
+    private boolean touchMoved(final float x, final float y, final Modifiers modifiers, final int pointer) {
+        final float[] at = this.touches.get(pointer);
+        if (at == null || !this.touchScroll) {
+            return false;
+        }
+        final float fromX = this.touchMidX();
+        final float fromY = this.touchMidY();
+        at[0] = x;
+        at[1] = y;
+        final float toX = this.touchMidX();
+        final float toY = this.touchMidY();
+        if (fromX != toX || fromY != toY) {
+            // Fingers moving down show what is above, as a wheel turned away from the user does
+            this.handleScroll(toX, toY, (toX - fromX) / TOUCH_SCROLL_UNITS, (toY - fromY) / TOUCH_SCROLL_UNITS,
+                    ScrollKind.PRECISE, modifiers, false);
+        }
+        return true;
+    }
+
+    private float touchMidX() {
+        float sum = 0f;
+        int count = 0;
+        for (final float[] at : this.touches.values()) {
+            sum += at[0];
+            if (++count == 2) {
+                break;
+            }
+        }
+        return count == 0 ? 0f : sum / count;
+    }
+
+    private float touchMidY() {
+        float sum = 0f;
+        int count = 0;
+        for (final float[] at : this.touches.values()) {
+            sum += at[1];
+            if (++count == 2) {
+                break;
+            }
+        }
+        return count == 0 ? 0f : sum / count;
+    }
+
+    /**
+     * Turns the touches that are down into a scroll: their presses end with no click, and their releases are used
+     * up, until every touch is up.
+     */
+    private void startTouchScroll(final Modifiers modifiers) {
+        this.touchScroll = true;
+        for (final Map.Entry<PressKey, Press> entry : List.copyOf(this.presses.entrySet())) {
+            final Press press = entry.getValue();
+            if (press.touch) {
+                this.presses.remove(entry.getKey());
+                this.swallowedReleases.add(entry.getKey());
+                this.endPress(press, entry.getKey().button(), press.lastX, press.lastY, modifiers, false);
+            }
+        }
+    }
+
+    /**
+     * Opens the context menu of a first touch held still for {@link #LONG_PRESS_MILLIS}, and keeps its release from
+     * clicking when a node had a menu to open.
+     */
+    private void pumpLongPress() {
+        if (this.presses.isEmpty()) {
+            return;
+        }
+        final long now = this.platform.clock().millis();
+        for (final Map.Entry<PressKey, Press> entry : List.copyOf(this.presses.entrySet())) {
+            final Press press = entry.getValue();
+            if (press.longPressAt < 0L || press.dragging || now < press.longPressAt) {
+                continue;
+            }
+            press.longPressAt = -1L;
+            if (press.target.root() != this) {
+                continue;
+            }
+            final InputContext previous = this.pointerContext;
+            this.pointerContext = InputContext.touch(entry.getKey().pointer());
+            try (CauseFrame _ = this.inputFrame(Device.TOUCH, this.modifiers)) {
+                if (this.openContextMenu(press.target, press.startX, press.startY, true)) {
+                    press.longPressed = true;
+                }
+            } finally {
+                this.pointerContext = previous;
+            }
+        }
     }
 
     /**
@@ -1385,9 +1572,32 @@ public final class Root {
      */
     public boolean pointerButton(final float x, final float y, final MouseButton button, final boolean pressed,
                                  final Modifiers modifiers) {
+        return this.pointerButton(x, y, button, pressed, modifiers, InputContext.MOUSE);
+    }
+
+    /**
+     * Handles a button of a device going down or up, as {@link #pointerButton(float, float, MouseButton, boolean,
+     * Modifiers)} does, with each pointer's presses kept apart. A touch hovers nothing: its press hits the node under
+     * it without making it hovered, and a first touch held still for {@link #LONG_PRESS_MILLIS} opens the context
+     * menu there and clicks nothing on its release.
+     *
+     * @param x the pointer's x, in UI units
+     * @param y the pointer's y, in UI units
+     * @param button the button
+     * @param pressed true for a press, false for a release
+     * @param modifiers the modifiers held
+     * @param context the device, pointer and pressure
+     * @return as the form without a context returns
+     */
+    public boolean pointerButton(final float x, final float y, final MouseButton button, final boolean pressed,
+                                 final Modifiers modifiers, final InputContext context) {
         this.frames.request();
-        try (CauseFrame _ = this.inputFrame(Device.MOUSE, modifiers).put(CauseKeys.BUTTON, button)) {
+        final InputContext previous = this.pointerContext;
+        this.pointerContext = context;
+        try (CauseFrame _ = this.inputFrame(context.device(), modifiers).put(CauseKeys.BUTTON, button)) {
             return this.handlePointerButton(x, y, button, pressed, modifiers);
+        } finally {
+            this.pointerContext = previous;
         }
     }
 
@@ -1400,20 +1610,38 @@ public final class Root {
     }
 
     private boolean pointerPressed(final float x, final float y, final MouseButton button, final Modifiers modifiers) {
+        final InputContext context = this.pointerContext;
+        final boolean hovers = hovers(context);
+        final PressKey key = new PressKey(context.pointerId(), button);
         this.pointerX = x;
         this.pointerY = y;
-        this.pointerInside = true;
+        if (hovers) {
+            this.pointerInside = true;
+        }
         this.altAlone = false;
         this.endKeyGrab();
-        this.swallowedReleases.remove(button);
-        final Press stale = this.presses.remove(button);
+        this.swallowedReleases.remove(key);
+        final Press stale = this.presses.remove(key);
         if (stale != null) {
             // The engine lost the release of the button's last press, so end that press first
             this.endPress(stale, button, stale.lastX, stale.lastY, modifiers, false);
         }
-        this.updateHover(x, y, modifiers);
-
-        final Node target = this.hovered;
+        if (!hovers) {
+            this.touches.put(context.pointerId(), new float[] {x, y});
+            if (this.touchScroll) {
+                // A further touch while two scroll joins the scroll
+                this.swallowedReleases.add(key);
+                return true;
+            }
+        }
+        final Node target;
+        if (hovers) {
+            this.updateHover(x, y, modifiers);
+            target = this.hovered;
+        } else {
+            this.layout();
+            target = this.hitTest(x, y);
+        }
         final int pressedLayer = target == null ? -1 : this.layerOf(target);
         boolean dismissed = false;
         // From a copy, since closing one layer can close others through their handlers
@@ -1430,14 +1658,16 @@ public final class Root {
             dismissed = true;
         }
         if (dismissed) {
-            this.swallowedReleases.add(button);
-            this.updateHover(x, y, modifiers);
+            this.swallowedReleases.add(key);
+            if (hovers) {
+                this.updateHover(x, y, modifiers);
+            }
             return true;
         }
 
         if (target == null) {
             if (this.topDialog() != null) {
-                this.swallowedReleases.add(button);
+                this.swallowedReleases.add(key);
                 return true;
             }
             this.changeFocus(null);
@@ -1445,7 +1675,7 @@ public final class Root {
         }
         if (!isUsable(target)) {
             // A disabled node takes the press so nothing behind it acts, and does nothing with it
-            this.swallowedReleases.add(button);
+            this.swallowedReleases.add(key);
             return true;
         }
 
@@ -1460,13 +1690,24 @@ public final class Root {
             node.hooks().pressedWithin(target.facade());
         }
 
-        final int clicks = this.clickCounter.press(target, button, x, y, this.platform.clock().millis());
-        this.presses.put(button, new Press(target, clicks, x, y));
+        final long now = this.platform.clock().millis();
+        final int clicks = this.clickCounters.computeIfAbsent(context.pointerId(), id -> new ClickCounter())
+                .press(target, button, x, y, now);
+        final Press press = new Press(target, clicks, x, y);
+        if (!hovers) {
+            press.touch = true;
+            if (this.presses.values().stream().noneMatch(other -> other.touch)) {
+                // A first touch held still opens the context menu
+                press.longPressAt = now + LONG_PRESS_MILLIS;
+                this.frames.at(this.platform.clock().nanoTime() + LONG_PRESS_MILLIS * 1_000_000L);
+            }
+        }
+        this.presses.put(key, press);
         target.setPressed(true);
         final boolean handled;
         try (CauseFrame _ = this.ui.causes().pushFrame().put(CauseKeys.CLICKS, clicks)) {
-            handled = target.fire(InputEvents.POINTER_PRESS, new PointerButtonEventImpl(target.facade(), x, y,
-                    modifiers, button, clicks)).isHandled();
+            handled = target.fire(InputEvents.POINTER_PRESS, this.at(new PointerButtonEventImpl(target.facade(), x, y,
+                    modifiers, button, clicks))).isHandled();
         }
         if (button == MouseButton.RIGHT && !handled && this.activatesOnPress() && target.root() == this) {
             this.openContextMenu(target, x, y, true);
@@ -1475,20 +1716,32 @@ public final class Root {
     }
 
     private boolean pointerReleased(final float x, final float y, final MouseButton button, final Modifiers modifiers) {
+        final InputContext context = this.pointerContext;
+        final boolean hovers = hovers(context);
+        final PressKey key = new PressKey(context.pointerId(), button);
         this.pointerX = x;
         this.pointerY = y;
-        this.pointerInside = true;
+        if (hovers) {
+            this.pointerInside = true;
+        } else {
+            this.touches.remove(context.pointerId());
+            if (this.touches.isEmpty()) {
+                this.touchScroll = false;
+            }
+        }
 
-        final Press press = this.presses.remove(button);
+        final Press press = this.presses.remove(key);
         if (press == null) {
             // The release of a press that closed popups or hit a dialog's backdrop is used up with it
-            return this.swallowedReleases.remove(button);
+            return this.swallowedReleases.remove(key);
         }
-        final boolean clicked = this.endPress(press, button, x, y, modifiers, true);
+        final boolean clicked = this.endPress(press, button, x, y, modifiers, !press.longPressed);
         if (clicked && button == MouseButton.RIGHT && !this.activatesOnPress()) {
             this.openContextMenu(press.target, x, y, true);
         }
-        this.updateHover(x, y, modifiers);
+        if (hovers) {
+            this.updateHover(x, y, modifiers);
+        }
         return true;
     }
 
@@ -1513,8 +1766,8 @@ public final class Root {
         }
 
         try (CauseFrame _ = this.ui.causes().pushFrame().put(CauseKeys.CLICKS, press.clicks)) {
-            target.fire(InputEvents.POINTER_RELEASE, new PointerButtonEventImpl(target.facade(), x, y, modifiers, button,
-                    press.clicks));
+            target.fire(InputEvents.POINTER_RELEASE, this.at(new PointerButtonEventImpl(target.facade(), x, y, modifiers, button,
+                    press.clicks)));
             final TransferDrag drag = press.transfer;
             if (drag != null) {
                 // A release the engine lost drops nothing
@@ -1525,11 +1778,11 @@ public final class Root {
                 }
             }
             if (press.dragging && target.root() == this) {
-                target.fire(InputEvents.DRAG_END, new DragEventImpl(target.facade(), x, y, modifiers, button,
-                        press.clicks, press.startX, press.startY, x - press.lastX, y - press.lastY));
+                target.fire(InputEvents.DRAG_END, this.at(new DragEventImpl(target.facade(), x, y, modifiers, button,
+                        press.clicks, press.startX, press.startY, x - press.lastX, y - press.lastY)));
             } else if (mayClick && target.root() == this && isUsable(target) && target.bounds().contains(x, y)) {
-                return !target.fire(InputEvents.CLICK, new PointerButtonEventImpl(target.facade(), x, y, modifiers,
-                        button, press.clicks)).isHandled() && target.root() == this;
+                return !target.fire(InputEvents.CLICK, this.at(new PointerButtonEventImpl(target.facade(), x, y, modifiers,
+                        button, press.clicks))).isHandled() && target.root() == this;
             }
         }
         return false;
@@ -1612,26 +1865,54 @@ public final class Root {
      */
     public boolean scroll(final float x, final float y, final float scrollX, final float scrollY,
                           final ScrollKind kind, final Modifiers modifiers) {
+        return this.scroll(x, y, scrollX, scrollY, kind, modifiers, InputContext.MOUSE);
+    }
+
+    /**
+     * Handles a scroll from a device, as {@link #scroll(float, float, float, float, ScrollKind, Modifiers)} does; a
+     * touch's goes to the node under the point without hovering it.
+     *
+     * @param x the pointer's x, in UI units
+     * @param y the pointer's y, in UI units
+     * @param scrollX the horizontal amount, positive toward the left
+     * @param scrollY the vertical amount, positive when the wheel turns away from the user
+     * @param kind the kind of device the scroll came from
+     * @param modifiers the modifiers held
+     * @param context the device, pointer and pressure
+     * @return true if a node handled the scroll
+     */
+    public boolean scroll(final float x, final float y, final float scrollX, final float scrollY,
+                          final ScrollKind kind, final Modifiers modifiers, final InputContext context) {
         this.frames.request();
-        try (CauseFrame _ = this.inputFrame(Device.MOUSE, modifiers)) {
-            return this.handleScroll(x, y, scrollX, scrollY, kind, modifiers);
+        final InputContext previous = this.pointerContext;
+        this.pointerContext = context;
+        try (CauseFrame _ = this.inputFrame(context.device(), modifiers)) {
+            return this.handleScroll(x, y, scrollX, scrollY, kind, modifiers, hovers(context));
+        } finally {
+            this.pointerContext = previous;
         }
     }
 
     private boolean handleScroll(final float x, final float y, final float scrollX, final float scrollY,
-                                 final ScrollKind kind, final Modifiers modifiers) {
+                                 final ScrollKind kind, final Modifiers modifiers, final boolean hovers) {
         this.pointerX = x;
         this.pointerY = y;
-        this.pointerInside = true;
         this.updateModifiers(modifiers, null, null);
-        this.updateHover(x, y, modifiers);
-        final Node target = usableAncestor(this.hovered);
+        final Node target;
+        if (hovers) {
+            this.pointerInside = true;
+            this.updateHover(x, y, modifiers);
+            target = usableAncestor(this.hovered);
+        } else {
+            this.layout();
+            target = usableAncestor(this.hitTest(x, y));
+        }
         if (target == null) {
             return false;
         }
         final boolean handled = target.fire(InputEvents.SCROLL,
-                new ScrollEventImpl(target.facade(), x, y, modifiers, scrollX, scrollY, kind)).isHandled();
-        if (handled) {
+                this.at(new ScrollEventImpl(target.facade(), x, y, modifiers, scrollX, scrollY, kind))).isHandled();
+        if (handled && hovers) {
             this.layout();
             this.updateHover(x, y, modifiers);
             this.updateTooltip();
@@ -1785,8 +2066,8 @@ public final class Root {
             this.hoverLive = false;
             if (live) {
                 old.setHovered(false);
-                old.fire(InputEvents.POINTER_EXIT, new PointerEventImpl(old.facade(), this.pointerX, this.pointerY,
-                        this.modifiers));
+                old.fire(InputEvents.POINTER_EXIT, this.at(new PointerEventImpl(old.facade(), this.pointerX, this.pointerY,
+                        this.modifiers)));
             }
         }
         this.updateTooltip();
@@ -1869,11 +2150,11 @@ public final class Root {
         this.hoverLive = live;
         if (previous != null && wasLive) {
             previous.setHovered(false);
-            previous.fire(InputEvents.POINTER_EXIT, new PointerEventImpl(previous.facade(), x, y, modifiers));
+            previous.fire(InputEvents.POINTER_EXIT, this.at(new PointerEventImpl(previous.facade(), x, y, modifiers)));
         }
         if (live) {
             next.setHovered(true);
-            next.fire(InputEvents.POINTER_ENTER, new PointerEventImpl(next.facade(), x, y, modifiers));
+            next.fire(InputEvents.POINTER_ENTER, this.at(new PointerEventImpl(next.facade(), x, y, modifiers)));
         }
     }
 
@@ -1998,8 +2279,22 @@ public final class Root {
      * @return true if a node handled the key, it closed an overlay, or it moved focus
      */
     public boolean key(final Key key, final KeyAction action, final Modifiers modifiers) {
+        return this.key(key, action, modifiers, InputContext.KEYBOARD);
+    }
+
+    /**
+     * Handles a key event from a device, such as a controller's button sent as a key, as
+     * {@link #key(Key, KeyAction, Modifiers)} does, with the context's device in the input's frame.
+     *
+     * @param key the physical key
+     * @param action whether the key went down, repeated or went up
+     * @param modifiers the modifiers the engine reports as held
+     * @param context the device
+     * @return as the form without a context returns
+     */
+    public boolean key(final Key key, final KeyAction action, final Modifiers modifiers, final InputContext context) {
         this.frames.request();
-        try (CauseFrame frame = this.inputFrame(Device.KEYBOARD, modifiers)) {
+        try (CauseFrame frame = this.inputFrame(context.device(), modifiers)) {
             this.updateModifiers(modifiers, key, action);
             frame.put(CauseKeys.MODIFIERS, this.modifiers);
             return this.handleKey(key, action, this.modifiers);
@@ -2377,8 +2672,21 @@ public final class Root {
      * @return true if a node handled it; false when nothing has focus or the code point was ignored
      */
     public boolean charTyped(final int codePoint, final Modifiers modifiers) {
+        return this.charTyped(codePoint, modifiers, InputContext.KEYBOARD);
+    }
+
+    /**
+     * Handles a typed character from a device, as {@link #charTyped(int, Modifiers)} does, with the context's device
+     * in the input's frame.
+     *
+     * @param codePoint the Unicode code point
+     * @param modifiers the modifiers held
+     * @param context the device
+     * @return as the form without a context returns
+     */
+    public boolean charTyped(final int codePoint, final Modifiers modifiers, final InputContext context) {
         this.frames.request();
-        try (CauseFrame _ = this.inputFrame(Device.KEYBOARD, modifiers)) {
+        try (CauseFrame _ = this.inputFrame(context.device(), modifiers)) {
             return this.handleCharTyped(codePoint, modifiers);
         }
     }
@@ -3123,10 +3431,24 @@ public final class Root {
         }
     }
 
+    /**
+     * Which pointer's which button a press is, so each pointer's presses are kept apart.
+     *
+     * @param pointer the pointer id
+     * @param button the button
+     */
+    private record PressKey(int pointer, MouseButton button) {
+    }
+
     private static final class Press {
         // The pressed node, or the source once the drag carries a transfer
         Node target;
         TransferDrag transfer;
+        // Whether a touch made the press, when a held first touch opens the context menu by the clock, or -1, and
+        // whether it did, so the release clicks nothing
+        boolean touch;
+        long longPressAt = -1L;
+        boolean longPressed;
         final int clicks;
         final float startX;
         final float startY;

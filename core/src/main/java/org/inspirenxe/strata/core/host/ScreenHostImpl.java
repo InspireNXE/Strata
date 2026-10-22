@@ -41,6 +41,7 @@ import org.inspirenxe.strata.core.text.Translations;
 import org.inspirenxe.strata.core.theme.ThemeRegistryImpl;
 import org.inspirenxe.strata.core.theme.ThemeResolver;
 import org.inspirenxe.strata.spi.Canvas;
+import org.inspirenxe.strata.spi.InputContext;
 import org.inspirenxe.strata.spi.Platform;
 import org.inspirenxe.strata.spi.ScreenHost;
 import org.inspirenxe.strata.spi.ThemeSource;
@@ -433,22 +434,39 @@ public final class ScreenHostImpl implements ScreenHost {
 
     @Override
     public boolean pointerMoved(final float x, final float y, final Modifiers modifiers) {
+        return this.pointerMoved(x, y, modifiers, InputContext.MOUSE);
+    }
+
+    @Override
+    public boolean pointerMoved(final float x, final float y, final Modifiers modifiers, final InputContext context) {
         this.uiThread.record();
-        return this.root.pointerMoved(x, y, modifiers);
+        return this.root.pointerMoved(x, y, modifiers, context);
     }
 
     @Override
     public boolean pointerButton(final float x, final float y, final MouseButton button, final boolean pressed,
                                  final Modifiers modifiers) {
+        return this.pointerButton(x, y, button, pressed, modifiers, InputContext.MOUSE);
+    }
+
+    @Override
+    public boolean pointerButton(final float x, final float y, final MouseButton button, final boolean pressed,
+                                 final Modifiers modifiers, final InputContext context) {
         this.uiThread.record();
-        return this.root.pointerButton(x, y, button, pressed, modifiers);
+        return this.root.pointerButton(x, y, button, pressed, modifiers, context);
     }
 
     @Override
     public boolean scroll(final float x, final float y, final float scrollX, final float scrollY, final ScrollKind kind,
                           final Modifiers modifiers) {
+        return this.scroll(x, y, scrollX, scrollY, kind, modifiers, InputContext.MOUSE);
+    }
+
+    @Override
+    public boolean scroll(final float x, final float y, final float scrollX, final float scrollY, final ScrollKind kind,
+                          final Modifiers modifiers, final InputContext context) {
         this.uiThread.record();
-        return this.root.scroll(x, y, scrollX, scrollY, kind, modifiers);
+        return this.root.scroll(x, y, scrollX, scrollY, kind, modifiers, context);
     }
 
     @Override
@@ -459,14 +477,24 @@ public final class ScreenHostImpl implements ScreenHost {
 
     @Override
     public boolean key(final Key key, final KeyAction action, final Modifiers modifiers) {
+        return this.key(key, action, modifiers, InputContext.KEYBOARD);
+    }
+
+    @Override
+    public boolean key(final Key key, final KeyAction action, final Modifiers modifiers, final InputContext context) {
         this.uiThread.record();
-        return this.root.key(key, action, modifiers);
+        return this.root.key(key, action, modifiers, context);
     }
 
     @Override
     public boolean charTyped(final int codePoint, final Modifiers modifiers) {
+        return this.charTyped(codePoint, modifiers, InputContext.KEYBOARD);
+    }
+
+    @Override
+    public boolean charTyped(final int codePoint, final Modifiers modifiers, final InputContext context) {
         this.uiThread.record();
-        return this.root.charTyped(codePoint, modifiers);
+        return this.root.charTyped(codePoint, modifiers, context);
     }
 
     @Override

@@ -34,6 +34,7 @@ import org.inspirenxe.strata.core.frame.UiThreadImpl;
 import org.inspirenxe.strata.core.node.Root;
 import org.inspirenxe.strata.core.theme.ThemeResolver;
 import org.inspirenxe.strata.spi.Canvas;
+import org.inspirenxe.strata.spi.InputContext;
 import org.inspirenxe.strata.spi.Platform;
 import org.inspirenxe.strata.spi.ScreenStack;
 
@@ -467,6 +468,33 @@ public final class ScreenStackImpl implements ScreenStack {
     @Override
     public boolean charTyped(final int codePoint, final Modifiers modifiers) {
         return this.input().map(host -> host.charTyped(codePoint, modifiers)).orElse(false);
+    }
+
+    @Override
+    public boolean pointerMoved(final float x, final float y, final Modifiers modifiers, final InputContext context) {
+        return this.input().map(host -> host.pointerMoved(x, y, modifiers, context)).orElse(false);
+    }
+
+    @Override
+    public boolean pointerButton(final float x, final float y, final MouseButton button, final boolean pressed,
+                                 final Modifiers modifiers, final InputContext context) {
+        return this.input().map(host -> host.pointerButton(x, y, button, pressed, modifiers, context)).orElse(false);
+    }
+
+    @Override
+    public boolean scroll(final float x, final float y, final float scrollX, final float scrollY, final ScrollKind kind,
+                          final Modifiers modifiers, final InputContext context) {
+        return this.input().map(host -> host.scroll(x, y, scrollX, scrollY, kind, modifiers, context)).orElse(false);
+    }
+
+    @Override
+    public boolean key(final Key key, final KeyAction action, final Modifiers modifiers, final InputContext context) {
+        return this.input().map(host -> host.key(key, action, modifiers, context)).orElse(false);
+    }
+
+    @Override
+    public boolean charTyped(final int codePoint, final Modifiers modifiers, final InputContext context) {
+        return this.input().map(host -> host.charTyped(codePoint, modifiers, context)).orElse(false);
     }
 
     @Override

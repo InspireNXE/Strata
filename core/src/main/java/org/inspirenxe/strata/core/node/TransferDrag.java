@@ -281,8 +281,8 @@ final class TransferDrag {
     private TransferEventImpl fire(final Node target, final EventType<TransferEvent> type,
                                    final TransferEventImpl.Kind kind, final DropEffect effect) {
         final Component<?> from = this.source == null ? null : this.source.facade();
-        final TransferEventImpl event = new TransferEventImpl(target.facade(), this.x, this.y, this.modifiers,
-                this.transfer, this.allowed, from, kind, effect);
+        final TransferEventImpl event = this.root.at(new TransferEventImpl(target.facade(), this.x, this.y,
+                this.modifiers, this.transfer, this.allowed, from, kind, effect));
         try (CauseFrame frame = this.root.factory().causes().pushFrame()) {
             if (from != null) {
                 frame.push(from);
