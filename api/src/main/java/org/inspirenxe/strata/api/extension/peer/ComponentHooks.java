@@ -55,6 +55,13 @@ public interface ComponentHooks {
     Size measureMinimum(MeasureContext context);
 
     /**
+     * Forwards to {@code CustomComponent.baseline}.
+     *
+     * @return the baseline from the top of the bounds, or NaN for none
+     */
+    float baseline();
+
+    /**
      * Forwards to {@code CustomComposite.arrange}; does nothing for a leaf component.
      *
      * @param context the arrange context

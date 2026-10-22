@@ -204,6 +204,16 @@ public abstract class BuiltInComponent<T extends Component<T>> implements Compon
     }
 
     /**
+     * Returns the distance from the top of the bounds to the baseline of the first line of text, as
+     * {@code CustomComponent.baseline} does. The default returns NaN, for no baseline.
+     *
+     * @return the baseline in UI units, or NaN for none
+     */
+    protected float baseline() {
+        return Float.NaN;
+    }
+
+    /**
      * Draws the component over its background and border and under its children. The default draws nothing.
      *
      * @param painter what to draw with; valid only during this call
@@ -478,6 +488,11 @@ public abstract class BuiltInComponent<T extends Component<T>> implements Compon
         @Override
         public Size measureMinimum(final MeasureContext context) {
             return BuiltInComponent.this.measureMinimum(context);
+        }
+
+        @Override
+        public float baseline() {
+            return BuiltInComponent.this.baseline();
         }
 
         @Override

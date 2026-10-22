@@ -57,4 +57,16 @@ public interface MeasureContext {
      * @throws IllegalArgumentException if {@code child} was made by another factory or has no Strata implementation
      */
     Size minimumSize(Component<?> child);
+
+    /**
+     * Returns where a measured child's first baseline lies, for lining up the text of children aligned
+     * {@link org.inspirenxe.strata.api.layout.VerticalAlignment#BASELINE}: the distance from the top of the space
+     * it asked for, margin included, to the baseline it reports for its desired height
+     * ({@link CustomComponent#baseline}). Read it after measuring the child.
+     *
+     * @param child a child of the component being measured
+     * @return the baseline in UI units from the top of the child's margin, or NaN if the child has none or is hidden
+     * @throws IllegalArgumentException if {@code child} was made by another factory or has no Strata implementation
+     */
+    float baseline(Component<?> child);
 }

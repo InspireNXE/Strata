@@ -43,6 +43,9 @@ import java.util.Objects;
  * {@link TextWrap} wraps it), at the width the parent offers when wrapping is on, and keeps them for painting. Each
  * line is aligned on its own within the bounds. The line height is the tallest of the styles in use.
  *
+ * <p>The baseline is the first line's: its characters' top, centered in the line as painting centers them, plus the
+ * ascent of the label's style, times the text scale.</p>
+ *
  * <p>With {@link TextOverflow#ELLIPSIS}, the shortened lines are worked out when the bounds' width changes and kept
  * until the next change, so painting allocates nothing in between.</p>
  */
@@ -260,6 +263,15 @@ public final class LabelImpl extends BuiltInComponent<Label> implements Label {
             scaledWidth = Math.max(0f, availableWidth);
         }
         return new Size(scaledWidth, height * this.textScale);
+    }
+
+    @Override
+    protected float baseline() {
+        if (this.lineHeights.isEmpty()) {
+            return Float.NaN;
+        }
+        final float top = (this.lineHeights.get(0) - this.lineHeight) * 0.5f;
+        return (top + this.environment().text().ascent(this.style())) * this.textScale;
     }
 
     @Override

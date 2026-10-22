@@ -64,6 +64,11 @@ public final class LayoutPass implements MeasureContext, ArrangeContext {
     }
 
     @Override
+    public float baseline(final Component<?> child) {
+        return this.ui.nodeOf(child).baseline();
+    }
+
+    @Override
     public void arrange(final Component<?> child, final Rect slot) {
         this.ui.nodeOf(child).arrange(this, slot);
     }

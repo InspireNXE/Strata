@@ -57,6 +57,13 @@ interface NodeHooks {
     Size measureMinimum(MeasureContext context);
 
     /**
+     * Returns the distance from the top of the bounds to the first baseline.
+     *
+     * @return the baseline, or NaN for none
+     */
+    float baseline();
+
+    /**
      * Gives every child its slot; does nothing for a leaf component.
      *
      * @param context the arrange context

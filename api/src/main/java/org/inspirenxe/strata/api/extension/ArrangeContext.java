@@ -56,6 +56,16 @@ public interface ArrangeContext {
     Size minimumSize(Component<?> child);
 
     /**
+     * Returns where a child's first baseline lies, as {@link MeasureContext#baseline} does: from the top of the
+     * space it asked for in the last measure, margin included.
+     *
+     * @param child a child of the container being arranged
+     * @return the baseline in UI units from the top of the child's margin, or NaN if the child has none or is hidden
+     * @throws IllegalArgumentException if {@code child} was made by another factory or has no Strata implementation
+     */
+    float baseline(Component<?> child);
+
+    /**
      * Measures a child, for one added during arrange, such as a row that scrolled into view. Measure such a child
      * before giving it a slot.
      *

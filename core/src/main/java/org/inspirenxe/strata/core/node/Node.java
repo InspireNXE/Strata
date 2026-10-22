@@ -328,9 +328,25 @@ public class Node implements ComponentPeer {
     }
 
     /**
+     * Returns where the component's first baseline lies below the top of its margin, from its baseline hook and its
+     * top margin, as {@link org.inspirenxe.strata.api.extension.MeasureContext#baseline} describes.
+     *
+     * @return the baseline in UI units, or NaN when the component is hidden, reports none or reports one that is
+     *     not finite
+     */
+    public final float baseline() {
+        if (!this.visible) {
+            return Float.NaN;
+        }
+        final float baseline = this.hooks.baseline();
+        return Float.isFinite(baseline) ? this.margin.top() + baseline : Float.NaN;
+    }
+
+    /**
      * Places the component in a slot and arranges its children. The slot is shrunk by the margin; the component
      * then takes its desired size, or the whole inner slot on an axis set to stretch with no fixed size (still
-     * clamped), and is aligned inside, then moved by its offset. A hidden component gets an empty rectangle at the
+     * clamped), and is aligned inside, then moved by its offset. {@link VerticalAlignment#BASELINE} places it as
+     * {@link VerticalAlignment#TOP} does; the parents that line up baselines move the slot instead. A hidden component gets an empty rectangle at the
      * slot's origin. Nothing is arranged if nothing changed since the last arrange into the same slot. If the hook
      * throws, the component stays marked for arranging, so the next layout tries again.
      *
@@ -363,7 +379,7 @@ public class Node implements ComponentPeer {
             case RIGHT -> inner.right() - width;
         };
         final float y = switch (this.verticalAlignment) {
-            case TOP, STRETCH -> inner.y();
+            case TOP, STRETCH, BASELINE -> inner.y();
             case MIDDLE -> inner.y() + (inner.height() - height) * 0.5f;
             case BOTTOM -> inner.bottom() - height;
         };

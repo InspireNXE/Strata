@@ -124,4 +124,14 @@ public abstract class TextMetricsContract {
             assertTrue(metrics.lineHeight(style) > 0f, "line height in " + style);
         }
     }
+
+    @Test
+    void ascentIsPositiveAndWithinTheLine() {
+        final TextMetrics metrics = this.metrics();
+        for (final TextStyle style : STYLES) {
+            final float ascent = metrics.ascent(style);
+            assertTrue(ascent > 0f, "ascent in " + style);
+            assertTrue(ascent <= metrics.lineHeight(style), "ascent within the line height in " + style);
+        }
+    }
 }

@@ -34,12 +34,13 @@ import java.time.ZoneOffset;
 import java.util.Optional;
 
 /**
- * A platform with monospaced text (6 units per code point, 9 units per line), a clock tests move by hand, and a
- * fixed wall clock.
+ * A platform with monospaced text (6 units per code point, 9 units per line, the baseline 7 below a line's top), a
+ * clock tests move by hand, and a fixed wall clock.
  */
 public final class TestPlatform implements Platform {
     public static final float CHAR_WIDTH = 6f;
     public static final float LINE_HEIGHT = 9f;
+    public static final float ASCENT = 7f;
     // Monospaced text measures wider, so tests can tell which style a span was measured in
     public static final float MONO_CHAR_WIDTH = 7f;
     // What the wall clock reads until a test sets another time
@@ -94,6 +95,11 @@ public final class TestPlatform implements Platform {
             @Override
             public float lineHeight(final TextStyle style) {
                 return LINE_HEIGHT;
+            }
+
+            @Override
+            public float ascent(final TextStyle style) {
+                return ASCENT;
             }
         };
     }

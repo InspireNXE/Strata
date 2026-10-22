@@ -46,6 +46,10 @@ import java.util.function.Function;
  * {@link WeightedShares} describes. The lower limit is the child's outer minimum
  * ({@link MeasureContext#minimumSize}), so a content minimum or a fixed size holds a share up too.</p>
  *
+ * <p>In a row, children aligned {@link org.inspirenxe.strata.api.layout.VerticalAlignment#BASELINE} are lined up
+ * as {@link BaselineRow} describes: the row is at least as tall as they need lined up, and each one's slot starts
+ * where its baseline meets theirs, as tall as the child asked for.</p>
+ *
  * <p>The panel's own content minimum is its children's minimums along the axis plus the gaps, the largest across,
  * and the padding.</p>
  */
@@ -53,6 +57,7 @@ public final class StackPanelImpl extends BuiltInContainer<StackPanel> implement
     private final Map<Component<?>, Float> weights;
     // Reused between layouts; one slot per child, 0 weight for children that take no share
     private final WeightedShares shares;
+    private final BaselineRow baselines;
     private Orientation orientation;
     private float spacing;
     private boolean spread;
@@ -68,6 +73,7 @@ public final class StackPanelImpl extends BuiltInContainer<StackPanel> implement
         this.orientation = Objects.requireNonNull(orientation, "orientation");
         this.weights = new IdentityHashMap<>();
         this.shares = new WeightedShares();
+        this.baselines = new BaselineRow();
     }
 
     @Override
@@ -144,6 +150,8 @@ public final class StackPanelImpl extends BuiltInContainer<StackPanel> implement
         final float innerHeight = availableHeight - padding.vertical();
 
         final List<Component<?>> children = this.children();
+        final BaselineRow baselines = this.baselines;
+        baselines.reset();
         float along = 0f;
         float across = 0f;
         int visible = 0;
@@ -165,6 +173,9 @@ public final class StackPanelImpl extends BuiltInContainer<StackPanel> implement
             }
             along += vertical ? outer.height() : outer.width();
             across = Math.max(across, vertical ? outer.width() : outer.height());
+            if (!vertical && BaselineRow.aligns(child)) {
+                baselines.add(context.baseline(child), outer.height());
+            }
             visible++;
         }
         final float gaps = visible > 1 ? this.spacing * (visible - 1) : 0f;
@@ -190,8 +201,12 @@ public final class StackPanelImpl extends BuiltInContainer<StackPanel> implement
             }
             this.shares.need(i, vertical ? outer.height() : outer.width());
             across = Math.max(across, vertical ? outer.width() : outer.height());
+            if (!vertical && BaselineRow.aligns(child)) {
+                baselines.add(context.baseline(child), outer.height());
+            }
         }
         along += this.shares.fit() + gaps;
+        across = Math.max(across, baselines.height());
 
         final float width = (vertical ? across : along) + padding.horizontal();
         final float height = (vertical ? along : across) + padding.vertical();
@@ -227,6 +242,15 @@ public final class StackPanelImpl extends BuiltInContainer<StackPanel> implement
         final List<Component<?>> children = this.children();
         this.weighShares(children, vertical, context::minimumSize);
         this.shares.resolve(left);
+        final BaselineRow baselines = this.baselines;
+        baselines.reset();
+        if (!vertical) {
+            for (final Component<?> child : children) {
+                if (BaselineRow.aligns(child)) {
+                    baselines.add(context.baseline(child), context.outerSize(child).height());
+                }
+            }
+        }
 
         float offset = vertical ? content.y() : content.x();
         boolean first = true;
@@ -250,6 +274,10 @@ public final class StackPanelImpl extends BuiltInContainer<StackPanel> implement
             }
             if (vertical) {
                 context.arrange(child, new Rect(content.x(), offset, content.width(), size));
+            } else if (BaselineRow.aligns(child)) {
+                final float height = context.outerSize(child).height();
+                context.arrange(child, new Rect(offset, baselines.top(content.y(), context.baseline(child), height),
+                        size, height));
             } else {
                 context.arrange(child, new Rect(offset, content.y(), size, content.height()));
             }

@@ -221,6 +221,21 @@ public abstract class CustomComponent<T extends Component<T>> implements Compone
     }
 
     /**
+     * Returns the distance from the top of the component's bounds to the baseline of its first line of text, for
+     * parents that line up their children's text ({@link VerticalAlignment#BASELINE}). Strata calls it during the
+     * parent's layout, after {@link #measure}, for the component at its desired height, so work it out from what
+     * {@code measure} cached and the text metrics' {@link org.inspirenxe.strata.api.text.TextMetrics#ascent ascent}:
+     * a component that draws a line of text at a top of {@code y} has its baseline at {@code y} plus the ascent of
+     * the line's style. It must not change layout state. It is not called while the component is hidden. The default
+     * returns NaN, for no baseline, and a parent lining up baselines then puts the component's bottom on the line.
+     *
+     * @return the baseline in UI units from the top of the bounds, or NaN for none
+     */
+    protected float baseline() {
+        return Float.NaN;
+    }
+
+    /**
      * Draws the component. The {@linkplain #background() background} and border are already drawn, and a
      * container's children are drawn after this returns, on top. The default draws nothing.
      *
@@ -477,6 +492,11 @@ public abstract class CustomComponent<T extends Component<T>> implements Compone
         @Override
         public Size measureMinimum(final MeasureContext context) {
             return CustomComponent.this.measureMinimum(context);
+        }
+
+        @Override
+        public float baseline() {
+            return CustomComponent.this.baseline();
         }
 
         @Override

@@ -30,5 +30,15 @@ public enum VerticalAlignment {
      * As tall as the slot minus the margin, unless the component has a fixed height; the minimum and maximum still
      * apply.
      */
-    STRETCH
+    STRETCH,
+    /**
+     * With the baseline of its first line of text on the line its neighbors share, so a label, a text box and a
+     * button in a row show their text at one height although they pad it differently. A horizontal
+     * {@link StackPanel}, each row of a {@link WrapPanel} and each row of a {@link GridPanel} line up the children
+     * aligned this way: each moves down until its baseline meets the lowest baseline among them, and a child with no
+     * baseline puts its bottom there. The baseline is what the component reports through
+     * {@code CustomComponent.baseline()}; Strata's text controls report the baseline of their first line. Everywhere
+     * else, and in a cell or line that a child spans with others, this acts as {@link #TOP}.
+     */
+    BASELINE
 }

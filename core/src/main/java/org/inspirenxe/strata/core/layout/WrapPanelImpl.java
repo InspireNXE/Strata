@@ -37,6 +37,10 @@ import java.util.Objects;
  * content box's length, from the sizes the children asked for, and gives each child a slot as long as it asked for
  * and as thick as its line, placed along the line by the line alignment. Neither pass allocates beyond the slots.
  *
+ * <p>In rows, the children of each row aligned {@link org.inspirenxe.strata.api.layout.VerticalAlignment#BASELINE}
+ * are lined up as {@link BaselineRow} describes: the row is at least as tall as they need lined up, and each one's
+ * slot starts where its baseline meets theirs, as tall as the child asked for. Columns place them at the top.</p>
+ *
  * <p>The panel's content minimum is the largest outer minimum of its visible children on each axis, plus the
  * padding.</p>
  */
@@ -45,6 +49,7 @@ public final class WrapPanelImpl extends BuiltInContainer<WrapPanel> implements 
     private float spacing;
     private float lineSpacing;
     private HorizontalAlignment lineAlignment;
+    private final BaselineRow baselines;
 
     /**
      * Creates an empty panel with no spacing and lines aligned to their start.
@@ -56,6 +61,7 @@ public final class WrapPanelImpl extends BuiltInContainer<WrapPanel> implements 
         super(ui);
         this.orientation = Objects.requireNonNull(orientation, "orientation");
         this.lineAlignment = HorizontalAlignment.LEFT;
+        this.baselines = new BaselineRow();
     }
 
     @Override
@@ -121,6 +127,8 @@ public final class WrapPanelImpl extends BuiltInContainer<WrapPanel> implements 
         float along = 0f;
         float lineThickness = 0f;
         int inLine = 0;
+        final BaselineRow baselines = this.baselines;
+        baselines.reset();
         for (final Component<?> child : this.children()) {
             final Size outer = rows
                     ? context.measure(child, innerWidth, Float.POSITIVE_INFINITY)
@@ -131,19 +139,23 @@ public final class WrapPanelImpl extends BuiltInContainer<WrapPanel> implements 
             final float length = rows ? outer.width() : outer.height();
             if (inLine > 0 && along + this.spacing + length > limit) {
                 longest = Math.max(longest, along);
-                thickness += lineThickness;
+                thickness += Math.max(lineThickness, baselines.height());
                 lines++;
                 along = 0f;
                 lineThickness = 0f;
                 inLine = 0;
+                baselines.reset();
             }
             along += (inLine > 0 ? this.spacing : 0f) + length;
             lineThickness = Math.max(lineThickness, rows ? outer.height() : outer.width());
+            if (rows && BaselineRow.aligns(child)) {
+                baselines.add(context.baseline(child), outer.height());
+            }
             inLine++;
         }
         if (inLine > 0) {
             longest = Math.max(longest, along);
-            thickness += lineThickness;
+            thickness += Math.max(lineThickness, baselines.height());
             lines++;
         }
         thickness += lines > 1 ? this.lineSpacing * (lines - 1) : 0f;
@@ -183,6 +195,7 @@ public final class WrapPanelImpl extends BuiltInContainer<WrapPanel> implements 
             float thickness = 0f;
             int inLine = 0;
             int end = start;
+            this.baselines.reset();
             for (; end < children.size(); end++) {
                 final Component<?> child = children.get(end);
                 if (!child.isVisible()) {
@@ -195,8 +208,12 @@ public final class WrapPanelImpl extends BuiltInContainer<WrapPanel> implements 
                 }
                 along += (inLine > 0 ? this.spacing : 0f) + length;
                 thickness = Math.max(thickness, rows ? outer.height() : outer.width());
+                if (rows && BaselineRow.aligns(child)) {
+                    this.baselines.add(context.baseline(child), outer.height());
+                }
                 inLine++;
             }
+            thickness = Math.max(thickness, this.baselines.height());
             this.arrangeLine(context, content, children, start, end, lineStart, along, thickness, inLine, limit);
             if (inLine > 0) {
                 lineStart += thickness + this.lineSpacing;
@@ -235,7 +252,11 @@ public final class WrapPanelImpl extends BuiltInContainer<WrapPanel> implements 
             }
             first = false;
             final Size outer = context.outerSize(child);
-            if (rows) {
+            if (rows && BaselineRow.aligns(child)) {
+                final float top = this.baselines.top(lineStart, context.baseline(child), outer.height());
+                context.arrange(child, new Rect(position, top, outer.width(), outer.height()));
+                position += outer.width();
+            } else if (rows) {
                 context.arrange(child, new Rect(position, lineStart, outer.width(), thickness));
                 position += outer.width();
             } else {

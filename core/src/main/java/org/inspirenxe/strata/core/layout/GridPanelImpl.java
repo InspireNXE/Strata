@@ -56,6 +56,11 @@ import java.util.Objects;
  * that sit only in it: at least the largest of their minimum sizes and at most the largest of their maximum sizes,
  * margins included, as {@link WeightedShares} resolves them. A track with no such child has no limits.</p>
  *
+ * <p>In each row, the children that sit in that row alone and are aligned
+ * {@link org.inspirenxe.strata.api.layout.VerticalAlignment#BASELINE} are lined up as {@link BaselineRow} describes:
+ * measuring makes the row need at least the height they take lined up, and arranging starts each one's slot where
+ * its baseline meets theirs, as tall as the child asked for and as wide as its cells.</p>
+ *
  * <p>The per-track arrays are kept between layouts, so a layout allocates them only when the number of tracks
  * grows.</p>
  */
@@ -73,6 +78,9 @@ public final class GridPanelImpl extends BuiltInContainer<GridPanel> implements 
     private Size[] outers;
     // Track floors while working out the grid's own minimum
     private float[] floors;
+    // Lines up the baselines of one row at a time, and the line of each row while arranging
+    private final BaselineRow baselines;
+    private float[] rowLines;
 
     /**
      * Creates an empty grid with no track definitions and no spacing.
@@ -88,6 +96,8 @@ public final class GridPanelImpl extends BuiltInContainer<GridPanel> implements 
         this.rowAxis = new Axis(this.rows);
         this.outers = new Size[0];
         this.floors = new float[0];
+        this.baselines = new BaselineRow();
+        this.rowLines = new float[0];
     }
 
     @Override
@@ -227,6 +237,7 @@ public final class GridPanelImpl extends BuiltInContainer<GridPanel> implements 
             }
         }
 
+        this.needBaselines(context, children, rows);
         columns.natural();
         rows.natural();
 
@@ -250,6 +261,48 @@ public final class GridPanelImpl extends BuiltInContainer<GridPanel> implements 
         final float width = columns.measuredLength(this.columnSpacing);
         final float height = rows.measuredLength(this.rowSpacing);
         return new Size(width + padding.horizontal(), height + padding.vertical());
+    }
+
+    /**
+     * Makes each row need the height its single-row children aligned to the baseline take lined up.
+     */
+    private void needBaselines(final MeasureContext context, final List<Component<?>> children, final Axis rows) {
+        if (!this.anyAligned(children, rows)) {
+            return;
+        }
+        for (int row = 0; row < rows.count; row++) {
+            final BaselineRow baselines = this.baselines;
+            baselines.reset();
+            for (int i = 0; i < children.size(); i++) {
+                final Component<?> child = children.get(i);
+                if (this.alignsIn(child, rows, row)) {
+                    baselines.add(context.baseline(child), this.outers[i].height());
+                }
+            }
+            rows.need(row, baselines.height());
+        }
+    }
+
+    private boolean anyAligned(final List<Component<?>> children, final Axis rows) {
+        for (final Component<?> child : children) {
+            final Cell cell = this.cellOf(child);
+            if (BaselineRow.aligns(child) && rows.span(cell.row(), cell.rowSpan()) == 1) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Returns whether a child is lined up by its baseline in a row: it is aligned to the baseline and sits in that
+     * row alone.
+     */
+    private boolean alignsIn(final Component<?> child, final Axis rows, final int row) {
+        if (!BaselineRow.aligns(child)) {
+            return false;
+        }
+        final Cell cell = this.cellOf(child);
+        return rows.first(cell.row()) == row && rows.span(cell.row(), cell.rowSpan()) == 1;
     }
 
     @Override
@@ -302,8 +355,13 @@ public final class GridPanelImpl extends BuiltInContainer<GridPanel> implements 
         rows.distribute(content.height() - this.rowSpacing * (rows.count - 1));
         columns.offsets(content.x(), this.columnSpacing);
         rows.offsets(content.y(), this.rowSpacing);
+        final List<Component<?>> children = this.children();
+        final boolean aligned = this.anyAligned(children, rows);
+        if (aligned) {
+            this.lineUpRows(context, children, rows);
+        }
 
-        for (final Component<?> child : this.children()) {
+        for (final Component<?> child : children) {
             final Cell cell = this.cellOf(child);
             final int column = columns.first(cell.column());
             final int row = rows.first(cell.row());
@@ -313,7 +371,33 @@ public final class GridPanelImpl extends BuiltInContainer<GridPanel> implements 
             final float y = rows.offsets[row];
             final float width = columns.offsets[lastColumn] + columns.sizes[lastColumn] - x;
             final float height = rows.offsets[lastRow] + rows.sizes[lastRow] - y;
-            context.arrange(child, new Rect(x, y, width, height));
+            if (aligned && this.alignsIn(child, rows, row)) {
+                final float baseline = context.baseline(child);
+                final float outer = context.outerSize(child).height();
+                final float offset = Float.isNaN(baseline) ? outer : baseline;
+                context.arrange(child, new Rect(x, y + this.rowLines[row] - offset, width, outer));
+            } else {
+                context.arrange(child, new Rect(x, y, width, height));
+            }
+        }
+    }
+
+    /**
+     * Works out the shared baseline of each row, from the top of the row, into {@link #rowLines}.
+     */
+    private void lineUpRows(final ArrangeContext context, final List<Component<?>> children, final Axis rows) {
+        if (this.rowLines.length < rows.count) {
+            this.rowLines = new float[rows.count];
+        }
+        for (int row = 0; row < rows.count; row++) {
+            final BaselineRow baselines = this.baselines;
+            baselines.reset();
+            for (final Component<?> child : children) {
+                if (this.alignsIn(child, rows, row)) {
+                    baselines.add(context.baseline(child), context.outerSize(child).height());
+                }
+            }
+            this.rowLines[row] = baselines.line();
         }
     }
 

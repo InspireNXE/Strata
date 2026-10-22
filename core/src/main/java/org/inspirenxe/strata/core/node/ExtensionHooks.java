@@ -53,6 +53,11 @@ final class ExtensionHooks implements NodeHooks {
     }
 
     @Override
+    public float baseline() {
+        return this.hooks.baseline();
+    }
+
+    @Override
     public void arrange(final ArrangeContext context, final Rect bounds) {
         this.hooks.arrange(context, bounds);
     }

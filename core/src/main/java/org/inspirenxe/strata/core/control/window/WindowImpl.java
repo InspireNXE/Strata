@@ -420,7 +420,7 @@ public final class WindowImpl extends BuiltInContainer<Window> implements Window
             case RIGHT -> inner.right() - next.width();
         };
         final float baseY = switch (this.verticalAlignment()) {
-            case TOP, STRETCH -> inner.y();
+            case TOP, STRETCH, BASELINE -> inner.y();
             case MIDDLE -> inner.y() + (inner.height() - next.height()) * 0.5f;
             case BOTTOM -> inner.bottom() - next.height();
         };
