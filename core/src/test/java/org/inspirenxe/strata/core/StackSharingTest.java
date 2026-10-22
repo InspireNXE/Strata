@@ -175,6 +175,54 @@ class StackSharingTest {
     }
 
     @Test
+    void aWeightedChildKeepsItsMinimumAndTheOthersShareTheRest() {
+        final AnchorPanel wide = this.body().setMinSize(150, 0);
+        final AnchorPanel one = this.body();
+        final AnchorPanel two = this.body();
+        this.filling(this.ui.stackPanel(Orientation.HORIZONTAL).add(wide, 1).add(one, 1).add(two, 2));
+
+        // A third of 200 is below 150, so the wide child keeps 150 and the others share 50 by 1 to 2
+        assertEquals(new Rect(0, 0, 150, 100), wide.bounds());
+        assertEquals(new Rect(150, 0, 50 / 3f, 100), one.bounds());
+        assertEquals(new Rect(150 + 50 / 3f, 0, 100 / 3f, 100), two.bounds());
+    }
+
+    @Test
+    void aCappedWeightedChildLeavesItsShareToTheOthers() {
+        final AnchorPanel capped = this.body().setMaxSize(40, Float.POSITIVE_INFINITY);
+        final AnchorPanel rest = this.body().setMargin(0, 0, 4, 0);
+        this.filling(this.ui.stackPanel(Orientation.HORIZONTAL).add(capped, 1).add(rest, 1));
+
+        assertEquals(new Rect(0, 0, 40, 100), capped.bounds());
+        assertEquals(new Rect(40, 0, 156, 100), rest.bounds());
+    }
+
+    @Test
+    void minimumsThatDoNotFitPushTheNextChildrenOnInsteadOfOverlapping() {
+        final AnchorPanel first = this.body().setMinSize(0, 80);
+        final AnchorPanel second = this.body().setMinSize(0, 80);
+        final Label footer = this.ui.label("Footer");
+        this.filling(this.ui.stackPanel().add(first, 1).add(second, 1).add(footer));
+
+        assertEquals(new Rect(0, 0, 200, 80), first.bounds());
+        assertEquals(new Rect(0, 80, 200, 80), second.bounds());
+        assertEquals(160, footer.bounds().y());
+    }
+
+    @Test
+    void measuredWithoutALimitACappedChildAsksOnlyForItsMaximum() {
+        final AnchorPanel capped = this.body().setMinSize(0, 10).setMaxSize(Float.POSITIVE_INFINITY, 20);
+        final AnchorPanel other = this.body().setMinSize(0, 50);
+        final StackPanel column = this.ui.stackPanel().add(capped, 1).add(other, 1);
+        this.test.show(this.ui.absolutePanel().add(column));
+
+        // A unit of 50 gives the other child its 50, but the capped child takes at most 20 of it
+        assertEquals(70, column.desiredHeight());
+        assertEquals(new Rect(0, 0, 0, 20), capped.bounds());
+        assertEquals(new Rect(0, 20, 0, 50), other.bounds());
+    }
+
+    @Test
     void hiddenWeightedChildrenTakeNoShareAndNoGap() {
         final AnchorPanel hidden = this.body();
         final AnchorPanel shown = this.body();

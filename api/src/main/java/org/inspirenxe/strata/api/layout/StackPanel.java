@@ -117,9 +117,13 @@ public interface StackPanel extends Container<StackPanel> {
      * the other children and the gaps leave, in proportion to their weights: weight 2 gets twice the space of weight
      * 1. A weighted child is placed in its share by its own alignment, so give it
      * {@link HorizontalAlignment#STRETCH} or {@link VerticalAlignment#STRETCH} along the orientation to fill it.
-     * Its share is never below 0, and its own desired size does not count, so a weighted child shrinks when the
-     * others need the room. Measured without a limit along the orientation, the panel asks for enough room to give
-     * every weighted child its desired size while keeping the proportions. The weight is forgotten when the child is
+     * Its share stays within the child's {@linkplain Component#minWidth() minimum} and
+     * {@linkplain Component#maxWidth() maximum} size along the orientation, margin included: a child whose share
+     * would cross a limit gets the limit, and the other weighted children share the rest by their weights. Beyond
+     * that its own desired size does not count, so a weighted child shrinks when the others need the room, and when
+     * the minimums do not fit the children run past the end of the panel. Measured without a limit along the
+     * orientation, the panel asks for enough room to give every weighted child its desired size while keeping the
+     * proportions, though no child counts for more than its maximum. The weight is forgotten when the child is
      * removed.
      *
      * @param child a child of this panel
