@@ -330,6 +330,15 @@ class ThemeResolverTest {
         }
 
         @Test
+        void roundedColors() {
+            assertEquals(Paint.rounded(0xFF202024, 4f), this.paint("{ \"color\": \"#FF202024\", \"radius\": 4 }"));
+            assertEquals(Paint.solid(0xFF202024), this.paint("{ \"color\": \"#202024\" }"));
+            assertTrue(this.tryPaint("{ \"color\": \"#202024\", \"radius\": -1 }").isEmpty());
+            assertTrue(this.tryPaint("{ \"color\": \"#202024\", \"radius\": \"big\" }").isEmpty());
+            assertTrue(this.tryPaint("{ \"color\": \"#202024\", \"corner\": 2 }").isEmpty());
+        }
+
+        @Test
         void gradients() {
             assertEquals(Paint.gradient(0xFF000001, 0xFF000002), this.paint("{ \"gradient\": [\"#000001\", \"#000002\"] }"));
         }

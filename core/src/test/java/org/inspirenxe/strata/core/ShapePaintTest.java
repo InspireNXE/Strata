@@ -347,6 +347,16 @@ class ShapePaintTest {
         }
 
         @Test
+        void aRoundedPaintFillsARoundedRectangle() {
+            org.inspirenxe.strata.api.theme.Paint.rounded(RED, 4f).paint(this.painter, new Rect(0, 0, 20, 20));
+            org.inspirenxe.strata.api.theme.Paint.rounded(0x00FF0000, 4f).paint(this.painter, new Rect(0, 0, 20, 20));
+            assertEquals(List.of("fillRoundRect 4.0"), this.canvas.calls);
+            assertThrows(IllegalArgumentException.class, () -> org.inspirenxe.strata.api.theme.Paint.rounded(RED, -1f));
+            assertThrows(IllegalArgumentException.class,
+                    () -> org.inspirenxe.strata.api.theme.Paint.rounded(RED, Float.NaN));
+        }
+
+        @Test
         void pixelsGoToTheCanvas() {
             final PixelBuffer buffer = PixelBuffer.of(2, 2);
             this.painter.pixels(buffer, new Rect(0, 0, 4, 4), RED);

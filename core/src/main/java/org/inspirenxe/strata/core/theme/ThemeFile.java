@@ -50,6 +50,7 @@ record ThemeFile(String layer, Optional<ThemeId> parent, Map<String, Paint> pain
     private static final Set<String> NINE_SLICE_KEYS = Set.of("nine_slice", "border", "tint", "size", "tiled");
     private static final Set<String> TILED_KEYS = Set.of("tiled", "size", "tint");
     private static final Set<String> GRADIENT_KEYS = Set.of("gradient");
+    private static final Set<String> COLOR_KEYS = Set.of("color", "radius");
     private static final Pattern DURATION = Pattern.compile("([0-9]+(?:\\.[0-9]+)?)(ms|s)");
     private static final Set<String> TEXT_KEYS =
             Set.of("color", "bold", "italic", "underline", "strikethrough", "shadow", "monospace");
@@ -128,6 +129,18 @@ record ThemeFile(String layer, Optional<ThemeId> parent, Map<String, Paint> pain
             return new Paint.Tiled(SpriteId.parse(string(map.get("tiled"), where + ".tiled")),
                     size(map.get("size"), where + ".size"), tint(map, where));
         }
+        if (map.containsKey("color")) {
+            checkKeys(map, COLOR_KEYS, where);
+            final int argb = color(string(map.get("color"), where + ".color"), where + ".color");
+            if (!map.containsKey("radius")) {
+                return Paint.solid(argb);
+            }
+            final float radius = number(map.get("radius"), where + ".radius");
+            if (radius < 0f) {
+                throw new IllegalArgumentException(where + ".radius must not be negative");
+            }
+            return Paint.rounded(argb, radius);
+        }
         if (map.containsKey("gradient")) {
             checkKeys(map, GRADIENT_KEYS, where);
             final List<?> colors = list(map.get("gradient"), where + ".gradient");
@@ -138,7 +151,7 @@ record ThemeFile(String layer, Optional<ThemeId> parent, Map<String, Paint> pain
                     color(string(colors.get(1), where + ".gradient"), where + ".gradient"));
         }
         throw new IllegalArgumentException(where
-                + " needs a color, \"none\", or one of sprite, tiled, nine_slice, gradient");
+                + " needs a color, \"none\", or one of color, sprite, tiled, nine_slice, gradient");
     }
 
     private static TextStylePatch textPatch(final Object value, final String where) {

@@ -23,8 +23,8 @@ import org.inspirenxe.strata.api.geometry.Size;
 import java.util.Objects;
 
 /**
- * How to fill a rectangle: a solid color, a vertical gradient, a stretched sprite, a tiled sprite or a nine-slice
- * sprite. Themes map style keys to paints, and components draw them with {@link #paint} without caring which kind
+ * How to fill a rectangle: a solid color, a color with rounded corners, a vertical gradient, a stretched sprite, a
+ * tiled sprite or a nine-slice sprite. Themes map style keys to paints, and components draw them with {@link #paint} without caring which kind
  * they hold.
  *
  * <p>Colors are ARGB ints ({@code 0xAARRGGBB}). A color with alpha 0 draws nothing; {@link #NONE} is such a
@@ -44,6 +44,18 @@ public sealed interface Paint {
      */
     static Paint solid(final int argb) {
         return new Solid(argb);
+    }
+
+    /**
+     * Returns a solid color with rounded corners. See {@link Rounded}.
+     *
+     * @param argb the color
+     * @param radius the radius of each corner, in UI units
+     * @return the paint
+     * @throws IllegalArgumentException if the radius is negative or not finite
+     */
+    static Paint rounded(final int argb, final float radius) {
+        return new Rounded(argb, radius);
     }
 
     /**
@@ -132,6 +144,11 @@ public sealed interface Paint {
                     painter.fill(rect, solid.argb);
                 }
             }
+            case Rounded rounded -> {
+                if ((rounded.argb >>> 24) != 0) {
+                    painter.fillRoundRect(rect, rounded.radius, rounded.argb);
+                }
+            }
             case Gradient gradient -> painter.fillGradient(rect, gradient.topArgb, gradient.bottomArgb);
             case Sprite sprite -> painter.sprite(sprite.sprite, rect, sprite.tint);
             case Tiled tiled -> painter.tiled(tiled.sprite, rect, tiled.size, tiled.tint);
@@ -151,6 +168,27 @@ public sealed interface Paint {
      * @param argb the color; alpha 0 draws nothing
      */
     record Solid(int argb) implements Paint {
+    }
+
+    /**
+     * A solid color with rounded corners, drawn with {@link Painter#fillRoundRect}. A radius larger than half the
+     * shorter side of the rectangle counts as half of it. An engine that draws only rectangles draws the corners in
+     * steps of a device pixel.
+     *
+     * @param argb the color; alpha 0 draws nothing
+     * @param radius the radius of each corner, in UI units; 0 gives square corners
+     */
+    record Rounded(int argb, float radius) implements Paint {
+        /**
+         * Checks the radius.
+         *
+         * @throws IllegalArgumentException if the radius is negative or not finite
+         */
+        public Rounded {
+            if (!(radius >= 0f) || Float.isInfinite(radius)) {
+                throw new IllegalArgumentException("Corner radius must be finite and not negative: " + radius);
+            }
+        }
     }
 
     /**

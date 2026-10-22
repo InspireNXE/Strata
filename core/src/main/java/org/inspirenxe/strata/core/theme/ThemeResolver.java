@@ -69,6 +69,7 @@ import java.util.Set;
  *     "button.normal": { "nine_slice": "mymod:button", "border": [3, 3, 3, 3], "tint": "#FFFFFFFF" },
  *     "button.hovered": { "sprite": "mymod:button_hover" },
  *     "list.row": "#FF1F2024",
+ *     "card.background": { "color": "#FF202024", "radius": 4 },
  *     "window.background": { "gradient": ["#F0101010", "#F0202020"] },
  *     "button.focus": "none"
  *   },
@@ -85,7 +86,8 @@ import java.util.Set;
  * }
  * }</pre>
  * <p>Colors are {@code #RRGGBB}, which is opaque, or {@code #AARRGGBB}. A paint is a color, {@code "none"} for
- * {@link Paint#NONE}, or an object: {@code {"sprite": id}}, {@code {"tiled": id, "size": [w, h]}},
+ * {@link Paint#NONE}, or an object: {@code {"color": color}} with an optional {@code radius} for rounded corners,
+ * in UI units, {@code {"sprite": id}}, {@code {"tiled": id, "size": [w, h]}},
  * {@code {"nine_slice": id, "border": ...}} with an optional {@code size} and {@code "tiled": true}, which needs the
  * size, or {@code {"gradient": [top, bottom]}}. Sprites, tiled sprites and nine-slices take an optional
  * {@code tint}, which defaults to opaque white. A nine-slice {@code border} is one number,
