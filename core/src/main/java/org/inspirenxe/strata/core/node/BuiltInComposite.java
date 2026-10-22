@@ -240,7 +240,8 @@ public abstract class BuiltInComposite<T extends Component<T>> extends BuiltInCo
     }
 
     /**
-     * Returns whether children are clipped to {@link #childClip()}.
+     * Returns whether children are clipped to {@link #childClip()}. The node reads its own setting when it paints
+     * and hit-tests, so overriding this method changes nothing there; call {@link #setChildClipping} instead.
      *
      * @return true by default
      */

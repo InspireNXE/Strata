@@ -25,8 +25,10 @@ import java.util.Objects;
 import java.util.Optional;
 
 /**
- * The {@link Environment} components see, backed by a host's {@link Platform} and its {@link Root}. Each call reads
- * them again, so it reflects their current state.
+ * The {@link Environment} components see, backed by a host's {@link Platform} and its {@link Root}. Time, the
+ * clipboard and the held modifiers are read again on each call. The text metrics are the platform's, which
+ * {@link Platform} requires to stay the same, wrapped once when the environment is made so inline sprites and visuals
+ * measure too.
  */
 final class EnvironmentImpl implements Environment {
     private final Platform platform;

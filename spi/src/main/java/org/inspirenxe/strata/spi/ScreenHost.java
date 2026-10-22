@@ -102,7 +102,9 @@ public interface ScreenHost extends InputSink {
     Theme theme();
 
     /**
-     * Replaces the theme. Components re-read their style keys and a new layout runs.
+     * Replaces the theme. Components re-read their style keys and a new layout runs. The host stops following a ref
+     * set before with {@link #setTheme(ThemeRef)}: {@link #themeRef()} becomes empty, and a reload of the theme
+     * source no longer changes the theme.
      *
      * @param theme the new theme
      * @throws org.inspirenxe.strata.api.theme.ThemeException if the theme lacks keys the open tree needs; the old

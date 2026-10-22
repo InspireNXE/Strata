@@ -53,8 +53,9 @@ public interface Focusable<S extends Focusable<S>> extends EventTarget<S> {
 
     /**
      * Sets whether the component can take keyboard focus, by a click or by {@link #requestFocus()}. Turning it off
-     * suits parts of a control that should leave focus where it is, such as the list in a combo box's popup. It
-     * does not take focus away from a component that already has it.
+     * suits parts of a control that should leave focus where it is, such as the list in a combo box's popup.
+     * Turning it off on the focused component clears focus at once, and the component hears
+     * {@link #FOCUS_LOST}.
      *
      * @param focusable false to refuse focus
      * @return this component
@@ -101,7 +102,9 @@ public interface Focusable<S extends Focusable<S>> extends EventTarget<S> {
 
     /**
      * Asks the host to give this component keyboard focus. Fails, changing nothing, unless the component is
-     * attached, focusable, visible and enabled, with every ancestor visible and enabled.
+     * attached, focusable, visible and enabled, with every ancestor visible and enabled. While a dialog is open, it
+     * also fails for a component below the top dialog, so only the dialog's content and overlays opened above it can
+     * take focus.
      *
      * @return true if the component now has focus
      */

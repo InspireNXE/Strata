@@ -18,9 +18,10 @@ package org.inspirenxe.strata.api.input;
 /**
  * What happened to a key.
  *
- * <p>A held key produces one {@link #PRESS}, then {@link #REPEAT}s at the system rate for keys that repeat, then
- * one {@link #RELEASE}. Strata delivers repeats on every engine: when an engine does not send them, Strata makes
- * them for navigation and delete keys.</p>
+ * <p>A held key produces one {@link #PRESS}, then {@link #REPEAT}s for keys that repeat, then one {@link #RELEASE}.
+ * An engine that sends repeats sends them at its own rate for the keys it chooses. When an engine does not, Strata
+ * makes them for the arrow keys, Home, End, Page Up, Page Down, Backspace and Delete only, the first 400 ms after
+ * the press and then one every 33 ms, for the most recently pressed of those keys.</p>
  */
 public enum KeyAction {
     /** The key went down. */

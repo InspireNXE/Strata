@@ -92,7 +92,8 @@ public interface ScreenStack extends InputSink, ScreenController {
 
     /**
      * Replaces the theme of every screen in the stack and of screens pushed later, except screens opened with a
-     * theme of their own.
+     * theme of their own. Those screens stop following a ref set before with {@link #setTheme(ThemeRef)}, so a
+     * reload of the theme source no longer changes them.
      *
      * @param theme the new theme
      * @throws org.inspirenxe.strata.api.theme.ThemeException if the theme lacks keys a screen's tree needs

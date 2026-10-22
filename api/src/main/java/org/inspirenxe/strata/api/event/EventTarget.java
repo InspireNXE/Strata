@@ -29,6 +29,10 @@ import org.inspirenxe.strata.api.event.input.InputEvents;
  * final value of a request. A handler may register or remove handlers while it runs; the change applies from the
  * next event.</p>
  *
+ * <p>Register and remove handlers on the UI thread only, for components and the other targets alike: handlers are
+ * kept without locks, and events fire on the UI thread. A {@link org.inspirenxe.strata.api.state.State} is the way to
+ * hand a value from another thread to a component.</p>
+ *
  * <p>Do not implement this interface. A component of your own gets it from
  * {@link org.inspirenxe.strata.api.extension.CustomComponent} and the other {@code Custom*} bases.</p>
  *

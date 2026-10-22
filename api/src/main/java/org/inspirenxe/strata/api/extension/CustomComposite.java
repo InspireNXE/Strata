@@ -234,7 +234,8 @@ public abstract class CustomComposite<T extends Component<T>> extends CustomComp
     }
 
     /**
-     * Returns whether children are clipped to {@link #childClip()}.
+     * Returns whether children are clipped to {@link #childClip()}. Strata reads the setting itself when it paints
+     * and hit-tests, so overriding this method changes nothing there; call {@link #setChildClipping} instead.
      *
      * @return true by default
      */

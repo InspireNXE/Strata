@@ -20,8 +20,9 @@ import org.inspirenxe.strata.api.theme.ThemeRef;
 
 /**
  * What an open screen can ask of its host. Each opening of a screen gets its own handle; once that opening ends
- * (the screen closed, or the host opened another screen), the handle's methods do nothing, except {@link #open},
- * which throws.
+ * (the screen closed, or its host showed another screen in its place), the handle's methods do nothing, except
+ * {@link #open}, which throws. Opening a screen above this one with {@link #open} does not end this opening: the
+ * screen is covered, keeps its handle, and shows again when the screen above closes.
  *
  * <p>Hosts create handles. Do not implement this interface.</p>
  */

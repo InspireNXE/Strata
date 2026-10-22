@@ -43,7 +43,7 @@ public interface TextInputSink {
      */
     TextInputSink NONE = new TextInputSink() {
         @Override
-        public void start(final Rect caretArea) {
+        public void start(final Rect fieldArea) {
         }
 
         @Override
@@ -54,19 +54,21 @@ public interface TextInputSink {
     /**
      * Called when a component that accepts text input gains focus.
      *
-     * @param caretArea where the text field is, in UI units, for placing input method windows
+     * @param fieldArea the bounds of the whole field, in the host's UI units, for placing input method windows. Core
+     *                  reads them as the field gains focus, and again when its screen comes back to the top of a
+     *                  stack, but does not call again as the caret moves or the field is laid out anew.
      */
-    void start(Rect caretArea);
+    void start(Rect fieldArea);
 
     /**
      * Called when a component that accepts text input gains focus, with the kind of text it takes. The default
      * forwards to {@link #start(Rect)}; override it to treat secrets differently.
      *
-     * @param caretArea where the text field is, in UI units, for placing input method windows
+     * @param fieldArea the bounds of the whole field, in the host's UI units, as {@link #start(Rect)} says
      * @param kind the kind of text the field takes
      */
-    default void start(final Rect caretArea, final TextInputKind kind) {
-        this.start(caretArea);
+    default void start(final Rect fieldArea, final TextInputKind kind) {
+        this.start(fieldArea);
     }
 
     /**

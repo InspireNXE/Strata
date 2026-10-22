@@ -33,7 +33,8 @@ import java.util.Set;
  * Strata.components().register(ComponentId.of("fancy", "gauge"), Gauge.class, GaugeImpl::new);
  * }</pre>
  *
- * <p>A library that lists a {@link ComponentLibrary} is registered without anyone calling it.</p>
+ * <p>A library that lists a {@link ComponentLibrary} is registered without anyone calling it, when the class loaders
+ * {@link #load} names can see it; an adapter loads the rest.</p>
  *
  * <p>Lookup by type takes the registration for that exact type. If there is none, it takes the newest registration
  * whose type is a subtype of the one asked for, so callers can ask for an interface the registered type extends,
@@ -115,8 +116,10 @@ public interface ComponentRegistry {
 
     /**
      * Registers the {@link ComponentLibrary} services that a class loader can see and that are not registered yet.
-     * Strata looks in its own class loader and the thread's context class loader by itself. Engine adapters call
-     * this for each plugin whose classes those loaders cannot see, when the plugin loads.
+     * The first time anything uses the registry, Strata registers the libraries its own class loader can see and
+     * those the context class loader of the thread making that call can see, and it does not look again later.
+     * Engine adapters call this for each plugin whose classes those loaders cannot see, when the plugin loads, and
+     * anyone may call it for a class loader that came after that first use.
      *
      * @param loader the class loader to look in
      */
