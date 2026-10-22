@@ -154,6 +154,17 @@ class InfoBarTest {
         }
 
         @Test
+        void stacksItsLinesAtTheWidestWhenTheWidthIsUnboundedAndTheTextBreaks() {
+            final InfoBar bar = InfoBarTest.this.ui.infoBar(Severity.WARNING, "Low stock", "Only three\ncrates left");
+            InfoBarTest.this.test.show(InfoBarTest.this.ui.stackPanel(Orientation.HORIZONTAL).add(bar));
+            // 15 of strip and padding, the widest line "crates left" at 66, 16 for the close button; three lines
+            assertEquals(new Rect(0, 0, 97, 35), bar.bounds());
+            assertEquals(List.of("text Low stock 9,4 #FFFFFFFF", "text Only three 9,13 #FFFFFFFF",
+                    "text crates left 9,22 #FFFFFFFF", "text x 82,4 #FFA0A0A0"),
+                    InfoBarTest.this.render().lines("text"));
+        }
+
+        @Test
         void isALineTallWhenEmpty() {
             final InfoBar bar = InfoBarTest.this.show(InfoBarTest.this.ui.infoBar(), 200);
             assertEquals(new Rect(0, 0, 200, 17), bar.bounds());
