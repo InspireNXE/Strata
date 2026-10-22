@@ -49,6 +49,7 @@ import org.inspirenxe.strata.api.geometry.Rect;
 import org.inspirenxe.strata.api.geometry.Size;
 import org.inspirenxe.strata.api.input.TextInputKind;
 import org.inspirenxe.strata.api.layout.Anchor;
+import org.inspirenxe.strata.api.layout.FlowDirection;
 import org.inspirenxe.strata.api.layout.HorizontalAlignment;
 import org.inspirenxe.strata.api.layout.VerticalAlignment;
 import org.inspirenxe.strata.api.state.PropertyKey;
@@ -817,6 +818,17 @@ public abstract class CustomComponent<T extends Component<T>> implements Compone
     @Override
     public final T setAnchor(final Anchor anchor) {
         return Component.super.setAnchor(anchor);
+    }
+
+    @Override
+    public final FlowDirection flowDirection() {
+        return this.peer.flowDirection();
+    }
+
+    @Override
+    public final T setFlowDirection(final FlowDirection direction) {
+        this.peer.setFlowDirection(direction);
+        return this.self();
     }
 
     @Override

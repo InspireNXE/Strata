@@ -49,6 +49,11 @@ import java.util.Set;
  * glide over the theme's {@value ScrollPanel#STYLE_SMOOTH} time through a {@link Motion}, and a further step adds to
  * where a glide under way is headed. {@link #setScroll}, {@link #scrollBy}, the thumb and the track move at once and
  * stop a glide, as everything does when the time is 0 or the panel is detached.</p>
+ *
+ * <p>Right to left (design 4.49), the panel lays out as for left to right and mirrors the viewport and the bars
+ * inside its bounds, as its children are mirrored: the vertical bar sits at the left, the horizontal bar starts at
+ * the right, and an offset of 0 shows the content's right edge, its start. Left and Right and a sideways wheel move
+ * the other way, so they still move toward the side they name; Shift with the wheel keeps moving toward the end.</p>
  */
 public final class ScrollPanelImpl extends BuiltInContainer<ScrollPanel> implements ScrollPanel {
     private static final Set<String> REQUIRED = Set.of(STYLE_THUMB);
@@ -82,6 +87,8 @@ public final class ScrollPanelImpl extends BuiltInContainer<ScrollPanel> impleme
     private boolean verticalShown;
     private boolean horizontalShown;
     private Rect viewport;
+    // The viewport as for left to right, where the children's slot is worked out
+    private Rect logicalViewport;
 
     // Pointer
     private int dragAxis;
@@ -108,6 +115,7 @@ public final class ScrollPanelImpl extends BuiltInContainer<ScrollPanel> impleme
         this.verticalPolicy = ScrollPolicy.AUTO;
         this.rate = DEFAULT_SCROLL_RATE;
         this.viewport = Rect.ZERO;
+        this.logicalViewport = Rect.ZERO;
         this.thumb = Paint.NONE;
         this.thumbHoveredPaint = Paint.NONE;
         this.track = Paint.NONE;
@@ -211,8 +219,10 @@ public final class ScrollPanelImpl extends BuiltInContainer<ScrollPanel> impleme
     }
 
     @Override
-    public ScrollPanel scrollToVisible(final Rect area) {
-        final Rect view = this.viewport;
+    public ScrollPanel scrollToVisible(final Rect wanted) {
+        // Right to left, the area is mirrored to where it would be left to right, where the offsets work alike
+        final Rect area = this.isRightToLeft() ? Flow.mirror(wanted, this.bounds()) : wanted;
+        final Rect view = this.logicalViewport;
         float x = this.scrollX;
         float y = this.scrollY;
         if (area.y() < view.y()) {
@@ -398,29 +408,33 @@ public final class ScrollPanelImpl extends BuiltInContainer<ScrollPanel> impleme
         this.verticalShown = vertical;
         this.horizontalShown = horizontal;
 
-        this.viewport = new Rect(content.x(), content.y(),
+        final Rect view = new Rect(content.x(), content.y(),
                 Math.max(0f, content.width() - (vertical ? GUTTER : 0f)),
                 Math.max(0f, content.height() - (horizontal ? GUTTER : 0f)));
+        this.logicalViewport = view;
+        this.viewport = this.flow(view);
         final float extentWidth = this.horizontalPolicy == ScrollPolicy.NEVER
-                ? this.viewport.width() : Math.max(this.contentWidth, this.viewport.width());
+                ? view.width() : Math.max(this.contentWidth, view.width());
         final float extentHeight = this.verticalPolicy == ScrollPolicy.NEVER
-                ? this.viewport.height() : Math.max(this.contentHeight, this.viewport.height());
-        this.maxScrollX = Math.max(0f, extentWidth - this.viewport.width());
-        this.maxScrollY = Math.max(0f, extentHeight - this.viewport.height());
+                ? view.height() : Math.max(this.contentHeight, view.height());
+        this.maxScrollX = Math.max(0f, extentWidth - view.width());
+        this.maxScrollY = Math.max(0f, extentHeight - view.height());
         this.scrollX = clamp(this.scrollX, this.maxScrollX);
         this.scrollY = clamp(this.scrollY, this.maxScrollY);
         this.arranged = true;
 
-        final Rect slot = new Rect(this.viewport.x() - Math.round(this.scrollX), this.viewport.y() - Math.round(this.scrollY),
+        // Worked out as for left to right; the children's node mirrors them right to left
+        final Rect slot = new Rect(view.x() - Math.round(this.scrollX), view.y() - Math.round(this.scrollY),
                 extentWidth, extentHeight);
         for (final Component<?> child : this.children()) {
             context.arrange(child, slot);
         }
 
-        this.verticalBar.update(new Rect(content.right() - BAR_WIDTH, content.y(), BAR_WIDTH, this.viewport.height()),
-                this.viewport.height(), extentHeight);
-        this.horizontalBar.update(new Rect(content.x(), content.bottom() - BAR_WIDTH, this.viewport.width(), BAR_WIDTH),
-                this.viewport.width(), extentWidth);
+        this.verticalBar.update(this.flow(new Rect(content.right() - BAR_WIDTH, content.y(), BAR_WIDTH,
+                view.height())), view.height(), extentHeight);
+        this.horizontalBar.setReversed(this.isRightToLeft());
+        this.horizontalBar.update(this.flow(new Rect(content.x(), content.bottom() - BAR_WIDTH, view.width(),
+                BAR_WIDTH)), view.width(), extentWidth);
     }
 
     @Override
@@ -446,7 +460,8 @@ public final class ScrollPanelImpl extends BuiltInContainer<ScrollPanel> impleme
 
     @Override
     protected void onScroll(final ScrollEvent event) {
-        float dx = -event.scrollX() * this.rate;
+        // A sideways wheel moves toward the side it turns to, which is toward the start right to left
+        float dx = (this.isRightToLeft() ? event.scrollX() : -event.scrollX()) * this.rate;
         float dy = -event.scrollY() * this.rate;
         // Shift turns a vertical scroll sideways; an engine that turns it itself sends a horizontal one
         if (event.modifiers().shift() && dx == 0f && this.horizontalPolicy != ScrollPolicy.NEVER) {
@@ -475,6 +490,8 @@ public final class ScrollPanelImpl extends BuiltInContainer<ScrollPanel> impleme
         final boolean vertical = this.verticalPolicy != ScrollPolicy.NEVER;
         final boolean horizontal = this.horizontalPolicy != ScrollPolicy.NEVER;
         final float page = Math.max(this.rate, this.viewport.height() - this.rate);
+        // Left and Right move toward the side they name, so they swap right to left
+        final float leftward = this.isRightToLeft() ? this.rate : -this.rate;
         final boolean moved = switch (event.key()) {
             case UP -> vertical && this.glideTo(this.aimX(), this.aimY() - this.rate);
             case DOWN -> vertical && this.glideTo(this.aimX(), this.aimY() + this.rate);
@@ -482,8 +499,8 @@ public final class ScrollPanelImpl extends BuiltInContainer<ScrollPanel> impleme
             case PAGE_DOWN -> vertical && this.glideTo(this.aimX(), this.aimY() + page);
             case HOME -> vertical && this.glideTo(this.aimX(), 0f);
             case END -> vertical && this.glideTo(this.aimX(), this.maxScrollY);
-            case LEFT -> horizontal && this.glideTo(this.aimX() - this.rate, this.aimY());
-            case RIGHT -> horizontal && this.glideTo(this.aimX() + this.rate, this.aimY());
+            case LEFT -> horizontal && this.glideTo(this.aimX() + leftward, this.aimY());
+            case RIGHT -> horizontal && this.glideTo(this.aimX() - leftward, this.aimY());
             default -> false;
         };
         if (moved) {
@@ -518,7 +535,8 @@ public final class ScrollPanelImpl extends BuiltInContainer<ScrollPanel> impleme
                 this.dragGrab = x - thumbRect.x();
             } else {
                 final float page = Math.max(this.rate, this.viewport.width() - this.rate);
-                this.scrollTo(this.scrollX + (x < thumbRect.x() ? -page : page), this.scrollY);
+                final boolean towardStart = x < thumbRect.x() != this.horizontalBar.isReversed();
+                this.scrollTo(this.scrollX + (towardStart ? -page : page), this.scrollY);
             }
             event.consume();
         }

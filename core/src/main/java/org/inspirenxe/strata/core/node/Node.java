@@ -41,6 +41,7 @@ import org.inspirenxe.strata.api.geometry.Insets;
 import org.inspirenxe.strata.api.geometry.Rect;
 import org.inspirenxe.strata.api.geometry.Size;
 import org.inspirenxe.strata.api.input.TextInputKind;
+import org.inspirenxe.strata.api.layout.FlowDirection;
 import org.inspirenxe.strata.api.layout.HorizontalAlignment;
 import org.inspirenxe.strata.api.layout.VerticalAlignment;
 import org.inspirenxe.strata.api.state.PropertyKey;
@@ -148,6 +149,8 @@ public class Node implements ComponentPeer {
     private float explicitHeight;
     private HorizontalAlignment horizontalAlignment;
     private VerticalAlignment verticalAlignment;
+    // Null follows the parent
+    private FlowDirection flowDirection;
     private float offsetX;
     private float offsetY;
     private Paint background;
@@ -177,6 +180,8 @@ public class Node implements ComponentPeer {
     private float lastAvailableWidth;
     private float lastAvailableHeight;
     private Rect lastSlot;
+    // The sum of the left and right edges of the parent's bounds the last arrange mirrored inside, or NaN for none
+    private float lastMirror = Float.NaN;
 
     /**
      * Creates the node behind a component. {@link ComponentFactoryImpl#createPeer}, {@link BuiltInComponent} and
@@ -372,20 +377,27 @@ public class Node implements ComponentPeer {
     /**
      * Places the component in a slot and arranges its children. The slot is shrunk by the margin; the component
      * then takes its desired size, or the whole inner slot on an axis set to stretch with no fixed size (still
-     * clamped), and is aligned inside, then moved by its offset. {@link VerticalAlignment#BASELINE} places it as
-     * {@link VerticalAlignment#TOP} does; the parents that line up baselines move the slot instead. A hidden component gets an empty rectangle at the
-     * slot's origin. Nothing is arranged if nothing changed since the last arrange into the same slot. If the hook
-     * throws, the component stays marked for arranging, so the next layout tries again.
+     * clamped), and is aligned inside. In a parent whose {@linkplain #flowDirection() direction} is right to left
+     * the result is then mirrored inside the parent's bounds, so the slot and the alignment are worked out as for
+     * left to right. Last it is moved by its offset, which is not mirrored. {@link VerticalAlignment#BASELINE} places
+     * it as {@link VerticalAlignment#TOP} does; the parents that line up baselines move the slot instead. A hidden
+     * component gets an empty rectangle at the slot's origin. Nothing is arranged if nothing changed since the last
+     * arrange into the same slot and the same mirror. If the hook throws, the component stays marked for arranging,
+     * so the next layout tries again.
      *
      * @param pass the layout context
      * @param slot the space the parent assigns, margin included, in the host's coordinates
      */
     public final void arrange(final LayoutPass pass, final Rect slot) {
-        if (!this.arrangeDirty && slot.equals(this.lastSlot)) {
+        final ContainerNode container = this.parent;
+        final float mirror = container != null && container.flowDirection() == FlowDirection.RIGHT_TO_LEFT
+                ? container.bounds().x() + container.bounds().right() : Float.NaN;
+        if (!this.arrangeDirty && slot.equals(this.lastSlot) && Float.compare(mirror, this.lastMirror) == 0) {
             return;
         }
         this.arrangeDirty = false;
         this.lastSlot = slot;
+        this.lastMirror = mirror;
         if (!this.visible) {
             this.bounds = new Rect(slot.x(), slot.y(), 0f, 0f);
             return;
@@ -411,7 +423,9 @@ public class Node implements ComponentPeer {
             case BOTTOM -> inner.bottom() - height;
         };
 
-        this.bounds = new Rect(x + this.offsetX, y + this.offsetY, width, height);
+        // Mirrored inside the parent's bounds: the left edge goes where the right edge was, from the other side
+        final float placedX = Float.isNaN(mirror) ? x : mirror - x - width;
+        this.bounds = new Rect(placedX + this.offsetX, y + this.offsetY, width, height);
         boolean done = false;
         try {
             this.hooks.arrange(pass, this.bounds);
@@ -1386,6 +1400,77 @@ public class Node implements ComponentPeer {
         this.horizontalAlignment = Objects.requireNonNull(horizontal, "horizontal");
         this.verticalAlignment = Objects.requireNonNull(vertical, "vertical");
         this.invalidateLayout();
+    }
+
+    /**
+     * Returns the direction this node's content runs in: its own, else the nearest ancestor's that has one, else, at
+     * the top of its tree, its root's {@link Root#flowDirection()}, or the language's while it is in no tree. It walks
+     * the parents on each call.
+     *
+     * @return the direction
+     */
+    @Override
+    public final FlowDirection flowDirection() {
+        Node node = this;
+        while (true) {
+            if (node.flowDirection != null) {
+                return node.flowDirection;
+            }
+            if (node.parent == null) {
+                return node.root != null ? node.root.flowDirection() : Root.languageDirection();
+            }
+            node = node.parent;
+        }
+    }
+
+    /**
+     * Returns the direction set on this node.
+     *
+     * @return the direction, or null when it follows its parent
+     */
+    public final FlowDirection ownFlowDirection() {
+        return this.flowDirection;
+    }
+
+    /**
+     * Sets the direction, null to follow the parent, and marks this node and everything inside it for measuring and
+     * arranging again, since text and the parts of controls follow the direction. On a screen's root, every overlay
+     * is laid out again too, since overlays follow the root.
+     *
+     * @param direction the direction, or null
+     * @throws IllegalStateException if attached and called off the UI thread
+     */
+    @Override
+    public final void setFlowDirection(final FlowDirection direction) {
+        if (direction == this.flowDirection) {
+            return;
+        }
+        this.checkThread();
+        this.flowDirection = direction;
+        if (this.root != null && this.root.content() == this) {
+            this.root.invalidateText();
+        } else {
+            this.invalidateSubtree();
+        }
+    }
+
+    /**
+     * Marks this node and everything inside it for measuring and arranging, and asks for a layout.
+     */
+    private void invalidateSubtree() {
+        this.markSubtree();
+        this.invalidateLayout();
+    }
+
+    private void markSubtree() {
+        this.measureDirty = true;
+        this.minimumDirty = true;
+        this.arrangeDirty = true;
+        if (this instanceof final ContainerNode container) {
+            for (final Node child : container.childNodes()) {
+                child.markSubtree();
+            }
+        }
     }
 
     @Override

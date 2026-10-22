@@ -24,6 +24,7 @@ import org.inspirenxe.strata.api.event.component.PaintEvent;
 import org.inspirenxe.strata.api.geometry.Insets;
 import org.inspirenxe.strata.api.geometry.Rect;
 import org.inspirenxe.strata.api.layout.Anchor;
+import org.inspirenxe.strata.api.layout.FlowDirection;
 import org.inspirenxe.strata.api.layout.HorizontalAlignment;
 import org.inspirenxe.strata.api.layout.VerticalAlignment;
 import org.inspirenxe.strata.api.state.PropertyKey;
@@ -497,6 +498,35 @@ public interface Component<T extends Component<T>> extends EventTarget<T>, Enabl
     default T setAnchor(final Anchor anchor) {
         return this.setAlignment(anchor.horizontal(), anchor.vertical());
     }
+
+    /**
+     * Returns the direction the component's content runs in: the one set on it, or else its parent's, up to the top
+     * of its tree. The top of a screen's tree, and an overlay's content, follow the screen's root when a direction is
+     * set on it, and otherwise the language of the platform's translator, right to left for Arabic, Hebrew and the
+     * other languages written that way. A component in no tree follows the language.
+     *
+     * @return the direction
+     */
+    FlowDirection flowDirection();
+
+    /**
+     * Sets the direction the component's content runs in, for it and everything inside it that sets none.
+     *
+     * <p>A container or composite whose direction is right to left arranges its children as it would left to right
+     * and then mirrors them inside its bounds: each child's left edge moves to where its right edge was, measured
+     * from the other side. Margins, padding, {@link HorizontalAlignment#LEFT} and {@link HorizontalAlignment#RIGHT}
+     * therefore mean the start and the end, and the positions of an
+     * {@link org.inspirenxe.strata.api.layout.AbsolutePanel} are mirrored too. The mirror moves the real bounds, so
+     * {@link #bounds()}, the pointer and drawing stay in the host's coordinates. Text, sprites and visuals draw
+     * unmirrored; the controls whose parts or keys have a direction, such as a slider's fill or a tree's arrows,
+     * follow it themselves.</p>
+     *
+     * <p>A change lays out the component and everything inside it again.</p>
+     *
+     * @param direction the direction, or null to follow the parent's
+     * @return this component
+     */
+    T setFlowDirection(FlowDirection direction);
 
     /**
      * Returns where the component sits, in the host's coordinates, as of the last layout. Before the first layout

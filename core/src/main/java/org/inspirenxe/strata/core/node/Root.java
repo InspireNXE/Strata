@@ -44,6 +44,7 @@ import org.inspirenxe.strata.api.input.Modifier;
 import org.inspirenxe.strata.api.input.Modifiers;
 import org.inspirenxe.strata.api.input.MouseButton;
 import org.inspirenxe.strata.api.input.ScrollKind;
+import org.inspirenxe.strata.api.layout.FlowDirection;
 import org.inspirenxe.strata.api.screen.Screen;
 import org.inspirenxe.strata.api.overlay.Overlay;
 import org.inspirenxe.strata.api.overlay.Overlays;
@@ -76,6 +77,7 @@ import org.inspirenxe.strata.core.state.Binding;
 import org.inspirenxe.strata.core.state.BindingQueue;
 import org.inspirenxe.strata.core.state.Watch;
 import org.inspirenxe.strata.core.text.Mnemonics;
+import org.inspirenxe.strata.core.text.Translations;
 import org.inspirenxe.strata.spi.Canvas;
 import org.inspirenxe.strata.spi.InputContext;
 import org.inspirenxe.strata.spi.Platform;
@@ -90,6 +92,7 @@ import java.util.IdentityHashMap;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
@@ -204,6 +207,10 @@ public final class Root {
      * How far two touches that move together move, in UI units, to scroll one wheel notch.
      */
     public static final float TOUCH_SCROLL_UNITS = 10f;
+
+    // The direction of the translator's language, and the translations' version it was worked out for
+    private static volatile FlowDirection languageFlow;
+    private static volatile long languageFlowVersion;
 
     private final Platform platform;
     private final ComponentFactoryImpl ui;
@@ -602,6 +609,40 @@ public final class Root {
      */
     void checkTheme(final Node subtree) {
         this.validateTheme(this.theme, subtree);
+    }
+
+    /**
+     * Returns the direction the trees of this root run in where no node sets one: the direction set on the content,
+     * so overlays follow the screen, or else the language's.
+     *
+     * @return the direction
+     */
+    public FlowDirection flowDirection() {
+        final Node top = this.content;
+        if (top != null && top.ownFlowDirection() != null) {
+            return top.ownFlowDirection();
+        }
+        return Root.languageDirection();
+    }
+
+    /**
+     * Returns the direction the language of the platform's translator is written in, worked out again only when the
+     * translations' version changes. Hosts lay out every node again on such a change, so a node arranged after it
+     * reads the new direction.
+     *
+     * @return right to left for Arabic, Hebrew and the other languages written that way
+     */
+    public static FlowDirection languageDirection() {
+        final long version = Translations.version();
+        final FlowDirection known = Root.languageFlow;
+        if (known != null && Root.languageFlowVersion == version) {
+            return known;
+        }
+        final Locale locale = Translations.translator().locale();
+        final FlowDirection direction = locale == null ? FlowDirection.LEFT_TO_RIGHT : FlowDirection.of(locale);
+        Root.languageFlowVersion = version;
+        Root.languageFlow = direction;
+        return direction;
     }
 
     /**

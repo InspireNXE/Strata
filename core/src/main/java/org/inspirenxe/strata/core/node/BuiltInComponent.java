@@ -49,6 +49,7 @@ import org.inspirenxe.strata.api.geometry.Insets;
 import org.inspirenxe.strata.api.geometry.Rect;
 import org.inspirenxe.strata.api.geometry.Size;
 import org.inspirenxe.strata.api.input.TextInputKind;
+import org.inspirenxe.strata.api.layout.FlowDirection;
 import org.inspirenxe.strata.api.layout.HorizontalAlignment;
 import org.inspirenxe.strata.api.layout.VerticalAlignment;
 import org.inspirenxe.strata.api.state.PropertyKey;
@@ -57,6 +58,7 @@ import org.inspirenxe.strata.api.theme.Border;
 import org.inspirenxe.strata.api.text.TextStyle;
 import org.inspirenxe.strata.api.theme.Paint;
 import org.inspirenxe.strata.api.theme.Theme;
+import org.inspirenxe.strata.core.layout.Flow;
 
 import java.util.Objects;
 import java.util.Optional;
@@ -826,6 +828,38 @@ public abstract class BuiltInComponent<T extends Component<T>> implements Compon
     public final T setAlignment(final HorizontalAlignment horizontal, final VerticalAlignment vertical) {
         this.node.setAlignment(horizontal, vertical);
         return this.self();
+    }
+
+    @Override
+    public final FlowDirection flowDirection() {
+        return this.node.flowDirection();
+    }
+
+    @Override
+    public final T setFlowDirection(final FlowDirection direction) {
+        this.node.setFlowDirection(direction);
+        return this.self();
+    }
+
+    /**
+     * Returns whether the component's content runs right to left, as {@link #flowDirection()} says. Controls whose
+     * parts sit at a side, or whose keys move one way, read this when they place, draw and handle them.
+     *
+     * @return true for {@link FlowDirection#RIGHT_TO_LEFT}
+     */
+    protected final boolean isRightToLeft() {
+        return this.node.flowDirection() == FlowDirection.RIGHT_TO_LEFT;
+    }
+
+    /**
+     * Returns a rectangle worked out as for left to right, mirrored inside the bounds while the component runs right
+     * to left, as {@link Component#setFlowDirection} mirrors children. Left to right it comes back as it is.
+     *
+     * @param rect the rectangle, in the host's coordinates
+     * @return the rectangle as drawn
+     */
+    protected final Rect flow(final Rect rect) {
+        return this.isRightToLeft() ? Flow.mirror(rect, this.node.bounds()) : rect;
     }
 
     @Override

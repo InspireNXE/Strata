@@ -29,8 +29,11 @@ import org.inspirenxe.strata.api.theme.Paint;
  * less 8 units, but never longer than the track. On a track shorter than twice the minimum, the minimum is half the
  * track, so the thumb always has room to travel. When the whole content shows, the thumb fills the track.</p>
  *
- * <p>The last thumb is kept and made again only when the track, the fractions or the offset change, so painting an
- * unchanged bar allocates nothing.</p>
+ * <p>A {@linkplain #setReversed reversed} horizontal bar starts at its right end, for content that runs right to
+ * left: an offset of 0 puts the thumb at the right, and the largest at the left.</p>
+ *
+ * <p>The last thumb is kept and made again only when the track, the fractions, the direction or the offset change, so
+ * painting an unchanged bar allocates nothing.</p>
  */
 public final class ScrollTrack {
     private final boolean vertical;
@@ -38,6 +41,7 @@ public final class ScrollTrack {
     private Rect track;
     private float visible;
     private float extent;
+    private boolean reversed;
     // The last thumb and the offsets it was made for; null after an update
     private Rect thumb;
     private float thumbOffset;
@@ -81,6 +85,27 @@ public final class ScrollTrack {
     }
 
     /**
+     * Sets whether a horizontal bar starts at its right end. A vertical bar ignores it.
+     *
+     * @param reversed true for content that runs right to left
+     */
+    public void setReversed(final boolean reversed) {
+        if (reversed != this.reversed) {
+            this.reversed = reversed;
+            this.thumb = null;
+        }
+    }
+
+    /**
+     * Returns whether the bar starts at its right end.
+     *
+     * @return true for a reversed horizontal bar
+     */
+    public boolean isReversed() {
+        return this.reversed && !this.vertical;
+    }
+
+    /**
      * Returns the track.
      *
      * @return the track, as of the last update
@@ -120,9 +145,12 @@ public final class ScrollTrack {
         final float length = this.thumbLength();
         final float travel = this.trackLength() - length;
         final float along = maxOffset <= 0f ? 0f : travel * Math.max(0f, Math.min(1f, offset / maxOffset));
-        this.thumb = this.vertical
-                ? new Rect(this.track.x(), this.track.y() + along, this.track.width(), length)
-                : new Rect(this.track.x() + along, this.track.y(), length, this.track.height());
+        if (this.vertical) {
+            this.thumb = new Rect(this.track.x(), this.track.y() + along, this.track.width(), length);
+        } else {
+            final float x = this.reversed ? this.track.right() - along - length : this.track.x() + along;
+            this.thumb = new Rect(x, this.track.y(), length, this.track.height());
+        }
         this.thumbOffset = offset;
         this.thumbMaxOffset = maxOffset;
         return this.thumb;
@@ -131,7 +159,7 @@ public final class ScrollTrack {
     /**
      * Returns the offset that puts the thumb's start at a point along the bar.
      *
-     * @param thumbStart where the thumb should start, in the host's coordinates on the bar's axis
+     * @param thumbStart where the thumb's top or left edge should be, in the host's coordinates on the bar's axis
      * @param maxOffset the largest offset
      * @return the offset, not clamped
      */
@@ -139,6 +167,9 @@ public final class ScrollTrack {
         final float travel = this.trackLength() - this.thumbLength();
         if (travel <= 0f) {
             return 0f;
+        }
+        if (this.isReversed()) {
+            return (this.track.right() - this.thumbLength() - thumbStart) / travel * maxOffset;
         }
         final float start = this.vertical ? this.track.y() : this.track.x();
         return (thumbStart - start) / travel * maxOffset;

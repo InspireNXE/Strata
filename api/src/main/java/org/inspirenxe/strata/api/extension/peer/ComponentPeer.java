@@ -26,6 +26,7 @@ import org.inspirenxe.strata.api.event.Subscription;
 import org.inspirenxe.strata.api.extension.Environment;
 import org.inspirenxe.strata.api.geometry.Insets;
 import org.inspirenxe.strata.api.geometry.Rect;
+import org.inspirenxe.strata.api.layout.FlowDirection;
 import org.inspirenxe.strata.api.layout.HorizontalAlignment;
 import org.inspirenxe.strata.api.layout.VerticalAlignment;
 import org.inspirenxe.strata.api.state.PropertyKey;
@@ -328,6 +329,20 @@ public interface ComponentPeer {
      * @param vertical the vertical alignment
      */
     void setAlignment(HorizontalAlignment horizontal, VerticalAlignment vertical);
+
+    /**
+     * See {@link org.inspirenxe.strata.api.component.Component#flowDirection()}.
+     *
+     * @return the direction, its own or inherited
+     */
+    FlowDirection flowDirection();
+
+    /**
+     * See {@link org.inspirenxe.strata.api.component.Component#setFlowDirection}.
+     *
+     * @param direction the direction, or null to follow the parent's
+     */
+    void setFlowDirection(FlowDirection direction);
 
     /**
      * See {@link org.inspirenxe.strata.api.extension.CustomComponent#offsetX()}.
