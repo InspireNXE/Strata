@@ -122,6 +122,10 @@ public final class ContainerNode extends Node implements ContainerPeer {
      */
     @Override
     public void insert(final int index, final Component<?> child) {
+        this.insert(index, child, false);
+    }
+
+    private void insert(final int index, final Component<?> child, final boolean content) {
         Objects.checkIndex(index, this.childNodes.size() + 1);
         final Node node = this.factory().nodeOf(child);
         if (node.parentNode() != null) {
@@ -141,6 +145,8 @@ public final class ContainerNode extends Node implements ContainerPeer {
         this.childNodes.add(index, node);
         this.children.add(index, node.facade());
         node.setParent(this);
+        // Before attaching, so reports that bindings fire as the child attaches already pass the composite
+        node.setContent(content);
         node.setPaintSequence(++this.topSequence);
         this.paintOrderValid = false;
         if (root != null) {
@@ -151,8 +157,7 @@ public final class ContainerNode extends Node implements ContainerPeer {
 
     @Override
     public void addContent(final Component<?> child) {
-        this.add(child);
-        this.factory().nodeOf(child).setContent(true);
+        this.insert(this.childNodes.size(), child, true);
     }
 
     /**
@@ -166,8 +171,7 @@ public final class ContainerNode extends Node implements ContainerPeer {
      * @throws org.inspirenxe.strata.api.theme.ThemeException as for {@link #insert(int, Component)}
      */
     public void insertContent(final int index, final Component<?> child) {
-        this.insert(index, child);
-        this.factory().nodeOf(child).setContent(true);
+        this.insert(index, child, true);
     }
 
     @Override

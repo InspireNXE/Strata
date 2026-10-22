@@ -235,12 +235,13 @@ public class Node implements ComponentPeer {
      * replaced by the fixed size where one is set and capped by the maximum size. The result is replaced by the
      * fixed size where one is set, then clamped to the minimum and maximum. A hidden component measures as 0 by 0
      * without calling its hook. Nothing is measured if nothing changed since the last measure with the same space.
+     * If the hook or a {@link Component#MEASURED} handler throws, the component stays marked for measuring, so the
+     * next layout tries again.
      *
      * @param pass the layout context
      * @param availableWidth the width the parent offers, margin included; may be infinite
      * @param availableHeight the height the parent offers, margin included; may be infinite
      */
-    @SuppressWarnings("unchecked")
     public final void measure(final LayoutPass pass, final float availableWidth, final float availableHeight) {
         if (!this.measureDirty && availableWidth == this.lastAvailableWidth && availableHeight == this.lastAvailableHeight) {
             return;
@@ -255,7 +256,19 @@ public class Node implements ComponentPeer {
             this.desiredHeight = 0f;
             return;
         }
+        boolean done = false;
+        try {
+            this.measureVisible(pass, availableWidth, availableHeight);
+            done = true;
+        } finally {
+            if (!done) {
+                this.measureDirty = true;
+            }
+        }
+    }
 
+    @SuppressWarnings("unchecked")
+    private void measureVisible(final LayoutPass pass, final float availableWidth, final float availableHeight) {
         float width = Float.isNaN(this.explicitWidth) ? availableWidth - this.margin.horizontal() : this.explicitWidth;
         float height = Float.isNaN(this.explicitHeight) ? availableHeight - this.margin.vertical() : this.explicitHeight;
         width = Math.max(0f, Math.min(width, this.maxWidth));
@@ -285,7 +298,8 @@ public class Node implements ComponentPeer {
      * Places the component in a slot and arranges its children. The slot is shrunk by the margin; the component
      * then takes its desired size, or the whole inner slot on an axis set to stretch with no fixed size (still
      * clamped), and is aligned inside, then moved by its offset. A hidden component gets an empty rectangle at the
-     * slot's origin. Nothing is arranged if nothing changed since the last arrange into the same slot.
+     * slot's origin. Nothing is arranged if nothing changed since the last arrange into the same slot. If the hook
+     * throws, the component stays marked for arranging, so the next layout tries again.
      *
      * @param pass the layout context
      * @param slot the space the parent assigns, margin included, in the host's coordinates
@@ -322,7 +336,15 @@ public class Node implements ComponentPeer {
         };
 
         this.bounds = new Rect(x + this.offsetX, y + this.offsetY, width, height);
-        this.hooks.arrange(pass, this.bounds);
+        boolean done = false;
+        try {
+            this.hooks.arrange(pass, this.bounds);
+            done = true;
+        } finally {
+            if (!done) {
+                this.arrangeDirty = true;
+            }
+        }
     }
 
     /**
@@ -488,13 +510,25 @@ public class Node implements ComponentPeer {
     // Events
     // ------------------------------------------------------------------
 
+    /**
+     * Adds a handler. Adding or removing a {@link Component#MEASURED} handler marks the component for measuring, since
+     * the handler can change the desired size and a component is not measured again while nothing changed.
+     */
     @Override
     public final <E extends Event> Subscription subscribe(final EventType<E> type, final int priority,
                                                           final EventHandler<? super E> handler) {
         if (this.dispatcher == null) {
             this.dispatcher = new EventDispatcher();
         }
-        return this.dispatcher.subscribe(type, priority, handler);
+        final Subscription subscription = this.dispatcher.subscribe(type, priority, handler);
+        if (type != Component.MEASURED) {
+            return subscription;
+        }
+        this.invalidateLayout();
+        return () -> {
+            subscription.unsubscribe();
+            this.invalidateLayout();
+        };
     }
 
     /**

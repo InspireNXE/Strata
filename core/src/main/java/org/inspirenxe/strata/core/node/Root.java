@@ -19,6 +19,7 @@ import org.inspirenxe.strata.api.component.Component;
 import org.inspirenxe.strata.api.component.CursorKind;
 import org.inspirenxe.strata.api.component.Focusable;
 import org.inspirenxe.strata.api.component.Tooltip;
+import org.inspirenxe.strata.api.control.attribute.popup.Closable;
 import org.inspirenxe.strata.api.event.Event;
 import org.inspirenxe.strata.api.event.EventHandler;
 import org.inspirenxe.strata.api.event.EventType;
@@ -140,6 +141,8 @@ public final class Root {
     // Buttons whose press closed popups or hit a dialog's backdrop, so their release is swallowed too
     private final Set<MouseButton> swallowedReleases;
     private final List<Layer> layers;
+    // The layers being painted, copied each frame so a paint handler can close an overlay
+    private final List<Layer> paintLayers;
     private final List<Node> arrangeRequests;
     private final OverlaysImpl overlays;
     private final BindingQueue bindingQueue;
@@ -194,6 +197,7 @@ public final class Root {
         this.presses = new EnumMap<>(MouseButton.class);
         this.swallowedReleases = EnumSet.noneOf(MouseButton.class);
         this.layers = new ArrayList<>();
+        this.paintLayers = new ArrayList<>();
         this.arrangeRequests = new ArrayList<>();
         this.overlays = new OverlaysImpl();
         this.bindingQueue = new BindingQueue();
@@ -446,13 +450,27 @@ public final class Root {
         return this.bindingQueue.flush();
     }
 
+    /**
+     * Detaches a subtree: clears the hover, focus, tooltip and press state that points into it, then detaches each
+     * node. A focus-lost handler that throws does not stop the rest of the subtree from being detached; the first
+     * such failure is thrown once every node is detached.
+     */
     void detachTree(final Node subtree) {
+        final RuntimeException[] failure = new RuntimeException[1];
         visit(subtree, node -> {
             if (node == this.hovered) {
                 this.hovered = null;
             }
             if (node == this.focused) {
-                this.changeFocus(null);
+                try {
+                    this.changeFocus(null);
+                } catch (final RuntimeException e) {
+                    if (failure[0] == null) {
+                        failure[0] = e;
+                    } else {
+                        failure[0].addSuppressed(e);
+                    }
+                }
             }
             if (node == this.tooltipOwner) {
                 this.tooltipOwner = null;
@@ -467,6 +485,9 @@ public final class Root {
             this.closeTooltip();
         }
         this.treeChanged();
+        if (failure[0] != null) {
+            throw failure[0];
+        }
     }
 
     void treeChanged() {
@@ -585,13 +606,26 @@ public final class Root {
      * Lays out every layer if anything requested it since the last layout: the content and dialogs are measured
      * with the root's size and arranged into it, popups are placed by their anchor, and the tooltip by the pointer.
      * Subtrees that did not change are skipped. Then nodes that asked only to be arranged again are arranged in their
-     * last slot. Rendering and pointer input call this first, so bounds are never stale.
+     * last slot. Rendering and pointer input call this first, so bounds are never stale. If a measure or arrange hook
+     * throws, the layout stays requested, so the next call tries again.
      */
     public void layout() {
         if (!this.layoutRequested) {
             return;
         }
         this.layoutRequested = false;
+        boolean done = false;
+        try {
+            this.layoutLayers();
+            done = true;
+        } finally {
+            if (!done) {
+                this.layoutRequested = true;
+            }
+        }
+    }
+
+    private void layoutLayers() {
         final Rect area = new Rect(0, 0, this.width, this.height);
         if (this.content != null) {
             this.content.measure(this.layoutPass, this.width, this.height);
@@ -674,9 +708,10 @@ public final class Root {
     }
 
     /**
-     * Draws one frame: fires a key repeat if one is due, lays out if needed, paints the content, each overlay and
+     * Draws one frame: fires a key repeat if one is due, lays out if needed, works hover out again if the tree
+     * changed since the pointer last moved and the pointer is inside the host, paints the content, each overlay and
      * the tooltip, and asks the canvas for the cursor of the hovered node (or its nearest ancestor that sets one,
-     * falling back to the arrow).
+     * falling back to the arrow). An overlay that a paint handler closes is not painted after it closes.
      *
      * @param canvas the frame's canvas
      */
@@ -698,12 +733,24 @@ public final class Root {
         if (!this.layers.isEmpty()) {
             final Rect area = new Rect(0, 0, this.width, this.height);
             final Paint backdrop = this.theme.paintOr(Overlays.STYLE_BACKDROP, Paint.NONE);
-            for (final Layer layer : this.layers) {
-                canvas.nextLayer();
-                if (layer.modal) {
-                    backdrop.paint(frame, area);
+            final List<Layer> painting = this.paintLayers;
+            for (int i = 0; i < this.layers.size(); i++) {
+                painting.add(this.layers.get(i));
+            }
+            try {
+                for (int i = 0; i < painting.size(); i++) {
+                    final Layer layer = painting.get(i);
+                    if (!layer.open) {
+                        continue;
+                    }
+                    canvas.nextLayer();
+                    if (layer.modal) {
+                        backdrop.paint(frame, area);
+                    }
+                    layer.node.paint(frame);
                 }
-                layer.node.paint(frame);
+            } finally {
+                painting.clear();
             }
         }
         if (this.tooltipNode != null) {
@@ -1578,15 +1625,16 @@ public final class Root {
     }
 
     private Layer open(final Component<?> content, final Rect anchor, final boolean modal) {
-        return this.open(content, anchor, modal, -1L);
+        return this.open(content, anchor, modal, false, 0L);
     }
 
-    private Layer open(final Component<?> content, final Rect anchor, final boolean modal, final long expiresAt) {
+    private Layer open(final Component<?> content, final Rect anchor, final boolean modal, final boolean toast,
+                       final long expiresAt) {
         final Node node = this.ui.nodeOf(content);
         if (node.parentNode() != null || node.root() != null) {
             throw new IllegalArgumentException(content + " is already part of a tree");
         }
-        final Layer layer = new Layer(node, anchor, modal, expiresAt);
+        final Layer layer = new Layer(node, anchor, modal, toast, expiresAt);
         // Remember focus before the dialog makes it unfocusable
         layer.previousFocus = modal ? this.focused : null;
         this.attachTree(node);
@@ -1608,6 +1656,8 @@ public final class Root {
         final Node node;
         final Rect anchor;
         final boolean modal;
+        final boolean toast;
+        // When a toast closes, by the platform's clock, whose zero point is arbitrary; unused for other layers
         final long expiresAt;
         final EventDispatcher handlers;
         Node previousFocus;
@@ -1617,10 +1667,11 @@ public final class Root {
         // The area a popup opened in an area is laid out in, or null
         Rect area;
 
-        Layer(final Node node, final Rect anchor, final boolean modal, final long expiresAt) {
+        Layer(final Node node, final Rect anchor, final boolean modal, final boolean toast, final long expiresAt) {
             this.node = node;
             this.anchor = anchor;
             this.modal = modal;
+            this.toast = toast;
             this.expiresAt = expiresAt;
             this.handlers = new EventDispatcher();
             this.open = true;
@@ -1659,7 +1710,7 @@ public final class Root {
         }
 
         boolean isToast() {
-            return this.expiresAt >= 0L;
+            return this.toast;
         }
 
         /**
@@ -1714,6 +1765,11 @@ public final class Root {
             return this;
         }
 
+        /**
+         * Closes the layer. A focus handler that throws while the content is detached does not stop the rest: the
+         * content is still released, focus still goes back, and {@code CLOSED} still fires before the exception goes
+         * on.
+         */
         @Override
         public Overlay close() {
             if (!this.open) {
@@ -1721,16 +1777,24 @@ public final class Root {
             }
             this.open = false;
             Root.this.layers.remove(this);
-            Root.this.detachTree(this.node);
-            release(this.node);
-            Root.this.requestLayout();
-            if (this.modal && this.previousFocus != null && Root.this.canFocus(this.previousFocus)) {
-                Root.this.changeFocus(this.previousFocus);
+            try {
+                Root.this.detachTree(this.node);
+            } finally {
+                release(this.node);
+                Root.this.requestLayout();
+                try {
+                    if (this.modal && this.previousFocus != null && Root.this.canFocus(this.previousFocus)) {
+                        Root.this.changeFocus(this.previousFocus);
+                    }
+                    if (this.handlers.hasHandlers(Overlay.CLOSED)) {
+                        final ControlEventImpl<Closable<?>> event = new ControlEventImpl<>(this.node.facade(), this);
+                        event.setCauses(Root.this.ui.causes());
+                        this.handlers.fire(Overlay.CLOSED, event);
+                    }
+                } finally {
+                    this.handlers.clear();
+                }
             }
-            if (this.handlers.hasHandlers(Overlay.CLOSED)) {
-                this.handlers.fire(Overlay.CLOSED, new ControlEventImpl<>(this.node.facade(), this));
-            }
-            this.handlers.clear();
             return this;
         }
 
@@ -1777,7 +1841,7 @@ public final class Root {
             if (millis <= 0L) {
                 throw new IllegalArgumentException("A toast must show for some time: " + millis);
             }
-            final Layer layer = Root.this.open(content, null, false, Root.this.platform.clock().millis() + millis);
+            final Layer layer = Root.this.open(content, null, false, true, Root.this.platform.clock().millis() + millis);
             content.onEvent(InputEvents.CLICK, Integer.MAX_VALUE, event -> {
                 if (!event.isCancelled()) {
                     layer.close();
