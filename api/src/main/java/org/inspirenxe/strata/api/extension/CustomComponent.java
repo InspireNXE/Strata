@@ -596,6 +596,17 @@ public abstract class CustomComponent<T extends Component<T>> implements Compone
     // ------------------------------------------------------------------
 
     @Override
+    public final Optional<String> id() {
+        return this.peer.id();
+    }
+
+    @Override
+    public final T setId(final String id) {
+        this.peer.setId(id);
+        return this.self();
+    }
+
+    @Override
     public final Optional<Component<?>> parent() {
         return Optional.ofNullable(this.peer.parent());
     }

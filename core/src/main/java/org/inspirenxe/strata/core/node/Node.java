@@ -73,7 +73,8 @@ import java.util.function.Function;
  * Strata's own components, or a developer's {@code CustomComponent}, for which this node is the peer. Core reaches the
  * facade's protected hooks only through the hooks object the facade hands its node.
  *
- * <p>A new node is visible, enabled, not focusable and not tabbable, with tab index 0, no cursor, no margin, no
+ * <p>A new node has no id, and is visible, enabled, not focusable and not tabbable, with tab index 0, no cursor, no
+ * margin, no
  * size limits, no fixed size, left and top alignment, no offset, no background, no border, no tooltip and z index
  * 0.</p>
  *
@@ -94,6 +95,7 @@ public class Node implements ComponentPeer {
     private final Component<?> facade;
     private final NodeHooks hooks;
 
+    private String id;
     private ContainerNode parent;
     private Root root;
     // Whether the attach hook and ATTACHED ran since the last detach, so attach and detach always come in pairs
@@ -844,6 +846,16 @@ public class Node implements ComponentPeer {
     // ------------------------------------------------------------------
     // Tree
     // ------------------------------------------------------------------
+
+    @Override
+    public final Optional<String> id() {
+        return Optional.ofNullable(this.id);
+    }
+
+    @Override
+    public final void setId(final String id) {
+        this.id = id;
+    }
 
     /**
      * Returns the node of the container or composite holding this component.

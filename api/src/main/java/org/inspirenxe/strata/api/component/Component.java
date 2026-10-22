@@ -133,6 +133,25 @@ public interface Component<T extends Component<T>> extends EventTarget<T>, Enabl
     PropertyKey<Component<?>, Boolean> VISIBLE = PropertyKey.of("component.visible", Component::isVisible,
             Component::setVisible);
 
+    // Identity
+
+    /**
+     * Returns the id set with {@link #setId}.
+     *
+     * @return the id, or empty if none is set; empty by default
+     */
+    Optional<String> id();
+
+    /**
+     * Gives the component an id, a free string that names it for code that does not hold a reference to it, such as
+     * a test that finds the component to click. Strata neither requires an id nor checks that ids are unique, and
+     * there is no lookup by id in this API: a screen keeps references to the components it needs.
+     *
+     * @param id the id, or {@code null} to remove it
+     * @return this component
+     */
+    T setId(String id);
+
     // Tree
 
     /**

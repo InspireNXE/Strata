@@ -49,6 +49,20 @@ import java.util.function.Consumer;
 public interface ComponentPeer {
 
     /**
+     * See {@link org.inspirenxe.strata.api.component.Component#id()}.
+     *
+     * @return the id, or empty
+     */
+    Optional<String> id();
+
+    /**
+     * See {@link org.inspirenxe.strata.api.component.Component#setId(String)}.
+     *
+     * @param id the id, or null to remove it
+     */
+    void setId(String id);
+
+    /**
      * See {@link org.inspirenxe.strata.api.component.Component#parent()}.
      *
      * @return the parent, or null

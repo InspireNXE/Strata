@@ -609,6 +609,17 @@ public abstract class BuiltInComponent<T extends Component<T>> implements Compon
     // ------------------------------------------------------------------
 
     @Override
+    public final Optional<String> id() {
+        return this.node.id();
+    }
+
+    @Override
+    public final T setId(final String id) {
+        this.node.setId(id);
+        return this.self();
+    }
+
+    @Override
     public final Optional<Component<?>> parent() {
         return Optional.ofNullable(this.node.parent());
     }
