@@ -17,6 +17,7 @@ package org.inspirenxe.strata.core.host;
 
 import org.inspirenxe.strata.api.ComponentFactory;
 import org.inspirenxe.strata.api.component.Component;
+import org.inspirenxe.strata.api.geometry.Size;
 import org.inspirenxe.strata.api.input.Key;
 import org.inspirenxe.strata.api.input.KeyAction;
 import org.inspirenxe.strata.api.input.Modifiers;
@@ -313,6 +314,14 @@ public final class ScreenHostImpl implements ScreenHost {
     @Override
     public void setPixelsPerUnit(final float pixelsPerUnit) {
         this.root.setPixelsPerUnit(pixelsPerUnit);
+    }
+
+    @Override
+    public Size preferredSize(final float availableWidth, final float availableHeight) {
+        this.refreshTheme();
+        this.refreshText();
+        this.flush();
+        return this.root.preferredSize(availableWidth, availableHeight);
     }
 
     @Override

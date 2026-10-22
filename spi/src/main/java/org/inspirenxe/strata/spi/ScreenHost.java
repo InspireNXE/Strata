@@ -17,6 +17,7 @@ package org.inspirenxe.strata.spi;
 
 import org.inspirenxe.strata.api.ComponentFactory;
 import org.inspirenxe.strata.api.component.Component;
+import org.inspirenxe.strata.api.geometry.Size;
 import org.inspirenxe.strata.api.screen.Screen;
 import org.inspirenxe.strata.api.screen.ScreenController;
 import org.inspirenxe.strata.api.screen.ScreenHandle;
@@ -178,6 +179,20 @@ public interface ScreenHost extends InputSink {
      * @throws IllegalArgumentException if the value is not finite and greater than 0
      */
     void setPixelsPerUnit(float pixelsPerUnit);
+
+    /**
+     * Returns the size the open screen's content wants in a given space, for a toolkit that asks an embedded widget
+     * for its preferred size, such as Swing's {@code pack()}. The host builds a pending screen and flushes bindings,
+     * then measures the content with the space offered, as a parent measures a child, without arranging it or
+     * changing its bounds; the next layout measures it again at the host's own size. Overlays and the tooltip are
+     * left out, since they place themselves in whatever size the host gets.
+     *
+     * @param availableWidth the width offered, in UI units; {@link Float#POSITIVE_INFINITY} for no limit
+     * @param availableHeight the height offered, in UI units; {@link Float#POSITIVE_INFINITY} for no limit
+     * @return the content's desired size, margin included, or {@link Size#ZERO} if no screen is open
+     * @throws IllegalArgumentException if either value is negative or NaN
+     */
+    Size preferredSize(float availableWidth, float availableHeight);
 
     /**
      * Sets how long the pointer must rest on a component before its tooltip shows, in place of the theme's. Until

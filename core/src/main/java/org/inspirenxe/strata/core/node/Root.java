@@ -30,6 +30,7 @@ import org.inspirenxe.strata.api.event.cause.Device;
 import org.inspirenxe.strata.api.event.cause.Origin;
 import org.inspirenxe.strata.api.event.input.InputEvents;
 import org.inspirenxe.strata.api.geometry.Rect;
+import org.inspirenxe.strata.api.geometry.Size;
 import org.inspirenxe.strata.api.input.Key;
 import org.inspirenxe.strata.api.input.KeyAction;
 import org.inspirenxe.strata.api.input.Modifier;
@@ -683,6 +684,29 @@ public final class Root {
         if (!(pixelsPerUnit > 0f) || Float.isInfinite(pixelsPerUnit)) {
             throw new IllegalArgumentException("Pixels per unit must be finite and greater than 0: " + pixelsPerUnit);
         }
+    }
+
+    /**
+     * Measures the content in a given space without arranging it, for a host asked for its preferred size. Overlays
+     * and the tooltip are left out. The content keeps the desired size from this measure until the next layout,
+     * which this requests, measures it again at the root's own size.
+     *
+     * @param availableWidth the width offered; may be infinite
+     * @param availableHeight the height offered; may be infinite
+     * @return the content's outer size, margin included, or {@link Size#ZERO} with no content
+     * @throws IllegalArgumentException if either value is negative or NaN
+     */
+    public Size preferredSize(final float availableWidth, final float availableHeight) {
+        if (!(availableWidth >= 0f) || !(availableHeight >= 0f)) {
+            throw new IllegalArgumentException("The space offered must not be negative or NaN: " + availableWidth
+                    + " by " + availableHeight);
+        }
+        if (this.content == null) {
+            return Size.ZERO;
+        }
+        this.requestLayout();
+        this.content.measure(this.layoutPass, availableWidth, availableHeight);
+        return new Size(this.content.outerWidth(), this.content.outerHeight());
     }
 
     void requestLayout() {

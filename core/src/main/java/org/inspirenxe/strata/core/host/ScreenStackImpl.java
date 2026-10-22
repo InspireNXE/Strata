@@ -15,6 +15,7 @@
  */
 package org.inspirenxe.strata.core.host;
 
+import org.inspirenxe.strata.api.geometry.Size;
 import org.inspirenxe.strata.api.input.Key;
 import org.inspirenxe.strata.api.input.KeyAction;
 import org.inspirenxe.strata.api.input.Modifiers;
@@ -306,6 +307,19 @@ public final class ScreenStackImpl implements ScreenStack {
         for (final Entry entry : this.entries) {
             entry.host().setPixelsPerUnit(pixelsPerUnit);
         }
+    }
+
+    @Override
+    public Size preferredSize(final float availableWidth, final float availableHeight) {
+        final ScreenHostImpl top = this.topHost();
+        if (top == null) {
+            if (!(availableWidth >= 0f) || !(availableHeight >= 0f)) {
+                throw new IllegalArgumentException("The space offered must not be negative or NaN: " + availableWidth
+                        + " by " + availableHeight);
+            }
+            return Size.ZERO;
+        }
+        return top.preferredSize(availableWidth, availableHeight);
     }
 
     @Override

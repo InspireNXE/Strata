@@ -15,6 +15,7 @@
  */
 package org.inspirenxe.strata.spi;
 
+import org.inspirenxe.strata.api.geometry.Size;
 import org.inspirenxe.strata.api.screen.Screen;
 import org.inspirenxe.strata.api.screen.ScreenController;
 import org.inspirenxe.strata.api.screen.ScreenHandle;
@@ -145,6 +146,17 @@ public interface ScreenStack extends InputSink, ScreenController {
      * @throws IllegalArgumentException if the value is not finite and greater than 0
      */
     void setPixelsPerUnit(float pixelsPerUnit);
+
+    /**
+     * Returns the size the top screen's content wants in a given space, as {@link ScreenHost#preferredSize} describes.
+     * The screens below are left out.
+     *
+     * @param availableWidth the width offered, in UI units; {@link Float#POSITIVE_INFINITY} for no limit
+     * @param availableHeight the height offered, in UI units; {@link Float#POSITIVE_INFINITY} for no limit
+     * @return the content's desired size, margin included, or {@link Size#ZERO} if the stack is empty
+     * @throws IllegalArgumentException if either value is negative or NaN
+     */
+    Size preferredSize(float availableWidth, float availableHeight);
 
     /**
      * Sets the tooltip delay of every screen, and of screens pushed later, as
