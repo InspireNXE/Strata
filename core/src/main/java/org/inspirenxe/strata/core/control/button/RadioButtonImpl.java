@@ -22,30 +22,29 @@ import org.inspirenxe.strata.api.event.input.KeyEvent;
 import org.inspirenxe.strata.api.event.input.PointerButtonEvent;
 import org.inspirenxe.strata.api.extension.MeasureContext;
 import org.inspirenxe.strata.api.extension.Painter;
-import org.inspirenxe.strata.api.geometry.Insets;
 import org.inspirenxe.strata.api.geometry.Rect;
 import org.inspirenxe.strata.api.geometry.Size;
 import org.inspirenxe.strata.api.input.Key;
-import org.inspirenxe.strata.api.input.KeyAction;
-import org.inspirenxe.strata.api.input.MouseButton;
 import org.inspirenxe.strata.api.text.Text;
-import org.inspirenxe.strata.api.text.TextMetrics;
 import org.inspirenxe.strata.api.text.TextStyle;
 import org.inspirenxe.strata.api.theme.Paint;
 import org.inspirenxe.strata.api.theme.Theme;
+import org.inspirenxe.strata.core.control.Activation;
+import org.inspirenxe.strata.core.control.BoxCaption;
+import org.inspirenxe.strata.core.control.RectCache;
 import org.inspirenxe.strata.core.control.Rings;
 import org.inspirenxe.strata.core.node.BuiltInComponent;
 import org.inspirenxe.strata.core.node.ComponentFactoryImpl;
-import org.inspirenxe.strata.core.text.TextLine;
 
 import java.util.Objects;
 import java.util.Set;
 
 /**
- * The core {@link RadioButton}. It lays out and paints like {@link CheckBoxImpl}: the box at the left edge,
- * vertically centered, and the caption {@link CheckBoxImpl#GAP} units to its right. A selected box draws the mark
- * paint inset by three tenths of the box size, and a focused box a one-unit focus ring. Its group holds the
- * selection.
+ * The core {@link RadioButton}. It lays out and paints like {@link CheckBoxImpl}: the box, the caption's line height
+ * plus {@link CheckBoxImpl#BOX_PADDING} rounded to a whole unit, at the left edge, vertically centered, and the
+ * caption {@link CheckBoxImpl#GAP} units to its right. A selected box draws the mark paint inset by three tenths of
+ * the box size, rounded to a whole unit, and a focused box a one-unit focus ring. The box, the mark and the ring are
+ * kept from one frame to the next while the bounds stay the same. Its group holds the selection.
  */
 public final class RadioButtonImpl extends BuiltInComponent<RadioButton> implements RadioButton {
     private static final Set<String> REQUIRED = Set.of(STYLE_NORMAL, STYLE_HOVERED, STYLE_SELECTED, STYLE_SELECTED_HOVERED);
@@ -66,10 +65,13 @@ public final class RadioButtonImpl extends BuiltInComponent<RadioButton> impleme
     private TextStyle disabledTextStyle;
 
     // Computed during measure
-    private TextLine caption;
-    private TextLine disabledCaption;
-    private float captionHeight;
+    private final BoxCaption layout = new BoxCaption(CheckBoxImpl.GAP);
     private float boxSize;
+
+    // Kept between frames
+    private final RectCache markArea = new RectCache();
+    private final Rings.Ring ring = new Rings.Ring();
+    private final Activation activation;
 
     /**
      * Creates a button in a group.
@@ -94,8 +96,11 @@ public final class RadioButtonImpl extends BuiltInComponent<RadioButton> impleme
         this.focusRing = Paint.NONE;
         this.textStyle = TextStyle.DEFAULT;
         this.disabledTextStyle = TextStyle.DEFAULT;
-        this.caption = TextLine.EMPTY;
-        this.disabledCaption = this.caption;
+        this.activation = Activation.leftButton(this::activatesOnPress, () -> {
+            if (this.isEnabled()) {
+                this.userSelect(false);
+            }
+        });
         this.setCursor(CursorKind.HAND);
     }
 
@@ -205,20 +210,14 @@ public final class RadioButtonImpl extends BuiltInComponent<RadioButton> impleme
 
     @Override
     protected Size measure(final MeasureContext context, final float availableWidth, final float availableHeight) {
-        final TextMetrics metrics = context.text();
-        this.caption = TextLine.of(this.text, this.textStyle, metrics);
-        this.disabledCaption = TextLine.of(this.text, this.disabledTextStyle, metrics);
-        this.captionHeight = Math.max(this.caption.height(), this.disabledCaption.height());
-        this.boxSize = this.captionHeight + CheckBoxImpl.BOX_PADDING;
-        final float captionWidth = Math.max(this.caption.width(), this.disabledCaption.width());
-        final float width = this.caption.isEmpty() ? this.boxSize : this.boxSize + CheckBoxImpl.GAP + captionWidth;
-        return new Size(width, Math.max(this.boxSize, this.captionHeight));
+        this.boxSize = CheckBoxImpl.defaultBoxSize(this.layout.measureCaption(this.text, this.textStyle,
+                this.disabledTextStyle, context.text()));
+        return this.layout.size(this.boxSize, this.boxSize);
     }
 
     @Override
     protected void paint(final Painter painter, final Rect bounds) {
-        final float middle = bounds.y() + bounds.height() * 0.5f;
-        final Rect box = new Rect(bounds.x(), middle - this.boxSize * 0.5f, this.boxSize, this.boxSize);
+        final Rect box = this.layout.box(bounds);
         final boolean enabled = this.isEnabled();
         final boolean lit = this.isHovered() || this.isFocused();
         final boolean selected = this.isSelected();
@@ -234,41 +233,24 @@ public final class RadioButtonImpl extends BuiltInComponent<RadioButton> impleme
         face.paint(painter, box);
 
         if (selected) {
-            (enabled ? this.mark : this.markDisabled).paint(painter, box.shrink(Insets.of(this.boxSize * 0.3f)));
+            final float inset = Math.round(this.boxSize * 0.3f);
+            (enabled ? this.mark : this.markDisabled).paint(painter, this.markArea.at(box.x() + inset,
+                    box.y() + inset, box.width() - inset * 2f, box.height() - inset * 2f));
         }
         if (this.isFocused() && this.focusRing != Paint.NONE) {
-            Rings.paint(painter, this.focusRing, box);
+            this.ring.paint(painter, this.focusRing, box);
         }
-        if (!this.caption.isEmpty()) {
-            (enabled ? this.caption : this.disabledCaption).draw(painter, box.right() + CheckBoxImpl.GAP,
-                    middle - this.captionHeight * 0.5f);
-        }
+        this.layout.paintCaption(painter, bounds, enabled);
     }
 
     @Override
     protected void onPointerPress(final PointerButtonEvent event) {
-        if (this.activatesOnPress()) {
-            this.clicked(event);
-        }
+        this.activation.press(event);
     }
 
     @Override
     protected void onClick(final PointerButtonEvent event) {
-        if (!this.activatesOnPress()) {
-            this.clicked(event);
-        }
-    }
-
-    /**
-     * Acts on a pointer press or click, whichever the platform's conventions say buttons act on.
-     */
-    private void clicked(final PointerButtonEvent event) {
-        if (event.button() == MouseButton.LEFT) {
-            if (this.isEnabled()) {
-                this.userSelect(false);
-            }
-            event.consume();
-        }
+        this.activation.click(event);
     }
 
     @Override
@@ -276,12 +258,10 @@ public final class RadioButtonImpl extends BuiltInComponent<RadioButton> impleme
         if (!event.action().isDown() || !this.isEnabled()) {
             return;
         }
-        final Key key = event.key();
-        if (event.action() == KeyAction.PRESS && (key.isEnter() || key == Key.SPACE)) {
-            this.userSelect(false);
-            event.consume();
+        if (Activation.key(event, () -> this.userSelect(false))) {
             return;
         }
+        final Key key = event.key();
         final int direction = switch (key) {
             case UP, LEFT -> -1;
             case DOWN, RIGHT -> 1;

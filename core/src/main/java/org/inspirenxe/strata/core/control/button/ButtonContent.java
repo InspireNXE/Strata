@@ -27,6 +27,7 @@ import org.inspirenxe.strata.api.theme.SpriteId;
 import org.inspirenxe.strata.api.theme.Theme;
 import org.inspirenxe.strata.api.visual.Visual;
 import org.inspirenxe.strata.core.control.Caption;
+import org.inspirenxe.strata.core.control.RectCache;
 import org.inspirenxe.strata.core.control.Rings;
 import org.inspirenxe.strata.core.text.TextLine;
 
@@ -62,8 +63,8 @@ final class ButtonContent {
     private float iconWidth;
     private float iconHeight;
     private final Caption captionDrawer = new Caption();
-    // Kept from one frame to the next while the icon stays in place
-    private Rect iconRect = Rect.ZERO;
+    private final RectCache iconRect = new RectCache();
+    private final Rings.Ring ring = new Rings.Ring();
 
     // Theme
     Paint normal;
@@ -275,7 +276,7 @@ final class ButtonContent {
      */
     void paintFocusRing(final Painter painter, final Rect bounds) {
         if (this.focusRing != Paint.NONE) {
-            Rings.paint(painter, this.focusRing, bounds);
+            this.ring.paint(painter, this.focusRing, bounds);
         }
     }
 
@@ -309,7 +310,8 @@ final class ButtonContent {
         final float contentWidth = this.contentWidth();
         final float x = hasText ? this.captionDrawer.start(bounds, padding, contentWidth)
                 : Caption.center(left, width, this.iconWidth);
-        final Rect iconRect = this.iconRect(x, top + (height - this.iconHeight) * 0.5f);
+        final Rect iconRect = this.iconRect.at(x, top + (height - this.iconHeight) * 0.5f, this.iconWidth,
+                this.iconHeight);
         final int tint = enabled ? 0xFFFFFFFF : DISABLED_ICON_TINT;
         if (this.iconVisual != null) {
             painter.visual(this.iconVisual, iconRect, tint);
@@ -320,13 +322,5 @@ final class ButtonContent {
             this.captionDrawer.draw(painter, shown, bounds, padding, this.iconWidth + ButtonImpl.ICON_GAP,
                     contentWidth, top + (height - this.captionHeight) * 0.5f, millis);
         }
-    }
-
-    private Rect iconRect(final float x, final float y) {
-        final Rect last = this.iconRect;
-        if (last.x() != x || last.y() != y || last.width() != this.iconWidth || last.height() != this.iconHeight) {
-            this.iconRect = new Rect(x, y, this.iconWidth, this.iconHeight);
-        }
-        return this.iconRect;
     }
 }

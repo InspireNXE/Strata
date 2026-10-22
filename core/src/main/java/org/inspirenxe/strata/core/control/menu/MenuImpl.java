@@ -576,25 +576,26 @@ public final class MenuImpl extends BuiltInComponent<Menu> implements Menu, Core
             final MenuEntryImpl item = this.items.get(i);
             final float top = bounds.y() + this.itemTop[i];
             if (item.separator()) {
-                this.separator.paint(painter, new Rect(left + 1f, top + (SEPARATOR_HEIGHT - 1f) * 0.5f, width - 2f, 1f));
+                this.separator.paint(painter, item.rowRect.at(left + 1f, top + (SEPARATOR_HEIGHT - 1f) * 0.5f,
+                        width - 2f, 1f));
                 continue;
             }
             if (i == this.highlighted) {
-                this.itemHovered.paint(painter, new Rect(left, top, width, this.itemHeight));
+                this.itemHovered.paint(painter, item.rowRect.at(left, top, width, this.itemHeight));
             }
             final Insets padding = this.itemPadding;
             final float textY = top + padding.top() + (this.itemHeight - padding.vertical() - this.lineHeight) * 0.5f;
             (item.usable() ? item.span : item.disabledSpan).draw(painter, left + padding.left(), textY);
             final int color = (item.usable() ? this.textStyle : this.disabledTextStyle).color();
             if (item.checked()) {
-                painter.fill(new Rect(left + (padding.left() - CHECK_SIZE) * 0.5f, top + (this.itemHeight - CHECK_SIZE) * 0.5f,
-                        CHECK_SIZE, CHECK_SIZE), color);
+                painter.fill(item.markRect.at(left + (padding.left() - CHECK_SIZE) * 0.5f,
+                        top + (this.itemHeight - CHECK_SIZE) * 0.5f, CHECK_SIZE, CHECK_SIZE), color);
             }
             if (!item.shortcutSpan.isEmpty()) {
                 item.shortcutSpan.draw(painter, left + width - padding.right() - item.shortcutWidth, textY);
             }
             if (item instanceof SubmenuItemImpl) {
-                Rings.right(painter, color, left + width - (padding.right() + Rings.ARROW_SHORT) * 0.5f,
+                item.arrow.right(painter, color, left + width - (padding.right() + Rings.ARROW_SHORT) * 0.5f,
                         top + (this.itemHeight - Rings.ARROW_LONG) * 0.5f);
             }
         }

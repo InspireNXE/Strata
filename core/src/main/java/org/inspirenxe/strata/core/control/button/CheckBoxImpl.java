@@ -22,21 +22,21 @@ import org.inspirenxe.strata.api.event.input.KeyEvent;
 import org.inspirenxe.strata.api.event.input.PointerButtonEvent;
 import org.inspirenxe.strata.api.extension.MeasureContext;
 import org.inspirenxe.strata.api.extension.Painter;
-import org.inspirenxe.strata.api.geometry.Insets;
 import org.inspirenxe.strata.api.geometry.Rect;
 import org.inspirenxe.strata.api.geometry.Size;
-import org.inspirenxe.strata.api.input.Key;
-import org.inspirenxe.strata.api.input.KeyAction;
-import org.inspirenxe.strata.api.input.MouseButton;
 import org.inspirenxe.strata.api.text.Text;
-import org.inspirenxe.strata.api.text.TextMetrics;
 import org.inspirenxe.strata.api.text.TextStyle;
 import org.inspirenxe.strata.api.theme.Paint;
 import org.inspirenxe.strata.api.theme.Theme;
+import org.inspirenxe.strata.core.control.Activation;
+import org.inspirenxe.strata.core.control.BoxCaption;
+import org.inspirenxe.strata.core.control.RectCache;
+import org.inspirenxe.strata.core.control.Rings;
 import org.inspirenxe.strata.core.node.BuiltInComponent;
 import org.inspirenxe.strata.core.node.ComponentFactoryImpl;
-import org.inspirenxe.strata.core.text.TextLine;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 
@@ -48,7 +48,9 @@ import java.util.Set;
  * paints and the mixed mark as a square at the same inset. A focused box draws a one-unit focus ring.
  *
  * <p>Measuring takes the wider and taller of the normal and disabled captions, so enabling or disabling it needs no
- * relayout. Without a fixed box size, the box is the caption's line height plus 8.</p>
+ * relayout. Without a fixed box size, the box is the caption's line height plus 8, rounded to a whole unit. The box,
+ * the mark's squares and the focus ring are kept from one frame to the next while the bounds and the box size stay
+ * the same, so painting allocates nothing then.</p>
  */
 public final class CheckBoxImpl extends BuiltInComponent<CheckBox> implements CheckBox {
     /**
@@ -81,10 +83,15 @@ public final class CheckBoxImpl extends BuiltInComponent<CheckBox> implements Ch
     private TextStyle disabledTextStyle;
 
     // Computed during measure
-    private TextLine caption;
-    private TextLine disabledCaption;
-    private float captionHeight;
+    private final BoxCaption layout = new BoxCaption(GAP);
     private float boxSize;
+
+    // Kept between frames: the mark's area, and the check's squares for the area they were placed in
+    private final RectCache markArea = new RectCache();
+    private final List<Rect> checkSquares = new ArrayList<>();
+    private Rect checkArea;
+    private final Rings.Ring ring = new Rings.Ring();
+    private final Activation activation;
 
     /**
      * Creates a checkbox.
@@ -111,8 +118,7 @@ public final class CheckBoxImpl extends BuiltInComponent<CheckBox> implements Ch
         this.focusRing = Paint.NONE;
         this.textStyle = TextStyle.DEFAULT;
         this.disabledTextStyle = TextStyle.DEFAULT;
-        this.caption = TextLine.EMPTY;
-        this.disabledCaption = this.caption;
+        this.activation = Activation.leftButton(this::activatesOnPress, this::userToggle);
         this.setCursor(CursorKind.HAND);
     }
 
@@ -261,21 +267,26 @@ public final class CheckBoxImpl extends BuiltInComponent<CheckBox> implements Ch
 
     @Override
     protected Size measure(final MeasureContext context, final float availableWidth, final float availableHeight) {
-        final TextMetrics metrics = context.text();
-        this.caption = TextLine.of(this.text, this.textStyle, metrics);
-        this.disabledCaption = TextLine.of(this.text, this.disabledTextStyle, metrics);
-        this.captionHeight = Math.max(this.caption.height(), this.disabledCaption.height());
-        // Whole units, so the mark, inset by whole units too, is centered exactly
-        this.boxSize = Float.isNaN(this.fixedBoxSize) ? Math.round(this.captionHeight + BOX_PADDING) : this.fixedBoxSize;
-        final float captionWidth = Math.max(this.caption.width(), this.disabledCaption.width());
-        final float width = this.caption.isEmpty() ? this.boxSize : this.boxSize + GAP + captionWidth;
-        return new Size(width, Math.max(this.boxSize, this.captionHeight));
+        final float captionHeight = this.layout.measureCaption(this.text, this.textStyle, this.disabledTextStyle,
+                context.text());
+        this.boxSize = Float.isNaN(this.fixedBoxSize) ? CheckBoxImpl.defaultBoxSize(captionHeight) : this.fixedBoxSize;
+        return this.layout.size(this.boxSize, this.boxSize);
+    }
+
+    /**
+     * Returns the box size for a caption height when none is fixed: the height plus {@link #BOX_PADDING}, rounded to
+     * a whole unit so a mark inset by whole units is centered exactly. A radio button sizes its box the same way.
+     *
+     * @param captionHeight the caption's height
+     * @return the box size
+     */
+    static float defaultBoxSize(final float captionHeight) {
+        return Math.round(captionHeight + BOX_PADDING);
     }
 
     @Override
     protected void paint(final Painter painter, final Rect bounds) {
-        final float middle = bounds.y() + bounds.height() * 0.5f;
-        final Rect box = new Rect(bounds.x(), middle - this.boxSize * 0.5f, this.boxSize, this.boxSize);
+        final Rect box = this.layout.box(bounds);
         final boolean enabled = this.isEnabled();
         final boolean lit = this.isHovered() || this.isFocused();
 
@@ -290,79 +301,65 @@ public final class CheckBoxImpl extends BuiltInComponent<CheckBox> implements Ch
         }
         face.paint(painter, box);
 
-        final Rect inner = box.shrink(Insets.of(Math.round(this.boxSize * 0.2f)));
+        final float inset = Math.round(this.boxSize * 0.2f);
+        final Rect inner = this.markArea.at(box.x() + inset, box.y() + inset, box.width() - inset * 2f,
+                box.height() - inset * 2f);
         if (checked) {
             this.drawCheck(painter, enabled ? this.mark : this.markDisabled, inner);
         } else if (this.state == CheckState.MIXED) {
             (enabled ? this.mixedMark : this.mixedMarkDisabled).paint(painter, inner);
         }
         if (this.isFocused() && this.focusRing != Paint.NONE) {
-            this.focusRing.paint(painter, new Rect(box.x(), box.y(), box.width(), 1f));
-            this.focusRing.paint(painter, new Rect(box.x(), box.bottom() - 1f, box.width(), 1f));
-            this.focusRing.paint(painter, new Rect(box.x(), box.y() + 1f, 1f, box.height() - 2f));
-            this.focusRing.paint(painter, new Rect(box.right() - 1f, box.y() + 1f, 1f, box.height() - 2f));
+            this.ring.paint(painter, this.focusRing, box);
         }
-        if (!this.caption.isEmpty()) {
-            (enabled ? this.caption : this.disabledCaption).draw(painter, box.right() + GAP, middle - this.captionHeight * 0.5f);
-        }
+        this.layout.paintCaption(painter, bounds, enabled);
     }
 
     /**
      * Draws a check in a square: a short stroke down to the right from the left middle, then a long one up to the top
-     * right, each a run of squares a stroke thick.
+     * right, each a run of squares a stroke thick. The squares are placed again only when the area changed.
      */
     private void drawCheck(final Painter painter, final Paint paint, final Rect area) {
         if (paint == Paint.NONE) {
             return;
         }
-        final float size = Math.min(area.width(), area.height());
-        final float stroke = Math.max(1f, Math.round(this.boxSize / 8f));
-        final float span = size - stroke;
-        final float bottomX = area.x() + span * 0.375f;
-        final float bottomY = area.y() + span;
-        CheckBoxImpl.stroke(painter, paint, area.x(), area.y() + span * 0.5f, bottomX, bottomY, stroke);
-        CheckBoxImpl.stroke(painter, paint, bottomX, bottomY, area.x() + span, area.y(), stroke);
+        if (area != this.checkArea) {
+            this.checkArea = area;
+            this.checkSquares.clear();
+            final float size = Math.min(area.width(), area.height());
+            final float stroke = Math.max(1f, Math.round(this.boxSize / 8f));
+            final float span = size - stroke;
+            final float bottomX = area.x() + span * 0.375f;
+            final float bottomY = area.y() + span;
+            this.stroke(area.x(), area.y() + span * 0.5f, bottomX, bottomY, stroke);
+            this.stroke(bottomX, bottomY, area.x() + span, area.y(), stroke);
+        }
+        for (int i = 0; i < this.checkSquares.size(); i++) {
+            paint.paint(painter, this.checkSquares.get(i));
+        }
     }
 
-    private static void stroke(final Painter painter, final Paint paint, final float fromX, final float fromY,
-                               final float toX, final float toY, final float stroke) {
+    private void stroke(final float fromX, final float fromY, final float toX, final float toY, final float stroke) {
         final int steps = Math.max(1, Math.round(Math.max(Math.abs(toX - fromX), Math.abs(toY - fromY)) / (stroke * 0.5f)));
         for (int i = 0; i <= steps; i++) {
             final float t = (float) i / steps;
-            paint.paint(painter, new Rect(fromX + (toX - fromX) * t, fromY + (toY - fromY) * t, stroke, stroke));
+            this.checkSquares.add(new Rect(fromX + (toX - fromX) * t, fromY + (toY - fromY) * t, stroke, stroke));
         }
     }
 
     @Override
     protected void onPointerPress(final PointerButtonEvent event) {
-        if (this.activatesOnPress()) {
-            this.clicked(event);
-        }
+        this.activation.press(event);
     }
 
     @Override
     protected void onClick(final PointerButtonEvent event) {
-        if (!this.activatesOnPress()) {
-            this.clicked(event);
-        }
-    }
-
-    /**
-     * Acts on a pointer press or click, whichever the platform's conventions say buttons act on.
-     */
-    private void clicked(final PointerButtonEvent event) {
-        if (event.button() == MouseButton.LEFT) {
-            this.userToggle();
-            event.consume();
-        }
+        this.activation.click(event);
     }
 
     @Override
     protected void onKey(final KeyEvent event) {
-        if (event.action() == KeyAction.PRESS && (event.key().isEnter() || event.key() == Key.SPACE)) {
-            this.userToggle();
-            event.consume();
-        }
+        Activation.key(event, this::userToggle);
     }
 
     @Override

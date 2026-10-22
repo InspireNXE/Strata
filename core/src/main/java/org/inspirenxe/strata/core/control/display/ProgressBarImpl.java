@@ -25,6 +25,7 @@ import org.inspirenxe.strata.api.text.Text;
 import org.inspirenxe.strata.api.text.TextStyle;
 import org.inspirenxe.strata.api.theme.Paint;
 import org.inspirenxe.strata.api.theme.Theme;
+import org.inspirenxe.strata.core.control.RectCache;
 import org.inspirenxe.strata.core.node.BuiltInComponent;
 import org.inspirenxe.strata.core.node.ComponentFactoryImpl;
 import org.inspirenxe.strata.core.text.TextLine;
@@ -81,6 +82,7 @@ public final class ProgressBarImpl extends BuiltInComponent<ProgressBar> impleme
     // The indeterminate segment at each whole-unit step, for the bounds they were worked out for
     private Rect[] segments;
     private Rect segmentBounds;
+    private final RectCache fillRect = new RectCache();
 
     /**
      * Creates an empty bar with no caption.
@@ -208,7 +210,7 @@ public final class ProgressBarImpl extends BuiltInComponent<ProgressBar> impleme
         } else {
             final float fraction = (float) ((this.value - this.min) / (this.max - this.min));
             if (fraction > 0f) {
-                this.fillPaint.paint(painter, new Rect(bounds.x(), bounds.y(), bounds.width() * fraction,
+                this.fillPaint.paint(painter, this.fillRect.at(bounds.x(), bounds.y(), bounds.width() * fraction,
                         bounds.height()));
             }
         }

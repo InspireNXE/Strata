@@ -36,7 +36,9 @@ import org.inspirenxe.strata.api.text.TextMetrics;
 import org.inspirenxe.strata.api.text.TextStyle;
 import org.inspirenxe.strata.api.theme.Paint;
 import org.inspirenxe.strata.api.theme.Theme;
+import org.inspirenxe.strata.core.control.Activation;
 import org.inspirenxe.strata.core.control.Caption;
+import org.inspirenxe.strata.core.control.RectCache;
 import org.inspirenxe.strata.core.node.BuiltInComponent;
 import org.inspirenxe.strata.core.node.BuiltInComposite;
 import org.inspirenxe.strata.core.node.ComponentFactoryImpl;
@@ -339,6 +341,10 @@ public final class TabBarImpl extends BuiltInComposite<TabBar> implements TabBar
         private TextLine selectedSpan;
         private TextLine disabledSpan;
         private float textWidth;
+        private final Activation activation;
+        // Kept between frames
+        private final RectCache fillRect = new RectCache();
+        private final RectCache underlineRect = new RectCache();
 
         @SuppressWarnings("this-escape")
         TabView(final ComponentFactoryImpl ui, final TabBarImpl bar, final TabImpl tab) {
@@ -362,6 +368,7 @@ public final class TabBarImpl extends BuiltInComposite<TabBar> implements TabBar
             this.span = TextLine.EMPTY;
             this.selectedSpan = this.span;
             this.disabledSpan = this.span;
+            this.activation = new Activation(this::activatesOnPress, this::clicked);
             this.setAnchor(Anchor.FILL);
             this.sync();
         }
@@ -438,7 +445,10 @@ public final class TabBarImpl extends BuiltInComposite<TabBar> implements TabBar
             face.paint(painter, bounds);
             if (isSelected) {
                 if (this.selectedFill != Paint.NONE) {
-                    this.selectedFill.paint(painter, bounds.shrink(this.selectedFillInsets));
+                    final Insets inset = this.selectedFillInsets;
+                    this.selectedFill.paint(painter, this.fillRect.at(bounds.x() + inset.left(),
+                            bounds.y() + inset.top(), bounds.width() - inset.horizontal(),
+                            bounds.height() - inset.vertical()));
                 }
                 final Paint line = enabled ? this.underline : this.underlineDisabled;
                 if (line != Paint.NONE) {
@@ -446,8 +456,7 @@ public final class TabBarImpl extends BuiltInComposite<TabBar> implements TabBar
                     // Half the spare room on the left, rounded down on whole units
                     final float spare = bounds.width() - width;
                     final float left = bounds.x() + (spare == Math.rint(spare) ? (float) Math.floor(spare / 2f) : spare / 2f);
-                    line.paint(painter, new Rect(left,
-                            bounds.bottom() - 2f, width, 1f));
+                    line.paint(painter, this.underlineRect.at(left, bounds.bottom() - 2f, width, 1f));
                 }
             }
             // Centered in the tab less its state's padding
@@ -459,16 +468,12 @@ public final class TabBarImpl extends BuiltInComposite<TabBar> implements TabBar
 
         @Override
         protected void onPointerPress(final PointerButtonEvent event) {
-            if (this.activatesOnPress()) {
-                this.clicked(event);
-            }
+            this.activation.press(event);
         }
 
         @Override
         protected void onClick(final PointerButtonEvent event) {
-            if (!this.activatesOnPress()) {
-                this.clicked(event);
-            }
+            this.activation.click(event);
         }
 
         /**

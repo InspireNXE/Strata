@@ -32,6 +32,7 @@ import org.inspirenxe.strata.api.text.TextMetrics;
 import org.inspirenxe.strata.api.text.TextStyle;
 import org.inspirenxe.strata.api.theme.Paint;
 import org.inspirenxe.strata.api.theme.Theme;
+import org.inspirenxe.strata.core.control.RectCache;
 import org.inspirenxe.strata.core.node.BuiltInComponent;
 import org.inspirenxe.strata.core.node.ComponentFactoryImpl;
 import org.inspirenxe.strata.core.text.TextLine;
@@ -57,6 +58,7 @@ public final class MenuBarImpl extends BuiltInComponent<MenuBar> implements Menu
     private int openIndex;
     private boolean switching;
     private float pointerX;
+    private final RectCache hoverRect = new RectCache();
 
     // Theme
     private Paint background;
@@ -323,7 +325,8 @@ public final class MenuBarImpl extends BuiltInComponent<MenuBar> implements Menu
         final float textY = bounds.y() + padding.top() + (bounds.height() - padding.vertical() - this.lineHeight) * 0.5f;
         for (int i = 0; i < this.spans.length; i++) {
             if (i == hover || i == this.openIndex) {
-                this.hovered.paint(painter, new Rect(bounds.x() + this.titleX[i], bounds.y(), this.titleWidth[i], bounds.height()));
+                this.hovered.paint(painter, this.hoverRect.at(bounds.x() + this.titleX[i], bounds.y(),
+                        this.titleWidth[i], bounds.height()));
             }
             this.spans[i].draw(painter, bounds.x() + this.titleX[i] + padding.left(), textY);
         }

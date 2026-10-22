@@ -24,25 +24,25 @@ import org.inspirenxe.strata.api.extension.Painter;
 import org.inspirenxe.strata.api.geometry.Insets;
 import org.inspirenxe.strata.api.geometry.Rect;
 import org.inspirenxe.strata.api.geometry.Size;
-import org.inspirenxe.strata.api.input.Key;
-import org.inspirenxe.strata.api.input.KeyAction;
-import org.inspirenxe.strata.api.input.MouseButton;
 import org.inspirenxe.strata.api.text.Text;
-import org.inspirenxe.strata.api.text.TextMetrics;
 import org.inspirenxe.strata.api.text.TextStyle;
 import org.inspirenxe.strata.api.theme.Paint;
 import org.inspirenxe.strata.api.theme.Theme;
+import org.inspirenxe.strata.core.control.Activation;
+import org.inspirenxe.strata.core.control.BoxCaption;
+import org.inspirenxe.strata.core.control.RectCache;
 import org.inspirenxe.strata.core.control.Rings;
 import org.inspirenxe.strata.core.node.BuiltInComponent;
 import org.inspirenxe.strata.core.node.ComponentFactoryImpl;
-import org.inspirenxe.strata.core.text.TextLine;
 
 import java.util.Objects;
 import java.util.Set;
 
 /**
  * The core {@link ToggleSwitch}. The track sits at the left edge, vertically centered, and the caption
- * {@link #GAP} units to its right. The knob jumps between its two ends; there is no animation.
+ * {@link #GAP} units to its right. The knob jumps between its two ends; there is no animation. The track, the knob
+ * and the focus ring are kept from one frame to the next while they stay in place, so painting allocates nothing
+ * then.
  */
 public final class ToggleSwitchImpl extends BuiltInComponent<ToggleSwitch> implements ToggleSwitch {
     /**
@@ -77,11 +77,14 @@ public final class ToggleSwitchImpl extends BuiltInComponent<ToggleSwitch> imple
     private TextStyle disabledTextStyle;
 
     // Computed during measure
-    private TextLine caption;
-    private TextLine disabledCaption;
-    private float captionHeight;
+    private final BoxCaption layout = new BoxCaption(GAP);
     private float trackHeight;
     private float trackWidth;
+
+    // Kept between frames
+    private final RectCache knobRect = new RectCache();
+    private final Rings.Ring ring = new Rings.Ring();
+    private final Activation activation;
 
     /**
      * Creates a switch that is off.
@@ -102,8 +105,7 @@ public final class ToggleSwitchImpl extends BuiltInComponent<ToggleSwitch> imple
         this.focusRing = Paint.NONE;
         this.textStyle = TextStyle.DEFAULT;
         this.disabledTextStyle = TextStyle.DEFAULT;
-        this.caption = TextLine.EMPTY;
-        this.disabledCaption = this.caption;
+        this.activation = Activation.leftButton(this::activatesOnPress, this::userToggle);
         this.setCursor(CursorKind.HAND);
     }
 
@@ -183,21 +185,16 @@ public final class ToggleSwitchImpl extends BuiltInComponent<ToggleSwitch> imple
 
     @Override
     protected Size measure(final MeasureContext context, final float availableWidth, final float availableHeight) {
-        final TextMetrics metrics = context.text();
-        this.caption = TextLine.of(this.text, this.textStyle, metrics);
-        this.disabledCaption = TextLine.of(this.text, this.disabledTextStyle, metrics);
-        this.captionHeight = Math.max(this.caption.height(), this.disabledCaption.height());
-        this.trackHeight = this.captionHeight + this.trackPadding.vertical();
-        this.trackWidth = this.captionHeight * 2f + this.trackPadding.horizontal();
-        final float captionWidth = Math.max(this.caption.width(), this.disabledCaption.width());
-        final float width = this.caption.isEmpty() ? this.trackWidth : this.trackWidth + GAP + captionWidth;
-        return new Size(width, Math.max(this.trackHeight, this.captionHeight));
+        final float captionHeight = this.layout.measureCaption(this.text, this.textStyle, this.disabledTextStyle,
+                context.text());
+        this.trackHeight = captionHeight + this.trackPadding.vertical();
+        this.trackWidth = captionHeight * 2f + this.trackPadding.horizontal();
+        return this.layout.size(this.trackWidth, this.trackHeight);
     }
 
     @Override
     protected void paint(final Painter painter, final Rect bounds) {
-        final float middle = bounds.y() + bounds.height() * 0.5f;
-        final Rect bar = new Rect(bounds.x(), middle - this.trackHeight * 0.5f, this.trackWidth, this.trackHeight);
+        final Rect bar = this.layout.box(bounds);
         final boolean enabled = this.isEnabled();
         (enabled ? (this.on ? this.trackOn : this.track) : this.trackDisabled).paint(painter, bar);
 
@@ -210,46 +207,27 @@ public final class ToggleSwitchImpl extends BuiltInComponent<ToggleSwitch> imple
         } else {
             face = this.isHovered() || this.isFocused() ? this.knobHovered : this.knob;
         }
-        face.paint(painter, new Rect(knobX, bar.y() + inset.top(), knobSize, knobSize));
+        face.paint(painter, this.knobRect.at(knobX, bar.y() + inset.top(), knobSize, knobSize));
 
         if (this.isFocused() && this.focusRing != Paint.NONE) {
-            Rings.paint(painter, this.focusRing, bar);
+            this.ring.paint(painter, this.focusRing, bar);
         }
-        if (!this.caption.isEmpty()) {
-            (enabled ? this.caption : this.disabledCaption).draw(painter, bar.right() + GAP, middle - this.captionHeight * 0.5f);
-        }
+        this.layout.paintCaption(painter, bounds, enabled);
     }
 
     @Override
     protected void onPointerPress(final PointerButtonEvent event) {
-        if (this.activatesOnPress()) {
-            this.clicked(event);
-        }
+        this.activation.press(event);
     }
 
     @Override
     protected void onClick(final PointerButtonEvent event) {
-        if (!this.activatesOnPress()) {
-            this.clicked(event);
-        }
-    }
-
-    /**
-     * Acts on a pointer press or click, whichever the platform's conventions say buttons act on.
-     */
-    private void clicked(final PointerButtonEvent event) {
-        if (event.button() == MouseButton.LEFT) {
-            this.userToggle();
-            event.consume();
-        }
+        this.activation.click(event);
     }
 
     @Override
     protected void onKey(final KeyEvent event) {
-        if (event.action() == KeyAction.PRESS && (event.key().isEnter() || event.key() == Key.SPACE)) {
-            this.userToggle();
-            event.consume();
-        }
+        Activation.key(event, this::userToggle);
     }
 
     @Override

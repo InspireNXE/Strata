@@ -25,6 +25,7 @@ import org.inspirenxe.strata.api.layout.Orientation;
 import org.inspirenxe.strata.api.layout.VerticalAlignment;
 import org.inspirenxe.strata.api.theme.Paint;
 import org.inspirenxe.strata.api.theme.Theme;
+import org.inspirenxe.strata.core.control.RectCache;
 import org.inspirenxe.strata.core.node.BuiltInComponent;
 import org.inspirenxe.strata.core.node.ComponentFactoryImpl;
 
@@ -41,6 +42,9 @@ public final class SeparatorImpl extends BuiltInComponent<Separator> implements 
     private float thickness;
     private Paint line;
     private Paint shadow;
+    // Kept between frames
+    private final RectCache lineRect = new RectCache();
+    private final RectCache shadowRect = new RectCache();
 
     /**
      * Creates a separator one unit thick.
@@ -115,12 +119,12 @@ public final class SeparatorImpl extends BuiltInComponent<Separator> implements 
         // The line takes the first half across, the shadow the second
         if (this.orientation == Orientation.HORIZONTAL) {
             final float half = bounds.height() * 0.5f;
-            this.line.paint(painter, new Rect(bounds.x(), bounds.y(), bounds.width(), half));
-            this.shadow.paint(painter, new Rect(bounds.x(), bounds.y() + half, bounds.width(), half));
+            this.line.paint(painter, this.lineRect.at(bounds.x(), bounds.y(), bounds.width(), half));
+            this.shadow.paint(painter, this.shadowRect.at(bounds.x(), bounds.y() + half, bounds.width(), half));
         } else {
             final float half = bounds.width() * 0.5f;
-            this.line.paint(painter, new Rect(bounds.x(), bounds.y(), half, bounds.height()));
-            this.shadow.paint(painter, new Rect(bounds.x() + half, bounds.y(), half, bounds.height()));
+            this.line.paint(painter, this.lineRect.at(bounds.x(), bounds.y(), half, bounds.height()));
+            this.shadow.paint(painter, this.shadowRect.at(bounds.x() + half, bounds.y(), half, bounds.height()));
         }
     }
 }

@@ -36,6 +36,7 @@ import org.inspirenxe.strata.api.text.TextStyle;
 import org.inspirenxe.strata.api.theme.Paint;
 import org.inspirenxe.strata.api.theme.Theme;
 import org.inspirenxe.strata.core.control.Adoption;
+import org.inspirenxe.strata.core.control.RectCache;
 import org.inspirenxe.strata.core.control.Rings;
 import org.inspirenxe.strata.core.node.BuiltInComposite;
 import org.inspirenxe.strata.core.node.ComponentFactoryImpl;
@@ -64,6 +65,9 @@ public final class ExpanderImpl extends BuiltInComposite<Expander> implements Ex
     private Component<?> content;
     private boolean expanded;
     private float headerHeight;
+    // Kept between frames
+    private final RectCache headRect = new RectCache();
+    private final Rings.Arrow arrow = new Rings.Arrow();
     private float pointerY;
 
     // Theme
@@ -213,7 +217,7 @@ public final class ExpanderImpl extends BuiltInComposite<Expander> implements Ex
 
     @Override
     protected void paint(final Painter painter, final Rect bounds) {
-        final Rect head = new Rect(bounds.x(), bounds.y(), bounds.width(), this.headerHeight);
+        final Rect head = this.headRect.at(bounds.x(), bounds.y(), bounds.width(), this.headerHeight);
         final boolean lit = this.isFocused() || this.isHovered() && this.overHeader(this.pointerY);
         (lit ? this.headerHovered : this.header).paint(painter, head);
         final boolean enabled = this.isEnabled();
@@ -223,9 +227,9 @@ public final class ExpanderImpl extends BuiltInComposite<Expander> implements Ex
         final float innerHeight = head.height() - padding.vertical();
         final float arrowX = head.x() + padding.left();
         if (this.expanded) {
-            Rings.down(painter, color, arrowX, innerY + (innerHeight - Rings.ARROW_SHORT) * 0.5f);
+            this.arrow.down(painter, color, arrowX, innerY + (innerHeight - Rings.ARROW_SHORT) * 0.5f);
         } else {
-            Rings.right(painter, color, arrowX + (Rings.ARROW_LONG - Rings.ARROW_SHORT) * 0.5f,
+            this.arrow.right(painter, color, arrowX + (Rings.ARROW_LONG - Rings.ARROW_SHORT) * 0.5f,
                     innerY + (innerHeight - Rings.ARROW_LONG) * 0.5f);
         }
         (enabled ? this.span : this.disabledSpan).draw(painter, arrowX + Rings.ARROW_LONG + ARROW_GAP,

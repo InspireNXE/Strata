@@ -24,13 +24,11 @@ import org.inspirenxe.strata.api.extension.Painter;
 import org.inspirenxe.strata.api.geometry.Insets;
 import org.inspirenxe.strata.api.geometry.Rect;
 import org.inspirenxe.strata.api.geometry.Size;
-import org.inspirenxe.strata.api.input.Key;
-import org.inspirenxe.strata.api.input.KeyAction;
-import org.inspirenxe.strata.api.input.MouseButton;
 import org.inspirenxe.strata.api.text.Text;
 import org.inspirenxe.strata.api.theme.SpriteId;
 import org.inspirenxe.strata.api.theme.Theme;
 import org.inspirenxe.strata.api.visual.Visual;
+import org.inspirenxe.strata.core.control.Activation;
 import org.inspirenxe.strata.core.node.BuiltInComponent;
 import org.inspirenxe.strata.core.node.ComponentFactoryImpl;
 import org.inspirenxe.strata.core.text.TextLine;
@@ -86,6 +84,7 @@ public final class ButtonImpl extends BuiltInComponent<Button> implements Button
     public static final float MIN_WIDTH = 20f;
 
     private final ButtonContent content;
+    private final Activation activation;
     private boolean link;
 
     /**
@@ -98,6 +97,7 @@ public final class ButtonImpl extends BuiltInComponent<Button> implements Button
     public ButtonImpl(final ComponentFactoryImpl ui, final Text text) {
         super(ui);
         this.content = new ButtonContent(text);
+        this.activation = Activation.leftButton(this::activatesOnPress, this::userPress);
         this.setCursor(CursorKind.HAND);
         this.setMinSize(MIN_WIDTH, 0f);
     }
@@ -256,34 +256,17 @@ public final class ButtonImpl extends BuiltInComponent<Button> implements Button
 
     @Override
     protected void onPointerPress(final PointerButtonEvent event) {
-        if (this.activatesOnPress()) {
-            this.clicked(event);
-        }
+        this.activation.press(event);
     }
 
     @Override
     protected void onClick(final PointerButtonEvent event) {
-        if (!this.activatesOnPress()) {
-            this.clicked(event);
-        }
-    }
-
-    /**
-     * Acts on a pointer press or click, whichever the platform's conventions say buttons act on.
-     */
-    private void clicked(final PointerButtonEvent event) {
-        if (event.button() == MouseButton.LEFT) {
-            this.userPress();
-            event.consume();
-        }
+        this.activation.click(event);
     }
 
     @Override
     protected void onKey(final KeyEvent event) {
-        if (event.action() == KeyAction.PRESS && (event.key().isEnter() || event.key() == Key.SPACE)) {
-            this.userPress();
-            event.consume();
-        }
+        Activation.key(event, this::userPress);
     }
 
     @Override

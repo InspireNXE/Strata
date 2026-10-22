@@ -17,11 +17,14 @@ package org.inspirenxe.strata.core.control.menu;
 
 import org.inspirenxe.strata.api.control.menu.MenuEntry;
 import org.inspirenxe.strata.api.text.Text;
+import org.inspirenxe.strata.core.control.RectCache;
+import org.inspirenxe.strata.core.control.Rings;
 import org.inspirenxe.strata.core.text.TextLine;
 
 /**
- * The shared state of the core menu entries: the menu or bar that holds the entry, and the text spans its menu
- * caches during measure. A change to an entry tells its holder, which lays out again.
+ * The shared state of the core menu entries: the menu or bar that holds the entry, the text spans its menu caches
+ * during measure, and the rectangles its menu draws for it, kept between frames. A change to an entry tells its
+ * holder, which lays out again.
  */
 public abstract class MenuEntryImpl {
     private Object owner;
@@ -29,6 +32,9 @@ public abstract class MenuEntryImpl {
     TextLine disabledSpan;
     TextLine shortcutSpan;
     float shortcutWidth;
+    final RectCache rowRect = new RectCache();
+    final RectCache markRect = new RectCache();
+    final Rings.Arrow arrow = new Rings.Arrow();
 
     /**
      * Creates an entry that no menu holds yet.

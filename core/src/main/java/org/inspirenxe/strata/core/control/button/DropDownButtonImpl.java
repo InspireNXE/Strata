@@ -35,6 +35,7 @@ import org.inspirenxe.strata.api.theme.SpriteId;
 import org.inspirenxe.strata.api.theme.Theme;
 import org.inspirenxe.strata.api.visual.Visual;
 import org.inspirenxe.strata.core.control.CorePopup;
+import org.inspirenxe.strata.core.control.RectCache;
 import org.inspirenxe.strata.core.control.Rings;
 import org.inspirenxe.strata.core.control.collection.ComboBoxImpl;
 import org.inspirenxe.strata.core.node.BuiltInComponent;
@@ -64,6 +65,9 @@ public final class DropDownButtonImpl extends BuiltInComponent<DropDownButton> i
 
     // Theme
     private Paint arrow;
+    // Kept between frames
+    private final RectCache contentArea = new RectCache();
+    private final Rings.Arrow arrowLines = new Rings.Arrow();
 
     /**
      * Creates a drop-down button with no popup.
@@ -287,16 +291,17 @@ public final class DropDownButtonImpl extends BuiltInComponent<DropDownButton> i
         final float innerY = bounds.y() + padding.top();
         final float innerHeight = bounds.height() - padding.vertical();
         // The content and its clip area end before the arrow
-        content.paintContent(painter, new Rect(bounds.x(), bounds.y(),
+        content.paintContent(painter, this.contentArea.at(bounds.x(), bounds.y(),
                         bounds.width() - ComboBoxImpl.ARROW_GAP - ComboBoxImpl.ARROW_WIDTH, bounds.height()), padding,
                 enabled, enabled ? content.caption : content.disabledCaption, this.environment().millis());
 
         final float arrowX = bounds.right() - padding.right() - ComboBoxImpl.ARROW_WIDTH;
         final float arrowY = innerY + (innerHeight - Rings.ARROW_SHORT) * 0.5f;
         if (enabled && this.arrow != Paint.NONE) {
-            Rings.down(painter, this.arrow, arrowX, arrowY);
+            this.arrowLines.down(painter, this.arrow, arrowX, arrowY);
         } else {
-            Rings.down(painter, (enabled ? content.textStyle : content.disabledTextStyle).color(), arrowX, arrowY);
+            this.arrowLines.down(painter, (enabled ? content.textStyle : content.disabledTextStyle).color(), arrowX,
+                    arrowY);
         }
     }
 

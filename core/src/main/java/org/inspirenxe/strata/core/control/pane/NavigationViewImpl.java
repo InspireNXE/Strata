@@ -1493,6 +1493,8 @@ public final class NavigationViewImpl extends BuiltInComposite<NavigationView> i
         private float textY;
         private float arrowX;
         private float arrowY;
+        private final Rings.Arrow arrow = new Rings.Arrow();
+        private final Rings.Ring ring = new Rings.Ring();
 
         @SuppressWarnings("this-escape")
         Row(final ComponentFactoryImpl ui, final NavigationEntryImpl entry) {
@@ -1654,15 +1656,15 @@ public final class NavigationViewImpl extends BuiltInComposite<NavigationView> i
                 if (!item.children().isEmpty()) {
                     final int color = (enabled ? view.itemText : view.itemTextDisabled).color();
                     if (item.isExpanded()) {
-                        Rings.up(painter, color, this.arrowX, this.arrowY);
+                        this.arrow.up(painter, color, this.arrowX, this.arrowY);
                     } else {
-                        Rings.down(painter, color, this.arrowX, this.arrowY);
+                        this.arrow.down(painter, color, this.arrowX, this.arrowY);
                     }
                 }
             }
             this.badge.paint(painter, this.badgeRect);
             if (view.isFocused() && view.cursor == item) {
-                Rings.paint(painter, view.focusRing, bounds);
+                this.ring.paint(painter, view.focusRing, bounds);
             }
         }
 

@@ -53,7 +53,7 @@ public final class Caption {
     private float lineX;
     private float lineY;
     private final Runnable drawClipped = this::drawLine;
-    private Rect clipRect = Rect.ZERO;
+    private final RectCache clipRect = new RectCache();
 
     /**
      * Creates a caption drawer with no clip insets and no scrolling, until {@link #applyTheme} reads them.
@@ -130,7 +130,7 @@ public final class Caption {
         this.lineX = x;
         this.lineY = y;
         try {
-            painter.clipped(this.clipRect(left, top, space, Math.max(0f, bottom - top)), this.drawClipped);
+            painter.clipped(this.clipRect.at(left, top, space, Math.max(0f, bottom - top)), this.drawClipped);
         } finally {
             this.painter = null;
             this.line = null;
@@ -156,13 +156,6 @@ public final class Caption {
         return Math.max(clipLeft, Math.min(centered, clipRight - width));
     }
 
-    private Rect clipRect(final float x, final float y, final float width, final float height) {
-        final Rect last = this.clipRect;
-        if (last.x() != x || last.y() != y || last.width() != width || last.height() != height) {
-            this.clipRect = new Rect(x, y, width, height);
-        }
-        return this.clipRect;
-    }
 
     private void drawLine() {
         this.line.draw(this.painter, this.lineX, this.lineY);
