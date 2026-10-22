@@ -44,11 +44,14 @@ import org.inspirenxe.strata.api.geometry.Rect;
  *     the offset rounded to
  *     whole units, so whole-pixel engines do not shimmer; the stored offset keeps its fraction.</li>
  *     <li>A wheel notch scrolls {@linkplain #setScrollRate the scroll rate}, 10 units by default; precise scrolls
- *     are multiplied by the same rate. A panel that scrolls only sideways takes vertical wheel input too. The panel
- *     consumes a scroll only when its offset changes, so a scroll past the end reaches an outer panel.</li>
- *     <li>Keys no focused descendant consumed scroll it vertically: Up and Down by the rate, Page Up and Page Down by
- *     the viewport less one rate, Home and End to the ends. Held keys repeat. The panel leaves them alone with
- *     Control or Alt held or while it does not scroll vertically, and consumes one only when the offset changed.</li>
+ *     are multiplied by the same rate. A panel that scrolls only sideways takes vertical wheel input too, and a
+ *     vertical scroll with Shift held scrolls sideways while the horizontal axis scrolls; an engine that already
+ *     turns it sends a horizontal scroll, which the panel takes as it is. The panel consumes a scroll only when its
+ *     offset changes, so a scroll past the end reaches an outer panel.</li>
+ *     <li>Keys no focused descendant consumed scroll it: Up and Down by the rate, Page Up and Page Down by the
+ *     viewport less one rate, and Home and End to the ends, while it scrolls vertically, and Left and Right by the
+ *     rate while it scrolls sideways. Held keys repeat. The panel leaves them alone with Control or Alt held, and
+ *     consumes one only when the offset changed.</li>
  *     <li>A left press on a scroll bar's thumb grabs it and dragging moves it; a left press on the track pages
  *     toward the pointer.</li>
  *     <li>When a descendant gains focus, the panel scrolls the least distance that shows it.</li>

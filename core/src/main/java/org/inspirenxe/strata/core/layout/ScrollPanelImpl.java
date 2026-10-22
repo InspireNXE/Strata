@@ -418,6 +418,11 @@ public final class ScrollPanelImpl extends BuiltInContainer<ScrollPanel> impleme
     protected void onScroll(final ScrollEvent event) {
         float dx = -event.scrollX() * this.rate;
         float dy = -event.scrollY() * this.rate;
+        // Shift turns a vertical scroll sideways; an engine that turns it itself sends a horizontal one
+        if (event.modifiers().shift() && dx == 0f && this.horizontalPolicy != ScrollPolicy.NEVER) {
+            dx = dy;
+            dy = 0f;
+        }
         if (this.verticalPolicy == ScrollPolicy.NEVER) {
             if (dx == 0f) {
                 dx = dy;
@@ -434,18 +439,21 @@ public final class ScrollPanelImpl extends BuiltInContainer<ScrollPanel> impleme
 
     @Override
     protected void onKey(final KeyEvent event) {
-        if (!event.action().isDown() || this.verticalPolicy == ScrollPolicy.NEVER
-                || event.modifiers().control() || event.modifiers().alt()) {
+        if (!event.action().isDown() || event.modifiers().control() || event.modifiers().alt()) {
             return;
         }
+        final boolean vertical = this.verticalPolicy != ScrollPolicy.NEVER;
+        final boolean horizontal = this.horizontalPolicy != ScrollPolicy.NEVER;
         final float page = Math.max(this.rate, this.viewport.height() - this.rate);
         final boolean moved = switch (event.key()) {
-            case UP -> this.glideTo(this.aimX(), this.aimY() - this.rate);
-            case DOWN -> this.glideTo(this.aimX(), this.aimY() + this.rate);
-            case PAGE_UP -> this.glideTo(this.aimX(), this.aimY() - page);
-            case PAGE_DOWN -> this.glideTo(this.aimX(), this.aimY() + page);
-            case HOME -> this.glideTo(this.aimX(), 0f);
-            case END -> this.glideTo(this.aimX(), this.maxScrollY);
+            case UP -> vertical && this.glideTo(this.aimX(), this.aimY() - this.rate);
+            case DOWN -> vertical && this.glideTo(this.aimX(), this.aimY() + this.rate);
+            case PAGE_UP -> vertical && this.glideTo(this.aimX(), this.aimY() - page);
+            case PAGE_DOWN -> vertical && this.glideTo(this.aimX(), this.aimY() + page);
+            case HOME -> vertical && this.glideTo(this.aimX(), 0f);
+            case END -> vertical && this.glideTo(this.aimX(), this.maxScrollY);
+            case LEFT -> horizontal && this.glideTo(this.aimX() - this.rate, this.aimY());
+            case RIGHT -> horizontal && this.glideTo(this.aimX() + this.rate, this.aimY());
             default -> false;
         };
         if (moved) {
