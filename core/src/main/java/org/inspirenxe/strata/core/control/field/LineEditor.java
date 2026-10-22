@@ -21,6 +21,7 @@ import org.inspirenxe.strata.api.extension.Environment;
 import org.inspirenxe.strata.api.extension.Painter;
 import org.inspirenxe.strata.api.geometry.Rect;
 import org.inspirenxe.strata.api.input.Key;
+import org.inspirenxe.strata.api.input.Modifier;
 import org.inspirenxe.strata.api.input.Modifiers;
 import org.inspirenxe.strata.api.layout.HorizontalAlignment;
 import org.inspirenxe.strata.api.text.TextMetrics;
@@ -254,6 +255,16 @@ final class LineEditor {
      */
     boolean key(final Key key, final Modifiers modifiers) {
         return this.editor.key(key, modifiers);
+    }
+
+    /**
+     * Handles the editing and movement keys, the clipboard and history keys with the platform's shortcut modifier,
+     * as {@link TextEditor#key(Key, Modifiers, Modifier)} does.
+     *
+     * @return true if the key did something
+     */
+    boolean key(final Key key, final Modifiers modifiers, final Modifier shortcutModifier) {
+        return this.editor.key(key, modifiers, shortcutModifier);
     }
 
     /**

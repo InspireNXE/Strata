@@ -1230,7 +1230,7 @@ public final class TextAreaImpl extends BuiltInComponent<TextArea> implements Te
             this.edits.edit(this.editor.selectionStart(), this.editor.selectionEnd(), "\n", EditHistory.Kind.TYPE);
             handled = true;
         } else {
-            handled = this.editor.key(key, modifiers);
+            handled = this.editor.key(key, modifiers, event.shortcutModifier());
         }
         if (handled || TextEditor.typesCharacter(key, modifiers)) {
             event.consume();

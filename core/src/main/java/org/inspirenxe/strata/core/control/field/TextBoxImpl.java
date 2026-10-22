@@ -875,9 +875,9 @@ public final class TextBoxImpl extends BuiltInComponent<TextBox> implements Text
             }
             return;
         }
-        final boolean handled = this.editor.key(key, modifiers);
+        final boolean handled = this.editor.key(key, modifiers, event.shortcutModifier());
         // Typing keys arrive as characters too; keep the engine from also reading them as shortcuts
-        if (handled || (!modifiers.control() && !modifiers.alt() && key.isPrintable())) {
+        if (handled || TextEditor.typesCharacter(key, modifiers)) {
             event.consume();
         }
     }

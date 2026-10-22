@@ -19,6 +19,7 @@ import org.inspirenxe.strata.api.event.input.DragEvent;
 import org.inspirenxe.strata.api.event.input.PointerButtonEvent;
 import org.inspirenxe.strata.api.extension.Environment;
 import org.inspirenxe.strata.api.input.Key;
+import org.inspirenxe.strata.api.input.Modifier;
 import org.inspirenxe.strata.api.input.Modifiers;
 
 /**
@@ -320,26 +321,53 @@ final class TextEditor {
      * character too. That keeps the engine from also reading it as a shortcut.
      */
     static boolean typesCharacter(final Key key, final Modifiers modifiers) {
-        return !modifiers.control() && !modifiers.alt() && key.isPrintable();
+        return !modifiers.control() && !modifiers.alt() && !modifiers.superKey() && key.isPrintable();
     }
 
     /**
-     * Handles the editing and movement keys. The host has handled its own keys, such as Enter, first.
+     * Handles the editing and movement keys on a platform whose shortcut modifier is Control. The host has handled
+     * its own keys, such as Enter, first.
      *
      * @return true if the key did something
      */
     boolean key(final Key key, final Modifiers modifiers) {
+        return this.key(key, modifiers, Modifier.CONTROL);
+    }
+
+    /**
+     * Handles the editing and movement keys. Select all, copy, cut, paste, undo and redo (A, C, X, V, Z, Y, and
+     * Shift+Z for redo) take the platform's shortcut modifier, so they are Command keys where the platform's
+     * shortcuts use Command; word moves and word deletes keep Control. The host has handled its own keys, such as
+     * Enter, first.
+     *
+     * @param key the key
+     * @param modifiers the modifiers held
+     * @param shortcutModifier the platform's shortcut modifier, from the key event
+     * @return true if the key did something
+     */
+    boolean key(final Key key, final Modifiers modifiers, final Modifier shortcutModifier) {
         if (modifiers.alt()) {
             return false;
         }
         final boolean shift = modifiers.shift();
+        if (modifiers.has(shortcutModifier)) {
+            final Boolean edited = this.editKey(key, shift);
+            if (edited != null) {
+                return edited;
+            }
+        }
         if (modifiers.control()) {
             return this.controlKey(key, shift);
         }
         return this.plainKey(key, shift);
     }
 
-    private boolean controlKey(final Key key, final boolean shift) {
+    /**
+     * Handles the clipboard, select all and history keys.
+     *
+     * @return whether the key did something, or null for a key that is not one of them
+     */
+    private Boolean editKey(final Key key, final boolean shift) {
         switch (key) {
             case A -> this.host.selectAll();
             case C -> this.copy();
@@ -351,6 +379,15 @@ final class TextEditor {
             case Y -> {
                 return this.host.redo();
             }
+            default -> {
+                return null;
+            }
+        }
+        return Boolean.TRUE;
+    }
+
+    private boolean controlKey(final Key key, final boolean shift) {
+        switch (key) {
             case LEFT -> this.moveTo(this.boundaries.previousWordStart(this.caret), shift);
             case RIGHT -> this.moveTo(this.boundaries.nextWordEnd(this.caret), shift);
             case HOME -> this.moveTo(0, shift);
