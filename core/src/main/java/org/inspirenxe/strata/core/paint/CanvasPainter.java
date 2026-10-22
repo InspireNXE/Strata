@@ -350,6 +350,15 @@ public final class CanvasPainter implements Painter {
         this.canvas.pixels(buffer, rect, tint);
     }
 
+    /**
+     * Returns the density given to {@link #begin(Canvas, Capabilities, float)}, 1 after the other forms of
+     * {@code begin}, times every scale in progress.
+     */
+    @Override
+    public float pixelsPerUnit() {
+        return this.pixelsPerUnit * this.scale;
+    }
+
     private static boolean isVisible(final int argb) {
         return (argb >>> 24) != 0;
     }

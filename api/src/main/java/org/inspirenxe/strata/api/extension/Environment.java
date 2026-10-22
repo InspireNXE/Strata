@@ -21,8 +21,8 @@ import org.inspirenxe.strata.api.text.TextMetrics;
 import java.util.Optional;
 
 /**
- * What a component may ask of the engine outside layout: text measurement, time, the clipboard and the held
- * modifiers. Get it with {@link CustomComponent#environment()}.
+ * What a component may ask of the engine outside layout: text measurement, time, the clipboard, the held
+ * modifiers and the display's density. Get it with {@link CustomComponent#environment()}.
  *
  * <p>It comes from the host, so tests can drive time and the clipboard, and a component written against it works
  * on any engine. Do not read the system clock or AWT clipboard directly in a component.</p>
@@ -66,4 +66,13 @@ public interface Environment {
      * @return the held modifiers; {@link Modifiers#NONE} before any input
      */
     Modifiers modifiers();
+
+    /**
+     * Returns how many device pixels one UI unit covers on the host's display now, so a component can draw a line
+     * one device pixel wide ({@code 1 / pixelsPerUnit()} units) or pick a more detailed image. It changes when the
+     * window moves to another display or the user zooms, and the host then lays every component out again.
+     *
+     * @return device pixels per UI unit, greater than 0; 1 when the engine does not say
+     */
+    float pixelsPerUnit();
 }

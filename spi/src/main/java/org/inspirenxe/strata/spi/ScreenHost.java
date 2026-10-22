@@ -33,6 +33,9 @@ import java.util.Optional;
  * <h2>Requirements for callers (adapters)</h2>
  * <ul>
  *     <li>Call {@link #resize} before the first {@link #render}, and again whenever the area changes.</li>
+ *     <li>Call {@link #setPixelsPerUnit} when the engine knows its density and whenever it changes, such as when
+ *     the window moves to another display or the user zooms, together with {@link #resize}, since the area in UI
+ *     units changes with it.</li>
  *     <li>Call {@link #render} once per frame. It builds pending screens, runs layout if needed, draws, and asks for
  *     the cursor.</li>
  *     <li>Call {@link #close()} when the engine screen goes away, so the Strata screen's {@code closed()} runs.</li>
@@ -137,6 +140,19 @@ public interface ScreenHost extends InputSink {
      * @param height the height
      */
     void resize(float width, float height);
+
+    /**
+     * Sets how many device pixels one UI unit covers on the display, which components read from
+     * {@link org.inspirenxe.strata.api.extension.Environment#pixelsPerUnit()} and painters from
+     * {@link org.inspirenxe.strata.api.extension.Painter#pixelsPerUnit()}. It is 1 until set. A change lays every
+     * component out again, as a change of language does; the size in UI units is set apart, with {@link #resize}.
+     * A game adapter passes its GUI scale times the window's content scale; a desktop adapter its zoom times the
+     * display's scale.
+     *
+     * @param pixelsPerUnit device pixels per UI unit
+     * @throws IllegalArgumentException if the value is not finite and greater than 0
+     */
+    void setPixelsPerUnit(float pixelsPerUnit);
 
     /**
      * Sets how long the pointer must rest on a component before its tooltip shows, in place of the theme's. Until

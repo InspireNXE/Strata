@@ -210,6 +210,15 @@ public interface Painter {
     void pixels(PixelBuffer buffer, Rect rect, int tint);
 
     /**
+     * Returns how many device pixels one unit covers where the painter draws now: the host's
+     * {@linkplain Environment#pixelsPerUnit() density} times every {@link #scaled} in progress. A line
+     * {@code 1 / pixelsPerUnit()} units wide is one device pixel wide.
+     *
+     * @return device pixels per unit, greater than 0
+     */
+    float pixelsPerUnit();
+
+    /**
      * Draws a sprite stretched over a rectangle.
      *
      * @param sprite the sprite; see {@link SpriteId} for where engines look for it

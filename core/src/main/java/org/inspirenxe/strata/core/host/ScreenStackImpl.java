@@ -25,6 +25,7 @@ import org.inspirenxe.strata.api.screen.ScreenController;
 import org.inspirenxe.strata.api.screen.ScreenHandle;
 import org.inspirenxe.strata.api.theme.Theme;
 import org.inspirenxe.strata.api.theme.ThemeRef;
+import org.inspirenxe.strata.core.node.Root;
 import org.inspirenxe.strata.core.theme.ThemeResolver;
 import org.inspirenxe.strata.spi.Canvas;
 import org.inspirenxe.strata.spi.Platform;
@@ -58,6 +59,7 @@ public final class ScreenStackImpl implements ScreenStack {
     private float height;
     // Negative until set, so each screen follows its theme
     private long tooltipDelay = -1L;
+    private float pixelsPerUnit = 1f;
 
     /**
      * Creates an empty stack of size 0 by 0. Adapters use {@code StrataCore} instead.
@@ -117,6 +119,7 @@ public final class ScreenStackImpl implements ScreenStack {
         self[0] = host;
         host.setOpener(new Above(host));
         host.resize(this.width, this.height);
+        host.setPixelsPerUnit(this.pixelsPerUnit);
         if (this.tooltipDelay >= 0L) {
             host.setTooltipDelay(this.tooltipDelay);
         }
@@ -269,6 +272,15 @@ public final class ScreenStackImpl implements ScreenStack {
         this.height = height;
         for (final Entry entry : this.entries) {
             entry.host().resize(width, height);
+        }
+    }
+
+    @Override
+    public void setPixelsPerUnit(final float pixelsPerUnit) {
+        Root.checkPixelsPerUnit(pixelsPerUnit);
+        this.pixelsPerUnit = pixelsPerUnit;
+        for (final Entry entry : this.entries) {
+            entry.host().setPixelsPerUnit(pixelsPerUnit);
         }
     }
 

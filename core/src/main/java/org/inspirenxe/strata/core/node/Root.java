@@ -161,6 +161,7 @@ public final class Root {
     private Node content;
     private float width;
     private float height;
+    private float pixelsPerUnit = 1f;
     // The whole host, kept so neither layout nor painting allocates it
     private Rect area = Rect.ZERO;
     private boolean layoutRequested;
@@ -605,6 +606,43 @@ public final class Root {
         }
     }
 
+    /**
+     * Returns how many device pixels one UI unit covers.
+     *
+     * @return the density; 1 until set
+     */
+    public float pixelsPerUnit() {
+        return this.pixelsPerUnit;
+    }
+
+    /**
+     * Sets how many device pixels one UI unit covers. A change marks every node for measuring, as a change of
+     * language does, and the painter draws with the new density from the next frame.
+     *
+     * @param pixelsPerUnit device pixels per UI unit
+     * @throws IllegalArgumentException if the value is not finite and greater than 0
+     */
+    public void setPixelsPerUnit(final float pixelsPerUnit) {
+        Root.checkPixelsPerUnit(pixelsPerUnit);
+        if (pixelsPerUnit != this.pixelsPerUnit) {
+            this.pixelsPerUnit = pixelsPerUnit;
+            this.invalidateText();
+            this.requestLayout();
+        }
+    }
+
+    /**
+     * Checks a density.
+     *
+     * @param pixelsPerUnit device pixels per UI unit
+     * @throws IllegalArgumentException if the value is not finite and greater than 0
+     */
+    public static void checkPixelsPerUnit(final float pixelsPerUnit) {
+        if (!(pixelsPerUnit > 0f) || Float.isInfinite(pixelsPerUnit)) {
+            throw new IllegalArgumentException("Pixels per unit must be finite and greater than 0: " + pixelsPerUnit);
+        }
+    }
+
     void requestLayout() {
         this.layoutRequested = true;
     }
@@ -738,7 +776,7 @@ public final class Root {
             this.layout();
         }
         this.hoverStale = false;
-        final CanvasPainter frame = this.painter.begin(canvas, this.platform.capabilities(), 1f);
+        final CanvasPainter frame = this.painter.begin(canvas, this.platform.capabilities(), this.pixelsPerUnit);
         if (this.content != null) {
             this.content.paint(frame);
         }

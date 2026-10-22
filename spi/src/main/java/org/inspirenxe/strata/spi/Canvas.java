@@ -44,6 +44,10 @@ import org.inspirenxe.strata.api.visual.Visual;
  *     intersects any clip already in place.</li>
  *     <li>Never throw for missing resources: a sprite that cannot be found should draw something visible (the Swing
  *     adapter draws magenta) so the problem shows on screen.</li>
+ *     <li>A sprite id names one sprite, which an adapter may hold in several densities. Draw the densest image the
+ *     device pixels under the rectangle can show, so a sprite stays sharp on a display of 1.5 or 2 device pixels per
+ *     unit. Rectangles are in UI units whatever the image's pixel size, so a denser image draws at the same size, and
+ *     a sized nine-slice's border, given in units, stays the same.</li>
  *     <li>Text drawn with {@link #text} must line up with the widths and line height the platform's
  *     {@link org.inspirenxe.strata.api.text.TextMetrics} reports.</li>
  * </ul>

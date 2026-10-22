@@ -26,7 +26,7 @@ import java.util.Optional;
 
 /**
  * The {@link Environment} components see, backed by a host's {@link Platform} and its {@link Root}. Time, the
- * clipboard and the held modifiers are read again on each call. The text metrics are the platform's, which
+ * clipboard, the held modifiers and the density are read again on each call. The text metrics are the platform's, which
  * {@link Platform} requires to stay the same, wrapped once when the environment is made so inline sprites and visuals
  * measure too.
  */
@@ -65,5 +65,11 @@ final class EnvironmentImpl implements Environment {
     public Modifiers modifiers() {
         final Root root = this.ui.root();
         return root == null ? Modifiers.NONE : root.modifiers();
+    }
+
+    @Override
+    public float pixelsPerUnit() {
+        final Root root = this.ui.root();
+        return root == null ? 1f : root.pixelsPerUnit();
     }
 }

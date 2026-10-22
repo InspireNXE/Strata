@@ -120,6 +120,15 @@ public interface ScreenStack extends InputSink, ScreenController {
     void resize(float width, float height);
 
     /**
+     * Sets the density of every screen, and of screens pushed later, as
+     * {@link ScreenHost#setPixelsPerUnit(float)} does.
+     *
+     * @param pixelsPerUnit device pixels per UI unit
+     * @throws IllegalArgumentException if the value is not finite and greater than 0
+     */
+    void setPixelsPerUnit(float pixelsPerUnit);
+
+    /**
      * Sets the tooltip delay of every screen, and of screens pushed later, as
      * {@link ScreenHost#setTooltipDelay(long)} does.
      *

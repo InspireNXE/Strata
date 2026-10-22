@@ -281,6 +281,11 @@ public final class ScreenHostImpl implements ScreenHost {
     }
 
     @Override
+    public void setPixelsPerUnit(final float pixelsPerUnit) {
+        this.root.setPixelsPerUnit(pixelsPerUnit);
+    }
+
+    @Override
     public void setTooltipDelay(final long millis) {
         this.root.setTooltipDelay(millis);
     }
