@@ -18,6 +18,7 @@ package org.inspirenxe.strata.core.control.collection;
 import org.inspirenxe.strata.api.animation.Animator;
 import org.inspirenxe.strata.api.appearance.Appearances;
 import org.inspirenxe.strata.api.component.Component;
+import org.inspirenxe.strata.api.control.attribute.item.CellEditor;
 import org.inspirenxe.strata.api.control.attribute.item.SelectionMode;
 import org.inspirenxe.strata.api.control.collection.ListView;
 import org.inspirenxe.strata.api.event.input.CharEvent;
@@ -34,6 +35,7 @@ import org.inspirenxe.strata.api.geometry.Rect;
 import org.inspirenxe.strata.api.geometry.Size;
 import org.inspirenxe.strata.api.input.Key;
 import org.inspirenxe.strata.api.input.KeyAction;
+import org.inspirenxe.strata.api.input.Modifiers;
 import org.inspirenxe.strata.api.input.MouseButton;
 import org.inspirenxe.strata.api.layout.ScrollPanel;
 import org.inspirenxe.strata.api.text.Text;
@@ -46,6 +48,7 @@ import org.inspirenxe.strata.core.layout.ScrollTrack;
 import org.inspirenxe.strata.core.layout.ThumbDrag;
 import org.inspirenxe.strata.core.node.BuiltInComposite;
 import org.inspirenxe.strata.core.node.ComponentFactoryImpl;
+import org.inspirenxe.strata.core.node.Root;
 import org.inspirenxe.strata.core.text.TextLine;
 
 import java.util.ArrayList;
@@ -95,6 +98,11 @@ public final class ListViewImpl<T> extends BuiltInComposite<ListView<T>> impleme
     // What type-ahead matches, or null while it is off
     private Function<? super T, ?> typeAheadName;
     private final TypeAhead typeAhead;
+    // Editing in place: the list's own editor and session, or the owner's route, and the row kept built while edited
+    private CellEditor<T> cellEditor;
+    private final CellEditSession session;
+    private EditRoute editRoute;
+    private int pinnedRow;
     private float rowHeight;
     private float rowSpacing;
     private int selectedIndex;
@@ -183,6 +191,8 @@ public final class ListViewImpl<T> extends BuiltInComposite<ListView<T>> impleme
         this.keyFunction = Function.identity();
         this.typeAheadName = Function.identity();
         this.typeAhead = new TypeAhead();
+        this.session = new CellEditSession(ui);
+        this.pinnedRow = -1;
         this.rowHeight = DEFAULT_ROW_HEIGHT;
         this.selectedIndex = -1;
         this.chosen = new TreeSet<>();
@@ -247,6 +257,7 @@ public final class ListViewImpl<T> extends BuiltInComposite<ListView<T>> impleme
      * @param moves the new index of each selected row, or -1
      */
     void replaceItems(final List<T> next, final IntUnaryOperator moves) {
+        this.cancelEdits();
         final Optional<T> before = this.selected();
         final int beforeIndex = this.selectedIndex;
         final List<Integer> beforeSet = List.copyOf(this.chosen);
@@ -284,6 +295,7 @@ public final class ListViewImpl<T> extends BuiltInComposite<ListView<T>> impleme
 
     @Override
     public ListView<T> refresh() {
+        this.cancelEdits();
         this.rowsStale = true;
         this.invalidateLayout();
         return this;
@@ -303,6 +315,11 @@ public final class ListViewImpl<T> extends BuiltInComposite<ListView<T>> impleme
         for (final Iterator<Map.Entry<Integer, Component<?>>> it = this.rows.entrySet().iterator(); it.hasNext(); ) {
             final Map.Entry<Integer, Component<?>> entry = it.next();
             if (Objects.equals(key, this.keyFunction.apply(this.items.get(entry.getKey())))) {
+                if (entry.getKey() == this.pinnedRow) {
+                    // The row being edited goes back to its cell first, which builds it again anyway
+                    this.cancelEdits();
+                    return this.refresh(item);
+                }
                 it.remove();
                 this.removeChild(entry.getValue());
                 dropped = true;
@@ -332,6 +349,158 @@ public final class ListViewImpl<T> extends BuiltInComposite<ListView<T>> impleme
         this.typeAheadName = name;
         this.typeAhead.reset();
         return this;
+    }
+
+    // ------------------------------------------------------------------
+    // Editing in place
+    // ------------------------------------------------------------------
+
+    @Override
+    public ListView<T> setCellEditor(final CellEditor<T> editor) {
+        this.cellEditor = editor;
+        return this;
+    }
+
+    @Override
+    public boolean isEditing() {
+        return this.session.isEditing();
+    }
+
+    @Override
+    public ListView<T> cancelEdit() {
+        this.session.cancel();
+        return this;
+    }
+
+    /**
+     * Makes the owner of this list edit its rows: the list's triggers go to the route, and the list's own editor is
+     * not used.
+     *
+     * @param route starts and cancels the owner's edits
+     */
+    void routeEdits(final EditRoute route) {
+        this.editRoute = Objects.requireNonNull(route, "route");
+    }
+
+    /**
+     * Ends the edit going on, the owner's or the list's own, before the rows change under it.
+     */
+    private void cancelEdits() {
+        if (this.editRoute != null) {
+            this.editRoute.cancel();
+        } else {
+            this.session.cancel();
+        }
+    }
+
+    /**
+     * Starts an edit of a row for the user, through the owner's route or with the list's own editor.
+     *
+     * @param row the row
+     * @param x the pointer's x for a double press, or NaN for a key or a character
+     * @param codePoint the character that started the edit, or -1
+     * @param modifiers the modifiers held
+     * @return true if the row is editable, so the trigger is used up even when a handler cancels the edit
+     */
+    private boolean startEdit(final int row, final float x, final int codePoint, final Modifiers modifiers) {
+        if (row < 0 || row >= this.items.size()) {
+            return false;
+        }
+        if (this.editRoute != null) {
+            return this.editRoute.edit(row, x, codePoint, modifiers);
+        }
+        final CellEditor<T> editor = this.cellEditor;
+        if (editor == null) {
+            return false;
+        }
+        final T item = this.items.get(row);
+        this.request(EDIT_CELL, item, value -> this.beginEdit(editor, row, item, codePoint, modifiers));
+        return true;
+    }
+
+    /**
+     * Puts the editor in place of a row's cell, keeps the row built and focuses the editor.
+     */
+    private void beginEdit(final CellEditor<T> editor, final int row, final T item, final int codePoint,
+                           final Modifiers modifiers) {
+        if (this.rowFor(row) == null) {
+            return;
+        }
+        final Component<?> component = this.session.begin(editor, item,
+                value -> this.report(CELL_EDITED, (Object) value, (Object) item),
+                () -> this.dropRow(row), this::requestFocus);
+        final Component<?> old = this.rows.remove(row);
+        if (old != null) {
+            this.removeChild(old);
+        }
+        this.rows.put(row, component);
+        this.addContent(component);
+        this.pinnedRow = row;
+        this.invalidateLayout();
+        this.session.focus(codePoint, modifiers);
+    }
+
+    /**
+     * Returns the component built for a row, scrolling it into view and laying out first if it is not built yet.
+     *
+     * @param row the row
+     * @return the row's component, or null if it could not be built, as while the list is detached
+     */
+    Component<?> rowFor(final int row) {
+        if (this.rowsStale || !this.rows.containsKey(row)) {
+            this.scrollToIndex(row);
+            final Root root = this.hostRoot();
+            if (root != null && this.isAttached()) {
+                root.layout();
+            }
+        }
+        return this.rowsStale ? null : this.rows.get(row);
+    }
+
+    /**
+     * Keeps a row built while it scrolls out of view, for the edit going on in it.
+     *
+     * @param row the row
+     */
+    void pin(final int row) {
+        this.pinnedRow = row;
+    }
+
+    /**
+     * Drops a row's component so the next layout builds it again from the cell factory, and stops keeping it built.
+     *
+     * @param row the row
+     */
+    void dropRow(final int row) {
+        final Component<?> component = this.rows.remove(row);
+        if (component != null) {
+            this.removeChild(component);
+        }
+        if (this.pinnedRow == row) {
+            this.pinnedRow = -1;
+        }
+        this.invalidateLayout();
+    }
+
+    /**
+     * Starts and cancels the edits of a control that shows its rows in this list.
+     */
+    interface EditRoute {
+        /**
+         * Starts an edit of a row for the user.
+         *
+         * @param row the row
+         * @param x the pointer's x for a double press, or NaN
+         * @param codePoint the character that started the edit, or -1
+         * @param modifiers the modifiers held
+         * @return true if the row is editable
+         */
+        boolean edit(int row, float x, int codePoint, Modifiers modifiers);
+
+        /**
+         * Ends the edit going on with no change, before the rows change.
+         */
+        void cancel();
     }
 
     @Override
@@ -971,12 +1140,20 @@ public final class ListViewImpl<T> extends BuiltInComposite<ListView<T>> impleme
         }
         for (final Iterator<Map.Entry<Integer, Component<?>>> it = this.rows.entrySet().iterator(); it.hasNext(); ) {
             final Map.Entry<Integer, Component<?>> entry = it.next();
-            if (entry.getKey() < first || entry.getKey() > last) {
+            if ((entry.getKey() < first || entry.getKey() > last) && entry.getKey() != this.pinnedRow) {
                 it.remove();
                 this.removeChild(entry.getValue());
             }
         }
         final float offset = Math.round(this.scrollY);
+        // A row kept built for an edit follows the scrolling outside the viewport, where the clip hides it
+        final Component<?> pinned = this.pinnedRow >= 0 && (this.pinnedRow < first || this.pinnedRow > last)
+                ? this.rows.get(this.pinnedRow) : null;
+        if (pinned != null) {
+            context.arrange(pinned, new Rect(this.rowX,
+                    this.viewport.y() + this.padding.top() + this.pinnedRow * this.step() - offset,
+                    this.rowWidth, this.rowHeight));
+        }
         final int count = Math.max(0, last - first + 1);
         if (this.paintRect.length < count) {
             this.paintIndex = new int[count];
@@ -1113,7 +1290,8 @@ public final class ListViewImpl<T> extends BuiltInComposite<ListView<T>> impleme
         } else if (index != this.selectedIndex) {
             this.userSelect(index);
         }
-        if (event.clicks() == 2 && !this.activateOnClick) {
+        if (event.clicks() == 2 && !this.activateOnClick
+                && !this.startEdit(index, event.x(), -1, event.modifiers())) {
             this.userActivate(index);
         }
         event.consume();
@@ -1167,7 +1345,17 @@ public final class ListViewImpl<T> extends BuiltInComposite<ListView<T>> impleme
     @Override
     protected void onChar(final CharEvent event) {
         final Function<? super T, ?> name = this.typeAheadName;
-        if (name == null || this.items.isEmpty()) {
+        if (name == null) {
+            // Without type-ahead a printable character starts an edit of the current row
+            final int codePoint = event.codePoint();
+            if (!event.modifiers().control() && !event.modifiers().alt() && !Character.isISOControl(codePoint)
+                    && !Character.isWhitespace(codePoint)
+                    && this.startEdit(this.selectedIndex, Float.NaN, codePoint, event.modifiers())) {
+                event.consume();
+            }
+            return;
+        }
+        if (this.items.isEmpty()) {
             return;
         }
         final Appearances appearances = this.node().factory().appearances();
@@ -1201,6 +1389,12 @@ public final class ListViewImpl<T> extends BuiltInComposite<ListView<T>> impleme
         final int page = Math.max(1, (int) Math.floor(this.viewport.height() / this.step()));
         final int last = this.items.size() - 1;
         final int current = this.selectedIndex;
+        if (event.key() == Key.F2 && event.action() == KeyAction.PRESS && !event.modifiers().shift()) {
+            if (this.startEdit(current, Float.NaN, -1, event.modifiers())) {
+                event.consume();
+            }
+            return;
+        }
         final int next = switch (event.key()) {
             case UP -> current < 0 ? last : Math.max(0, current - 1);
             case DOWN -> current < 0 ? 0 : Math.min(last, current + 1);

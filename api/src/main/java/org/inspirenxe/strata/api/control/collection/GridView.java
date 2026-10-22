@@ -21,6 +21,7 @@ import org.inspirenxe.strata.api.component.HasCursor;
 import org.inspirenxe.strata.api.component.HasTooltip;
 import org.inspirenxe.strata.api.component.Tooltip;
 import org.inspirenxe.strata.api.control.attribute.item.Activatable;
+import org.inspirenxe.strata.api.control.attribute.item.CellEditing;
 import org.inspirenxe.strata.api.control.attribute.item.CellSource;
 import org.inspirenxe.strata.api.control.attribute.item.ItemSource;
 import org.inspirenxe.strata.api.control.attribute.item.MultiSelection;
@@ -70,6 +71,10 @@ import java.util.function.Function;
  *     moves, and Shift extends the range in {@link SelectionMode#MULTIPLE} mode. Held keys repeat, except Enter and
  *     Space. Keys with Alt are left alone, and so are keys with Control other than Home, End and Control+A.</li>
  * </ul>
+ *
+ * <p>With a {@linkplain #setCellEditor cell editor}, filled cells are edited in place, as {@link CellEditing}
+ * describes: F2 or a typed character edits the cursor cell, and a double click edits the cell clicked and no longer
+ * activates it. Empty cells are not edited.</p>
  *
  * <p>The desired size is the columns and rows of cells with the spacing between them, and the scroll bar's gutter
  * while the rows overflow the height offered.</p>
@@ -123,7 +128,7 @@ import java.util.function.Function;
  */
 public interface GridView<T> extends Component<GridView<T>>, Focusable<GridView<T>>, HasCursor<GridView<T>>,
         HasTooltip<GridView<T>>, ItemSource<T, GridView<T>>, CellSource<T, GridView<T>>,
-        MultiSelection<T, GridView<T>>, Activatable<GridView<T>> {
+        MultiSelection<T, GridView<T>>, Activatable<GridView<T>>, CellEditing<T, GridView<T>> {
     /**
      * Style key drawn over the cursor cell while the grid has focus (paint, optional). Falls back to
      * {@value org.inspirenxe.strata.api.control.button.Button#STYLE_FOCUS}.

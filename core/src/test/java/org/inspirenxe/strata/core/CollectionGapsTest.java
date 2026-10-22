@@ -16,6 +16,9 @@
 package org.inspirenxe.strata.core;
 
 import org.inspirenxe.strata.api.ComponentFactory;
+import org.inspirenxe.strata.api.component.Component;
+import org.inspirenxe.strata.api.control.attribute.item.Activatable;
+import org.inspirenxe.strata.api.control.attribute.item.CellEditing;
 import org.inspirenxe.strata.api.control.attribute.item.MultiSelection;
 import org.inspirenxe.strata.api.control.attribute.item.SelectionMode;
 import org.inspirenxe.strata.api.control.collection.ComboBox;
@@ -24,6 +27,10 @@ import org.inspirenxe.strata.api.control.collection.ListView;
 import org.inspirenxe.strata.api.control.collection.TableColumn;
 import org.inspirenxe.strata.api.control.collection.TableView;
 import org.inspirenxe.strata.api.control.collection.TreeView;
+import org.inspirenxe.strata.api.control.field.TextBox;
+import org.inspirenxe.strata.api.event.input.InputEvents;
+import org.inspirenxe.strata.api.input.Key;
+import org.inspirenxe.strata.api.input.KeyAction;
 import org.inspirenxe.strata.api.input.Modifier;
 import org.inspirenxe.strata.api.input.Modifiers;
 import org.inspirenxe.strata.api.input.MouseButton;
@@ -40,9 +47,11 @@ import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
+import java.util.function.Consumer;
 import java.util.stream.IntStream;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -236,6 +245,164 @@ class CollectionGapsTest {
             CollectionGapsTest.this.test.host().render(canvas);
             assertTrue(canvas.lines().stream().anyMatch(line -> line.contains("CleoCleo")), canvas.lines().toString());
             assertTrue(canvas.lines().stream().noneMatch(line -> line.contains("...")), canvas.lines().toString());
+        }
+    }
+
+    @Nested
+    class EditingCells {
+        private final List<TextBox> editors = new ArrayList<>();
+
+        /**
+         * An editor as a project would write one: a text box that commits on Enter and cancels on Escape.
+         */
+        private Component<?> editor(final ComponentFactory ui, final String item, final Consumer<? super String> commit,
+                                    final Runnable cancel) {
+            final TextBox box = ui.textBox().setText(item);
+            box.onEvent(TextBox.SUBMITTED, e -> commit.accept(e.value()));
+            box.onEvent(InputEvents.KEY, e -> {
+                if (e.key() == Key.ESCAPE && e.action() == KeyAction.PRESS) {
+                    cancel.run();
+                    e.consume();
+                }
+            });
+            this.editors.add(box);
+            return box;
+        }
+
+        private ListView<String> list() {
+            final ListView<String> list = CollectionGapsTest.this.ui.<String>listView().setItems(List.of("Ana", "Ben", "Cleo"))
+                    .setCellEditor(this::editor)
+                    .onEvent(CellEditing.EDIT_CELL, e -> CollectionGapsTest.this.heard.add("edit " + e.value()))
+                    .onEvent(CellEditing.CELL_EDITED, e -> CollectionGapsTest.this.heard.add(e.previous() + "->" + e.value()))
+                    .onEvent(Activatable.ACTIVATED, e -> CollectionGapsTest.this.heard.add("activated " + e.value()));
+            list.setSize(150, 100);
+            CollectionGapsTest.this.test.show(CollectionGapsTest.this.panel.add(list, 0, 0));
+            return list;
+        }
+
+        private void key(final Key key) {
+            CollectionGapsTest.this.test.host().key(key, KeyAction.PRESS, Modifiers.NONE);
+        }
+
+        @Test
+        void f2EditsTheCurrentRowAndEnterCommits() {
+            final ListView<String> list = this.list().select(1);
+            list.requestFocus();
+            this.key(Key.F2);
+            assertTrue(list.isEditing());
+            final TextBox box = this.editors.getFirst();
+            assertTrue(box.isFocused());
+            box.setText("Bea");
+            this.key(Key.ENTER);
+            assertFalse(list.isEditing());
+            assertTrue(list.isFocused());
+            assertEquals(List.of("Ana", "Ben", "Cleo"), list.items());
+            assertEquals(List.of("edit Ben", "Ben->Bea"), CollectionGapsTest.this.heard);
+            assertFalse(box.isAttached());
+        }
+
+        @Test
+        void escapeCancelsAndACanceledRequestEditsNothing() {
+            final ListView<String> list = this.list().select(0);
+            list.requestFocus();
+            this.key(Key.F2);
+            this.key(Key.ESCAPE);
+            assertFalse(list.isEditing());
+            assertEquals(List.of("edit Ana"), CollectionGapsTest.this.heard);
+            list.onEvent(CellEditing.EDIT_CELL, e -> e.cancel());
+            this.key(Key.F2);
+            assertFalse(list.isEditing());
+            assertEquals(1, this.editors.size());
+        }
+
+        @Test
+        void aDoublePressEditsInsteadOfActivating() {
+            final ListView<String> list = this.list();
+            CollectionGapsTest.this.test.click(20, 30);
+            CollectionGapsTest.this.test.click(20, 30);
+            assertTrue(list.isEditing());
+            assertEquals(List.of("edit Ben"), CollectionGapsTest.this.heard);
+        }
+
+        @Test
+        void aTypedCharacterStartsAnEditWhenTypeAheadIsOff() {
+            final ListView<String> list = this.list().setTypeAhead(null).select(2);
+            list.requestFocus();
+            CollectionGapsTest.this.test.host().charTyped('x', Modifiers.NONE);
+            assertTrue(list.isEditing());
+            assertEquals("Cleox", this.editors.getFirst().text());
+        }
+
+        @Test
+        void newItemsCancelTheEditAndTheEditedRowStaysBuiltWhileScrolledOut() {
+            final ListView<String> list = this.list().setItems(numbers(50).stream().map(String::valueOf).toList()).select(0);
+            list.requestFocus();
+            this.key(Key.F2);
+            final TextBox box = this.editors.getFirst();
+            list.setScrollY(500);
+            CollectionGapsTest.this.test.host().layout();
+            assertTrue(box.isAttached());
+            assertTrue(list.isEditing());
+            list.setItems(List.of("Ana"));
+            assertFalse(list.isEditing());
+            assertFalse(box.isAttached());
+        }
+
+        @Test
+        void aTableEditsTheColumnUnderThePointerAndATreeItsCell() {
+            final ComponentFactory ui = CollectionGapsTest.this.ui;
+            final TableColumn<String> fixed = ui.<String>tableColumn("Name").setWidth(GridLength.fixed(50)).setCellText(n -> n);
+            final TableColumn<String> note = ui.<String>tableColumn("Note").setWidth(GridLength.fixed(50))
+                    .setCellText(n -> n).setCellEditor(this::editor);
+            final TableView<String> table = ui.<String>tableView().addColumn(fixed).addColumn(note)
+                    .setItems(List.of("Ana", "Ben"))
+                    .onEvent(CellEditing.CELL_EDITED, e -> CollectionGapsTest.this.heard.add(e.previous() + "->" + e.value()));
+            table.setSize(100, 100);
+            CollectionGapsTest.this.test.show(CollectionGapsTest.this.panel.add(table, 0, 0));
+            CollectionGapsTest.this.test.click(20, 30);
+            CollectionGapsTest.this.test.click(20, 30);
+            assertFalse(table.isEditing());
+            CollectionGapsTest.this.test.platform().advanceMillis(1000);
+            CollectionGapsTest.this.test.click(70, 30);
+            CollectionGapsTest.this.test.click(70, 30);
+            assertTrue(table.isEditing());
+            final TextBox box = this.editors.getFirst();
+            CollectionGapsTest.this.test.host().layout();
+            assertTrue(box.bounds().x() >= 50f, "the editor sits in the note column");
+            box.setText("Bo");
+            this.key(Key.ENTER);
+            assertEquals(List.of("Ana->Bo"), CollectionGapsTest.this.heard);
+            assertTrue(table.isFocused());
+
+            final TreeView<String> tree = ui.<String>treeView().setItems(List.of("Ana")).setCellEditor(this::editor);
+            tree.setSize(100, 100);
+            CollectionGapsTest.this.test.show(CollectionGapsTest.this.panel.add(tree, 150, 0));
+            tree.select(0).requestFocus();
+            this.key(Key.F2);
+            assertTrue(tree.isEditing());
+            CollectionGapsTest.this.test.host().layout();
+            assertTrue(this.editors.getLast().bounds().x() >= 150f + TreeView.ARROW_WIDTH);
+            tree.cancelEdit();
+            assertFalse(tree.isEditing());
+        }
+
+        @Test
+        void aGridEditsFilledCellsOnly() {
+            final ComponentFactory ui = CollectionGapsTest.this.ui;
+            final GridView<String> grid = ui.<String>gridView().setCellSize(40).setColumns(3)
+                    .setItems(Arrays.asList("Ana", null, "Ben")).setCellEditor(this::editor);
+            CollectionGapsTest.this.test.show(CollectionGapsTest.this.panel.add(grid, 0, 0));
+            grid.requestFocus();
+            this.key(Key.RIGHT);
+            this.key(Key.F2);
+            assertFalse(grid.isEditing());
+            this.key(Key.RIGHT);
+            this.key(Key.F2);
+            assertTrue(grid.isEditing());
+            this.editors.getFirst().setText("Bo");
+            this.key(Key.ENTER);
+            assertFalse(grid.isEditing());
+            assertEquals(Arrays.asList("Ana", null, "Ben"), grid.items());
         }
     }
 

@@ -41,4 +41,14 @@ public interface CellSource<T, S extends CellSource<T, S>> {
      * @return this control
      */
     S setCellFactory(Function<? super T, ? extends Component<?>> cellFactory);
+
+    /**
+     * Sets what edits an item in place, or makes the cells not editable, which is the default. The control that
+     * shows the cells edits them as {@link CellEditing} describes. A cell being edited goes on with the editor it
+     * started with.
+     *
+     * @param editor builds the editor for an item, or {@code null} for cells that cannot be edited
+     * @return this control
+     */
+    S setCellEditor(CellEditor<T> editor);
 }

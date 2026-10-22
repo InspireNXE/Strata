@@ -18,9 +18,11 @@ package org.inspirenxe.strata.core.control.collection;
 import org.inspirenxe.strata.api.component.Component;
 import org.inspirenxe.strata.api.component.HasTooltip;
 import org.inspirenxe.strata.api.component.Tooltip;
+import org.inspirenxe.strata.api.control.attribute.item.CellEditor;
 import org.inspirenxe.strata.api.control.attribute.item.SelectionMode;
 import org.inspirenxe.strata.api.control.button.Button;
 import org.inspirenxe.strata.api.control.collection.GridView;
+import org.inspirenxe.strata.api.event.input.CharEvent;
 import org.inspirenxe.strata.api.event.input.DragEvent;
 import org.inspirenxe.strata.api.event.input.FocusEvent;
 import org.inspirenxe.strata.api.event.input.KeyEvent;
@@ -34,6 +36,7 @@ import org.inspirenxe.strata.api.geometry.Rect;
 import org.inspirenxe.strata.api.geometry.Size;
 import org.inspirenxe.strata.api.input.Key;
 import org.inspirenxe.strata.api.input.KeyAction;
+import org.inspirenxe.strata.api.input.Modifiers;
 import org.inspirenxe.strata.api.input.MouseButton;
 import org.inspirenxe.strata.api.layout.ScrollPanel;
 import org.inspirenxe.strata.api.theme.Paint;
@@ -42,6 +45,7 @@ import org.inspirenxe.strata.core.layout.ScrollTrack;
 import org.inspirenxe.strata.core.layout.ThumbDrag;
 import org.inspirenxe.strata.core.node.BuiltInComposite;
 import org.inspirenxe.strata.core.node.ComponentFactoryImpl;
+import org.inspirenxe.strata.core.node.Root;
 
 import java.util.ArrayList;
 import java.util.BitSet;
@@ -91,6 +95,10 @@ public final class GridViewImpl<T> extends BuiltInComposite<GridView<T>> impleme
     private float spacing;
     private boolean selectable;
     private boolean slotsStale;
+    // Editing in place, and the cell kept built while edited
+    private CellEditor<T> cellEditor;
+    private final CellEditSession session;
+    private int pinned;
 
     // Selection: the current cell, the selected set as indexes and as bits for painting, and the range anchor
     private int selectedIndex;
@@ -146,6 +154,8 @@ public final class GridViewImpl<T> extends BuiltInComposite<GridView<T>> impleme
         this.mode = SelectionMode.SINGLE;
         this.anchor = -1;
         this.cursor = -1;
+        this.session = new CellEditSession(ui);
+        this.pinned = -1;
         this.bar = new ScrollTrack(true);
         this.thumbDrag = new ThumbDrag(this.bar, true);
         this.viewport = Rect.ZERO;
@@ -171,6 +181,7 @@ public final class GridViewImpl<T> extends BuiltInComposite<GridView<T>> impleme
     @Override
     public GridView<T> setItems(final List<? extends T> items) {
         final List<T> next = new ArrayList<>(items);
+        this.session.cancel();
         this.items.clear();
         this.items.addAll(next);
         this.shown = null;
@@ -197,6 +208,9 @@ public final class GridViewImpl<T> extends BuiltInComposite<GridView<T>> impleme
     @Override
     public GridView<T> setItem(final int index, final T item) {
         Objects.checkIndex(index, this.items.size());
+        if (index == this.pinned) {
+            this.session.cancel();
+        }
         this.items.set(index, item);
         this.shown = null;
         final Slot<T> slot = this.slots.get(index);
@@ -251,7 +265,80 @@ public final class GridViewImpl<T> extends BuiltInComposite<GridView<T>> impleme
      * Drops every slot; the next arrange builds the slots in view again.
      */
     private void rebuild() {
+        this.session.cancel();
         this.slotsStale = true;
+        this.invalidateLayout();
+    }
+
+    // ------------------------------------------------------------------
+    // Editing in place
+    // ------------------------------------------------------------------
+
+    @Override
+    public GridView<T> setCellEditor(final CellEditor<T> editor) {
+        this.cellEditor = editor;
+        return this;
+    }
+
+    @Override
+    public boolean isEditing() {
+        return this.session.isEditing();
+    }
+
+    @Override
+    public GridView<T> cancelEdit() {
+        this.session.cancel();
+        return this;
+    }
+
+    /**
+     * Starts an edit of a filled cell for the user: asks {@code EDIT_CELL} and, if no handler cancels it, puts the
+     * editor in the cell's slot, keeps it built and focuses the editor.
+     *
+     * @return true if the cell is editable, so the trigger is used up even when a handler cancels the edit
+     */
+    private boolean startEdit(final int index, final int codePoint, final Modifiers modifiers) {
+        final CellEditor<T> editor = this.cellEditor;
+        if (editor == null || index < 0 || index >= this.items.size() || this.items.get(index) == null) {
+            return false;
+        }
+        final T item = this.items.get(index);
+        this.request(EDIT_CELL, item, value -> {
+            final Slot<T> slot = this.slotFor(index);
+            if (slot == null) {
+                return;
+            }
+            slot.edit(this.session.begin(editor, item, edited -> this.report(CELL_EDITED, (Object) edited, (Object) item),
+                    () -> this.restore(index), this::requestFocus));
+            this.pinned = index;
+            this.session.focus(codePoint, modifiers);
+        });
+        return true;
+    }
+
+    /**
+     * Returns the slot built for a cell, scrolling it into view and laying out first if it is not built yet.
+     */
+    private Slot<T> slotFor(final int index) {
+        if (this.slotsStale || !this.slots.containsKey(index)) {
+            this.scrollToIndex(index);
+            final Root root = this.hostRoot();
+            if (root != null && this.isAttached()) {
+                root.layout();
+            }
+        }
+        return this.slotsStale ? null : this.slots.get(index);
+    }
+
+    /**
+     * Puts a cell's content back after an edit and stops keeping its slot built.
+     */
+    private void restore(final int index) {
+        this.pinned = -1;
+        final Slot<T> slot = this.slots.get(index);
+        if (slot != null && index < this.items.size()) {
+            slot.fill(this.items.get(index));
+        }
         this.invalidateLayout();
     }
 
@@ -568,6 +655,10 @@ public final class GridViewImpl<T> extends BuiltInComposite<GridView<T>> impleme
         }
         this.request(CLICK, new Click<>(index, this.items.get(index), event.button(), event.modifiers()),
                 this::applyClick);
+        if (left && event.clicks() == 2 && !this.activateOnClick
+                && this.startEdit(index, -1, event.modifiers())) {
+            return;
+        }
         if (left && event.clicks() == (this.activateOnClick ? 1 : 2)) {
             this.request(ACTIVATE, index, this::applyActivate);
         }
@@ -725,7 +816,7 @@ public final class GridViewImpl<T> extends BuiltInComposite<GridView<T>> impleme
         }
         for (final Iterator<Map.Entry<Integer, Slot<T>>> it = this.slots.entrySet().iterator(); it.hasNext(); ) {
             final Map.Entry<Integer, Slot<T>> entry = it.next();
-            if (entry.getKey() < first || entry.getKey() > last) {
+            if ((entry.getKey() < first || entry.getKey() > last) && entry.getKey() != this.pinned) {
                 it.remove();
                 this.removeChild(entry.getValue());
             }
@@ -744,6 +835,13 @@ public final class GridViewImpl<T> extends BuiltInComposite<GridView<T>> impleme
             final int row = i / this.columns;
             context.arrange(slot, new Rect(bounds.x() + column * step, bounds.y() + row * step - offset,
                     this.cellSize, this.cellSize));
+        }
+        // A cell kept built for an edit follows the scrolling outside the viewport, where the clip hides it
+        final Slot<T> kept = this.pinned >= 0 && (this.pinned < first || this.pinned > last)
+                ? this.slots.get(this.pinned) : null;
+        if (kept != null) {
+            context.arrange(kept, new Rect(bounds.x() + (this.pinned % this.columns) * step,
+                    bounds.y() + (this.pinned / this.columns) * step - offset, this.cellSize, this.cellSize));
         }
         this.bar.update(new Rect(bounds.right() - ScrollPanel.BAR_WIDTH, bounds.y(), ScrollPanel.BAR_WIDTH,
                 bounds.height()), this.viewport.height(), Math.max(total, this.viewport.height()));
@@ -821,6 +919,15 @@ public final class GridViewImpl<T> extends BuiltInComposite<GridView<T>> impleme
     }
 
     @Override
+    protected void onChar(final CharEvent event) {
+        final int codePoint = event.codePoint();
+        if (!event.modifiers().control() && !event.modifiers().alt() && !Character.isISOControl(codePoint)
+                && !Character.isWhitespace(codePoint) && this.startEdit(this.cursor, codePoint, event.modifiers())) {
+            event.consume();
+        }
+    }
+
+    @Override
     protected void onKey(final KeyEvent event) {
         final int count = this.items.size();
         if (!event.action().isDown() || event.modifiers().alt() || count == 0) {
@@ -838,6 +945,12 @@ public final class GridViewImpl<T> extends BuiltInComposite<GridView<T>> impleme
             return;
         }
         if (control && key != Key.HOME && key != Key.END) {
+            return;
+        }
+        if (press && key == Key.F2 && !control) {
+            if (this.startEdit(this.cursor, -1, event.modifiers())) {
+                event.consume();
+            }
             return;
         }
         if (press && (key.isEnter() || key == Key.SPACE)) {
@@ -900,6 +1013,18 @@ public final class GridViewImpl<T> extends BuiltInComposite<GridView<T>> impleme
             super(ui);
             this.grid = grid;
             this.index = index;
+        }
+
+        /**
+         * Puts an editor in place of the content.
+         */
+        void edit(final Component<?> editor) {
+            if (this.content != null) {
+                this.removeChild(this.content);
+            }
+            this.content = editor;
+            this.addContent(editor);
+            this.invalidateLayout();
         }
 
         void fill(final T item) {

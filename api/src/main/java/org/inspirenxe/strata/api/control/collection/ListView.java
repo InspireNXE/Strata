@@ -20,6 +20,7 @@ import org.inspirenxe.strata.api.component.Focusable;
 import org.inspirenxe.strata.api.component.HasCursor;
 import org.inspirenxe.strata.api.component.HasTooltip;
 import org.inspirenxe.strata.api.control.attribute.item.Activatable;
+import org.inspirenxe.strata.api.control.attribute.item.CellEditing;
 import org.inspirenxe.strata.api.control.attribute.item.CellSource;
 import org.inspirenxe.strata.api.control.attribute.item.ItemSource;
 import org.inspirenxe.strata.api.control.attribute.item.RowView;
@@ -60,6 +61,8 @@ import java.util.function.Function;
  *     Held keys repeat. Keys with Alt are left alone, and so are keys with Control other than Control+A in
  *     {@link SelectionMode#MULTIPLE} mode. An empty list takes no keys.</li>
  *     <li>Typing a name's first letters while focused selects the item, as {@link #setTypeAhead} describes.</li>
+ *     <li>With a {@linkplain #setCellEditor cell editor}, F2 and a double press edit a row in place, as
+ *     {@link CellEditing} describes, and a double press no longer activates.</li>
  *     <li>The wheel and the scroll bar scroll as in {@link org.inspirenxe.strata.api.layout.ScrollPanel}, and the
  *     list uses its theme keys for the bar.</li>
  * </ul>
@@ -128,7 +131,8 @@ import java.util.function.Function;
  */
 public interface ListView<T> extends Component<ListView<T>>, Focusable<ListView<T>>, HasCursor<ListView<T>>,
         HasTooltip<ListView<T>>, ItemSource<T, ListView<T>>, CellSource<T, ListView<T>>,
-        MultiSelection<T, ListView<T>>, Activatable<ListView<T>>, RowView<ListView<T>> {
+        MultiSelection<T, ListView<T>>, Activatable<ListView<T>>, RowView<ListView<T>>,
+        CellEditing<T, ListView<T>> {
     /**
      * Style key for the list's area behind its rows (paint, optional).
      */

@@ -20,6 +20,7 @@ import org.inspirenxe.strata.api.component.Focusable;
 import org.inspirenxe.strata.api.component.HasCursor;
 import org.inspirenxe.strata.api.component.HasTooltip;
 import org.inspirenxe.strata.api.control.attribute.item.Activatable;
+import org.inspirenxe.strata.api.control.attribute.item.CellEditing;
 import org.inspirenxe.strata.api.control.attribute.item.CellSource;
 import org.inspirenxe.strata.api.control.attribute.item.ItemSource;
 import org.inspirenxe.strata.api.control.attribute.item.RowView;
@@ -48,7 +49,8 @@ import java.util.function.Predicate;
  * children. Clicking the arrow flips the item. Right expands the selected item or, if it is expanded, selects its
  * first child; Left collapses it or, if it is collapsed, selects its parent. Those moves select as Up and Down do, so
  * in {@link SelectionMode#MULTIPLE} mode they ask {@link MultiSelection#SELECT_MANY} and Shift extends the range.
- * Up, Down, Page Up, Page Down, Home, End and Enter work as in a list.</p>
+ * Up, Down, Page Up, Page Down, Home, End and Enter work as in a list. With a {@linkplain #setCellEditor cell
+ * editor} the cell after the indent and arrow is edited in place, as {@link CellEditing} describes.</p>
  *
  * <p>Items are told apart by their key, the item itself unless {@linkplain #setKeyFunction set} otherwise, and the
  * tree remembers which keys are expanded across {@link #setItems} calls.</p>
@@ -103,7 +105,8 @@ import java.util.function.Predicate;
  */
 public interface TreeView<T> extends Component<TreeView<T>>, Focusable<TreeView<T>>, HasCursor<TreeView<T>>,
         HasTooltip<TreeView<T>>, ItemSource<T, TreeView<T>>, CellSource<T, TreeView<T>>,
-        MultiSelection<T, TreeView<T>>, Activatable<TreeView<T>>, RowView<TreeView<T>> {
+        MultiSelection<T, TreeView<T>>, Activatable<TreeView<T>>, RowView<TreeView<T>>,
+        CellEditing<T, TreeView<T>> {
     /**
      * Style key for the expand arrows (paint, optional).
      */

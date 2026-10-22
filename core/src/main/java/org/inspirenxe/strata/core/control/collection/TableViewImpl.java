@@ -19,6 +19,7 @@ import org.inspirenxe.strata.api.ComponentFactory;
 import org.inspirenxe.strata.api.component.Component;
 import org.inspirenxe.strata.api.component.CursorKind;
 import org.inspirenxe.strata.api.component.HasCursor;
+import org.inspirenxe.strata.api.control.attribute.item.CellEditor;
 import org.inspirenxe.strata.api.control.collection.ListView;
 import org.inspirenxe.strata.api.control.collection.TableColumn;
 import org.inspirenxe.strata.api.control.collection.TableView;
@@ -33,6 +34,7 @@ import org.inspirenxe.strata.api.extension.Painter;
 import org.inspirenxe.strata.api.geometry.Insets;
 import org.inspirenxe.strata.api.geometry.Rect;
 import org.inspirenxe.strata.api.geometry.Size;
+import org.inspirenxe.strata.api.input.Modifiers;
 import org.inspirenxe.strata.api.input.MouseButton;
 import org.inspirenxe.strata.api.layout.Anchor;
 import org.inspirenxe.strata.api.layout.GridLength;
@@ -674,6 +676,40 @@ public final class TableViewImpl<T> extends ListBackedControl<T, T, TableView<T>
         return new Row<>(this.ui, this, item);
     }
 
+    @Override
+    boolean startEdit(final int row, final float x, final int codePoint, final Modifiers modifiers) {
+        // The column under the pointer for a double press, else the first shown column with an editor
+        int at = -1;
+        if (Float.isNaN(x)) {
+            for (int i = 0; i < this.visible.size() && at < 0; i++) {
+                at = this.visible.get(i).cellEditor() != null ? i : -1;
+            }
+        } else {
+            for (int i = 0; i < this.headerCells.length && i < this.visible.size(); i++) {
+                if (x >= this.headerCells[i].x() && x < this.headerCells[i].right()) {
+                    at = this.visible.get(i).cellEditor() != null ? i : -1;
+                }
+            }
+        }
+        if (at < 0) {
+            return false;
+        }
+        final int column = at;
+        final CellEditor<T> editor = this.visible.get(column).cellEditor();
+        final T item = this.shown.get(row);
+        this.request(EDIT_CELL, item, value -> {
+            if (!(this.list.rowFor(row) instanceof Row<?> built) || column >= built.cells.size()) {
+                return;
+            }
+            built.edit(column, this.session.begin(editor, item,
+                    edited -> this.report(CELL_EDITED, (Object) edited, (Object) item),
+                    () -> this.list.dropRow(row), this::requestFocus));
+            this.list.pin(row);
+            this.session.focus(codePoint, modifiers);
+        });
+        return true;
+    }
+
     // ------------------------------------------------------------------
     // Items and selection, mostly the list's
     // ------------------------------------------------------------------
@@ -1278,6 +1314,16 @@ public final class TableViewImpl<T> extends ListBackedControl<T, T, TableView<T>
          */
         Component<?> cell(final int shownIndex) {
             return shownIndex < this.cells.size() ? this.cells.get(shownIndex) : null;
+        }
+
+        /**
+         * Puts an editor in place of a shown column's cell.
+         */
+        void edit(final int shownIndex, final Component<?> editor) {
+            this.removeChild(this.cells.get(shownIndex));
+            this.cells.set(shownIndex, editor);
+            this.addContent(editor);
+            this.invalidateLayout();
         }
 
         /**

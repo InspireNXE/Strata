@@ -17,9 +17,11 @@ package org.inspirenxe.strata.core.control.collection;
 
 import org.inspirenxe.strata.api.component.Component;
 import org.inspirenxe.strata.api.control.attribute.item.Activatable;
+import org.inspirenxe.strata.api.control.attribute.item.CellEditing;
 import org.inspirenxe.strata.api.control.attribute.item.MultiSelection;
 import org.inspirenxe.strata.api.control.attribute.item.RowView;
 import org.inspirenxe.strata.api.control.attribute.item.SelectionMode;
+import org.inspirenxe.strata.api.input.Modifiers;
 import org.inspirenxe.strata.api.layout.Anchor;
 import org.inspirenxe.strata.api.text.Text;
 import org.inspirenxe.strata.core.node.BuiltInComposite;
@@ -38,12 +40,17 @@ import java.util.List;
  * @param <E> the type of the list's rows
  * @param <S> the control's own type
  */
-abstract class ListBackedControl<T, E, S extends Component<S> & RowView<S> & MultiSelection<T, S> & Activatable<S>>
-        extends BuiltInComposite<S> implements RowView<S>, MultiSelection<T, S>, Activatable<S> {
+abstract class ListBackedControl<T, E, S extends Component<S> & RowView<S> & MultiSelection<T, S> & Activatable<S>
+        & CellEditing<T, S>> extends BuiltInComposite<S> implements RowView<S>, MultiSelection<T, S>, Activatable<S>,
+        CellEditing<T, S> {
     /**
      * The list that shows the rows.
      */
     final ListViewImpl<E> list;
+    /**
+     * The cell being edited in place, if any.
+     */
+    final CellEditSession session;
 
     /**
      * Makes the list, which builds its rows with {@link #row}, and routes it here.
@@ -61,6 +68,18 @@ abstract class ListBackedControl<T, E, S extends Component<S> & RowView<S> & Mul
                 this.report(SELECTED, index, previous);
             }
         });
+        this.session = new CellEditSession(ui);
+        this.list.routeEdits(new ListViewImpl.EditRoute() {
+            @Override
+            public boolean edit(final int row, final float x, final int codePoint, final Modifiers modifiers) {
+                return ListBackedControl.this.startEdit(row, x, codePoint, modifiers);
+            }
+
+            @Override
+            public void cancel() {
+                ListBackedControl.this.session.cancel();
+            }
+        });
         this.list.routeMany((indexes, current) -> this.request(SELECT_MANY, indexes, set -> this.list.applyMany(set, current)),
                 (indexes, previous) -> {
                     if (this.reportsSelection()) {
@@ -73,6 +92,30 @@ abstract class ListBackedControl<T, E, S extends Component<S> & RowView<S> & Mul
      * Makes the component for a row as it comes into view.
      */
     abstract Component<?> row(E row);
+
+    /**
+     * Starts an edit of a row for the user: asks {@code EDIT_CELL} and, if no handler cancels it, puts the editor in
+     * the row. Returns false when the row has nothing to edit, so the trigger goes on, as a double press goes on to
+     * activate.
+     *
+     * @param row the row
+     * @param x the pointer's x for a double press, or NaN for a key or a character
+     * @param codePoint the character that started the edit, or -1
+     * @param modifiers the modifiers held
+     * @return true if the row is editable
+     */
+    abstract boolean startEdit(int row, float x, int codePoint, Modifiers modifiers);
+
+    @Override
+    public boolean isEditing() {
+        return this.session.isEditing();
+    }
+
+    @Override
+    public S cancelEdit() {
+        this.session.cancel();
+        return this.self();
+    }
 
     /**
      * Returns whether a change of the list's selection is reported as it happens. A tree holds the reports back

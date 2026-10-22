@@ -16,6 +16,7 @@
 package org.inspirenxe.strata.core.control.collection;
 
 import org.inspirenxe.strata.api.component.Component;
+import org.inspirenxe.strata.api.control.attribute.item.CellEditor;
 import org.inspirenxe.strata.api.control.attribute.item.SelectionMode;
 import org.inspirenxe.strata.api.control.collection.ListView;
 import org.inspirenxe.strata.api.control.collection.TreeView;
@@ -26,6 +27,7 @@ import org.inspirenxe.strata.api.extension.MeasureContext;
 import org.inspirenxe.strata.api.extension.Painter;
 import org.inspirenxe.strata.api.geometry.Rect;
 import org.inspirenxe.strata.api.geometry.Size;
+import org.inspirenxe.strata.api.input.Modifiers;
 import org.inspirenxe.strata.api.input.MouseButton;
 import org.inspirenxe.strata.api.layout.Anchor;
 import org.inspirenxe.strata.api.theme.Paint;
@@ -71,6 +73,7 @@ public final class TreeViewImpl<T> extends ListBackedControl<T, TreeViewImpl.Ent
     private Predicate<? super T> hasChildren;
     private final Map<Object, List<? extends T>> kept;
     private Function<? super T, ? extends Component<?>> cellFactory;
+    private CellEditor<T> cellEditor;
     private Function<? super T, ?> keyFunction;
     private float indent;
     private Paint arrow;
@@ -144,6 +147,32 @@ public final class TreeViewImpl<T> extends ListBackedControl<T, TreeViewImpl.Ent
         this.cellFactory = Objects.requireNonNull(cellFactory, "cellFactory");
         this.list.refresh();
         return this;
+    }
+
+    @Override
+    public TreeView<T> setCellEditor(final CellEditor<T> editor) {
+        this.cellEditor = editor;
+        return this;
+    }
+
+    @Override
+    boolean startEdit(final int row, final float x, final int codePoint, final Modifiers modifiers) {
+        final CellEditor<T> editor = this.cellEditor;
+        if (editor == null) {
+            return false;
+        }
+        final T item = this.entries.get(row).item;
+        this.request(EDIT_CELL, item, value -> {
+            if (!(this.list.rowFor(row) instanceof Row<?> built)) {
+                return;
+            }
+            @SuppressWarnings("unchecked") final Row<T> target = (Row<T>) built;
+            target.edit(this.session.begin(editor, item, edited -> this.report(CELL_EDITED, (Object) edited, (Object) item),
+                    () -> this.list.dropRow(row), this::requestFocus));
+            this.list.pin(row);
+            this.session.focus(codePoint, modifiers);
+        });
+        return true;
     }
 
     @Override
@@ -674,7 +703,7 @@ public final class TreeViewImpl<T> extends ListBackedControl<T, TreeViewImpl.Ent
     private static final class Row<T> extends BuiltInComposite<Row<T>> {
         private final TreeViewImpl<T> tree;
         private final Entry<T> entry;
-        private final Component<?> cell;
+        private Component<?> cell;
         // The arrow's lines, and the bounds and state they were made for
         private Rect[] arrowLines;
         private Rect arrowBounds;
@@ -701,10 +730,22 @@ public final class TreeViewImpl<T> extends ListBackedControl<T, TreeViewImpl.Ent
             return new Size(lead + inner.width(), availableHeight);
         }
 
+        /**
+         * Puts an editor in place of the cell.
+         */
+        void edit(final Component<?> editor) {
+            this.removeChild(this.cell);
+            this.cell = editor;
+            this.addContent(editor);
+            this.invalidateLayout();
+        }
+
         @Override
         protected void arrange(final ArrangeContext context, final Rect bounds) {
             final float x = this.arrowX(bounds) + ARROW_WIDTH;
-            context.arrange(this.cell, new Rect(x, bounds.y(), Math.max(0f, bounds.right() - x), bounds.height()));
+            final float width = Math.max(0f, bounds.right() - x);
+            context.measure(this.cell, width, bounds.height());
+            context.arrange(this.cell, new Rect(x, bounds.y(), width, bounds.height()));
         }
 
         @Override

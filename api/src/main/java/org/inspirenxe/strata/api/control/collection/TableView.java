@@ -20,6 +20,7 @@ import org.inspirenxe.strata.api.component.Focusable;
 import org.inspirenxe.strata.api.component.HasCursor;
 import org.inspirenxe.strata.api.component.HasTooltip;
 import org.inspirenxe.strata.api.control.attribute.item.Activatable;
+import org.inspirenxe.strata.api.control.attribute.item.CellEditing;
 import org.inspirenxe.strata.api.control.attribute.item.ItemSource;
 import org.inspirenxe.strata.api.control.attribute.item.RowView;
 import org.inspirenxe.strata.api.control.attribute.item.MultiSelection;
@@ -70,6 +71,10 @@ import java.util.function.Function;
  * are sorted by the next, through {@link #SORT_MANY}. Text columns sort by their text, ignoring case, unless given
  * another comparator. Sorting changes only the order the rows are shown in: {@link #items()} keeps the order they
  * were set in, while {@link #shownItems()} and every row index follow the order on screen.</p>
+ *
+ * <p>Columns with a {@linkplain TableColumn#setCellEditor cell editor} are edited in place, as {@link CellEditing}
+ * describes: a double press edits the cell under the pointer when its column has an editor, and F2 and a typed
+ * character edit the current row's first shown column that has one.</p>
  *
  * <p>The table is focusable and tabbable, and keeps focus on its body: {@link #requestFocus()} focuses the body,
  * {@link #isFocused()} is true while the body has focus, a press on the header focuses it too, and the tab order
@@ -137,7 +142,8 @@ import java.util.function.Function;
  */
 public interface TableView<T> extends Component<TableView<T>>, Focusable<TableView<T>>, HasCursor<TableView<T>>,
         HasTooltip<TableView<T>>, ItemSource<T, TableView<T>>,
-        MultiSelection<T, TableView<T>>, Activatable<TableView<T>>, RowView<TableView<T>> {
+        MultiSelection<T, TableView<T>>, Activatable<TableView<T>>, RowView<TableView<T>>,
+        CellEditing<T, TableView<T>> {
     /**
      * Style key for the header behind each title (paint, required).
      */

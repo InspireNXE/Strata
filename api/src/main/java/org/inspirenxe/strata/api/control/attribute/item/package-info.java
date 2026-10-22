@@ -17,7 +17,9 @@
  * Attributes of controls that show a list of entries, select one or several and let the user activate one.
  *
  * <p>This package holds {@link org.inspirenxe.strata.api.control.attribute.item.ItemSource},
- * {@link org.inspirenxe.strata.api.control.attribute.item.CellSource},
+ * {@link org.inspirenxe.strata.api.control.attribute.item.CellSource} with its
+ * {@link org.inspirenxe.strata.api.control.attribute.item.CellEditor},
+ * {@link org.inspirenxe.strata.api.control.attribute.item.CellEditing},
  * {@link org.inspirenxe.strata.api.control.attribute.item.Selection},
  * {@link org.inspirenxe.strata.api.control.attribute.item.SingleSelection},
  * {@link org.inspirenxe.strata.api.control.attribute.item.MultiSelection} with its

@@ -17,6 +17,7 @@ package org.inspirenxe.strata.core.control.collection;
 
 import org.inspirenxe.strata.api.ComponentFactory;
 import org.inspirenxe.strata.api.component.Component;
+import org.inspirenxe.strata.api.control.attribute.item.CellEditor;
 import org.inspirenxe.strata.api.control.collection.TableColumn;
 import org.inspirenxe.strata.api.layout.GridLength;
 import org.inspirenxe.strata.api.text.Text;
@@ -41,6 +42,7 @@ public final class TableColumnImpl<T> implements TableColumn<T> {
     // What the cells show while they are text, or null once a cell factory replaced them
     private Function<? super T, ?> cellText;
     private Comparator<? super T> comparator;
+    private CellEditor<T> cellEditor;
     private float minWidth;
     private float maxWidth;
     private boolean resizable;
@@ -184,6 +186,21 @@ public final class TableColumnImpl<T> implements TableColumn<T> {
 
     Function<? super T, ? extends Component<?>> cellFactory() {
         return this.cellFactory;
+    }
+
+    @Override
+    public TableColumn<T> setCellEditor(final CellEditor<T> editor) {
+        this.cellEditor = editor;
+        return this;
+    }
+
+    /**
+     * Returns what edits this column's cells in place.
+     *
+     * @return the editor, or null when the cells cannot be edited
+     */
+    CellEditor<T> cellEditor() {
+        return this.cellEditor;
     }
 
     /**
