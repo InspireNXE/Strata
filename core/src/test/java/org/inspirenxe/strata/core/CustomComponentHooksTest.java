@@ -59,6 +59,7 @@ import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import java.util.function.Function;
 
@@ -415,9 +416,9 @@ class CustomComponentHooksTest {
             final Plain plain = new Plain(CustomComponentHooksTest.this.ui);
             plain.setCursor(CursorKind.HAND);
 
-            assertEquals(CursorKind.HAND, probe.cursor());
-            assertTrue(probe.tooltip() != null);
-            assertNull(plain.cursor(), "a component that does not declare HasCursor has no cursor");
+            assertEquals(CursorKind.HAND, probe.cursor().orElseThrow());
+            assertTrue(probe.tooltip().isPresent());
+            assertEquals(Optional.empty(), plain.cursor(), "a component that does not declare HasCursor has no cursor");
         }
 
         @Test
@@ -575,7 +576,7 @@ class CustomComponentHooksTest {
 
             assertEquals(List.of("removed Box"), frame.log);
             assertTrue(frame.kids().isEmpty());
-            assertNull(frame.part.parent());
+            assertEquals(Optional.empty(), frame.part.parent());
         }
 
         @Test
@@ -682,8 +683,8 @@ class CustomComponentHooksTest {
             panel.add(column);
             CustomComponentHooksTest.this.test.show(panel);
 
-            assertSame(column, label.parent());
-            assertSame(panel, column.parent());
+            assertSame(column, label.parent().orElseThrow());
+            assertSame(panel, column.parent().orElseThrow());
             assertTrue(label.isAttached());
         }
     }

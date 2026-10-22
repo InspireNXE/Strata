@@ -23,6 +23,7 @@ import org.inspirenxe.strata.api.theme.SpriteId;
 import org.inspirenxe.strata.api.visual.Visual;
 
 import java.util.Objects;
+import java.util.Optional;
 
 /**
  * A sprite or an engine {@link Visual} drawn at a size you choose, such as an icon, a picture or a product photo.
@@ -50,19 +51,21 @@ public interface Image extends Component<Image>, HasCursor<Image>, HasTooltip<Im
     /**
      * The value shown, as {@link #value()} and {@link #setValue} say, null for none. Binds one way.
      */
-    PropertyKey<Image, Object> VALUE = PropertyKey.of("image.value", Image::value, Image::setValue);
+    PropertyKey<Image, Object> VALUE = PropertyKey.of("image.value", image -> image.value().orElse(null),
+            Image::setValue);
     /**
      * The sprite, as {@link #sprite()} and {@link #setSprite} say. Binds one way. A null value throws as
      * {@code setSprite} does.
      */
-    PropertyKey<Image, SpriteId> SPRITE = PropertyKey.of("image.sprite", Image::sprite, Image::setSprite);
+    PropertyKey<Image, SpriteId> SPRITE = PropertyKey.of("image.sprite", image -> image.sprite().orElse(null),
+            Image::setSprite);
 
     /**
      * Returns the sprite.
      *
-     * @return the sprite drawn, or {@code null} while the image shows a visual or nothing
+     * @return the sprite drawn, or empty while the image shows a visual or nothing
      */
-    SpriteId sprite();
+    Optional<SpriteId> sprite();
 
     /**
      * Shows a sprite, replacing the sprite or visual shown before. Does not change the size.
@@ -75,9 +78,9 @@ public interface Image extends Component<Image>, HasCursor<Image>, HasTooltip<Im
     /**
      * Returns the visual.
      *
-     * @return the visual drawn, or {@code null} while the image shows a sprite or nothing
+     * @return the visual drawn, or empty while the image shows a sprite or nothing
      */
-    Visual visual();
+    Optional<Visual> visual();
 
     /**
      * Shows an engine visual, replacing the sprite or visual shown before, and sets the image size to the visual's
@@ -91,9 +94,9 @@ public interface Image extends Component<Image>, HasCursor<Image>, HasTooltip<Im
     /**
      * Returns the value shown.
      *
-     * @return the value set with {@link #setValue}, or {@code null} if none is
+     * @return the value set with {@link #setValue}, or empty if none is
      */
-    Object value();
+    Optional<Object> value();
 
     /**
      * Shows a value through its {@linkplain org.inspirenxe.strata.api.appearance.Appearances appearance}: its icon, at

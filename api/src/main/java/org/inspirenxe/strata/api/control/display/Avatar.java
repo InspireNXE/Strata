@@ -132,7 +132,8 @@ public interface Avatar extends Component<Avatar>, HasCursor<Avatar>, HasTooltip
     /**
      * The value shown, as {@link #value()} and {@link #setValue} say, null for none. Binds one way.
      */
-    PropertyKey<Avatar, Object> VALUE = PropertyKey.of("avatar.value", Avatar::value, Avatar::setValue);
+    PropertyKey<Avatar, Object> VALUE = PropertyKey.of("avatar.value", avatar -> avatar.value().orElse(null),
+            Avatar::setValue);
     /**
      * The name the initials are worked out from, as {@link #name()} and {@link #setName(Text)} say. Binds one way.
      * Null or {@link Text#empty()} goes back to the value's name.
@@ -147,9 +148,9 @@ public interface Avatar extends Component<Avatar>, HasCursor<Avatar>, HasTooltip
     /**
      * Returns the value shown.
      *
-     * @return the value set with {@link #setValue}, or {@code null} if none is
+     * @return the value set with {@link #setValue}, or empty if none is
      */
-    Object value();
+    Optional<Object> value();
 
     /**
      * Shows a value through its {@linkplain org.inspirenxe.strata.api.appearance.Appearances appearance}: its icon
@@ -169,9 +170,9 @@ public interface Avatar extends Component<Avatar>, HasCursor<Avatar>, HasTooltip
     /**
      * Returns the sprite set in code.
      *
-     * @return the sprite, or {@code null} while none is set
+     * @return the sprite, or empty while none is set
      */
-    SpriteId sprite();
+    Optional<SpriteId> sprite();
 
     /**
      * Shows a sprite as the picture, stretched over the square, replacing the sprite or visual set before.
@@ -184,9 +185,9 @@ public interface Avatar extends Component<Avatar>, HasCursor<Avatar>, HasTooltip
     /**
      * Returns the visual set in code.
      *
-     * @return the visual, or {@code null} while none is set
+     * @return the visual, or empty while none is set
      */
-    Visual visual();
+    Optional<Visual> visual();
 
     /**
      * Shows an engine visual as the picture, stretched over the square, replacing the sprite or visual set before.

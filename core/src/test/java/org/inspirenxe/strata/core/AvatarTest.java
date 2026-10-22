@@ -226,11 +226,11 @@ class AvatarTest {
             assertEquals(List.of("fill 10,10 24x24 #FF3C3F44", "sprite test:face 10,10 24x24 #FFFFFFFF"),
                     AvatarTest.this.render().lines());
             avatar.setVisual(new Icon("photo"));
-            assertNull(avatar.sprite());
+            assertEquals(Optional.empty(), avatar.sprite());
             assertEquals(List.of("fill 10,10 24x24 #FF3C3F44", "visual photo 10,10 24x24 #FFFFFFFF"),
                     AvatarTest.this.render().lines());
             avatar.setSprite(FACE);
-            assertNull(avatar.visual());
+            assertEquals(Optional.empty(), avatar.visual());
             avatar.setSprite(null);
             assertEquals(List.of("fill 10,10 24x24 #FF3C3F44", "text AL 16,17.5 #FFF0F0F0"),
                     AvatarTest.this.render().lines());
@@ -375,13 +375,13 @@ class AvatarTest {
                     .tooltip(account -> Tooltip.text("asked " + asked.incrementAndGet()))
                     .build()));
             final Avatar avatar = AvatarTest.this.show(AvatarTest.this.ui.avatar(new Account("Ana")));
-            assertEquals(Tooltip.text("asked 1"), avatar.tooltip());
+            assertEquals(Tooltip.text("asked 1"), avatar.tooltip().orElseThrow());
             AvatarTest.this.test.host().pointerMoved(20, 20, Modifiers.NONE);
-            assertEquals(Tooltip.text("asked 2"), avatar.tooltip());
+            assertEquals(Tooltip.text("asked 2"), avatar.tooltip().orElseThrow());
             avatar.setTooltip("Mine");
             AvatarTest.this.test.host().pointerMoved(200, 150, Modifiers.NONE);
             AvatarTest.this.test.host().pointerMoved(20, 20, Modifiers.NONE);
-            assertEquals(Tooltip.text("Mine"), avatar.tooltip());
+            assertEquals(Tooltip.text("Mine"), avatar.tooltip().orElseThrow());
         }
     }
 
@@ -390,9 +390,9 @@ class AvatarTest {
         AvatarTest.this.registerAccounts();
         final Account ana = new Account("Ana Lima");
         final Avatar avatar = this.show(this.ui.avatar(ana).setGroup(true).setBadge(2));
-        assertSame(ana, avatar.value());
+        assertSame(ana, avatar.value().orElseThrow());
         final List<ComponentSnapshot> snapshots = new ArrayList<>();
-        final AbsolutePanel panel = (AbsolutePanel) avatar.parent();
+        final AbsolutePanel panel = (AbsolutePanel) avatar.parent().orElseThrow();
         panel.onEvent(InputEvents.CLICK, event -> snapshots.add(event.snapshotOf(avatar).orElseThrow()));
         this.test.click(20, 20);
         assertEquals(new Avatar.State(ana, Text.empty(), "AL", true, 2), snapshots.getFirst().state());
@@ -403,7 +403,7 @@ class AvatarTest {
     void clearsTheValue() {
         this.registerAccounts();
         final Avatar avatar = this.ui.avatar(new Account("Ana Lima")).setValue(null);
-        assertNull(avatar.value());
+        assertEquals(Optional.empty(), avatar.value());
         assertEquals("", avatar.initials());
         assertEquals(INITIALS, Themes.flat().textStyle(Avatar.STYLE_INITIALS).orElseThrow().color());
         assertEquals(BACKGROUND, ((Paint.Solid) Themes.flat().paint(Avatar.STYLE_BACKGROUND).orElseThrow()).argb());

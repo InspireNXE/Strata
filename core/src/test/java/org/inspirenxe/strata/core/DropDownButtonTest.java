@@ -164,7 +164,7 @@ class DropDownButtonTest {
             final DropDownButton button = DropDownButtonTest.this.ui.dropDownButton("Sort");
             assertTrue(button.isFocusable());
             assertTrue(button.isTabbable());
-            assertEquals(CursorKind.HAND, button.cursor());
+            assertEquals(CursorKind.HAND, button.cursor().orElseThrow());
         }
 
         @Test

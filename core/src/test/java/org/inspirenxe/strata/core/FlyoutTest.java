@@ -46,7 +46,6 @@ import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -371,7 +370,7 @@ class FlyoutTest {
         void controlEventsInTheContentReachTheFlyoutButNotTheScreen() {
             FlyoutTest.this.show();
             final List<String> screen = new ArrayList<>();
-            FlyoutTest.this.behind.parent().onEvent(Button.PRESSED, event -> screen.add("screen heard"));
+            FlyoutTest.this.behind.parent().orElseThrow().onEvent(Button.PRESSED, event -> screen.add("screen heard"));
             final Button inside = FlyoutTest.this.ui.button("Inside");
             final Flyout flyout = FlyoutTest.this.ui.flyout(FlyoutTest.this.ui.stackPanel().add(inside));
             flyout.onEvent(Button.PRESSED, event -> FlyoutTest.this.heard.add("flyout heard " + event.target()));
@@ -401,7 +400,7 @@ class FlyoutTest {
             final Flyout flyout = FlyoutTest.this.ui.flyout(first);
             flyout.setContent(second);
             assertSame(second, flyout.content().orElseThrow());
-            assertNull(first.parent());
+            assertEquals(Optional.empty(), first.parent());
             // The old content is free to go elsewhere
             FlyoutTest.this.ui.flyout(first);
         }

@@ -25,10 +25,9 @@ import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -43,11 +42,11 @@ class ApiCompletionTest {
     @Test
     void clearTooltipRemovesTheTooltip() {
         final Box box = new Box(this.ui, 10, 10).setTooltip("Hint");
-        assertNotNull(box.tooltip());
+        assertTrue(box.tooltip().isPresent());
 
         assertSame(box, box.clearTooltip());
 
-        assertNull(box.tooltip());
+        assertEquals(Optional.empty(), box.tooltip());
     }
 
     @Test

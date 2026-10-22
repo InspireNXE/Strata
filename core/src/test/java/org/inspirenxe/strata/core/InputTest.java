@@ -31,6 +31,7 @@ import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -238,7 +239,7 @@ class InputTest {
 
         assertNull(this.test.focused());
         assertFalse(button.isAttached());
-        assertNull(button.parent());
+        assertEquals(Optional.empty(), button.parent());
     }
 
     @Test

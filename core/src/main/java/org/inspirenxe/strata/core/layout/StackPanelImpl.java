@@ -124,7 +124,7 @@ public final class StackPanelImpl extends BuiltInContainer<StackPanel> implement
 
     @Override
     public StackPanel setWeight(final Component<?> child, final float weight) {
-        if (child.parent() != this) {
+        if (child.parent().orElse(null) != this) {
             throw new IllegalArgumentException("Not a child of this panel: " + child);
         }
         if (!(weight >= 0f) || Float.isInfinite(weight)) {

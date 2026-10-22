@@ -30,6 +30,7 @@ import org.inspirenxe.strata.core.node.BuiltInComponent;
 import org.inspirenxe.strata.core.node.ComponentFactoryImpl;
 
 import java.util.Objects;
+import java.util.Optional;
 
 /**
  * The core {@link Image}. Its desired size is the image size, 16 by 16 by default or the visual's natural size. It
@@ -95,8 +96,8 @@ public final class ImageImpl extends BuiltInComponent<Image> implements Image {
     }
 
     @Override
-    public SpriteId sprite() {
-        return this.sprite;
+    public Optional<SpriteId> sprite() {
+        return Optional.ofNullable(this.sprite);
     }
 
     @Override
@@ -109,8 +110,8 @@ public final class ImageImpl extends BuiltInComponent<Image> implements Image {
     }
 
     @Override
-    public Visual visual() {
-        return this.visual;
+    public Optional<Visual> visual() {
+        return Optional.ofNullable(this.visual);
     }
 
     @Override
@@ -123,8 +124,8 @@ public final class ImageImpl extends BuiltInComponent<Image> implements Image {
     }
 
     @Override
-    public Object value() {
-        return this.value;
+    public Optional<Object> value() {
+        return Optional.ofNullable(this.value);
     }
 
     @Override
@@ -146,7 +147,7 @@ public final class ImageImpl extends BuiltInComponent<Image> implements Image {
      */
     private void showValueTooltip() {
         final Tooltip next = this.value == null ? null : Strata.appearances().tooltipOf(this.value).orElse(null);
-        if (next != null || this.tooltip() == this.valueTooltip) {
+        if (next != null || this.tooltip().orElse(null) == this.valueTooltip) {
             this.setTooltip(next);
         }
         this.valueTooltip = next;
@@ -157,7 +158,7 @@ public final class ImageImpl extends BuiltInComponent<Image> implements Image {
      */
     @Override
     protected void onPointerEnter(final PointerEvent event) {
-        if (this.value != null && this.tooltip() == this.valueTooltip) {
+        if (this.value != null && this.tooltip().orElse(null) == this.valueTooltip) {
             this.showValueTooltip();
         }
     }

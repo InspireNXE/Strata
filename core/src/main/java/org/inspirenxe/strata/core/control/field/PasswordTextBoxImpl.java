@@ -972,7 +972,7 @@ public final class PasswordTextBoxImpl extends BuiltInComposite<PasswordTextBox>
                 wanted = this.box.revealable && !this.box.buffer.isEmpty() && !this.box.fromCode ? this.show : null;
             }
             // Set only on a change, so typing does not refresh a tooltip that is showing
-            if (this.tooltip() != wanted) {
+            if (this.tooltip().orElse(null) != wanted) {
                 this.setTooltip(wanted);
             }
         }

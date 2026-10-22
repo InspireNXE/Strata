@@ -423,10 +423,10 @@ class ButtonPaneEventsTest {
         void contentItCannotTakeLeavesTheOldContent() {
             this.show();
             this.expander.setExpanded(true);
-            final Component<?> inside = this.expander.content();
+            final Component<?> inside = this.expander.content().orElseThrow();
             assertThrows(IllegalArgumentException.class, () -> this.expander.setContent(this.form));
-            assertSame(inside, this.expander.content());
-            assertSame(this.expander, inside.parent());
+            assertSame(inside, this.expander.content().orElseThrow());
+            assertSame(this.expander, inside.parent().orElseThrow());
         }
 
         @Test
@@ -435,7 +435,7 @@ class ButtonPaneEventsTest {
             this.expander.onEvent(Expander.EXPAND, event -> event.cancel());
             ButtonPaneEventsTest.this.test.click(5, 5);
             assertFalse(this.expander.isExpanded());
-            assertFalse(this.expander.content().isAttached());
+            assertFalse(this.expander.content().orElseThrow().isAttached());
             assertEquals(List.of(), this.heard);
         }
 
@@ -646,10 +646,10 @@ class ButtonPaneEventsTest {
         @Test
         void aSideItCannotTakeLeavesTheOldSide() {
             this.show();
-            final Component<?> first = this.split.first();
+            final Component<?> first = this.split.first().orElseThrow();
             assertThrows(IllegalArgumentException.class, () -> this.split.setFirst(this.form));
-            assertSame(first, this.split.first());
-            assertSame(this.split, first.parent());
+            assertSame(first, this.split.first().orElseThrow());
+            assertSame(this.split, first.parent().orElseThrow());
         }
 
         @Test
@@ -662,7 +662,7 @@ class ButtonPaneEventsTest {
                 for (int length = 0; length <= space; length++) {
                     this.split.setPosition(length / space);
                     ButtonPaneEventsTest.this.test.host().layout();
-                    if (this.split.first().bounds().width() != length) {
+                    if (this.split.first().orElseThrow().bounds().width() != length) {
                         missed.add(width + ":" + length);
                     }
                 }

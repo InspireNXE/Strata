@@ -18,6 +18,7 @@ package org.inspirenxe.strata.api.control.pane;
 import org.inspirenxe.strata.api.ComponentFactory;
 import org.inspirenxe.strata.api.component.Component;
 import org.inspirenxe.strata.api.component.Enableable;
+import org.inspirenxe.strata.api.component.HasTooltip;
 import org.inspirenxe.strata.api.component.Tooltip;
 import org.inspirenxe.strata.api.control.attribute.text.HasIcon;
 import org.inspirenxe.strata.api.control.attribute.text.HasText;
@@ -47,7 +48,7 @@ import java.util.function.Function;
  * interface.</p>
  */
 public non-sealed interface NavigationItem extends NavigationEntry, HasText<NavigationItem>, HasIcon<NavigationItem>,
-        Enableable<NavigationItem> {
+        Enableable<NavigationItem>, HasTooltip<NavigationItem> {
 
     /**
      * Shows a sprite as the icon, replacing the icon set before. The icon is all a column of icons shows. The size
@@ -103,6 +104,7 @@ public non-sealed interface NavigationItem extends NavigationEntry, HasText<Navi
      *
      * @return the tooltip, or empty when none is set
      */
+    @Override
     Optional<Tooltip> tooltip();
 
     /**
@@ -112,6 +114,7 @@ public non-sealed interface NavigationItem extends NavigationEntry, HasText<Navi
      * @param tooltip the tooltip, or {@code null} for none
      * @return this item
      */
+    @Override
     NavigationItem setTooltip(Tooltip tooltip);
 
     /**

@@ -17,6 +17,7 @@ package org.inspirenxe.strata.core;
 
 import org.inspirenxe.strata.api.ComponentFactory;
 import org.inspirenxe.strata.api.component.Enableable;
+import org.inspirenxe.strata.api.component.HasTooltip;
 import org.inspirenxe.strata.api.component.Tooltip;
 import org.inspirenxe.strata.api.control.attribute.item.SingleSelection;
 import org.inspirenxe.strata.api.control.collection.ListView;
@@ -54,7 +55,6 @@ import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -123,6 +123,20 @@ class EntriesTest {
             }
 
             assertTrue(all.stream().noneMatch(Enableable::isEnabled));
+        }
+
+        @Test
+        void entriesTakeTooltipsAsComponentsDo() {
+            final ComponentFactory ui = EntriesTest.this.ui;
+            final List<HasTooltip<?>> all = List.of(ui.button("Ana"), ui.tab("Sell"), ui.navigationItem("Market"));
+
+            for (final HasTooltip<?> each : all) {
+                assertEquals(Optional.empty(), each.tooltip());
+                each.setTooltip("Why it is off");
+                assertEquals(Tooltip.text("Why it is off"), each.tooltip().orElseThrow());
+                each.clearTooltip();
+                assertEquals(Optional.empty(), each.tooltip(), each + " clears");
+            }
         }
 
         @Test
@@ -290,8 +304,8 @@ class EntriesTest {
             assertEquals(Orientation.HORIZONTAL, ui.separator().orientation());
             assertEquals(Orientation.HORIZONTAL, ui.splitPane().orientation());
             final Image image = ui.image();
-            assertNull(image.sprite());
-            assertNull(image.visual());
+            assertEquals(Optional.empty(), image.sprite());
+            assertEquals(Optional.empty(), image.visual());
             final MessageBox box = ui.messageBox();
             assertEquals(MessageBox.Buttons.OK, box.buttons());
             assertEquals("", box.text().plain());

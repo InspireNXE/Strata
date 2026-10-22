@@ -43,6 +43,7 @@ import org.inspirenxe.strata.core.node.ComponentFactoryImpl;
 import org.inspirenxe.strata.core.text.TextLine;
 
 import java.util.Objects;
+import java.util.Optional;
 
 /**
  * The core {@link Expander}. The content is a child only while expanded. The expander shows the hand cursor while
@@ -113,8 +114,8 @@ public final class ExpanderImpl extends BuiltInComposite<Expander> implements Ex
     }
 
     @Override
-    public Component<?> content() {
-        return this.content;
+    public Optional<Component<?>> content() {
+        return Optional.ofNullable(this.content);
     }
 
     @Override

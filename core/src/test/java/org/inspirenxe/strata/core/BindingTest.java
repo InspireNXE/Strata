@@ -758,7 +758,7 @@ class BindingTest {
             final InfoBar bar = BindingTest.this.ui.infoBar().bind(InfoBar.SEVERITY, severity);
             BindingTest.this.test.show(BindingTest.this.ui.stackPanel().add(avatar).add(progress).add(note).add(bar));
             assertEquals(3, avatar.badge());
-            assertEquals(Tooltip.text("3 unread"), avatar.tooltip());
+            assertEquals(Tooltip.text("3 unread"), avatar.tooltip().orElseThrow());
             assertTrue(progress.isIndeterminate());
             assertTrue(note.isReadOnly());
             assertEquals(InfoBar.Severity.ERROR, bar.severity());
@@ -768,7 +768,7 @@ class BindingTest {
             severity.set(InfoBar.Severity.SUCCESS);
             BindingTest.this.flush();
             assertEquals(0, avatar.badge());
-            assertEquals(Tooltip.text("0 unread"), avatar.tooltip());
+            assertEquals(Tooltip.text("0 unread"), avatar.tooltip().orElseThrow());
             assertFalse(progress.isIndeterminate());
             assertEquals(InfoBar.Severity.SUCCESS, bar.severity());
         }

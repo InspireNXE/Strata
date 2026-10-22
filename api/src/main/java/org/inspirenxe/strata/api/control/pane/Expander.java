@@ -27,6 +27,7 @@ import org.inspirenxe.strata.api.state.PropertyKey;
 import org.inspirenxe.strata.api.text.Text;
 
 import java.util.Objects;
+import java.util.Optional;
 
 /**
  * A titled header that shows or hides the component below it.
@@ -122,9 +123,9 @@ public interface Expander extends Component<Expander>, Focusable<Expander>, HasC
     /**
      * Returns the content.
      *
-     * @return the content, or null if none was set
+     * @return the content, or empty if none was set
      */
-    Component<?> content();
+    Optional<Component<?>> content();
 
     /**
      * Replaces the content. The old content is removed from the tree.

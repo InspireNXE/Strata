@@ -216,7 +216,7 @@ class EventSystemTest {
         void anAncestorCanRefuseBecauseRequestsBubble() {
             final CounterImpl counter = EventSystemTest.this.counter();
             final List<Component<?>> targets = new ArrayList<>();
-            counter.parent().onEvent(Counter.STEP, e -> {
+            counter.parent().orElseThrow().onEvent(Counter.STEP, e -> {
                 targets.add(e.target());
                 e.cancel();
             });
@@ -385,7 +385,7 @@ class EventSystemTest {
         void reportsReachAncestors() {
             final CounterImpl counter = EventSystemTest.this.counter();
             final List<Counter> seen = new ArrayList<>();
-            ((AbsolutePanel) counter.parent()).onEvent(Counter.CLEARED, e -> seen.add(e.control()));
+            ((AbsolutePanel) counter.parent().orElseThrow()).onEvent(Counter.CLEARED, e -> seen.add(e.control()));
             counter.userClear();
             assertEquals(List.of(counter), seen);
         }

@@ -1232,7 +1232,7 @@ public final class NavigationViewImpl extends BuiltInComposite<NavigationView> i
 
     private void scrollTo(final NavigationItemImpl item) {
         final Row row = this.rows.get(item);
-        if (row != null && row.parent() == this.pane.items) {
+        if (row != null && row.parent().orElse(null) == this.pane.items) {
             this.pane.scroll.scrollToVisible(row);
         }
     }

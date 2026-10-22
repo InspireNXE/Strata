@@ -26,10 +26,10 @@ import org.inspirenxe.strata.spi.ScreenStack;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
+import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -57,7 +57,7 @@ class ThemeCheckTest {
         assertThrows(ThemeException.class, () -> panel.add(needy));
 
         assertEquals(List.of(), panel.children());
-        assertNull(needy.parent());
+        assertEquals(Optional.empty(), needy.parent());
         assertFalse(needy.isAttached());
         // Not left half added, so another container can take it
         this.ui.absolutePanel().add(needy);

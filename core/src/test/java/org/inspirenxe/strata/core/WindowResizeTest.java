@@ -28,10 +28,10 @@ import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -52,7 +52,7 @@ class WindowResizeTest {
     WindowResizeTest() {
         this.test.show(this.ui.anchorPanel().add(this.window).setAnchor(Anchor.FILL));
         // Registered on the screen's root, so the events are heard around the window
-        this.window.parent()
+        this.window.parent().orElseThrow()
                 .onEvent(Window.RESIZE, event -> this.requests.add(event.value()))
                 .onEvent(Window.RESIZED, event -> this.heard.add(text(event.previous()) + "->" + text(event.value())));
     }
@@ -182,18 +182,18 @@ class WindowResizeTest {
     @Test
     void theCursorShowsWhatAPressWouldResize() {
         this.move(195, 185);
-        assertEquals(CursorKind.RESIZE_ALL, this.window.cursor());
+        assertEquals(CursorKind.RESIZE_ALL, this.window.cursor().orElseThrow());
         this.move(150, 150);
-        assertNull(this.window.cursor());
+        assertEquals(Optional.empty(), this.window.cursor());
 
         this.window.setEdgeResizable(true);
         this.move(101, 150);
-        assertEquals(CursorKind.RESIZE_HORIZONTAL, this.window.cursor());
+        assertEquals(CursorKind.RESIZE_HORIZONTAL, this.window.cursor().orElseThrow());
         this.move(150, 189);
-        assertEquals(CursorKind.RESIZE_VERTICAL, this.window.cursor());
+        assertEquals(CursorKind.RESIZE_VERTICAL, this.window.cursor().orElseThrow());
         this.move(10, 10);
         this.move(150, 150);
-        assertNull(this.window.cursor());
+        assertEquals(Optional.empty(), this.window.cursor());
     }
 
     @Test

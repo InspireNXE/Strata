@@ -582,8 +582,8 @@ public abstract class BuiltInComponent<T extends Component<T>> implements Compon
     // ------------------------------------------------------------------
 
     @Override
-    public final Component<?> parent() {
-        return this.node.parent();
+    public final Optional<Component<?>> parent() {
+        return Optional.ofNullable(this.node.parent());
     }
 
     @Override
@@ -824,10 +824,10 @@ public abstract class BuiltInComponent<T extends Component<T>> implements Compon
     /**
      * Returns the cursor shown over this component. See {@link HasCursor#cursor()}.
      *
-     * @return the cursor, or {@code null} to use the nearest ancestor's
+     * @return the cursor, or empty to use the nearest ancestor's
      */
-    public final CursorKind cursor() {
-        return this.node.cursor();
+    public final Optional<CursorKind> cursor() {
+        return Optional.ofNullable(this.node.cursor());
     }
 
     /**
@@ -844,10 +844,10 @@ public abstract class BuiltInComponent<T extends Component<T>> implements Compon
     /**
      * Returns the tooltip. See {@link HasTooltip#tooltip()}.
      *
-     * @return the tooltip, or {@code null} for none
+     * @return the tooltip, or empty for none
      */
-    public final Tooltip tooltip() {
-        return this.node.tooltip();
+    public final Optional<Tooltip> tooltip() {
+        return Optional.ofNullable(this.node.tooltip());
     }
 
     /**
@@ -869,11 +869,11 @@ public abstract class BuiltInComponent<T extends Component<T>> implements Compon
      * Returns the theme applied to this component, for reading styles outside {@link #onApplyTheme}.
      *
      * @return the host's theme, with the {@linkplain org.inspirenxe.strata.api.component.Container#setTextStyle text
-     *     style patches} of the containers around the component applied, or {@code null} before the component is
+     *     style patches} of the containers around the component applied, or empty before the component is
      *     first attached
      */
-    protected final Theme theme() {
-        return this.node.theme();
+    protected final Optional<Theme> theme() {
+        return Optional.ofNullable(this.node.theme());
     }
 
     /**

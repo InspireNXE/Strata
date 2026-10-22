@@ -572,7 +572,7 @@ class NavigationViewTest {
             // An item's text is its tooltip
             NavigationViewTest.this.test.host().pointerMoved(10, 30, Modifiers.NONE);
             final Component<?> hovered = NavigationViewTest.this.test.host().root().hovered().facade();
-            assertEquals(Tooltip.text(NavigationViewTest.this.item("General").text()), ((HasTooltip<?>) hovered).tooltip());
+            assertEquals(Tooltip.text(NavigationViewTest.this.item("General").text()), ((HasTooltip<?>) hovered).tooltip().orElseThrow());
         }
 
         @Test

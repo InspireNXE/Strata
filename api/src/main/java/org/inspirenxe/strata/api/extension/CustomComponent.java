@@ -567,8 +567,8 @@ public abstract class CustomComponent<T extends Component<T>> implements Compone
     // ------------------------------------------------------------------
 
     @Override
-    public final Component<?> parent() {
-        return this.peer.parent();
+    public final Optional<Component<?>> parent() {
+        return Optional.ofNullable(this.peer.parent());
     }
 
     @Override
@@ -825,10 +825,10 @@ public abstract class CustomComponent<T extends Component<T>> implements Compone
     /**
      * Returns the cursor shown over this component. See {@link HasCursor#cursor()}.
      *
-     * @return the cursor, or {@code null} to use the nearest ancestor's
+     * @return the cursor, or empty to use the nearest ancestor's
      */
-    public final CursorKind cursor() {
-        return this.peer.cursor();
+    public final Optional<CursorKind> cursor() {
+        return Optional.ofNullable(this.peer.cursor());
     }
 
     /**
@@ -845,10 +845,10 @@ public abstract class CustomComponent<T extends Component<T>> implements Compone
     /**
      * Returns the tooltip. See {@link HasTooltip#tooltip()}.
      *
-     * @return the tooltip, or {@code null} for none
+     * @return the tooltip, or empty for none
      */
-    public final Tooltip tooltip() {
-        return this.peer.tooltip();
+    public final Optional<Tooltip> tooltip() {
+        return Optional.ofNullable(this.peer.tooltip());
     }
 
     /**
@@ -870,11 +870,11 @@ public abstract class CustomComponent<T extends Component<T>> implements Compone
      * Returns the theme applied to this component, for reading styles outside {@link #onApplyTheme}.
      *
      * @return the host's theme, with the {@linkplain org.inspirenxe.strata.api.component.Container#setTextStyle text
-     *     style patches} of the containers around the component applied, or {@code null} before the component is
+     *     style patches} of the containers around the component applied, or empty before the component is
      *     first attached
      */
-    protected final Theme theme() {
-        return this.peer.theme();
+    protected final Optional<Theme> theme() {
+        return Optional.ofNullable(this.peer.theme());
     }
 
     /**

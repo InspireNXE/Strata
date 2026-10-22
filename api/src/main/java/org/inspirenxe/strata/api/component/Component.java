@@ -119,10 +119,10 @@ public interface Component<T extends Component<T>> extends EventTarget<T>, Enabl
      * page. Code that needs something from its parent should ask for that capability, an attribute or
      * {@code Container}, with {@link #parent(Class)} or {@link #ancestor(Class)}, and not assume the parent's type.
      *
-     * @return the parent, or {@code null} for a screen's root component, an overlay's content or a component not
-     *     added anywhere
+     * @return the parent, or empty for a screen's root component, an overlay's content or a component not added
+     *     anywhere
      */
-    Component<?> parent();
+    Optional<Component<?>> parent();
 
     /**
      * Returns the parent if it is an instance of the given type. The type is usually a raw interface, such as
@@ -202,8 +202,9 @@ public interface Component<T extends Component<T>> extends EventTarget<T>, Enabl
      * @return true unless this component or one of its ancestors is disabled
      */
     default boolean isEffectivelyEnabled() {
-        for (Component<?> component = this; component != null; component = component.parent()) {
-            if (!component.isEnabled()) {
+        for (Optional<Component<?>> component = Optional.of(this); component.isPresent();
+             component = component.get().parent()) {
+            if (!component.get().isEnabled()) {
                 return false;
             }
         }
@@ -217,8 +218,9 @@ public interface Component<T extends Component<T>> extends EventTarget<T>, Enabl
      * @return true unless this component or one of its ancestors is hidden
      */
     default boolean isEffectivelyVisible() {
-        for (Component<?> component = this; component != null; component = component.parent()) {
-            if (!component.isVisible()) {
+        for (Optional<Component<?>> component = Optional.of(this); component.isPresent();
+             component = component.get().parent()) {
+            if (!component.get().isVisible()) {
                 return false;
             }
         }

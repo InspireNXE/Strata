@@ -228,7 +228,7 @@ class BasicControlsTest {
         @Test
         void aClickIsConsumed() {
             final List<Object> bubbled = new ArrayList<>();
-            this.box.parent().onEvent(InputEvents.CLICK, bubbled::add);
+            this.box.parent().orElseThrow().onEvent(InputEvents.CLICK, bubbled::add);
             this.test.click(45, 8);
             assertEquals(List.of(), bubbled);
         }

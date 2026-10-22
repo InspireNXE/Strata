@@ -25,6 +25,8 @@ import org.inspirenxe.strata.api.event.control.ValueRequestEvent;
 import org.inspirenxe.strata.api.layout.Orientation;
 import org.inspirenxe.strata.api.state.PropertyKey;
 
+import java.util.Optional;
+
 /**
  * Two components side by side, or one above the other, with a divider between them that the user drags to share
  * the space.
@@ -115,9 +117,9 @@ public interface SplitPane extends Component<SplitPane>, HasCursor<SplitPane>, H
     /**
      * Returns the left or top component.
      *
-     * @return the first component, or null if none was set
+     * @return the first component, or empty if none was set
      */
-    Component<?> first();
+    Optional<Component<?>> first();
 
     /**
      * Replaces the left or top component. The old one is removed from the tree.
@@ -132,9 +134,9 @@ public interface SplitPane extends Component<SplitPane>, HasCursor<SplitPane>, H
     /**
      * Returns the right or bottom component.
      *
-     * @return the second component, or null if none was set
+     * @return the second component, or empty if none was set
      */
-    Component<?> second();
+    Optional<Component<?>> second();
 
     /**
      * Replaces the right or bottom component. The old one is removed from the tree.

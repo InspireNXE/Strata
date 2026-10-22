@@ -15,6 +15,8 @@
  */
 package org.inspirenxe.strata.api.component;
 
+import java.util.Optional;
+
 /**
  * A component that can choose the pointer's cursor. Every container and nearly every control has one.
  *
@@ -33,9 +35,9 @@ public interface HasCursor<S extends HasCursor<S>> {
     /**
      * Returns the cursor shown while the pointer is over this component.
      *
-     * @return the cursor, or {@code null} to use the nearest ancestor's
+     * @return the cursor, or empty to use the nearest ancestor's
      */
-    CursorKind cursor();
+    Optional<CursorKind> cursor();
 
     /**
      * Sets the cursor shown while the pointer is over this component or a descendant that sets none.

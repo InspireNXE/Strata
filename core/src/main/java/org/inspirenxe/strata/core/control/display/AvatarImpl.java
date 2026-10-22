@@ -166,8 +166,8 @@ public final class AvatarImpl extends BuiltInComponent<Avatar> implements Avatar
     // ------------------------------------------------------------------
 
     @Override
-    public Object value() {
-        return this.value;
+    public Optional<Object> value() {
+        return Optional.ofNullable(this.value);
     }
 
     @Override
@@ -186,7 +186,7 @@ public final class AvatarImpl extends BuiltInComponent<Avatar> implements Avatar
      */
     private void showValueTooltip() {
         final Tooltip next = this.value == null ? null : Strata.appearances().tooltipOf(this.value).orElse(null);
-        if (next != null || this.tooltip() == this.valueTooltip) {
+        if (next != null || this.tooltip().orElse(null) == this.valueTooltip) {
             this.setTooltip(next);
         }
         this.valueTooltip = next;
@@ -197,14 +197,14 @@ public final class AvatarImpl extends BuiltInComponent<Avatar> implements Avatar
      */
     @Override
     protected void onPointerEnter(final PointerEvent event) {
-        if (this.value != null && this.tooltip() == this.valueTooltip) {
+        if (this.value != null && this.tooltip().orElse(null) == this.valueTooltip) {
             this.showValueTooltip();
         }
     }
 
     @Override
-    public SpriteId sprite() {
-        return this.sprite;
+    public Optional<SpriteId> sprite() {
+        return Optional.ofNullable(this.sprite);
     }
 
     @Override
@@ -215,8 +215,8 @@ public final class AvatarImpl extends BuiltInComponent<Avatar> implements Avatar
     }
 
     @Override
-    public Visual visual() {
-        return this.visual;
+    public Optional<Visual> visual() {
+        return Optional.ofNullable(this.visual);
     }
 
     @Override

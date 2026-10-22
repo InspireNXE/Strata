@@ -38,6 +38,7 @@ import org.inspirenxe.strata.core.node.BuiltInComposite;
 import org.inspirenxe.strata.core.node.ComponentFactoryImpl;
 
 import java.util.Objects;
+import java.util.Optional;
 
 /**
  * The core {@link SplitPane}. The divider is a private child component, so it can show its own cursor and receive
@@ -89,8 +90,8 @@ public final class SplitPaneImpl extends BuiltInComposite<SplitPane> implements 
     }
 
     @Override
-    public Component<?> first() {
-        return this.first;
+    public Optional<Component<?>> first() {
+        return Optional.ofNullable(this.first);
     }
 
     @Override
@@ -100,8 +101,8 @@ public final class SplitPaneImpl extends BuiltInComposite<SplitPane> implements 
     }
 
     @Override
-    public Component<?> second() {
-        return this.second;
+    public Optional<Component<?>> second() {
+        return Optional.ofNullable(this.second);
     }
 
     @Override

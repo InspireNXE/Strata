@@ -264,7 +264,7 @@ class InfoBarTest {
         void theCloseButtonsTooltipSaysClose() {
             InfoBarTest.this.show(InfoBarTest.this.ui.infoBar(), 300);
             final HasTooltip<?> close = (HasTooltip<?>) InfoBarTest.this.closeButton();
-            assertEquals(Tooltip.text(Text.translatable("strata.button.close")), close.tooltip());
+            assertEquals(Tooltip.text(Text.translatable("strata.button.close")), close.tooltip().orElseThrow());
             assertEquals("Close", Text.translatable("strata.button.close").plain());
         }
 

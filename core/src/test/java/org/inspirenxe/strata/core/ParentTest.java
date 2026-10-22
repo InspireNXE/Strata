@@ -40,7 +40,6 @@ import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -61,8 +60,8 @@ class ParentTest {
             final StackPanel panel = ParentTest.this.ui.stackPanel().add(label);
             ParentTest.this.test.show(panel);
 
-            assertSame(panel, label.parent());
-            assertNull(panel.parent(), "the screen's root has no parent");
+            assertSame(panel, label.parent().orElseThrow());
+            assertEquals(Optional.empty(), panel.parent(), "the screen's root has no parent");
         }
 
         @Test
@@ -71,9 +70,9 @@ class ParentTest {
             final Expander expander = ParentTest.this.ui.expander("More").setContent(body).setExpanded(true);
             ParentTest.this.test.show(ParentTest.this.ui.stackPanel().add(expander));
 
-            assertSame(expander, body.parent());
+            assertSame(expander, body.parent().orElseThrow());
             expander.setExpanded(false);
-            assertNull(body.parent(), "collapsing takes the content out of the tree");
+            assertEquals(Optional.empty(), body.parent(), "collapsing takes the content out of the tree");
         }
 
         @Test
@@ -82,7 +81,7 @@ class ParentTest {
             final InfoBar bar = ParentTest.this.ui.infoBar().setAction(action);
             ParentTest.this.test.show(ParentTest.this.ui.stackPanel().add(bar));
 
-            assertSame(bar, action.parent());
+            assertSame(bar, action.parent().orElseThrow());
         }
 
         @Test
@@ -92,7 +91,7 @@ class ParentTest {
             ParentTest.this.test.show(view);
             view.select(0);
 
-            assertSame(view, page.parent());
+            assertSame(view, page.parent().orElseThrow());
         }
 
         @Test
@@ -101,7 +100,7 @@ class ParentTest {
             final Label popup = ParentTest.this.ui.label("Dev");
             ParentTest.this.ui.overlays().popup(popup, new Rect(0f, 0f, 10f, 10f));
 
-            assertNull(popup.parent());
+            assertEquals(Optional.empty(), popup.parent());
         }
     }
 
@@ -273,8 +272,8 @@ class ParentTest {
             final Card card = new Card(ParentTest.this.ui, body);
             ParentTest.this.test.show(ParentTest.this.ui.stackPanel().add(card));
 
-            assertSame(card, card.heading.parent());
-            assertSame(card, body.parent());
+            assertSame(card, card.heading.parent().orElseThrow());
+            assertSame(card, body.parent().orElseThrow());
             assertEquals(Optional.of(card), body.parent(Card.class));
             assertEquals(Optional.empty(), body.parent(Container.class), "a composite is not a container");
         }

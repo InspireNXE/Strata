@@ -173,7 +173,7 @@ class RangeControlsTest {
             assertEquals(10d, plain.scrollRate());
             assertFalse(plain.isSlim());
             assertFalse(plain.isFocusable());
-            assertEquals(CursorKind.HAND, plain.cursor());
+            assertEquals(CursorKind.HAND, plain.cursor().orElseThrow());
             assertEquals(Orientation.HORIZONTAL,
                     RangeControlsTest.this.test.factory().scrollBar(Orientation.HORIZONTAL).orientation());
             assertEquals(new Rect(0, 0, 6, 100), this.bar.bounds());

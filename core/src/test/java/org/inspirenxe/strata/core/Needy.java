@@ -40,7 +40,7 @@ final class Needy extends CustomComponent<Needy> {
     }
 
     Theme current() {
-        return this.theme();
+        return this.theme().orElse(null);
     }
 
     @Override
