@@ -29,6 +29,7 @@ import org.inspirenxe.strata.api.control.menu.Menu;
 import org.inspirenxe.strata.api.control.menu.MenuBar;
 import org.inspirenxe.strata.api.control.menu.MenuEntry;
 import org.inspirenxe.strata.api.control.menu.MenuItem;
+import org.inspirenxe.strata.api.control.menu.MenuSeparator;
 import org.inspirenxe.strata.api.control.menu.SubmenuItem;
 import org.inspirenxe.strata.api.control.pane.SplitPane;
 import org.inspirenxe.strata.api.control.pane.Tab;
@@ -126,6 +127,27 @@ class EntriesTest {
             EntriesTest.this.test.click(30, 10 + 2 + 7);
             assertEquals(List.of("copy"), EntriesTest.this.heard);
             assertFalse(menu.isOpen());
+        }
+
+        @Test
+        void aSubmenuItemsMenuCanBeCleared() {
+            final ComponentFactory ui = EntriesTest.this.ui;
+            final Menu view = ui.menu().addItem("Zoom", () -> { });
+            final SubmenuItem item = ui.submenuItem("View").setMenu(view);
+            final MenuBar bar = ui.menuBar().addMenu(item);
+            item.setMenu(null);
+            assertEquals(Optional.empty(), item.menu());
+            // The menu is free again, so another holder can take it
+            bar.addMenu("Other", view);
+        }
+
+        @Test
+        void removingAnEntryNotMadeByStrataDoesNothing() {
+            final Menu menu = EntriesTest.this.ui.menu().addItem("Copy", () -> { });
+            final MenuSeparator foreign = new MenuSeparator() {
+            };
+            menu.removeItem(foreign);
+            assertEquals(1, menu.items().size());
         }
 
         @Test

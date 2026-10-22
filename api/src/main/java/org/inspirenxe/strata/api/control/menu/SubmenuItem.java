@@ -42,12 +42,14 @@ public non-sealed interface SubmenuItem extends MenuEntry, HasText<SubmenuItem> 
     Optional<Menu> menu();
 
     /**
-     * Sets the menu it opens, closing the one before if it is open. An item without a menu opens nothing.
+     * Sets the menu it opens, closing the one before if it is open. An item without a menu opens nothing. The menu
+     * before is free to open from somewhere else afterwards.
      *
-     * @param menu the menu
+     * @param menu the menu, or {@code null} for none
      * @return this item
-     * @throws IllegalArgumentException if the item is in a menu or bar and {@code menu} already opens from somewhere
-     *     else, or the item is in a menu and {@code menu} is that menu or one it opens from
+     * @throws IllegalArgumentException if {@code menu} was not made by Strata, the item is in a menu or bar and
+     *     {@code menu} already opens from somewhere else, or the item is in a menu and {@code menu} is that menu or one
+     *     it opens from
      */
     SubmenuItem setMenu(Menu menu);
 

@@ -174,7 +174,7 @@ public final class MenuImpl extends BuiltInComponent<Menu> implements Menu, Core
 
     @Override
     public Menu removeItem(final MenuEntry entry) {
-        final int index = this.items.indexOf(MenuEntryImpl.of(entry));
+        final int index = entry instanceof final MenuEntryImpl impl ? this.items.indexOf(impl) : -1;
         if (index < 0) {
             return this;
         }
