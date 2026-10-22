@@ -51,7 +51,8 @@ import java.util.function.Function;
  *     <li>In the default {@link SelectionMode#SINGLE} mode at most one item is selected. A left press on a row
  *     selects it; a press on the selected row deselects it only when the list {@linkplain #setDeselectable is
  *     deselectable}. A cell that consumes the press, such as a button, keeps the row from being selected.</li>
- *     <li>In {@link SelectionMode#MULTIPLE} mode Control, Shift and Control+A select several rows, as that mode
+ *     <li>In {@link SelectionMode#MULTIPLE} mode the shortcut modifier, Shift and the shortcut modifier with A select
+ *     several rows, as that mode
  *     describes. Those changes ask {@link MultiSelection#SELECT_MANY} in place of
  *     {@link Selection#SELECT}, and every change of the selected rows reports
  *     {@link MultiSelection#SELECTED_MANY}.</li>
@@ -60,8 +61,8 @@ import java.util.function.Function;
  *     click does instead of a double press, as in a drop-down.</li>
  *     <li>While focused: Up and Down move the selection, Page Up and Page Down by a viewport, Home and End to the
  *     ends; the list scrolls to keep the selection in view. With nothing selected, Up starts from the last row.
- *     Held keys repeat. Keys with Alt are left alone, and so are keys with Control other than Control+A in
- *     {@link SelectionMode#MULTIPLE} mode. An empty list takes no keys.</li>
+ *     Held keys repeat. Keys with Alt are left alone, and so are keys with Control or the shortcut modifier other
+ *     than the shortcut modifier with A in {@link SelectionMode#MULTIPLE} mode. An empty list takes no keys.</li>
  *     <li>Typing a name's first letters while focused selects the item, as {@link #setTypeAhead} describes.</li>
  *     <li>With a {@linkplain #setCellEditor cell editor}, F2 and a double press edit a row in place, as
  *     {@link CellEditing} describes, and a double press no longer activates.</li>

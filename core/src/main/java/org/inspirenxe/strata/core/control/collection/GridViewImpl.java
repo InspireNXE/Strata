@@ -37,6 +37,7 @@ import org.inspirenxe.strata.api.geometry.Rect;
 import org.inspirenxe.strata.api.geometry.Size;
 import org.inspirenxe.strata.api.input.Key;
 import org.inspirenxe.strata.api.input.KeyAction;
+import org.inspirenxe.strata.api.input.Modifier;
 import org.inspirenxe.strata.api.input.Modifiers;
 import org.inspirenxe.strata.api.input.MouseButton;
 import org.inspirenxe.strata.api.layout.ScrollPanel;
@@ -545,9 +546,17 @@ public final class GridViewImpl<T> extends BuiltInComposite<GridView<T>> impleme
     }
 
     /**
-     * Picks a cell for the user: in {@link SelectionMode#MULTIPLE} mode alone, added or removed with Control, or as
-     * the range from the anchor with Shift, through {@code SELECT_MANY}; otherwise through {@code SELECT} if the
-     * current cell changes.
+     * Returns the platform's shortcut modifier, which adds a clicked entry to the selection: the host's, or Control
+     * while the control is not on a screen.
+     */
+    private Modifier shortcutModifier() {
+        return this.hostRoot() == null ? Modifier.CONTROL : this.hostRoot().shortcutModifier();
+    }
+
+    /**
+     * Picks a cell for the user: in {@link SelectionMode#MULTIPLE} mode alone, added or removed with the shortcut
+     * modifier, or as the range from the anchor with Shift, through {@code SELECT_MANY}; otherwise through
+     * {@code SELECT} if the current cell changes.
      */
     private void userPick(final int index, final boolean control, final boolean shift) {
         if (this.mode != SelectionMode.MULTIPLE) {
@@ -649,7 +658,7 @@ public final class GridViewImpl<T> extends BuiltInComposite<GridView<T>> impleme
         final boolean left = event.button() == MouseButton.LEFT;
         this.cursor = index;
         if (this.selectable && left) {
-            this.userPick(index, event.modifiers().control(), event.modifiers().shift());
+            this.userPick(index, event.modifiers().has(this.shortcutModifier()), event.modifiers().shift());
         }
         if (index >= this.items.size()) {
             // A selection handler replaced the items and the cell went, so the rest of the click goes with it
@@ -940,14 +949,14 @@ public final class GridViewImpl<T> extends BuiltInComposite<GridView<T>> impleme
         final boolean control = event.modifiers().control();
         final boolean press = event.action() == KeyAction.PRESS;
         final int from = Math.min(Math.max(this.cursor, 0), count - 1);
-        if (control && key == Key.A) {
+        if (event.modifiers().has(event.shortcutModifier()) && key == Key.A) {
             if (press && this.selectable && this.mode == SelectionMode.MULTIPLE) {
                 this.userSelectMany(this.allCells(), from);
                 event.consume();
             }
             return;
         }
-        if (control && key != Key.HOME && key != Key.END) {
+        if ((control || event.modifiers().has(event.shortcutModifier())) && key != Key.HOME && key != Key.END) {
             return;
         }
         if (press && key == Key.F2 && !control) {

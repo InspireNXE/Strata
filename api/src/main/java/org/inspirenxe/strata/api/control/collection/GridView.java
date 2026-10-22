@@ -61,8 +61,9 @@ import java.util.function.Function;
  * <ul>
  *     <li>Clicking a cell with any button fires {@link #CLICK} and then {@link #CLICKED}, empty cells included, and
  *     consumes the click. A {@linkplain #setSelectable selectable} grid also selects the cell clicked with the left
- *     button first. In {@link SelectionMode#MULTIPLE} mode Control and a click adds or removes a cell, Shift and a
- *     click selects the range from the anchor in cell order, and Control+A selects every cell, as in a list. A double
+ *     button first. In {@link SelectionMode#MULTIPLE} mode the shortcut modifier and a click adds or removes a cell,
+ *     Shift and a click selects the range from the anchor in cell order, and the shortcut modifier with A selects
+ *     every cell, as in a list. A double
  *     click with the left button activates the cell, or a single click with {@link #setActivateOnClick}.</li>
  *     <li>The grid is focusable and tabbable, and has a cursor cell while focused, ringed with
  *     {@value #STYLE_FOCUS}. It starts on the selected cell, or the first. The arrows move it cell by cell, Left and
@@ -70,7 +71,8 @@ import java.util.function.Function;
  *     first and last cell; Page Up and Page Down move it by the rows in view. The grid scrolls to keep it in view.
  *     Enter and Space ask {@link Activatable#ACTIVATE} for it. While the grid is selectable the cursor selects as it
  *     moves, and Shift extends the range in {@link SelectionMode#MULTIPLE} mode. Held keys repeat, except Enter and
- *     Space. Keys with Alt are left alone, and so are keys with Control other than Home, End and Control+A.</li>
+ *     Space. Keys with Alt are left alone, and so are keys with Control or the shortcut modifier other than Home and
+ *     End with Control and the shortcut modifier with A.</li>
  * </ul>
  *
  * <p>With a {@linkplain #setCellEditor cell editor}, filled cells are edited in place, as {@link CellEditing}

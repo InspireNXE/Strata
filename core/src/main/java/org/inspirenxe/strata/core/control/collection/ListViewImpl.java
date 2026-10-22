@@ -37,6 +37,7 @@ import org.inspirenxe.strata.api.geometry.Rect;
 import org.inspirenxe.strata.api.geometry.Size;
 import org.inspirenxe.strata.api.input.Key;
 import org.inspirenxe.strata.api.input.KeyAction;
+import org.inspirenxe.strata.api.input.Modifier;
 import org.inspirenxe.strata.api.input.Modifiers;
 import org.inspirenxe.strata.api.input.MouseButton;
 import org.inspirenxe.strata.api.layout.ScrollPanel;
@@ -738,8 +739,16 @@ public final class ListViewImpl<T> extends BuiltInComposite<ListView<T>> impleme
     }
 
     /**
-     * Picks a row with the pointer or the keys in MULTIPLE mode: alone, added or removed with Control, or as the
-     * range from the anchor with Shift.
+     * Returns the platform's shortcut modifier, which adds a clicked entry to the selection: the host's, or Control
+     * while the control is not on a screen.
+     */
+    private Modifier shortcutModifier() {
+        return this.hostRoot() == null ? Modifier.CONTROL : this.hostRoot().shortcutModifier();
+    }
+
+    /**
+     * Picks a row with the pointer or the keys in MULTIPLE mode: alone, added or removed with the shortcut modifier,
+     * or as the range from the anchor with Shift.
      */
     private void userPick(final int index, final boolean control, final boolean shift, final boolean single) {
         if (shift) {
@@ -1357,12 +1366,13 @@ public final class ListViewImpl<T> extends BuiltInComposite<ListView<T>> impleme
             return;
         }
         this.pendingPick = -1;
+        final boolean adds = event.modifiers().has(this.shortcutModifier());
         if (this.mode == SelectionMode.MULTIPLE && this.dragTransfer != null && event.clicks() == 1
-                && !event.modifiers().control() && !event.modifiers().shift() && this.chosenBits.get(index)
+                && !adds && !event.modifiers().shift() && this.chosenBits.get(index)
                 && this.chosen.size() > 1) {
             this.pendingPick = index;
         } else if (this.mode == SelectionMode.MULTIPLE) {
-            this.userPick(index, event.modifiers().control(), event.modifiers().shift(), event.clicks() == 1);
+            this.userPick(index, adds, event.modifiers().shift(), event.clicks() == 1);
         } else if (this.deselectable && index == this.selectedIndex && event.clicks() == 1) {
             this.userSelect(-1);
         } else if (index != this.selectedIndex) {
@@ -1565,8 +1575,10 @@ public final class ListViewImpl<T> extends BuiltInComposite<ListView<T>> impleme
         if (!event.action().isDown() || event.modifiers().alt() || this.items.isEmpty()) {
             return;
         }
-        if (event.modifiers().control()) {
-            if (this.mode == SelectionMode.MULTIPLE && event.key() == Key.A && event.action() == KeyAction.PRESS) {
+        final boolean shortcut = event.modifiers().has(event.shortcutModifier());
+        if (shortcut || event.modifiers().control()) {
+            if (shortcut && this.mode == SelectionMode.MULTIPLE && event.key() == Key.A
+                    && event.action() == KeyAction.PRESS) {
                 final List<Integer> all = new ArrayList<>(this.items.size());
                 for (int i = 0; i < this.items.size(); i++) {
                     all.add(i);
