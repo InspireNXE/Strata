@@ -265,8 +265,8 @@ public interface TextArea extends Component<TextArea>, Focusable<TextArea>, HasC
 
     /**
      * Scrolls to an offset. The offset is at least 0, and once the area has been laid out it is at most what its rows
-     * need; the next paint clamps it again to the rows in the area's size. The view stays there until the caret
-     * moves, the user scrolls, or it is set again.
+     * need; the next paint clamps it again to the rows in the area's size. It stops a glide of the wheel that is under
+     * way. The view stays there until the caret moves, the user scrolls, or it is set again.
      *
      * @param scrollY the vertical offset in UI units
      * @return this text area
@@ -275,8 +275,8 @@ public interface TextArea extends Component<TextArea>, Focusable<TextArea>, HasC
     TextArea setScrollY(float scrollY);
 
     /**
-     * Scrolls the least distance that shows the caret's row and column, as moving the caret does. Before the area has
-     * been laid out, it scrolls on the next paint.
+     * Scrolls the least distance that shows the caret's row and column, at once, as moving the caret does, stopping a
+     * glide of the wheel that is under way. Before the area has been laid out, it scrolls on the next paint.
      *
      * @return this text area
      */

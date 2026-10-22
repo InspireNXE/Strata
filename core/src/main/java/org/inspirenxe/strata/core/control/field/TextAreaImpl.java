@@ -524,16 +524,21 @@ public final class TextAreaImpl extends BuiltInComponent<TextArea> implements Te
         if (Float.isNaN(scrollY)) {
             throw new IllegalArgumentException("Scroll offset is NaN");
         }
+        // Code wins over a glide of the wheel, as the caret does
+        this.glide.stop();
         this.scrollY = Math.max(0f, scrollY);
         this.revealPending = false;
         if (this.isLaidOut()) {
             this.ensureRows();
         }
+        this.repaint();
         return this;
     }
 
     @Override
     public TextArea scrollToCaret() {
+        this.glide.stop();
+        this.repaint();
         if (this.isLaidOut()) {
             this.ensureRows();
             this.updateVisuals();

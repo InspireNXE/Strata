@@ -272,6 +272,24 @@ class BuiltInMotionTest {
             assertTrue(Math.abs(middle - start) > 0f && Math.abs(middle - start) < Math.abs(end - start),
                     "part way: " + middle + " between " + start + " and " + end);
         }
+
+        @Test
+        void scrollingATextAreaFromCodeStopsItsGlide() {
+            BuiltInMotionTest.this.host(with(ScrollPanel.STYLE_SMOOTH, 100f));
+            final TextArea area = BuiltInMotionTest.this.ui.textArea();
+            area.setText(String.join("\n", IntStream.range(0, 50).mapToObj(i -> "Line " + i).toList()));
+            area.setHeight(60f);
+            area.setWidth(100f);
+            BuiltInMotionTest.this.test.show(area);
+            area.setScrollY(0f);
+            BuiltInMotionTest.this.frame(0L);
+            assertTrue(BuiltInMotionTest.this.test.host().scroll(20, 20, 0f, -1f, ScrollKind.WHEEL, Modifiers.NONE));
+            BuiltInMotionTest.this.frame(50L);
+            assertTrue(area.scrollY() > 0f);
+            area.setScrollY(0f);
+            BuiltInMotionTest.this.frame(60L);
+            assertEquals(0f, area.scrollY(), "code wins over the glide");
+        }
     }
 
     @Nested
