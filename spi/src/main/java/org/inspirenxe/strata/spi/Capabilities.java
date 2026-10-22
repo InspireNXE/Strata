@@ -34,15 +34,38 @@ package org.inspirenxe.strata.spi;
  *                      and a {@linkplain org.inspirenxe.strata.api.theme.Paint.Tiled tiled} sprite to
  *                      {@code sprite}, and the engine's slicing decides how they look. When false, the host draws
  *                      both itself, each piece a {@link Canvas#spriteRegion} call.
+ * @param drawsShapes true when the canvas implements every shape call: {@link Canvas#line},
+ *                    {@link Canvas#polyline}, {@link Canvas#fillRoundRect}, {@link Canvas#strokeRect},
+ *                    {@link Canvas#fillEllipse}, {@link Canvas#strokeEllipse}, {@link Canvas#strokeArc},
+ *                    {@link Canvas#fillShape}, {@link Canvas#strokeShape},
+ *                    {@link Canvas#fillGradient(org.inspirenxe.strata.api.geometry.Rect,
+ *                    org.inspirenxe.strata.api.extension.Gradient) fillGradient} with a {@code Gradient} and
+ *                    {@link Canvas#shadow}, and honors {@link Canvas#pushRoundClip} and
+ *                    {@link Canvas#pushSmoothing}. When false, the host never calls them: it draws every shape from
+ *                    fills one device pixel high, a gradient at an angle from columns of vertical gradients, a
+ *                    shadow from a few rings of falling alpha, and a round clip as a clip to the whole
+ *                    rectangle. Those look stepped and work on every canvas.
  */
-public record Capabilities(boolean sendsKeyRepeat, boolean monospaceFont, boolean slicesSprites) {
+public record Capabilities(boolean sendsKeyRepeat, boolean monospaceFont, boolean slicesSprites,
+                           boolean drawsShapes) {
     /**
-     * Creates capabilities for an engine that stores no slicing with its images.
+     * Creates capabilities for an engine that stores no slicing with its images and draws no shapes.
      *
      * @param sendsKeyRepeat true when the adapter delivers key repeats itself
      * @param monospaceFont true when the engine has a monospaced font
      */
     public Capabilities(final boolean sendsKeyRepeat, final boolean monospaceFont) {
-        this(sendsKeyRepeat, monospaceFont, false);
+        this(sendsKeyRepeat, monospaceFont, false, false);
+    }
+
+    /**
+     * Creates capabilities for an engine that draws no shapes.
+     *
+     * @param sendsKeyRepeat true when the adapter delivers key repeats itself
+     * @param monospaceFont true when the engine has a monospaced font
+     * @param slicesSprites true when the engine stores slicing with its images
+     */
+    public Capabilities(final boolean sendsKeyRepeat, final boolean monospaceFont, final boolean slicesSprites) {
+        this(sendsKeyRepeat, monospaceFont, slicesSprites, false);
     }
 }

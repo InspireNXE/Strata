@@ -42,6 +42,7 @@ import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -116,6 +117,16 @@ public abstract class PlatformContract {
         for (int i = 0; i < 10; i++) {
             assertEquals(first, platform.capabilities());
         }
+    }
+
+    @Test
+    void theShorterCapabilitiesConstructorsDrawNoShapes() {
+        final Capabilities two = new Capabilities(true, true);
+        final Capabilities three = new Capabilities(true, true, true);
+        assertFalse(two.slicesSprites(), "two arguments slice no sprites");
+        assertFalse(two.drawsShapes(), "two arguments draw no shapes");
+        assertFalse(three.drawsShapes(), "three arguments draw no shapes");
+        assertEquals(new Capabilities(true, true, true, false), three);
     }
 
     @Test

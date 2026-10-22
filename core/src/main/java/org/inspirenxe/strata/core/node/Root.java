@@ -738,7 +738,7 @@ public final class Root {
             this.layout();
         }
         this.hoverStale = false;
-        final CanvasPainter frame = this.painter.begin(canvas, this.platform.capabilities().slicesSprites());
+        final CanvasPainter frame = this.painter.begin(canvas, this.platform.capabilities(), 1f);
         if (this.content != null) {
             this.content.paint(frame);
         }

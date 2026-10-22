@@ -20,6 +20,7 @@ import org.inspirenxe.strata.api.geometry.Rect;
 import org.inspirenxe.strata.api.geometry.Size;
 import org.inspirenxe.strata.api.text.TextSpan;
 import org.inspirenxe.strata.api.theme.SpriteId;
+import org.inspirenxe.strata.api.visual.PixelBuffer;
 import org.inspirenxe.strata.api.visual.Visual;
 
 /**
@@ -31,6 +32,12 @@ import org.inspirenxe.strata.api.visual.Visual;
  *
  * <p>Clipping, translation and scaling are scoped to a callback, so the engine's state is always restored, even if
  * the callback throws.</p>
+ *
+ * <p>Lines, outlines, ellipses, arcs, rounded rectangles, shapes, gradients at an angle and shadows are anti-aliased
+ * where the engine can, and {@link #smoothed} asks for hard edges. An engine that draws only rectangles still draws
+ * them, built from rectangles one device pixel high, so they look stepped there. Radii below 0 count as 0, and radii
+ * larger than half the shorter side of their rectangle as half of it. A {@link Stroke}, a {@link Gradient} and a
+ * {@link Shape} are values: make them once and keep them in fields, so a frame allocates nothing.</p>
  *
  * <p>Strata provides the painter, which is valid only during the paint call. Do not implement this
  * interface.</p>
@@ -53,6 +60,154 @@ public interface Painter {
      * @param bottomArgb the color at the bottom edge
      */
     void fillGradient(Rect rect, int topArgb, int bottomArgb);
+
+    /**
+     * Fills a rectangle with a gradient at any angle, with any number of stops.
+     *
+     * @param rect the area
+     * @param gradient the gradient
+     */
+    void fillGradient(Rect rect, Gradient gradient);
+
+    /**
+     * Draws a straight line, centered on the segment between two points, with caps at both ends.
+     *
+     * @param x1 the start's x coordinate
+     * @param y1 the start's y coordinate
+     * @param x2 the end's x coordinate
+     * @param y2 the end's y coordinate
+     * @param stroke the width, caps and joins
+     * @param argb the color
+     */
+    void line(float x1, float y1, float x2, float y2, Stroke stroke, int argb);
+
+    /**
+     * Draws connected straight lines through points, centered on them, with joins at the points between and caps
+     * at the two ends. The array is read during the call and not kept, so a chart can keep one array and refill it
+     * for every frame.
+     *
+     * @param points the points as x, y pairs: point {@code i} is {@code points[2 * i]}, {@code points[2 * i + 1]}
+     * @param count how many points to draw from the start of the array; fewer than 2 draw nothing
+     * @param stroke the width, caps and joins
+     * @param argb the color
+     * @throws IllegalArgumentException if {@code count} is negative or the array holds fewer than {@code count}
+     *                                  points
+     */
+    void polyline(float[] points, int count, Stroke stroke, int argb);
+
+    /**
+     * Fills a rectangle with rounded corners.
+     *
+     * @param rect the area
+     * @param radius the radius of each corner; 0 for square corners
+     * @param argb the color
+     */
+    void fillRoundRect(Rect rect, float radius, int argb);
+
+    /**
+     * Draws the outline of a rectangle, inside it: the stroke's outer edge is the rectangle's edge, so a border drawn
+     * over a component's bounds stays inside them. The corners follow the radius; the stroke's caps and joins do not
+     * apply. A stroke wider than half the rectangle fills it.
+     *
+     * @param rect the area
+     * @param radius the radius of each outer corner; 0 for square corners
+     * @param stroke the width
+     * @param argb the color
+     */
+    void strokeRect(Rect rect, float radius, Stroke stroke, int argb);
+
+    /**
+     * Fills the ellipse that fits a rectangle.
+     *
+     * @param oval the rectangle the ellipse fills
+     * @param argb the color
+     */
+    void fillEllipse(Rect oval, int argb);
+
+    /**
+     * Draws the outline of the ellipse that fits a rectangle, inside it: the stroke's outer edge is the ellipse. The
+     * stroke's caps and joins do not apply.
+     *
+     * @param oval the rectangle the ellipse fills
+     * @param stroke the width
+     * @param argb the color
+     */
+    void strokeEllipse(Rect oval, Stroke stroke, int argb);
+
+    /**
+     * Draws part of the outline of the ellipse that fits a rectangle, inside it, as for {@link #strokeEllipse}, with
+     * the stroke's caps at both ends. Angles are as for {@link Shape.Builder#arc}: 0 is at the right and angles turn
+     * clockwise on screen. A sweep of a full turn or more either way draws the whole outline.
+     *
+     * @param oval the rectangle the ellipse fills
+     * @param startRadians the angle the arc starts at, in radians
+     * @param sweepRadians how far the arc turns, in radians; negative turns counterclockwise
+     * @param stroke the width and caps
+     * @param argb the color
+     */
+    void strokeArc(Rect oval, float startRadians, float sweepRadians, Stroke stroke, int argb);
+
+    /**
+     * Fills a shape, closing every subpath, by the nonzero winding rule.
+     *
+     * @param shape the shape
+     * @param argb the color
+     */
+    void fillShape(Shape shape, int argb);
+
+    /**
+     * Draws the outline of a shape, centered on its path, with the stroke's joins at its corners and caps on the
+     * ends of subpaths that are not closed.
+     *
+     * @param shape the shape
+     * @param stroke the width, caps and joins
+     * @param argb the color
+     */
+    void strokeShape(Shape shape, Stroke stroke, int argb);
+
+    /**
+     * Draws the soft shadow of a rounded rectangle: the color over the rectangle, fading to nothing over
+     * {@code blur} units outside its edges. Draw it before what casts it, at an offset if the light comes from one
+     * side.
+     *
+     * @param rect the rectangle that casts the shadow
+     * @param radius the radius of its corners
+     * @param blur how far outside the rectangle the shadow fades out, in UI units; 0 or less gives a hard edge
+     * @param argb the color at full strength
+     */
+    void shadow(Rect rect, float radius, float blur, int argb);
+
+    /**
+     * Runs {@code draw} with anti-aliasing turned on or off for what it draws. Shapes are smooth by default; pixel
+     * art and bitmap fonts want hard edges. Engines that cannot anti-alias draw hard edges either way, and an engine
+     * may apply the setting to sprites and text too.
+     *
+     * @param smooth true for anti-aliased edges, false for hard ones
+     * @param draw the drawing
+     */
+    void smoothed(boolean smooth, Runnable draw);
+
+    /**
+     * Runs {@code draw} with drawing limited to a rectangle with rounded corners, intersected with any clip already
+     * in place. It clips drawing only; hit testing stays rectangular. An engine that draws only rectangles clips to
+     * the whole rectangle, corners included.
+     *
+     * @param rect the area drawing is limited to
+     * @param radius the radius of each corner
+     * @param draw the drawing to clip
+     */
+    void clippedRound(Rect rect, float radius, Runnable draw);
+
+    /**
+     * Draws a pixel buffer stretched over a rectangle. An engine copies the pixels again only when the buffer's
+     * {@linkplain PixelBuffer#version() version} moved since it last drew it. An engine that cannot draw pixels
+     * shows the placeholder it shows for a visual it does not know.
+     *
+     * @param buffer the pixels
+     * @param rect the area
+     * @param tint an ARGB color multiplied with the pixels; opaque white leaves them unchanged
+     */
+    void pixels(PixelBuffer buffer, Rect rect, int tint);
 
     /**
      * Draws a sprite stretched over a rectangle.

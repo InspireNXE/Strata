@@ -15,7 +15,10 @@
  */
 package org.inspirenxe.strata.core.paint;
 
+import org.inspirenxe.strata.api.extension.Gradient;
 import org.inspirenxe.strata.api.extension.Painter;
+import org.inspirenxe.strata.api.extension.Shape;
+import org.inspirenxe.strata.api.extension.Stroke;
 import org.inspirenxe.strata.api.geometry.Insets;
 import org.inspirenxe.strata.api.geometry.Rect;
 import org.inspirenxe.strata.api.geometry.Size;
@@ -24,9 +27,11 @@ import org.inspirenxe.strata.api.text.InlineVisual;
 import org.inspirenxe.strata.api.text.TextMetrics;
 import org.inspirenxe.strata.api.text.TextSpan;
 import org.inspirenxe.strata.api.theme.SpriteId;
+import org.inspirenxe.strata.api.visual.PixelBuffer;
 import org.inspirenxe.strata.api.visual.Visual;
 import org.inspirenxe.strata.core.text.InlineMetrics;
 import org.inspirenxe.strata.spi.Canvas;
+import org.inspirenxe.strata.spi.Capabilities;
 
 /**
  * The {@link Painter} that components draw with, passing each call to the engine's {@link Canvas}. The scoped clip
@@ -42,6 +47,15 @@ import org.inspirenxe.strata.spi.Canvas;
  * <p>Drawing a sized nine-slice allocates only the rectangle of each of its nine parts, and drawing tiles only the
  * rectangle of each copy, since the canvas takes rectangles; the slice edges are kept in arrays the painter
  * reuses.</p>
+ *
+ * <p>Shapes go to the canvas when the engine {@linkplain Capabilities#drawsShapes() draws shapes}. Otherwise the
+ * painter draws them from fills one device pixel high, gradients at an angle from columns of vertical gradients,
+ * shadows from rings of falling alpha, and round clips as rectangular clips, and never calls the canvas's shape
+ * methods; {@link #smoothed} then only runs its drawing. Either way the painter draws nothing for a color with alpha
+ * 0, an empty rectangle, a stroke of width 0, an empty shape or fewer than two points, limits each radius to half the
+ * shorter side of its rectangle (a negative radius counts as 0), fills a rounded rectangle of radius 0 with
+ * {@link Canvas#fill}, draws an arc of a full turn or more as a whole ellipse, and a shadow without blur as a
+ * rounded rectangle. {@link #pixels} always goes to the canvas.</p>
  */
 public final class CanvasPainter implements Painter {
     /** The most copies of a tile in one row or column, so a tiny tile cannot flood the canvas with calls. */
@@ -51,6 +65,7 @@ public final class CanvasPainter implements Painter {
     private static final int WHITE = 0xFFFFFFFF;
 
     private final InlineMetrics metrics;
+    private final ShapeFallback fallback = new ShapeFallback();
     // The edges of a nine-slice's parts, in the rectangle and in the image, reused by every nine-slice
     private final float[] destX = new float[4];
     private final float[] destY = new float[4];
@@ -58,6 +73,10 @@ public final class CanvasPainter implements Painter {
     private final float[] sourceY = new float[4];
     private Canvas canvas;
     private boolean slicesSprites;
+    private boolean drawsShapes;
+    // Device pixels per unit of the host, and the product of the scales in progress
+    private float pixelsPerUnit = 1f;
+    private float scale = 1f;
 
     /**
      * Creates a painter with no canvas and no text metrics. Call {@link #begin(Canvas)} before drawing. It draws
@@ -96,8 +115,31 @@ public final class CanvasPainter implements Painter {
      * @return this painter
      */
     public CanvasPainter begin(final Canvas canvas, final boolean slicesSprites) {
+        return this.begin(canvas, slicesSprites, false, 1f);
+    }
+
+    /**
+     * Points the painter at the canvas for this frame, with what the engine does for itself and the host's density.
+     *
+     * @param canvas the frame's canvas
+     * @param capabilities what the engine does for itself; the painter reads whether it slices sprites and draws
+     *                     shapes
+     * @param pixelsPerUnit device pixels per UI unit, greater than 0
+     * @return this painter
+     */
+    public CanvasPainter begin(final Canvas canvas, final Capabilities capabilities, final float pixelsPerUnit) {
+        return this.begin(canvas, capabilities.slicesSprites(), capabilities.drawsShapes(), pixelsPerUnit);
+    }
+
+    private CanvasPainter begin(final Canvas canvas, final boolean slicesSprites, final boolean drawsShapes,
+                                final float pixelsPerUnit) {
         this.canvas = canvas;
         this.slicesSprites = slicesSprites;
+        this.drawsShapes = drawsShapes;
+        this.pixelsPerUnit = pixelsPerUnit;
+        this.scale = 1f;
+        this.fallback.begin(canvas);
+        this.fallback.pixelsPerUnit(pixelsPerUnit);
         return this;
     }
 
@@ -118,6 +160,209 @@ public final class CanvasPainter implements Painter {
     @Override
     public void fillGradient(final Rect rect, final int topArgb, final int bottomArgb) {
         this.canvas.fillGradient(rect, topArgb, bottomArgb);
+    }
+
+    @Override
+    public void fillGradient(final Rect rect, final Gradient gradient) {
+        if (!CanvasPainter.isArea(rect)) {
+            return;
+        }
+        if (this.drawsShapes) {
+            this.canvas.fillGradient(rect, gradient);
+        } else {
+            this.fallback.fillGradient(rect, gradient);
+        }
+    }
+
+    @Override
+    public void line(final float x1, final float y1, final float x2, final float y2, final Stroke stroke,
+                     final int argb) {
+        if (!CanvasPainter.isVisible(argb) || !(stroke.width() > 0f)) {
+            return;
+        }
+        if (this.drawsShapes) {
+            this.canvas.line(x1, y1, x2, y2, stroke, argb);
+        } else {
+            this.fallback.line(x1, y1, x2, y2, stroke, argb);
+        }
+    }
+
+    @Override
+    public void polyline(final float[] points, final int count, final Stroke stroke, final int argb) {
+        if (count < 0 || points.length < 2L * count) {
+            throw new IllegalArgumentException("A polyline of " + count + " points needs " + 2L * count
+                    + " coordinates, not " + points.length);
+        }
+        if (count < 2 || !CanvasPainter.isVisible(argb) || !(stroke.width() > 0f)) {
+            return;
+        }
+        if (this.drawsShapes) {
+            this.canvas.polyline(points, count, stroke, argb);
+        } else {
+            this.fallback.polyline(points, count, stroke, argb);
+        }
+    }
+
+    @Override
+    public void fillRoundRect(final Rect rect, final float radius, final int argb) {
+        if (!CanvasPainter.isVisible(argb) || !CanvasPainter.isArea(rect)) {
+            return;
+        }
+        final float r = CanvasPainter.radius(rect, radius);
+        if (r == 0f) {
+            this.canvas.fill(rect, argb);
+        } else if (this.drawsShapes) {
+            this.canvas.fillRoundRect(rect, r, argb);
+        } else {
+            this.fallback.fillRoundRect(rect, r, argb);
+        }
+    }
+
+    @Override
+    public void strokeRect(final Rect rect, final float radius, final Stroke stroke, final int argb) {
+        if (!CanvasPainter.isVisible(argb) || !CanvasPainter.isArea(rect) || !(stroke.width() > 0f)) {
+            return;
+        }
+        final float r = CanvasPainter.radius(rect, radius);
+        if (this.drawsShapes) {
+            this.canvas.strokeRect(rect, r, stroke, argb);
+        } else {
+            this.fallback.strokeRect(rect, r, stroke.width(), argb);
+        }
+    }
+
+    @Override
+    public void fillEllipse(final Rect oval, final int argb) {
+        if (!CanvasPainter.isVisible(argb) || !CanvasPainter.isArea(oval)) {
+            return;
+        }
+        if (this.drawsShapes) {
+            this.canvas.fillEllipse(oval, argb);
+        } else {
+            this.fallback.fillEllipse(oval, argb);
+        }
+    }
+
+    @Override
+    public void strokeEllipse(final Rect oval, final Stroke stroke, final int argb) {
+        if (!CanvasPainter.isVisible(argb) || !CanvasPainter.isArea(oval) || !(stroke.width() > 0f)) {
+            return;
+        }
+        if (this.drawsShapes) {
+            this.canvas.strokeEllipse(oval, stroke, argb);
+        } else {
+            this.fallback.strokeEllipse(oval, stroke.width(), argb);
+        }
+    }
+
+    @Override
+    public void strokeArc(final Rect oval, final float startRadians, final float sweepRadians, final Stroke stroke,
+                          final int argb) {
+        if (!(Math.abs(sweepRadians) > 0f) || !Float.isFinite(startRadians)) {
+            return;
+        }
+        if (Math.abs(sweepRadians) >= 2.0 * Math.PI) {
+            this.strokeEllipse(oval, stroke, argb);
+            return;
+        }
+        if (!CanvasPainter.isVisible(argb) || !CanvasPainter.isArea(oval) || !(stroke.width() > 0f)) {
+            return;
+        }
+        if (this.drawsShapes) {
+            this.canvas.strokeArc(oval, startRadians, sweepRadians, stroke, argb);
+        } else {
+            this.fallback.strokeArc(oval, startRadians, sweepRadians, stroke, argb);
+        }
+    }
+
+    @Override
+    public void fillShape(final Shape shape, final int argb) {
+        if (!CanvasPainter.isVisible(argb) || shape.isEmpty()) {
+            return;
+        }
+        if (this.drawsShapes) {
+            this.canvas.fillShape(shape, argb);
+        } else {
+            this.fallback.fillShape(shape, argb);
+        }
+    }
+
+    @Override
+    public void strokeShape(final Shape shape, final Stroke stroke, final int argb) {
+        if (!CanvasPainter.isVisible(argb) || shape.isEmpty() || !(stroke.width() > 0f)) {
+            return;
+        }
+        if (this.drawsShapes) {
+            this.canvas.strokeShape(shape, stroke, argb);
+        } else {
+            this.fallback.strokeShape(shape, stroke, argb);
+        }
+    }
+
+    @Override
+    public void shadow(final Rect rect, final float radius, final float blur, final int argb) {
+        if (!(blur > 0f) || Float.isInfinite(blur)) {
+            this.fillRoundRect(rect, radius, argb);
+            return;
+        }
+        if (!CanvasPainter.isVisible(argb) || !CanvasPainter.isArea(rect)) {
+            return;
+        }
+        final float r = CanvasPainter.radius(rect, radius);
+        if (this.drawsShapes) {
+            this.canvas.shadow(rect, r, blur, argb);
+        } else {
+            this.fallback.shadow(rect, r, blur, argb);
+        }
+    }
+
+    @Override
+    public void smoothed(final boolean smooth, final Runnable draw) {
+        if (!this.drawsShapes) {
+            draw.run();
+            return;
+        }
+        this.canvas.pushSmoothing(smooth);
+        try {
+            draw.run();
+        } finally {
+            this.canvas.popSmoothing();
+        }
+    }
+
+    @Override
+    public void clippedRound(final Rect rect, final float radius, final Runnable draw) {
+        final float r = CanvasPainter.radius(rect, radius);
+        if (this.drawsShapes && r > 0f) {
+            this.canvas.pushRoundClip(rect, r);
+        } else {
+            this.canvas.pushClip(rect);
+        }
+        try {
+            draw.run();
+        } finally {
+            this.canvas.popClip();
+        }
+    }
+
+    @Override
+    public void pixels(final PixelBuffer buffer, final Rect rect, final int tint) {
+        this.canvas.pixels(buffer, rect, tint);
+    }
+
+    private static boolean isVisible(final int argb) {
+        return (argb >>> 24) != 0;
+    }
+
+    private static boolean isArea(final Rect rect) {
+        return rect.width() > 0f && rect.height() > 0f;
+    }
+
+    /**
+     * Limits a radius to half the shorter side of a rectangle, counting a negative or undefined one as 0.
+     */
+    private static float radius(final Rect rect, final float radius) {
+        return radius > 0f ? Math.min(radius, Math.min(rect.width(), rect.height()) / 2f) : 0f;
     }
 
     @Override
@@ -306,10 +551,15 @@ public final class CanvasPainter implements Painter {
             draw.run();
             return;
         }
+        final float previous = this.scale;
         this.canvas.pushScale(scale);
+        this.scale = previous * scale;
+        this.fallback.pixelsPerUnit(this.pixelsPerUnit * this.scale);
         try {
             draw.run();
         } finally {
+            this.scale = previous;
+            this.fallback.pixelsPerUnit(this.pixelsPerUnit * previous);
             this.canvas.popTransform();
         }
     }

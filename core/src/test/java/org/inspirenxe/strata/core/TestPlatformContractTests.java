@@ -77,6 +77,51 @@ class TestPlatformContractTests {
         }
     }
 
+    /**
+     * A canvas that draws to readable pixels and stands for an engine that draws shapes by drawing them through core's
+     * fallback, so the shape checks run on it.
+     */
+    @Nested
+    class RasterCanvasTest extends CanvasContract {
+        @Override
+        protected Surface surface(final int width, final int height) {
+            final RasterCanvas canvas = new RasterCanvas(width, height);
+            return new Surface() {
+                @Override
+                public org.inspirenxe.strata.spi.Canvas canvas() {
+                    return canvas;
+                }
+
+                @Override
+                public void finish() {
+                    if (!canvas.balanced()) {
+                        throw new AssertionError("stacks not balanced");
+                    }
+                }
+
+                @Override
+                public boolean readable() {
+                    return true;
+                }
+
+                @Override
+                public int argb(final int x, final int y) {
+                    return canvas.argb(x, y);
+                }
+            };
+        }
+
+        @Override
+        protected boolean drawsShapes() {
+            return true;
+        }
+
+        @Override
+        protected boolean drawsPixels() {
+            return true;
+        }
+    }
+
     @Nested
     class NullCanvasTest extends CanvasContract {
         @Override
