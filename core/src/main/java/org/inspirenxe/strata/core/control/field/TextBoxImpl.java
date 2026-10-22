@@ -79,6 +79,10 @@ import java.util.function.UnaryOperator;
  * {@link TextBox#SUBMITTED} is on the path, so an ancestor's key handler still sees Enter from a box nobody
  * submits.</p>
  *
+ * <p>The user's edits and the edits from code go into an {@code EditHistory} of at most 100 edits by default, which
+ * Ctrl+Z, Ctrl+Y and Ctrl+Shift+Z walk through, as {@code PlainEdits} describes; {@link #setText} clears it. An edit
+ * from code hides the suggestions, as {@code setText} does.</p>
+ *
  * <p>The suggestion list is a {@link ListViewImpl} in a popup, not focusable, built when it first opens and dropped
  * when it closes. The box routes the list's input to itself, so the list fires no events. Its rows are one line of
  * {@link TextBox#STYLE_SUGGESTION_TEXT} plus 4 units tall, with the text 4 units in from the left, and it is at least
@@ -218,10 +222,82 @@ public final class TextBoxImpl extends BuiltInComponent<TextBox> implements Text
             final String previous = this.buffer.toString();
             this.buffer.set(clean);
             this.editor.place(this.buffer.length());
+            // The text the user edited is gone, so nothing in the history applies to it
+            this.edits.history().clear();
             this.hideSuggestions();
             this.changed(previous);
             this.editor.settle();
         }
+        return this;
+    }
+
+    @Override
+    public TextBox insert(final String text) {
+        return this.change(this.selectionStart(), this.selectionEnd(), text, true);
+    }
+
+    @Override
+    public TextBox replace(final int start, final int end, final String text) {
+        return this.change(start, end, text, false);
+    }
+
+    @Override
+    public TextBox append(final String text) {
+        return this.change(this.buffer.length(), this.buffer.length(), text, false);
+    }
+
+    @Override
+    public TextBox delete(final int start, final int end) {
+        return this.change(start, end, "", false);
+    }
+
+    private TextBox change(final int start, final int end, final String text, final boolean collapse) {
+        this.edits.change(start, end, text, collapse);
+        this.editor.settle();
+        return this;
+    }
+
+    @Override
+    public boolean canUndo() {
+        return this.edits.history().canUndo();
+    }
+
+    @Override
+    public boolean canRedo() {
+        return this.edits.history().canRedo();
+    }
+
+    @Override
+    public TextBox undo() {
+        this.edits.undo(false);
+        this.editor.settle();
+        return this;
+    }
+
+    @Override
+    public TextBox redo() {
+        this.edits.redo(false);
+        this.editor.settle();
+        return this;
+    }
+
+    @Override
+    public TextBox clearHistory() {
+        this.edits.history().clear();
+        return this;
+    }
+
+    @Override
+    public int historyLimit() {
+        return this.edits.history().limit();
+    }
+
+    @Override
+    public TextBox setHistoryLimit(final int edits) {
+        if (edits < 0) {
+            throw new IllegalArgumentException("History limit must not be negative: " + edits);
+        }
+        this.edits.history().setLimit(edits);
         return this;
     }
 
@@ -252,11 +328,7 @@ public final class TextBoxImpl extends BuiltInComponent<TextBox> implements Text
         }
         this.maxLength = maxLength;
         if (this.codePoints() > maxLength) {
-            final String previous = this.buffer.toString();
-            this.buffer.truncate(this.buffer.offsetByCodePoints(0, maxLength));
-            this.editor.clamp();
-            this.changed(previous);
-            this.editor.settle();
+            this.change(this.buffer.offsetByCodePoints(0, maxLength), this.buffer.length(), "", false);
         }
         return this;
     }
@@ -515,7 +587,7 @@ public final class TextBoxImpl extends BuiltInComponent<TextBox> implements Text
         final boolean applied;
         this.completing = true;
         try {
-            applied = this.edits.edit(start, end, FieldText.singleLine(suggestion.text()));
+            applied = this.edits.edit(start, end, FieldText.singleLine(suggestion.text()), EditHistory.Kind.OTHER);
         } finally {
             this.completing = false;
         }
@@ -888,24 +960,34 @@ public final class TextBoxImpl extends BuiltInComponent<TextBox> implements Text
 
         @Override
         public void type(final int start, final int end, final int codePoint) {
-            TextBoxImpl.this.edits.edit(start, end, Character.toString(codePoint));
+            TextBoxImpl.this.edits.edit(start, end, Character.toString(codePoint), EditHistory.Kind.TYPE);
         }
 
         @Override
-        public void delete(final int start, final int end) {
-            TextBoxImpl.this.edits.edit(start, end, "");
+        public void delete(final int start, final int end, final EditHistory.Kind kind) {
+            TextBoxImpl.this.edits.edit(start, end, "", kind);
         }
 
         @Override
         public void paste(final int start, final int end) {
             TextBoxImpl.this.environment().clipboardText()
                     .map(FieldText::singleLine)
-                    .ifPresent(text -> TextBoxImpl.this.edits.edit(start, end, text));
+                    .ifPresent(text -> TextBoxImpl.this.edits.edit(start, end, text, EditHistory.Kind.OTHER));
         }
 
         @Override
         public void copy(final int start, final int end) {
             TextBoxImpl.this.environment().setClipboardText(TextBoxImpl.this.buffer.substring(start, end));
+        }
+
+        @Override
+        public boolean undo() {
+            return TextBoxImpl.this.edits.undo(true);
+        }
+
+        @Override
+        public boolean redo() {
+            return TextBoxImpl.this.edits.redo(true);
         }
 
         @Override
@@ -962,11 +1044,28 @@ public final class TextBoxImpl extends BuiltInComponent<TextBox> implements Text
         }
 
         @Override
+        public long millis() {
+            return TextBoxImpl.this.environment().millis();
+        }
+
+        @Override
         public void userChanged(final String previous) {
             TextBoxImpl.this.changed(previous);
             if (!TextBoxImpl.this.completing) {
                 TextBoxImpl.this.suggestAfterEdit();
             }
+        }
+
+        @Override
+        public void userUndid(final String previous) {
+            TextBoxImpl.this.hideSuggestions();
+            TextBoxImpl.this.changed(previous);
+        }
+
+        @Override
+        public void codeChanged(final String previous, final boolean caretMoved) {
+            TextBoxImpl.this.hideSuggestions();
+            TextBoxImpl.this.changed(previous);
         }
     }
 }

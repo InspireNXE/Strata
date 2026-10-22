@@ -83,6 +83,11 @@ import java.util.function.UnaryOperator;
  * back first. Every change reports {@link TextArea#EDITED} and then {@link TextArea#MODIFIED}, and each input or call
  * that moved the caret or the anchor then reports {@link TextArea#CARET_MOVED} once.</p>
  *
+ * <p>The user's edits and the edits from code go into an {@code EditHistory} of at most 100 edits by default, which
+ * Ctrl+Z, Ctrl+Y and Ctrl+Shift+Z walk through, as {@code PlainEdits} describes; {@link #setText} clears it. An edit
+ * from code keeps the view where it is unless it moved the caret, and then scrolls only as far as the caret
+ * needs.</p>
+ *
  * <p>The text is a {@code PlainBuffer}. The caret, the selection, the keys and the pointer are a {@code TextEditor},
  * which the text box and the password box share, with the area's rows plugged in for Home, End, Up, Down, Page Up,
  * Page Down and triple clicks, and a user's edit goes through the {@code PlainEdits} the text box uses too. The rows
@@ -273,11 +278,83 @@ public final class TextAreaImpl extends BuiltInComponent<TextArea> implements Te
             final String previous = this.buffer.toString();
             this.buffer.set(clean);
             this.editor.place(this.buffer.length());
+            // The text the user edited is gone, so nothing in the history applies to it
+            this.edits.history().clear();
             this.scrollX = 0f;
             this.scrollY = 0f;
             this.changed(previous, false);
             this.editor.settle();
         }
+        return this;
+    }
+
+    @Override
+    public TextArea insert(final String text) {
+        return this.change(this.selectionStart(), this.selectionEnd(), text, true);
+    }
+
+    @Override
+    public TextArea replace(final int start, final int end, final String text) {
+        return this.change(start, end, text, false);
+    }
+
+    @Override
+    public TextArea append(final String text) {
+        return this.change(this.buffer.length(), this.buffer.length(), text, false);
+    }
+
+    @Override
+    public TextArea delete(final int start, final int end) {
+        return this.change(start, end, "", false);
+    }
+
+    private TextArea change(final int start, final int end, final String text, final boolean collapse) {
+        this.edits.change(start, end, text, collapse);
+        this.editor.settle();
+        return this;
+    }
+
+    @Override
+    public boolean canUndo() {
+        return this.edits.history().canUndo();
+    }
+
+    @Override
+    public boolean canRedo() {
+        return this.edits.history().canRedo();
+    }
+
+    @Override
+    public TextArea undo() {
+        this.edits.undo(false);
+        this.editor.settle();
+        return this;
+    }
+
+    @Override
+    public TextArea redo() {
+        this.edits.redo(false);
+        this.editor.settle();
+        return this;
+    }
+
+    @Override
+    public TextArea clearHistory() {
+        this.edits.history().clear();
+        return this;
+    }
+
+    @Override
+    public int historyLimit() {
+        return this.edits.history().limit();
+    }
+
+    @Override
+    public TextArea setHistoryLimit(final int edits) {
+        if (edits < 0) {
+            throw new IllegalArgumentException("History limit must not be negative: " + edits);
+        }
+        this.edits.history().setLimit(edits);
         return this;
     }
 
@@ -308,11 +385,7 @@ public final class TextAreaImpl extends BuiltInComponent<TextArea> implements Te
         }
         this.maxLength = maxLength;
         if (this.codePoints() > maxLength) {
-            final String previous = this.buffer.toString();
-            this.buffer.truncate(this.buffer.offsetByCodePoints(0, maxLength));
-            this.editor.clamp();
-            this.changed(previous, true);
-            this.editor.settle();
+            this.change(this.buffer.offsetByCodePoints(0, maxLength), this.buffer.length(), "", false);
         }
         return this;
     }
@@ -966,7 +1039,7 @@ public final class TextAreaImpl extends BuiltInComponent<TextArea> implements Te
         this.updateVisuals();
         final boolean handled;
         if (key.isEnter() && !modifiers.control() && !modifiers.alt()) {
-            this.edits.edit(this.editor.selectionStart(), this.editor.selectionEnd(), "\n");
+            this.edits.edit(this.editor.selectionStart(), this.editor.selectionEnd(), "\n", EditHistory.Kind.TYPE);
             handled = true;
         } else {
             handled = this.editor.key(key, modifiers);
@@ -1073,24 +1146,34 @@ public final class TextAreaImpl extends BuiltInComponent<TextArea> implements Te
 
         @Override
         public void type(final int start, final int end, final int codePoint) {
-            TextAreaImpl.this.edits.edit(start, end, Character.toString(codePoint));
+            TextAreaImpl.this.edits.edit(start, end, Character.toString(codePoint), EditHistory.Kind.TYPE);
         }
 
         @Override
-        public void delete(final int start, final int end) {
-            TextAreaImpl.this.edits.edit(start, end, "");
+        public void delete(final int start, final int end, final EditHistory.Kind kind) {
+            TextAreaImpl.this.edits.edit(start, end, "", kind);
         }
 
         @Override
         public void paste(final int start, final int end) {
             TextAreaImpl.this.environment().clipboardText()
                     .map(FieldText::lines)
-                    .ifPresent(text -> TextAreaImpl.this.edits.edit(start, end, text));
+                    .ifPresent(text -> TextAreaImpl.this.edits.edit(start, end, text, EditHistory.Kind.OTHER));
         }
 
         @Override
         public void copy(final int start, final int end) {
             TextAreaImpl.this.environment().setClipboardText(TextAreaImpl.this.buffer.substring(start, end));
+        }
+
+        @Override
+        public boolean undo() {
+            return TextAreaImpl.this.edits.undo(true);
+        }
+
+        @Override
+        public boolean redo() {
+            return TextAreaImpl.this.edits.redo(true);
         }
 
         @Override
@@ -1192,8 +1275,24 @@ public final class TextAreaImpl extends BuiltInComponent<TextArea> implements Te
         }
 
         @Override
+        public long millis() {
+            return TextAreaImpl.this.environment().millis();
+        }
+
+        @Override
         public void userChanged(final String previous) {
             TextAreaImpl.this.changed(previous, true);
+        }
+
+        @Override
+        public void userUndid(final String previous) {
+            TextAreaImpl.this.changed(previous, true);
+        }
+
+        @Override
+        public void codeChanged(final String previous, final boolean caretMoved) {
+            // The view stays where it is unless the caret moved, and then scrolls only as far as the caret needs
+            TextAreaImpl.this.changed(previous, caretMoved);
         }
     }
 }

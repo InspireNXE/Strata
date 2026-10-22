@@ -42,7 +42,8 @@ import org.inspirenxe.strata.api.state.PropertyKey;
  */
 public interface TextEntry<S extends TextEntry<S>> extends EventTarget<S> {
     /**
-     * Asked before the user changes the text by typing, deleting, cutting or pasting. It carries no value; cancel it
+     * Asked before the user changes the text by typing, deleting, cutting or pasting, and on a {@link TextInput}
+     * before the user's undo or redo. It carries no value; cancel it
      * to refuse the edit, which leaves the text and the selection as they were. While handlers run, the control
      * still holds the text from before the edit. An edit that would leave the text as it is fires nothing, and a
      * read-only control fires nothing. Each control says what it asks after this. Fires only for the user's actions.

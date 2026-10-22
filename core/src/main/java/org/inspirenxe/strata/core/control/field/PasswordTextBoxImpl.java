@@ -887,7 +887,7 @@ public final class PasswordTextBoxImpl extends BuiltInComposite<PasswordTextBox>
         }
 
         @Override
-        public void delete(final int start, final int end) {
+        public void delete(final int start, final int end, final EditHistory.Kind kind) {
             final PasswordTextBoxImpl box = PasswordTextBoxImpl.this;
             if (box.readOnly || !box.request(MODIFY)) {
                 return;
@@ -936,6 +936,17 @@ public final class PasswordTextBoxImpl extends BuiltInComposite<PasswordTextBox>
         @Override
         public void copy(final int start, final int end) {
             // Never called: allowsCopy is false
+        }
+
+        @Override
+        public boolean undo() {
+            // A password box keeps no history of its secret
+            return false;
+        }
+
+        @Override
+        public boolean redo() {
+            return false;
         }
 
         @Override

@@ -345,6 +345,12 @@ final class TextEditor {
             case C -> this.copy();
             case X -> this.cut();
             case V -> this.host.paste(this.selectionStart(), this.selectionEnd());
+            case Z -> {
+                return shift ? this.host.redo() : this.host.undo();
+            }
+            case Y -> {
+                return this.host.redo();
+            }
             case LEFT -> this.moveTo(this.boundaries.previousWordStart(this.caret), shift);
             case RIGHT -> this.moveTo(this.boundaries.nextWordEnd(this.caret), shift);
             case HOME -> this.moveTo(0, shift);
@@ -353,14 +359,14 @@ final class TextEditor {
                 if (this.hasSelection()) {
                     this.deleteSelection();
                 } else {
-                    this.delete(this.boundaries.previousWordStart(this.caret), this.caret);
+                    this.delete(this.boundaries.previousWordStart(this.caret), this.caret, EditHistory.Kind.BACKSPACE);
                 }
             }
             case DELETE -> {
                 if (this.hasSelection()) {
                     this.deleteSelection();
                 } else {
-                    this.delete(this.caret, this.boundaries.nextWordEnd(this.caret));
+                    this.delete(this.caret, this.boundaries.nextWordEnd(this.caret), EditHistory.Kind.DELETE);
                 }
             }
             default -> {
@@ -404,14 +410,14 @@ final class TextEditor {
                 if (this.hasSelection()) {
                     this.deleteSelection();
                 } else {
-                    this.delete(this.boundaries.previous(this.caret), this.caret);
+                    this.delete(this.boundaries.previous(this.caret), this.caret, EditHistory.Kind.BACKSPACE);
                 }
             }
             case DELETE -> {
                 if (this.hasSelection()) {
                     this.deleteSelection();
                 } else {
-                    this.delete(this.caret, this.boundaries.next(this.caret));
+                    this.delete(this.caret, this.boundaries.next(this.caret), EditHistory.Kind.DELETE);
                 }
             }
             default -> {
@@ -463,12 +469,12 @@ final class TextEditor {
     }
 
     private void deleteSelection() {
-        this.host.delete(this.selectionStart(), this.selectionEnd());
+        this.host.delete(this.selectionStart(), this.selectionEnd(), EditHistory.Kind.OTHER);
     }
 
-    private void delete(final int start, final int end) {
+    private void delete(final int start, final int end, final EditHistory.Kind kind) {
         if (start < end) {
-            this.host.delete(start, end);
+            this.host.delete(start, end, kind);
         }
     }
 
@@ -510,8 +516,11 @@ final class TextEditor {
 
         /**
          * Applies the user deleting a non-empty range.
+         *
+         * @param kind {@code BACKSPACE} or {@code DELETE} for a key that deleted next to the caret, {@code OTHER} for
+         *     a deleted selection
          */
-        void delete(int start, int end);
+        void delete(int start, int end, EditHistory.Kind kind);
 
         /**
          * Applies the user pasting over a range, which is empty when nothing is selected.
@@ -522,6 +531,20 @@ final class TextEditor {
          * Puts a range of the text on the clipboard. Called only when {@link #allowsCopy} is true.
          */
         void copy(int start, int end);
+
+        /**
+         * Applies the user's undo, for Ctrl+Z.
+         *
+         * @return false if the field has nothing to undo, so the key is not used
+         */
+        boolean undo();
+
+        /**
+         * Applies the user's redo, for Ctrl+Y and Ctrl+Shift+Z.
+         *
+         * @return false if the field has nothing to redo, so the key is not used
+         */
+        boolean redo();
 
         /**
          * Called before a key moves the caret.
