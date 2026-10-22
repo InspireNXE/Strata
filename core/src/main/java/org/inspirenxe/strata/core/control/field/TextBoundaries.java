@@ -22,8 +22,9 @@ import java.text.BreakIterator;
 /**
  * Character and word boundaries over an {@link EditBuffer}.
  *
- * <p>Over a field's {@link PlainBuffer} a character is a grapheme cluster as {@link BreakIterator#getCharacterInstance()}
- * finds it, so a flag, an emoji with a skin tone or a letter with its accents is one step. Words are the segments of
+ * <p>Over a field's {@link PlainBuffer} a character is a grapheme cluster as
+ * {@link BreakIterator#getCharacterInstance()} finds it, so a flag, an emoji with a skin tone or a letter with its
+ * accents is one step. Words are the segments of
  * {@link BreakIterator#getWordInstance()}: a segment that holds a letter or a digit is a word, so an apostrophe or a
  * decimal point inside one stays in it; neighboring segments of punctuation, symbols or emoji make one run; and
  * neighboring whitespace makes one run, which a line break ends. The iterators are given the text again only after it

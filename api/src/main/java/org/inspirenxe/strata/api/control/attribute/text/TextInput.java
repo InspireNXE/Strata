@@ -42,10 +42,10 @@ public interface TextInput<S extends TextInput<S>> extends TextEntry<S> {
      * if no handler canceled that. The value is the whole text the edit would produce. While handlers run, the
      * control still holds the text and selection from before the edit. Cancel the event to reject the edit, or set
      * another text to rewrite it; the value must not be set to null. The control applies its own rules to the final
-     * text, such as the {@linkplain #maxLength() length limit}, as each control describes. A handler that sets the
-     * text from code meanwhile makes that the text the final text replaces, and {@link #EDITED} reports it as the
-     * previous text. An edit that would leave the text as it is fires nothing, and a read-only control fires nothing.
-     * Fires only for the user's actions.
+     * text, such as the {@linkplain #maxLength() length limit}, as each control describes. If a handler sets the
+     * text from code, the final text replaces the text it set, and {@link #EDITED} reports that as the previous text.
+     * An edit that would leave the text as it is fires nothing, and a read-only control fires nothing. Fires only for
+     * the user's actions.
      */
     EventType<ValueRequestEvent<TextInput<?>, String>> EDIT = EventType.valueRequest("text_input.edit");
     /**

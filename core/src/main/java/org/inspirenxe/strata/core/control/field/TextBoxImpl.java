@@ -71,8 +71,8 @@ import java.util.function.UnaryOperator;
  * handler for either is on its path. While the handlers run the box still holds the text and selection from before
  * the edit; a canceled {@code MODIFY} ends the edit there. The final text then has its line breaks and other control
  * characters dropped, is cut to the length limit and goes through the internal filter, and the caret goes as many
- * characters from its end as the edit left it, with nothing selected. With neither handler on the path the edit applies directly, without putting
- * the old text back first. Every change reports {@link TextBox#EDITED} and then {@link TextBox#MODIFIED}. Enter fires
+ * characters from its end as the edit left it, with nothing selected. With neither handler on the path the edit
+ * applies directly, without putting the old text back first. Every change reports {@link TextBox#EDITED} and then {@link TextBox#MODIFIED}. Enter fires
  * {@link TextBox#SUBMIT} on every press, but is consumed only when a handler for {@link TextBox#SUBMIT} or
  * {@link TextBox#SUBMITTED} is on the path, so an ancestor's key handler still sees Enter from a box nobody
  * submits.</p>

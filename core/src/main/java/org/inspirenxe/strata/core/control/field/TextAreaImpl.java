@@ -61,11 +61,11 @@ import java.util.function.UnaryOperator;
  * puts the caret at its end and scrolls back to the top, and the view stays there until the caret moves, so new text
  * shows its start.
  *
- * <p>Rows break by the rule {@code LineBreaks} describes, which labels share, between grapheme clusters when a word is
- * too wide. A row that wraps keeps the whitespace it breaks at, past its edge if it must, and the caret cannot sit
- * after its last character: that position is the start of the next row. A caret in that whitespace is drawn at the
- * edge. The view scrolls to keep the caret in sight after the caret moves, but not on other
- * frames, so the wheel can scroll it away. Each wheel notch scrolls three lines, and selecting a whole line past its
+ * <p>Rows break by the rule {@code LineBreaks} describes, which labels share, and a word too wide for a row breaks
+ * between grapheme clusters. A row that wraps keeps the whitespace it breaks at, past its edge if it must, and the
+ * caret cannot sit after its last character: that position is the start of the next row. A caret in that whitespace
+ * is drawn at the edge. The view scrolls to keep the caret in sight after the caret moves, but not on other frames,
+ * so the wheel can scroll it away. Each wheel notch scrolls three lines, and selecting a whole line past its
  * end shows a 3-unit stub for the line break.</p>
  *
  * <p>A vertical scroll bar shows when the rows are taller than the area. An area that does not wrap also shows a
@@ -75,8 +75,8 @@ import java.util.function.UnaryOperator;
  * <p>Every user edit that would change the text fires {@link TextArea#MODIFY} and then {@link TextArea#EDIT} when a
  * handler for either is on its path. While the handlers run the area still holds the text and selection from before
  * the edit; a canceled {@code MODIFY} ends the edit there. The final text then has its line breaks turned into
- * {@code \n} and its control characters other than tabs dropped, and is cut to the length limit, and the caret goes as many characters from its end as the edit left it,
- * with nothing selected. With neither handler on the path the edit applies directly, without putting the old text
+ * {@code \n} and its control characters other than tabs dropped, and is cut to the length limit, and the caret goes
+ * as many characters from its end as the edit left it, with nothing selected. With neither handler on the path the edit applies directly, without putting the old text
  * back first. Every change reports {@link TextArea#EDITED} and then {@link TextArea#MODIFIED}.</p>
  *
  * <p>The text is a {@code PlainBuffer}. The caret, the selection, the keys and the pointer are a {@code TextEditor},
@@ -715,7 +715,7 @@ public final class TextAreaImpl extends BuiltInComponent<TextArea> implements Te
     /**
      * Runs inside the viewport clip during {@link #paint}; a field-held method reference, so painting allocates no
      * lambda per frame. The rectangles of each selected row and its spans in the selected style are kept from frame to
-     * frame, so a frame that repeats the last one allocates nothing.
+     * frame and made again only when they change.
      */
     private void drawContent() {
         final float originX = this.viewport.x() - this.scrollX;

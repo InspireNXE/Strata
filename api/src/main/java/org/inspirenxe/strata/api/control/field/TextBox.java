@@ -44,8 +44,8 @@ import java.util.Objects;
  *     everything.</li>
  *     <li>Left and Right move by character, Home and End to either end. With Shift they extend the selection. With
  *     a selection and no Shift, Left and Right collapse it to its start or end. Backspace and Delete remove the
- *     character before or after the caret, or the selection. A character is what a reader sees as one: a letter
- *     with its accents, a flag or an emoji with its skin tone is one step and goes in one Backspace.</li>
+ *     character before or after the caret, or the selection. A character is what a reader sees as one, so a letter
+ *     with its accents, a flag, or an emoji with its skin tone moves as one step and goes in one Backspace.</li>
  *     <li>Ctrl+Left and Ctrl+Right move by word; Ctrl+Backspace and Ctrl+Delete delete by word. They skip spaces,
  *     then stop at the other end of a word or of a run of punctuation, so {@code path/to/file} takes five steps.
  *     Words follow the Unicode word rules that {@link java.text.BreakIterator} applies, so an apostrophe or a

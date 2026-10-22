@@ -28,8 +28,8 @@ import java.util.function.UnaryOperator;
  * {@code MODIFY} or {@code EDIT} handler on the path, or when the edit left the text as it was, it applies at once.
  * Otherwise the field holds the text and selection from before the edit again while it asks {@code MODIFY} and then
  * {@code EDIT} with the edited text, and the final text is cleaned, cut to the limit and placed with the caret as many
- * chars from its end as the edit left it. Then the field's own filter, if it has one, gets the last word, and a
- * change is reported through {@link Field#userChanged}.</p>
+ * chars from its end as the edit left it. The field's own filter, if it has one, then sees the final text and may
+ * reject or rewrite it, and a change is reported through {@link Field#userChanged}.</p>
  *
  * <p>Each edit keeps what it needs in locals, so a handler may set the text or edit again while it runs. The final
  * text is compared with, and reported against, the text the field holds when the handlers are done, which is the

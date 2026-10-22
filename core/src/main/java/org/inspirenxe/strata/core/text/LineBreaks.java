@@ -16,8 +16,8 @@
 package org.inspirenxe.strata.core.text;
 
 /**
- * Where wrapped text breaks into rows: the one rule that labels, tooltips, toasts and info bars, through
- * {@link TextWrap} and {@link RichText}, and text areas share.
+ * Where wrapped text breaks into rows. Labels, tooltips, toasts and info bars wrap by it through {@link TextWrap} and
+ * {@link RichText}, and text areas call it directly, so they all break text the same way.
  *
  * <p>A row takes as much of its line as fits the width and breaks after the last whitespace that fits. A word wider
  * than a whole row breaks between characters, and a row always takes at least one character, so a row can be wider
@@ -150,7 +150,10 @@ public final class LineBreaks {
         return new Characters() {
             @Override
             public int next(final int index) {
-                return index >= text.length() ? text.length() : index + Character.charCount(Character.codePointAt(text, index));
+                if (index >= text.length()) {
+                    return text.length();
+                }
+                return index + Character.charCount(Character.codePointAt(text, index));
             }
 
             @Override

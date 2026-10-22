@@ -48,10 +48,11 @@ import java.util.function.Predicate;
  *
  * <p>The value is kept to whole minutes, or seconds while they show, and inside the range, which never reaches past
  * the dates {@link DateRange} supports. A value is cut to the unit and then clamped to the first and last whole unit
- * inside the range, so a value cut to before a start that carries seconds moves up to the next whole minute; typed
- * drafts are allowed by the same two ends. A range too short to hold a whole unit keeps the value at its start. The calendar in the
- * popup is not focusable, so focus stays in the field; a press on the calendar or a column takes it back. The popup's
- * parts are made the first time it opens and kept.</p>
+ * inside the range, so a value cut to before a start that carries seconds moves up to the next whole minute. A typed
+ * draft is allowed between the same two ends. A range too short to hold a whole unit keeps the value at its start.</p>
+ *
+ * <p>The calendar in the popup is not focusable, so focus stays in the field; a press on the calendar or a column
+ * takes it back. The popup's parts are made the first time it opens and kept.</p>
  */
 public final class DateTimePickerImpl extends PickerBase<DateTimePicker, LocalDateTime> implements DateTimePicker {
     private static final Set<String> EXTRA = Set.of(CalendarView.STYLE_DAY_SELECTED, ListView.STYLE_ROW_SELECTED,
