@@ -257,9 +257,78 @@ public interface TextArea extends Component<TextArea>, Focusable<TextArea>, HasC
     /**
      * Returns how far the text is scrolled down.
      *
-     * @return the vertical scroll offset in UI units, as of the last paint
+     * @return the vertical scroll offset in UI units, as of the last paint or the last call that set it
      */
     float scrollY();
+
+    /**
+     * Scrolls to an offset. The offset is at least 0, and once the area has been laid out it is at most what its rows
+     * need; the next paint clamps it again to the rows in the area's size. The view stays there until the caret
+     * moves, the user scrolls, or it is set again.
+     *
+     * @param scrollY the vertical offset in UI units
+     * @return this text area
+     * @throws IllegalArgumentException if the offset is NaN
+     */
+    TextArea setScrollY(float scrollY);
+
+    /**
+     * Scrolls the least distance that shows the caret's row and column, as moving the caret does. Before the area has
+     * been laid out, it scrolls on the next paint.
+     *
+     * @return this text area
+     */
+    TextArea scrollToCaret();
+
+    /**
+     * Returns how many lines the text has: one more than its line breaks, whatever the wrapping.
+     *
+     * @return the number of lines, at least 1
+     */
+    int lineCount();
+
+    /**
+     * Returns the line a char index is on.
+     *
+     * @param index a char index; clamped to the text
+     * @return the line, from 0
+     */
+    int lineOf(int index);
+
+    /**
+     * Returns where a line starts.
+     *
+     * @param line the line, from 0
+     * @return the char index of the line's first char, or the text's length for an empty last line
+     * @throws IndexOutOfBoundsException if {@code line} is negative or not less than {@link #lineCount()}
+     */
+    int lineStart(int line);
+
+    /**
+     * Returns the column of a char index on its line, counted in code points from the line's start, as a code
+     * editor shows it.
+     *
+     * @param index a char index; clamped to the text, and moved off the middle of a surrogate pair
+     * @return the column, from 0
+     */
+    int columnOf(int index);
+
+    /**
+     * Returns whether Tab types a tab character.
+     *
+     * @return false by default
+     */
+    boolean acceptsTab();
+
+    /**
+     * Makes Tab type a tab character instead of moving focus, for an area used as a small code editor. While it is on
+     * and the area is editable, Tab types a tab, Shift+Tab does nothing, and Control+Tab and Control+Shift+Tab move
+     * focus. A read-only area lets Tab move focus as usual.
+     *
+     * @param accepts true to type tabs
+     * @return this text area
+     */
+    TextArea setAcceptsTab(boolean accepts);
 
     /**
      * A text area's own state in a {@link org.inspirenxe.strata.api.component.ComponentSnapshot}.

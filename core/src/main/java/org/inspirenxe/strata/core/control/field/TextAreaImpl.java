@@ -71,6 +71,10 @@ import java.util.function.UnaryOperator;
  * {@value org.inspirenxe.strata.api.layout.ScrollPanel#STYLE_SMOOTH} time through a {@link Motion}, adding to where a
  * glide under way is headed; keeping the caret in sight moves at once and stops a glide, so typing never waits.</p>
  *
+ * <p>Tab is left to the root, which moves focus, unless the area accepts tabs and is editable: then Tab types a tab
+ * as typing does, Shift+Tab is consumed and does nothing, and Control+Tab moves focus through the root, forward or
+ * with Shift backward. Lines and columns are counted from line breaks over the buffer, not from the rows.</p>
+ *
  * <p>A vertical scroll bar shows when the rows are taller than the area. An area that does not wrap also shows a
  * horizontal one along the bottom when its widest row does not fit; a horizontal wheel turn scrolls it by three
  * lines' height.</p>
@@ -126,6 +130,7 @@ public final class TextAreaImpl extends BuiltInComponent<TextArea> implements Te
     private Insets setPadding;
     private Insets themePadding;
     private boolean readOnly;
+    private boolean acceptsTab;
 
     private float scrollX;
     private float scrollY;
@@ -494,6 +499,91 @@ public final class TextAreaImpl extends BuiltInComponent<TextArea> implements Te
     @Override
     public float scrollY() {
         return this.scrollY;
+    }
+
+    @Override
+    public TextArea setScrollY(final float scrollY) {
+        if (Float.isNaN(scrollY)) {
+            throw new IllegalArgumentException("Scroll offset is NaN");
+        }
+        this.scrollY = Math.max(0f, scrollY);
+        this.revealPending = false;
+        if (this.isLaidOut()) {
+            this.ensureRows();
+        }
+        return this;
+    }
+
+    @Override
+    public TextArea scrollToCaret() {
+        if (this.isLaidOut()) {
+            this.ensureRows();
+            this.updateVisuals();
+            this.revealPending = false;
+            this.revealCaret();
+        } else {
+            this.revealPending = true;
+        }
+        return this;
+    }
+
+    /**
+     * Returns whether the area has been measured in a tree, so its rows can be worked out now.
+     */
+    private boolean isLaidOut() {
+        return this.isAttached() && this.lineHeight > 0f;
+    }
+
+    @Override
+    public int lineCount() {
+        int lines = 1;
+        for (int i = this.buffer.indexOf("\n", 0); i >= 0; i = this.buffer.indexOf("\n", i + 1)) {
+            lines++;
+        }
+        return lines;
+    }
+
+    @Override
+    public int lineOf(final int index) {
+        final int end = Math.max(0, Math.min(index, this.buffer.length()));
+        int line = 0;
+        for (int i = this.buffer.indexOf("\n", 0); i >= 0 && i < end; i = this.buffer.indexOf("\n", i + 1)) {
+            line++;
+        }
+        return line;
+    }
+
+    @Override
+    public int lineStart(final int line) {
+        if (line < 0) {
+            throw new IndexOutOfBoundsException("No line " + line);
+        }
+        int start = 0;
+        for (int i = 0; i < line; i++) {
+            final int newline = this.buffer.indexOf("\n", start);
+            if (newline < 0) {
+                throw new IndexOutOfBoundsException("No line " + line + " in " + (i + 1) + " lines");
+            }
+            start = newline + 1;
+        }
+        return start;
+    }
+
+    @Override
+    public int columnOf(final int index) {
+        final int at = this.boundaries.snap(index);
+        return this.buffer.codePointCount(this.startOfLineAt(at), at);
+    }
+
+    @Override
+    public boolean acceptsTab() {
+        return this.acceptsTab;
+    }
+
+    @Override
+    public TextArea setAcceptsTab(final boolean accepts) {
+        this.acceptsTab = accepts;
+        return this;
     }
 
     // ------------------------------------------------------------------
@@ -1033,6 +1123,7 @@ public final class TextAreaImpl extends BuiltInComponent<TextArea> implements Te
         final Key key = event.key();
         final Modifiers modifiers = event.modifiers();
         if (key == Key.TAB) {
+            this.tabKey(event);
             return;
         }
         this.ensureRows();
@@ -1048,6 +1139,26 @@ public final class TextAreaImpl extends BuiltInComponent<TextArea> implements Te
             event.consume();
         }
         this.editor.settle();
+    }
+
+    /**
+     * Handles Tab while the area accepts tabs and is editable: types a tab, ignores Shift+Tab, and moves focus for
+     * Control+Tab. Otherwise leaves Tab to the root.
+     */
+    private void tabKey(final KeyEvent event) {
+        final Modifiers modifiers = event.modifiers();
+        if (!this.acceptsTab || this.readOnly || modifiers.alt()) {
+            return;
+        }
+        if (modifiers.control()) {
+            this.hostRoot().moveFocus(modifiers.shift());
+        } else if (!modifiers.shift()) {
+            this.ensureRows();
+            this.updateVisuals();
+            this.edits.edit(this.editor.selectionStart(), this.editor.selectionEnd(), "\t", EditHistory.Kind.TYPE);
+            this.editor.settle();
+        }
+        event.consume();
     }
 
     @Override
@@ -1100,7 +1211,7 @@ public final class TextAreaImpl extends BuiltInComponent<TextArea> implements Te
         return this.boundaries.previousCodePoint(index);
     }
 
-    private int lineStart(final int index) {
+    private int startOfLineAt(final int index) {
         final int newline = this.buffer.lastIndexOf("\n", index - 1);
         return newline < 0 ? 0 : newline + 1;
     }
@@ -1205,7 +1316,7 @@ public final class TextAreaImpl extends BuiltInComponent<TextArea> implements Te
 
         @Override
         public int lineStart(final int index) {
-            return TextAreaImpl.this.lineStart(index);
+            return TextAreaImpl.this.startOfLineAt(index);
         }
 
         @Override
