@@ -15,6 +15,8 @@
  */
 package org.inspirenxe.strata.spi;
 
+import org.inspirenxe.strata.api.text.PluralCategory;
+
 import java.util.Locale;
 import java.util.Optional;
 
@@ -36,6 +38,9 @@ import java.util.Optional;
  *     asking {@link #translate} for the {@code strata.date.*} and {@code strata.time.*} keys. Core caches what it
  *     reads per locale and version, so a translator whose locale changes must change its version too. The default is
  *     the JVM's default locale for formatting.</li>
+ *     <li>{@link #plural} gives the plural category of a count, which plural text picks its translation by. The
+ *     default applies Strata's cardinal rules from the Unicode CLDR to {@link #locale()}. A translator whose text
+ *     system has rules of its own may override it.</li>
  *     <li>Calls may come from any thread, since code can read text outside the UI thread. Store the version in a
  *     volatile field or an atomic.</li>
  * </ul>
@@ -80,5 +85,19 @@ public interface Translator {
      */
     default Locale locale() {
         return Locale.getDefault(Locale.Category.FORMAT);
+    }
+
+    /**
+     * Returns the plural category of a count in the current language, which
+     * {@link org.inspirenxe.strata.api.text.Text#plural plural text} picks its translation by. A translator whose
+     * text system has plural rules of its own overrides this to use them, so Strata's text agrees with the engine's.
+     * Core calls it on every resolve, from any thread, so it must be cheap; it must not return null.
+     *
+     * @param count the count, which may be negative
+     * @return Strata's rule for {@link #locale()}, as {@link PluralCategory#of} gives it, unless the translator
+     *     returns another
+     */
+    default PluralCategory plural(final long count) {
+        return PluralCategory.of(this.locale(), count);
     }
 }

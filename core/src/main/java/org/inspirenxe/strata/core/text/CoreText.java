@@ -204,7 +204,14 @@ sealed interface CoreText extends Text {
 
         @Override
         public List<TextSpan> resolve(final TextStyle base) {
-            final String pattern = Translations.translate(this.key);
+            return Translatable.format(Translations.translate(this.key), this.args, base);
+        }
+
+        /**
+         * Formats a pattern: {@code %s} takes the next argument, {@code %1$s} the first, and {@code %%} is a
+         * percent sign. A specifier past the arguments is shown as written.
+         */
+        static List<TextSpan> format(final String pattern, final List<Object> args, final TextStyle base) {
             final List<TextSpan> out = new ArrayList<>();
             final StringBuilder literal = new StringBuilder();
             int next = 0;
@@ -240,14 +247,14 @@ sealed interface CoreText extends Text {
                     literal.append(c);
                     continue;
                 }
-                if (index < 0 || index >= this.args.size()) {
+                if (index < 0 || index >= args.size()) {
                     literal.append(pattern, i, specifierEnd);
                 } else {
                     if (!literal.isEmpty()) {
                         out.add(new TextSpan(literal.toString(), base));
                         literal.setLength(0);
                     }
-                    final Object arg = this.args.get(index);
+                    final Object arg = args.get(index);
                     if (arg instanceof final Text text) {
                         out.addAll(text.resolve(base));
                     } else {
@@ -260,6 +267,25 @@ sealed interface CoreText extends Text {
                 out.add(new TextSpan(literal.toString(), base));
             }
             return Spans.normalize(out);
+        }
+    }
+
+    /**
+     * A translation key whose pattern is picked by a count's plural category, formatted anew on every resolve.
+     *
+     * @param key the key without its category
+     * @param count the count
+     * @param args the arguments, text or any object
+     */
+    record Plural(String key, long count, List<Object> args) implements CoreText {
+        public Plural {
+            Objects.requireNonNull(key, "key");
+            args = List.copyOf(args);
+        }
+
+        @Override
+        public List<TextSpan> resolve(final TextStyle base) {
+            return Translatable.format(Translations.translatePlural(this.key, this.count), this.args, base);
         }
     }
 

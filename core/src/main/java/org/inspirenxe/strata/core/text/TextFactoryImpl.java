@@ -16,6 +16,7 @@
 package org.inspirenxe.strata.core.text;
 
 import org.inspirenxe.strata.api.text.InlineElement;
+import org.inspirenxe.strata.api.text.PluralCategory;
 import org.inspirenxe.strata.api.text.Text;
 import org.inspirenxe.strata.api.text.TextFactory;
 import org.inspirenxe.strata.api.text.TextStyle;
@@ -24,6 +25,7 @@ import org.inspirenxe.strata.spi.TextSource;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Locale;
 import java.util.Objects;
 
 /**
@@ -62,6 +64,19 @@ public final class TextFactoryImpl implements TextFactory {
             Objects.requireNonNull(arg, "arg");
         }
         return new CoreText.Translatable(key, Arrays.asList(args));
+    }
+
+    @Override
+    public Text plural(final String key, final long count, final Object... args) {
+        for (final Object arg : args) {
+            Objects.requireNonNull(arg, "arg");
+        }
+        return new CoreText.Plural(key, count, Arrays.asList(args));
+    }
+
+    @Override
+    public PluralCategory pluralCategory(final Locale locale, final long count) {
+        return PluralRules.select(Objects.requireNonNull(locale, "locale"), count);
     }
 
     @Override

@@ -15,6 +15,7 @@
  */
 package org.inspirenxe.strata.core.text;
 
+import org.inspirenxe.strata.api.text.PluralCategory;
 import org.inspirenxe.strata.spi.Translator;
 
 import java.util.Map;
@@ -130,18 +131,51 @@ public final class Translations {
      * @return the pattern
      */
     public static String translate(final String key) {
-        final String translated = Translations.translator.translate(key).orElse(null);
-        if (translated != null) {
-            return translated;
-        }
-        final String fallback = Translations.DEFAULTS.get(key);
-        if (fallback != null) {
-            return fallback;
+        final String found = Translations.lookup(key);
+        if (found != null) {
+            return found;
         }
         if (Translations.MISSING.add(key)) {
             LOGGER.log(System.Logger.Level.WARNING, "No translation for " + key);
         }
         return key;
+    }
+
+    /**
+     * Returns the pattern for a key from the translator, then Strata's English, without warning when neither has it.
+     *
+     * @param key the key
+     * @return the pattern, or null when there is none
+     */
+    public static String lookup(final String key) {
+        final String translated = Translations.translator.translate(key).orElse(null);
+        return translated != null ? translated : Translations.DEFAULTS.get(key);
+    }
+
+    /**
+     * Returns the pattern for a count: the translation of {@code key.<category>} for the translator's
+     * {@linkplain Translator#plural category} of the count, else of {@code key.other}, else {@code key.other} itself
+     * with one warning. A translator that returns null for the category, or throws, counts as {@code other}.
+     *
+     * @param key the key without its category
+     * @param count the count
+     * @return the pattern
+     */
+    public static String translatePlural(final String key, final long count) {
+        PluralCategory category;
+        try {
+            category = Translations.translator.plural(count);
+        } catch (final RuntimeException e) {
+            LOGGER.log(System.Logger.Level.WARNING, "The translator failed to give the plural of " + count, e);
+            category = null;
+        }
+        if (category != null && category != PluralCategory.OTHER) {
+            final String found = Translations.lookup(key + '.' + category.suffix());
+            if (found != null) {
+                return found;
+            }
+        }
+        return Translations.translate(key + '.' + PluralCategory.OTHER.suffix());
     }
 
     /**
