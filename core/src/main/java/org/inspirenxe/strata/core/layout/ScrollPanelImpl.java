@@ -120,12 +120,18 @@ public final class ScrollPanelImpl extends BuiltInContainer<ScrollPanel> impleme
 
     @Override
     public ScrollPanel setScroll(final float x, final float y) {
+        if (Float.isNaN(x) || Float.isNaN(y)) {
+            throw new IllegalArgumentException("A scroll offset must not be NaN: " + x + ", " + y);
+        }
         this.scrollTo(x, y);
         return this;
     }
 
     @Override
     public ScrollPanel scrollBy(final float dx, final float dy) {
+        if (Float.isNaN(dx) || Float.isNaN(dy)) {
+            throw new IllegalArgumentException("A scroll distance must not be NaN: " + dx + ", " + dy);
+        }
         this.scrollTo(this.scrollX + dx, this.scrollY + dy);
         return this;
     }

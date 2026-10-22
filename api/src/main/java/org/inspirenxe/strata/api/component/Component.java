@@ -272,20 +272,24 @@ public interface Component<T extends Component<T>> extends EventTarget<T> {
 
     /**
      * Sets the smallest size the component may take. Applies to measured sizes, fixed sizes and stretching alike.
+     * Where a minimum is larger than the maximum, the minimum wins.
      *
-     * @param minWidth the minimum width
-     * @param minHeight the minimum height
+     * @param minWidth the minimum width; 0 or more and finite
+     * @param minHeight the minimum height; 0 or more and finite
      * @return this component
+     * @throws IllegalArgumentException if either value is negative, infinite or NaN
      */
     T setMinSize(float minWidth, float minHeight);
 
     /**
      * Sets the largest size the component may take. Applies to measured sizes, fixed sizes and stretching alike.
      * The maximum also limits the space offered to the component when it is measured, so text wraps within it.
+     * Where the minimum is larger than a maximum, the minimum wins.
      *
      * @param maxWidth the maximum width; {@link Float#POSITIVE_INFINITY} for no limit
      * @param maxHeight the maximum height; {@link Float#POSITIVE_INFINITY} for no limit
      * @return this component
+     * @throws IllegalArgumentException if either value is negative or NaN
      */
     T setMaxSize(float maxWidth, float maxHeight);
 
@@ -293,8 +297,9 @@ public interface Component<T extends Component<T>> extends EventTarget<T> {
      * Fixes the width, replacing the measured width and overriding {@code STRETCH}. The minimum and maximum still
      * apply.
      *
-     * @param width the width, or {@link Float#NaN} to go back to the measured width
+     * @param width the width, 0 or more and finite, or {@link Float#NaN} to go back to the measured width
      * @return this component
+     * @throws IllegalArgumentException if the width is negative or infinite
      */
     T setWidth(float width);
 
@@ -302,8 +307,9 @@ public interface Component<T extends Component<T>> extends EventTarget<T> {
      * Fixes the height, replacing the measured height and overriding {@code STRETCH}. The minimum and maximum still
      * apply.
      *
-     * @param height the height, or {@link Float#NaN} to go back to the measured height
+     * @param height the height, 0 or more and finite, or {@link Float#NaN} to go back to the measured height
      * @return this component
+     * @throws IllegalArgumentException if the height is negative or infinite
      */
     T setHeight(float height);
 
@@ -313,6 +319,7 @@ public interface Component<T extends Component<T>> extends EventTarget<T> {
      * @param width the width, or {@link Float#NaN} for the measured width
      * @param height the height, or {@link Float#NaN} for the measured height
      * @return this component
+     * @throws IllegalArgumentException if either value is negative or infinite
      */
     default T setSize(final float width, final float height) {
         this.setWidth(width);

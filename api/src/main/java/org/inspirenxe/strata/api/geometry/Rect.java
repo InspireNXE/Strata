@@ -24,8 +24,8 @@ package org.inspirenxe.strata.api.geometry;
  *
  * @param x the left edge
  * @param y the top edge
- * @param width the width; clamped to zero if negative
- * @param height the height; clamped to zero if negative
+ * @param width the width; zero if negative or NaN
+ * @param height the height; zero if negative or NaN
  */
 public record Rect(float x, float y, float width, float height) {
     /**
@@ -34,11 +34,11 @@ public record Rect(float x, float y, float width, float height) {
     public static final Rect ZERO = new Rect(0, 0, 0, 0);
 
     /**
-     * Creates a rectangle, clamping a negative width or height to zero.
+     * Creates a rectangle, making a negative or NaN width or height zero.
      */
     public Rect {
-        width = Math.max(0f, width);
-        height = Math.max(0f, height);
+        width = width > 0f ? width : 0f;
+        height = height > 0f ? height : 0f;
     }
 
     /**
@@ -151,12 +151,14 @@ public record Rect(float x, float y, float width, float height) {
     }
 
     /**
-     * Returns whether two rectangles overlap. Rectangles that only share an edge do not.
+     * Returns whether two rectangles overlap. Rectangles that only share an edge do not, and an empty rectangle
+     * overlaps nothing, since it has no area.
      *
      * @param other the other rectangle
      * @return true if some area lies inside both
      */
     public boolean intersects(final Rect other) {
-        return this.x < other.right() && other.x < this.right() && this.y < other.bottom() && other.y < this.bottom();
+        return this.width > 0f && this.height > 0f && other.width > 0f && other.height > 0f
+                && this.x < other.right() && other.x < this.right() && this.y < other.bottom() && other.y < this.bottom();
     }
 }

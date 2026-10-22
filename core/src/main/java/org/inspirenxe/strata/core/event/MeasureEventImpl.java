@@ -86,11 +86,18 @@ public final class MeasureEventImpl extends EventImpl implements MeasureEvent {
 
     @Override
     public void setWidth(final float width) {
-        this.width = Math.max(0f, width);
+        this.width = Math.max(0f, finite(width, "width"));
     }
 
     @Override
     public void setHeight(final float height) {
-        this.height = Math.max(0f, height);
+        this.height = Math.max(0f, finite(height, "height"));
+    }
+
+    private static float finite(final float length, final String name) {
+        if (!Float.isFinite(length)) {
+            throw new IllegalArgumentException("A measured " + name + " must be finite: " + length);
+        }
+        return length;
     }
 }

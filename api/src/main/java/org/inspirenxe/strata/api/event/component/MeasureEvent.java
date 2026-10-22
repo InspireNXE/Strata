@@ -71,6 +71,7 @@ public interface MeasureEvent extends Event {
      * Replaces the content width.
      *
      * @param width the width; negative values count as 0
+     * @throws IllegalArgumentException if the width is infinite or NaN
      */
     void setWidth(float width);
 
@@ -78,6 +79,7 @@ public interface MeasureEvent extends Event {
      * Replaces the content height.
      *
      * @param height the height; negative values count as 0
+     * @throws IllegalArgumentException if the height is infinite or NaN
      */
     void setHeight(float height);
 }

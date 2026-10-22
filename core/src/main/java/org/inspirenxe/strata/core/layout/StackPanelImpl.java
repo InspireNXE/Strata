@@ -76,6 +76,9 @@ public final class StackPanelImpl extends BuiltInContainer<StackPanel> implement
 
     @Override
     public StackPanel setSpacing(final float spacing) {
+        if (!Float.isFinite(spacing)) {
+            throw new IllegalArgumentException("Spacing must be finite: " + spacing);
+        }
         this.spacing = spacing;
         this.invalidateLayout();
         return this;

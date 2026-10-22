@@ -81,6 +81,7 @@ public interface StackPanel extends Container<StackPanel> {
      *
      * @param spacing the spacing in UI units
      * @return this panel
+     * @throws IllegalArgumentException if the spacing is infinite or NaN
      */
     StackPanel setSpacing(float spacing);
 

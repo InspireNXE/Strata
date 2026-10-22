@@ -999,6 +999,10 @@ public class Node implements ComponentPeer {
 
     @Override
     public final void setMinSize(final float minWidth, final float minHeight) {
+        if (!(minWidth >= 0f) || !(minHeight >= 0f) || Float.isInfinite(minWidth) || Float.isInfinite(minHeight)) {
+            throw new IllegalArgumentException("A minimum size must be finite and not negative: " + minWidth + " by "
+                    + minHeight);
+        }
         this.minWidth = minWidth;
         this.minHeight = minHeight;
         this.invalidateLayout();
@@ -1006,6 +1010,10 @@ public class Node implements ComponentPeer {
 
     @Override
     public final void setMaxSize(final float maxWidth, final float maxHeight) {
+        if (!(maxWidth >= 0f) || !(maxHeight >= 0f)) {
+            throw new IllegalArgumentException("A maximum size must not be negative or NaN: " + maxWidth + " by "
+                    + maxHeight);
+        }
         this.maxWidth = maxWidth;
         this.maxHeight = maxHeight;
         this.invalidateLayout();
@@ -1013,14 +1021,24 @@ public class Node implements ComponentPeer {
 
     @Override
     public final void setWidth(final float width) {
-        this.explicitWidth = width;
+        this.explicitWidth = fixedLength(width, "width");
         this.invalidateLayout();
     }
 
     @Override
     public final void setHeight(final float height) {
-        this.explicitHeight = height;
+        this.explicitHeight = fixedLength(height, "height");
         this.invalidateLayout();
+    }
+
+    /**
+     * Checks a fixed width or height: NaN, which means none, or a finite length that is not negative.
+     */
+    private static float fixedLength(final float length, final String name) {
+        if (!Float.isNaN(length) && (length < 0f || Float.isInfinite(length))) {
+            throw new IllegalArgumentException("A fixed " + name + " must be finite and not negative: " + length);
+        }
+        return length;
     }
 
     @Override

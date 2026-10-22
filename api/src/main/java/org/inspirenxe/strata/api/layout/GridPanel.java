@@ -98,6 +98,7 @@ public interface GridPanel extends Container<GridPanel> {
      * @param columnSpacing the gap between columns
      * @param rowSpacing the gap between rows
      * @return this grid
+     * @throws IllegalArgumentException if either gap is infinite or NaN
      */
     GridPanel setSpacing(float columnSpacing, float rowSpacing);
 

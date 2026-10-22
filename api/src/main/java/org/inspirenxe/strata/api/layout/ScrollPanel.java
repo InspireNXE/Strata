@@ -147,6 +147,7 @@ public interface ScrollPanel extends Container<ScrollPanel>, Focusable<ScrollPan
      * @param x the horizontal offset
      * @param y the vertical offset
      * @return this panel
+     * @throws IllegalArgumentException if either offset is NaN
      */
     ScrollPanel setScroll(float x, float y);
 
@@ -156,6 +157,7 @@ public interface ScrollPanel extends Container<ScrollPanel>, Focusable<ScrollPan
      * @param dx the change to the horizontal offset
      * @param dy the change to the vertical offset
      * @return this panel
+     * @throws IllegalArgumentException if either change is NaN
      */
     ScrollPanel scrollBy(float dx, float dy);
 

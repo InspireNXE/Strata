@@ -80,16 +80,19 @@ public final class GridPanelImpl extends BuiltInContainer<GridPanel> implements 
 
     @Override
     public GridPanel columns(final GridLength... lengths) {
+        // Checked before the old definitions go, so a bad argument changes nothing
+        final List<GridLength> checked = List.of(lengths);
         this.columns.clear();
-        this.columns.addAll(Arrays.asList(lengths));
+        this.columns.addAll(checked);
         this.invalidateLayout();
         return this;
     }
 
     @Override
     public GridPanel rows(final GridLength... lengths) {
+        final List<GridLength> checked = List.of(lengths);
         this.rows.clear();
-        this.rows.addAll(Arrays.asList(lengths));
+        this.rows.addAll(checked);
         this.invalidateLayout();
         return this;
     }
@@ -120,6 +123,9 @@ public final class GridPanelImpl extends BuiltInContainer<GridPanel> implements 
 
     @Override
     public GridPanel setSpacing(final float columnSpacing, final float rowSpacing) {
+        if (!Float.isFinite(columnSpacing) || !Float.isFinite(rowSpacing)) {
+            throw new IllegalArgumentException("Spacing must be finite: " + columnSpacing + ", " + rowSpacing);
+        }
         this.columnSpacing = columnSpacing;
         this.rowSpacing = rowSpacing;
         this.invalidateLayout();
