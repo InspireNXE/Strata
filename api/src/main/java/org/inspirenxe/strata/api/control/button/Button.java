@@ -19,6 +19,7 @@ import org.inspirenxe.strata.api.component.Component;
 import org.inspirenxe.strata.api.component.Focusable;
 import org.inspirenxe.strata.api.component.HasCursor;
 import org.inspirenxe.strata.api.component.HasTooltip;
+import org.inspirenxe.strata.api.control.attribute.text.HasIcon;
 import org.inspirenxe.strata.api.control.attribute.text.HasText;
 import org.inspirenxe.strata.api.event.EventType;
 import org.inspirenxe.strata.api.event.control.ControlEvent;
@@ -26,7 +27,6 @@ import org.inspirenxe.strata.api.event.control.RequestEvent;
 import org.inspirenxe.strata.api.geometry.Insets;
 import org.inspirenxe.strata.api.text.Text;
 import org.inspirenxe.strata.api.theme.SpriteId;
-import org.inspirenxe.strata.api.visual.Visual;
 
 import java.util.Objects;
 
@@ -79,7 +79,7 @@ import java.util.Objects;
  * interface.</p>
  */
 public interface Button extends Component<Button>, Focusable<Button>, HasCursor<Button>, HasTooltip<Button>,
-        HasText<Button> {
+        HasText<Button>, HasIcon<Button> {
     /**
      * Style key for the idle face (paint, required).
      */
@@ -217,69 +217,6 @@ public interface Button extends Component<Button>, Focusable<Button>, HasCursor<
     default Button setTextPadding(final float left, final float top, final float right, final float bottom) {
         return this.setTextPadding(new Insets(left, top, right, bottom));
     }
-
-    /**
-     * Returns the icon sprite.
-     *
-     * @return the sprite, or null if the icon is a visual or there is none
-     */
-    SpriteId iconSprite();
-
-    /**
-     * Returns the icon visual.
-     *
-     * @return the visual, or null if the icon is a sprite or there is none
-     */
-    Visual iconVisual();
-
-    /**
-     * Shows a sprite before the caption, replacing any icon. The size stays what it was, 16 by 16 by default. A new
-     * layout runs.
-     *
-     * @param sprite the sprite; see {@link SpriteId} for where engines look for it
-     * @return this button
-     */
-    Button setIcon(SpriteId sprite);
-
-    /**
-     * Shows a visual before the caption, replacing any icon, at the visual's natural size. A new layout runs.
-     *
-     * @param visual the visual
-     * @return this button
-     */
-    Button setIcon(Visual visual);
-
-    /**
-     * Removes the icon. A new layout runs.
-     *
-     * @return this button
-     */
-    Button clearIcon();
-
-    /**
-     * Returns the width the icon is drawn at.
-     *
-     * @return the width in UI units; 16 by default
-     */
-    float iconWidth();
-
-    /**
-     * Returns the height the icon is drawn at.
-     *
-     * @return the height in UI units; 16 by default
-     */
-    float iconHeight();
-
-    /**
-     * Sets the size the icon is drawn at. Strata cannot ask an engine for a sprite's size, so the caller gives it.
-     * A new layout runs.
-     *
-     * @param width the width in UI units, finite and not negative
-     * @param height the height in UI units, finite and not negative
-     * @return this button
-     * @throws IllegalArgumentException if either size is negative, infinite or not a number
-     */
-    Button setIconSize(float width, float height);
 
     /**
      * Returns whether the button is a link.

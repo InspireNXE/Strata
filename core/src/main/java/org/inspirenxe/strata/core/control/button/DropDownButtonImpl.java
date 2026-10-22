@@ -108,13 +108,13 @@ public final class DropDownButtonImpl extends BuiltInComponent<DropDownButton> i
     }
 
     @Override
-    public SpriteId iconSprite() {
-        return this.content.iconSprite();
+    public Optional<SpriteId> iconSprite() {
+        return Optional.ofNullable(this.content.iconSprite());
     }
 
     @Override
-    public Visual iconVisual() {
-        return this.content.iconVisual();
+    public Optional<Visual> iconVisual() {
+        return Optional.ofNullable(this.content.iconVisual());
     }
 
     @Override

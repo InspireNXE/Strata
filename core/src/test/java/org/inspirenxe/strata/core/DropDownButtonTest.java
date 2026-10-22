@@ -622,16 +622,16 @@ class DropDownButtonTest {
         @Test
         void iconsAreSpritesOrVisuals() {
             final DropDownButton button = DropDownButtonTest.this.ui.dropDownButton("Sort").setIcon(ICON);
-            assertSame(ICON, button.iconSprite());
+            assertSame(ICON, button.iconSprite().orElseThrow());
             assertEquals(16f, button.iconWidth());
             final Visual visual = () -> new Size(10f, 12f);
             button.setIcon(visual);
-            assertSame(visual, button.iconVisual());
-            assertEquals(null, button.iconSprite());
+            assertSame(visual, button.iconVisual().orElseThrow());
+            assertTrue(button.iconSprite().isEmpty());
             assertEquals(10f, button.iconWidth());
             assertEquals(12f, button.iconHeight());
             button.clearIcon();
-            assertEquals(null, button.iconVisual());
+            assertTrue(button.iconVisual().isEmpty());
             assertThrows(IllegalArgumentException.class, () -> button.setIconSize(-1, 4));
         }
 

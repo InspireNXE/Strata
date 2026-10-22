@@ -22,11 +22,10 @@ import org.inspirenxe.strata.api.component.HasTooltip;
 import org.inspirenxe.strata.api.control.attribute.popup.Closable;
 import org.inspirenxe.strata.api.control.attribute.popup.Openable;
 import org.inspirenxe.strata.api.control.attribute.popup.Popup;
+import org.inspirenxe.strata.api.control.attribute.text.HasIcon;
 import org.inspirenxe.strata.api.control.attribute.text.HasText;
 import org.inspirenxe.strata.api.geometry.Insets;
 import org.inspirenxe.strata.api.text.Text;
-import org.inspirenxe.strata.api.theme.SpriteId;
-import org.inspirenxe.strata.api.visual.Visual;
 
 import java.util.Objects;
 import java.util.Optional;
@@ -50,7 +49,8 @@ import java.util.Optional;
  * nothing to show (a menu with no items, a flyout with no content), the button asks nothing and stays closed. A popup
  * belongs to one button at a time.</p>
  *
- * <p>It looks and measures like a {@link Button}, with an arrow 7 units wide and 4 tall at the right end of the
+ * <p>It looks and measures like a {@link Button}, its icon included, with an arrow 7 units wide and 4 tall at the
+ * right end of the
  * space inside its padding, 4 units after the caption. While open it draws the pressed face. It is focusable and
  * tabbable, shows the hand cursor, is at least 20 units wide, and asks to be at least 20 tall, though a smaller
  * height set on it applies. A disabled button takes no focus, does not open,
@@ -83,7 +83,8 @@ import java.util.Optional;
  * interface.</p>
  */
 public interface DropDownButton extends Component<DropDownButton>, Focusable<DropDownButton>,
-        HasCursor<DropDownButton>, HasTooltip<DropDownButton>, HasText<DropDownButton>, Openable<DropDownButton> {
+        HasCursor<DropDownButton>, HasTooltip<DropDownButton>, HasText<DropDownButton>, HasIcon<DropDownButton>,
+        Openable<DropDownButton> {
     /**
      * Style key for the arrow (paint, optional).
      */
@@ -150,69 +151,6 @@ public interface DropDownButton extends Component<DropDownButton>, Focusable<Dro
     default DropDownButton setTextPadding(final float left, final float top, final float right, final float bottom) {
         return this.setTextPadding(new Insets(left, top, right, bottom));
     }
-
-    /**
-     * Returns the icon sprite.
-     *
-     * @return the sprite, or null if the icon is a visual or there is none
-     */
-    SpriteId iconSprite();
-
-    /**
-     * Returns the icon visual.
-     *
-     * @return the visual, or null if the icon is a sprite or there is none
-     */
-    Visual iconVisual();
-
-    /**
-     * Shows a sprite before the caption, replacing any icon. The size stays what it was, 16 by 16 by default. A new
-     * layout runs.
-     *
-     * @param sprite the sprite; see {@link SpriteId} for where engines look for it
-     * @return this button
-     */
-    DropDownButton setIcon(SpriteId sprite);
-
-    /**
-     * Shows a visual before the caption, replacing any icon, at the visual's natural size. A new layout runs.
-     *
-     * @param visual the visual
-     * @return this button
-     */
-    DropDownButton setIcon(Visual visual);
-
-    /**
-     * Removes the icon. A new layout runs.
-     *
-     * @return this button
-     */
-    DropDownButton clearIcon();
-
-    /**
-     * Returns the width the icon is drawn at.
-     *
-     * @return the width in UI units; 16 by default
-     */
-    float iconWidth();
-
-    /**
-     * Returns the height the icon is drawn at.
-     *
-     * @return the height in UI units; 16 by default
-     */
-    float iconHeight();
-
-    /**
-     * Sets the size the icon is drawn at. Strata cannot ask an engine for a sprite's size, so the caller gives it.
-     * A new layout runs.
-     *
-     * @param width the width in UI units, finite and not negative
-     * @param height the height in UI units, finite and not negative
-     * @return this button
-     * @throws IllegalArgumentException if either size is negative, infinite or not a number
-     */
-    DropDownButton setIconSize(float width, float height);
 
     /**
      * Returns the popup the button opens.

@@ -33,6 +33,7 @@ import org.inspirenxe.strata.core.node.BuiltInComponent;
 import org.inspirenxe.strata.core.node.ComponentFactoryImpl;
 import org.inspirenxe.strata.core.text.TextLine;
 
+import java.util.Optional;
 import java.util.Set;
 
 /**
@@ -122,13 +123,13 @@ public final class ButtonImpl extends BuiltInComponent<Button> implements Button
     }
 
     @Override
-    public SpriteId iconSprite() {
-        return this.content.iconSprite();
+    public Optional<SpriteId> iconSprite() {
+        return Optional.ofNullable(this.content.iconSprite());
     }
 
     @Override
-    public Visual iconVisual() {
-        return this.content.iconVisual();
+    public Optional<Visual> iconVisual() {
+        return Optional.ofNullable(this.content.iconVisual());
     }
 
     @Override

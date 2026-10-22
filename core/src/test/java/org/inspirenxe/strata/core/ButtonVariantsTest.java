@@ -269,11 +269,11 @@ class ButtonVariantsTest {
             assertEquals(List.of(0xFFFFFFFF), this.render().tints);
             this.button.setEnabled(false);
             assertEquals(List.of(0xFF808080), this.render().tints);
-            assertEquals(ICON, this.button.iconSprite());
+            assertEquals(ICON, this.button.iconSprite().orElseThrow());
             this.button.clearIcon();
             ButtonVariantsTest.this.test.host().layout();
-            assertNull(this.button.iconSprite());
-            assertNull(this.button.iconVisual());
+            assertTrue(this.button.iconSprite().isEmpty());
+            assertTrue(this.button.iconVisual().isEmpty());
             assertEquals(List.of(), this.render().sprites);
             assertEquals(new Rect(0, 0, 28, 20), this.button.bounds());
         }

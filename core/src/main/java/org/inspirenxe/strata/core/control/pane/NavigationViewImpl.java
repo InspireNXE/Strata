@@ -84,8 +84,9 @@ import java.util.function.Function;
  * rows of hidden children are hidden, not removed. Rows are built for every entry, since navigation panes are short,
  * and rebuilt when the entries change.</p>
  *
- * <p>An item is a line of the item text style plus the item padding's top and bottom tall. Its icon is a square one
- * line tall, and children are indented by a line and {@link #GAP}, so a child's icon lines up with its parent's text.
+ * <p>An item is a line of the item text style plus the item padding's top and bottom tall. Its icon sits in a square
+ * one line tall, at the item's icon size in the middle or scaled down to fit, and children are indented by a line and
+ * {@link #GAP}, so a child's icon lines up with its parent's text.
  * A separator is a one-unit line with {@link #SEPARATOR_SPACE} above and below. The column of icons is an item's
  * height plus the pane padding's sides wide, and the bar of {@code MINIMAL} an item's height plus the pane padding's
  * top and bottom tall.</p>
@@ -1591,13 +1592,13 @@ public final class NavigationViewImpl extends BuiltInComposite<NavigationView> i
             }
             final NavigationItemImpl item = (NavigationItemImpl) this.entry;
             if (compact) {
-                this.iconRect = new Rect(bounds.x() + (bounds.width() - line) * 0.5f,
-                        bounds.y() + (bounds.height() - line) * 0.5f, line, line);
+                this.iconRect = fitIcon(item, bounds.x() + (bounds.width() - line) * 0.5f,
+                        bounds.y() + (bounds.height() - line) * 0.5f, line);
                 this.badgeRect = this.badge.cornerAt(bounds.right(), bounds.bottom());
                 return;
             }
             final float left = bounds.x() + padding.left() + this.depth * (line + GAP);
-            this.iconRect = new Rect(left, bounds.y() + (bounds.height() - line) * 0.5f, line, line);
+            this.iconRect = fitIcon(item, left, bounds.y() + (bounds.height() - line) * 0.5f, line);
             float right = bounds.right() - padding.right();
             if (!item.children().isEmpty()) {
                 this.arrowX = right - Rings.ARROW_LONG;
@@ -1618,6 +1619,20 @@ public final class NavigationViewImpl extends BuiltInComposite<NavigationView> i
             this.shownNormal = this.normal.ellipsize(room, view.itemText, metrics);
             this.shownSelected = this.selectedLine.ellipsize(room, view.itemTextSelected, metrics);
             this.shownDisabled = this.disabled.ellipsize(room, view.itemTextDisabled, metrics);
+        }
+
+        /**
+         * Returns where an item's icon draws in its square slot one line tall: at its size in the middle, or scaled
+         * down to fit, keeping its shape.
+         */
+        private static Rect fitIcon(final NavigationItemImpl item, final float x, final float y, final float line) {
+            final float width = item.iconWidth();
+            final float height = item.iconHeight();
+            final float scale = Math.min(1f, Math.min(width > line ? line / width : 1f,
+                    height > line ? line / height : 1f));
+            final float drawnWidth = width * scale;
+            final float drawnHeight = height * scale;
+            return new Rect(x + (line - drawnWidth) * 0.5f, y + (line - drawnHeight) * 0.5f, drawnWidth, drawnHeight);
         }
 
         @Override
@@ -1645,10 +1660,10 @@ public final class NavigationViewImpl extends BuiltInComposite<NavigationView> i
                 view.itemHovered.paint(painter, bounds);
             }
             final int tint = enabled ? WHITE : DISABLED_ICON_TINT;
-            if (item.iconVisual() != null) {
-                painter.visual(item.iconVisual(), this.iconRect, tint);
-            } else if (item.iconSprite() != null) {
-                painter.sprite(item.iconSprite(), this.iconRect, tint);
+            if (item.visual() != null) {
+                painter.visual(item.visual(), this.iconRect, tint);
+            } else if (item.sprite() != null) {
+                painter.sprite(item.sprite(), this.iconRect, tint);
             }
             if (!compact) {
                 (isSelected && enabled ? this.shownSelected : enabled ? this.shownNormal : this.shownDisabled)
