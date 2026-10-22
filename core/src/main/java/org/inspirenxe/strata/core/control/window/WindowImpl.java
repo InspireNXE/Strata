@@ -49,14 +49,15 @@ import java.util.Set;
 
 /**
  * The core {@link Window}. The close button is an {@code x} at the right end of the title bar, {@link #CLOSE_WIDTH}
- * units wide and as tall as the bar. Dragging keeps the window's bounds inside the slot its parent last gave it. The
- * window asks for its largest child plus padding and the title bar, and at least the title's width plus room for
- * the close button.
+ * units wide and as tall as the bar. Dragging keeps the window's bounds inside the slot its parent last gave it, and
+ * a window the user moved or resized is moved back inside when a later layout gives it a smaller or shifted slot,
+ * until code sets its offset. The window asks for its largest child plus padding and the title bar, and at least the
+ * title's width plus room for the close button.
  *
  * <p>A press on the close button closes; otherwise a press on a part that resizes starts a resize, and a press
  * elsewhere on the title bar starts a move. A resize works from the bounds and pointer position at the press, so
- * each move of the drag works out the size afresh rather than adding up steps. The grip's six squares are placed
- * during arrange, so painting allocates nothing.</p>
+ * each move of the drag works out the size afresh rather than adding up steps. The title bar, the close button's
+ * area, the content's clip and the grip's six squares are placed during arrange, so painting allocates nothing.</p>
  *
  * <p>While it raises on press, which a new window does, any press inside it raises it in its parent node, a
  * container's or a composite's, through {@link #onPressWithin}, so handlers that cancel the press or stop it on a
@@ -99,6 +100,8 @@ public final class WindowImpl extends BuiltInContainer<Window> implements Window
     private Size size;
     private boolean gripHovered;
     private boolean resizeCursor;
+    // True once the user moved or resized the window, until code sets the offset
+    private boolean userPlaced;
 
     // Theme
     private Paint background;
@@ -121,6 +124,9 @@ public final class WindowImpl extends BuiltInContainer<Window> implements Window
 
     // Placed during arrange
     private final Rect[] gripDots;
+    private Rect titleBarArea = Rect.ZERO;
+    private Rect closeArea = Rect.ZERO;
+    private Rect contentArea = Rect.ZERO;
 
     /**
      * Runs in place of {@link #close()} once the user's {@link #CLOSE} request was accepted, for a control that holds
@@ -295,14 +301,6 @@ public final class WindowImpl extends BuiltInContainer<Window> implements Window
         }
     }
 
-    private Rect titleBarRect(final Rect bounds) {
-        return new Rect(bounds.x(), bounds.y(), bounds.width(), this.titleHeight);
-    }
-
-    private Rect closeRect(final Rect bounds) {
-        return new Rect(bounds.right() - CLOSE_WIDTH - 1f, bounds.y(), CLOSE_WIDTH, this.titleHeight);
-    }
-
     /**
      * Returns the edges a press at a point would resize, as a mask of {@link #LEFT}, {@link #TOP}, {@link #RIGHT} and
      * {@link #BOTTOM}: the right and bottom for the grip, and with edge resizing each edge within {@link #EDGE_SIZE}
@@ -428,7 +426,8 @@ public final class WindowImpl extends BuiltInContainer<Window> implements Window
         };
         this.size = next;
         this.setSize(next.width(), next.height());
-        this.setOffset(x - baseX, y - baseY);
+        super.setOffset(x - baseX, y - baseY);
+        this.userPlaced = true;
         this.report(RESIZED, next, previous);
     }
 
@@ -505,8 +504,15 @@ public final class WindowImpl extends BuiltInContainer<Window> implements Window
 
     @Override
     protected void arrange(final ArrangeContext context, final Rect bounds) {
-        final Rect area = new Rect(bounds.x(), bounds.y() + this.titleHeight, bounds.width(),
-                Math.max(0f, bounds.height() - this.titleHeight)).shrink(this.padding());
+        if (this.userPlaced && this.keepInsideSlot(bounds)) {
+            // The new offset arranges the window again in this layout, with the bounds it gives
+            return;
+        }
+        this.titleBarArea = new Rect(bounds.x(), bounds.y(), bounds.width(), this.titleHeight);
+        this.closeArea = new Rect(bounds.right() - CLOSE_WIDTH - 1f, bounds.y(), CLOSE_WIDTH, this.titleHeight);
+        this.contentArea = new Rect(bounds.x(), bounds.y() + this.titleHeight, bounds.width(),
+                Math.max(0f, bounds.height() - this.titleHeight));
+        final Rect area = this.contentArea.shrink(this.padding());
         for (final Component<?> child : this.children()) {
             context.arrange(child, area);
         }
@@ -521,10 +527,28 @@ public final class WindowImpl extends BuiltInContainer<Window> implements Window
         }
     }
 
+    /**
+     * Moves a window the user placed back inside its slot when the slot shrank or moved since, as a drag would have
+     * kept it.
+     *
+     * @return true if the offset changed
+     */
+    private boolean keepInsideSlot(final Rect bounds) {
+        final Rect slot = this.node().slot();
+        final float baseX = bounds.x() - this.offsetX();
+        final float baseY = bounds.y() - this.offsetY();
+        final float x = this.keptInside(this.offsetX(), baseX, bounds.width(), slot.x(), slot.right());
+        final float y = this.keptInside(this.offsetY(), baseY, bounds.height(), slot.y(), slot.bottom());
+        if (x == this.offsetX() && y == this.offsetY()) {
+            return false;
+        }
+        super.setOffset(x, y);
+        return true;
+    }
+
     @Override
     protected Rect childClip() {
-        final Rect bounds = this.bounds();
-        return new Rect(bounds.x(), bounds.y() + this.titleHeight, bounds.width(), Math.max(0f, bounds.height() - this.titleHeight));
+        return this.contentArea;
     }
 
     @Override
@@ -543,14 +567,13 @@ public final class WindowImpl extends BuiltInContainer<Window> implements Window
     @Override
     protected void paint(final Painter painter, final Rect bounds) {
         this.background.paint(painter, bounds);
-        final Rect bar = this.titleBarRect(bounds);
-        this.titleBar.paint(painter, bar);
+        this.titleBar.paint(painter, this.titleBarArea);
         final Insets padding = this.titlePadding;
         final float textY = bounds.y() + padding.top();
         this.titleSpan.draw(painter, bounds.x() + padding.left()
                 + (bounds.width() - padding.horizontal() - this.titleWidth) * 0.5f, textY);
         if (this.hasCloseButton()) {
-            final Rect close = this.closeRect(bounds);
+            final Rect close = this.closeArea;
             painter.text(this.closeHovered ? this.closeHoveredSpan : this.closeSpan,
                     close.x() + (close.width() - this.closeWidth) * 0.5f, textY);
         }
@@ -569,7 +592,7 @@ public final class WindowImpl extends BuiltInContainer<Window> implements Window
             return;
         }
         final Rect bounds = this.bounds();
-        final boolean onClose = this.hasCloseButton() && this.closeRect(bounds).contains(event.x(), event.y());
+        final boolean onClose = this.hasCloseButton() && this.closeArea.contains(event.x(), event.y());
         final int edges = onClose ? 0 : this.edgesAt(event.x(), event.y());
         if (edges != 0) {
             this.resizeEdges = edges;
@@ -579,7 +602,7 @@ public final class WindowImpl extends BuiltInContainer<Window> implements Window
             event.consume();
             return;
         }
-        if (!this.titleBarRect(bounds).contains(event.x(), event.y())) {
+        if (!this.titleBarArea.contains(event.x(), event.y())) {
             return;
         }
         if (onClose) {
@@ -594,7 +617,7 @@ public final class WindowImpl extends BuiltInContainer<Window> implements Window
 
     @Override
     protected void onClick(final PointerButtonEvent event) {
-        if (this.closePressed && this.closeRect(this.bounds()).contains(event.x(), event.y())) {
+        if (this.closePressed && this.closeArea.contains(event.x(), event.y())) {
             this.closePressed = false;
             event.consume();
             this.userClose();
@@ -620,11 +643,11 @@ public final class WindowImpl extends BuiltInContainer<Window> implements Window
         final Rect bounds = this.bounds();
         final float baseX = bounds.x() - this.offsetX();
         final float baseY = bounds.y() - this.offsetY();
-        float x = this.dragOffsetX + event.x() - event.startX();
-        float y = this.dragOffsetY + event.y() - event.startY();
-        x = Math.max(slot.x() - baseX, Math.min(x, slot.right() - bounds.width() - baseX));
-        y = Math.max(slot.y() - baseY, Math.min(y, slot.bottom() - bounds.height() - baseY));
-        this.setOffset(x, y);
+        final float x = this.dragOffsetX + event.x() - event.startX();
+        final float y = this.dragOffsetY + event.y() - event.startY();
+        super.setOffset(this.keptInside(x, baseX, bounds.width(), slot.x(), slot.right()),
+                this.keptInside(y, baseY, bounds.height(), slot.y(), slot.bottom()));
+        this.userPlaced = true;
         event.consume();
     }
 
@@ -648,7 +671,7 @@ public final class WindowImpl extends BuiltInContainer<Window> implements Window
     @Override
     protected void onPointerMove(final PointerEvent event) {
         this.closeHovered = event.target() == this && this.hasCloseButton()
-                && this.closeRect(this.bounds()).contains(event.x(), event.y());
+                && this.closeArea.contains(event.x(), event.y());
         if (this.resizable || this.resizeCursor) {
             this.hoverEdges(this.closeHovered ? 0 : this.edgesAt(event.x(), event.y()));
         }
@@ -700,8 +723,21 @@ public final class WindowImpl extends BuiltInContainer<Window> implements Window
         return super.offsetY();
     }
 
+    /**
+     * Sets the offset from code, which the window then keeps even where it puts the window outside its slot.
+     */
     @Override
     public Window setOffset(final float offsetX, final float offsetY) {
+        this.userPlaced = false;
         return super.setOffset(offsetX, offsetY);
+    }
+
+    /**
+     * Returns an offset on one axis that keeps the window inside its slot on that axis, or at the slot's start when
+     * the window is larger than the slot.
+     */
+    private float keptInside(final float offset, final float base, final float length, final float start,
+                             final float end) {
+        return Math.max(start - base, Math.min(offset, end - length - base));
     }
 }

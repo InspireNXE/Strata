@@ -205,4 +205,23 @@ class WindowResizeTest {
         assertEquals(List.of(), this.requests);
         assertEquals(List.of(), this.heard);
     }
+
+    @Test
+    void aMovedWindowIsKeptInsideItsSlotWhenTheHostShrinks() {
+        this.drag(150, 113, 350, 113);
+        assertEquals(new Rect(200, 110, 100, 80), this.window.bounds());
+
+        this.test.host().resize(220, 300);
+        this.test.host().layout();
+
+        assertEquals(new Rect(120, 110, 100, 80), this.window.bounds());
+    }
+
+    @Test
+    void anOffsetSetFromCodeIsNotKeptInside() {
+        this.window.setOffset(150, 0);
+        this.test.host().layout();
+
+        assertEquals(new Rect(250, 110, 100, 80), this.window.bounds());
+    }
 }

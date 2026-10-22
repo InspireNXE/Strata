@@ -40,7 +40,9 @@ import org.inspirenxe.strata.api.text.Text;
  *     {@code AbsolutePanel} the one pressed comes to the front. It is raised before the press is delivered, whatever
  *     handlers then do with the press.</li>
  *     <li>Dragging the title bar moves the window by its {@linkplain #setOffset offset}, kept inside the slot its
- *     parent gives it, while it {@linkplain #setMovable is movable}.</li>
+ *     parent gives it, while it {@linkplain #setMovable is movable}. A window the user moved or resized stays inside
+ *     that slot when it later shrinks or moves, as when the screen gets smaller; an offset set from code is kept as
+ *     set.</li>
  *     <li>A click on the close button {@linkplain #close closes} it while it {@linkplain #setClosable is
  *     closable}. So does an Escape press that nothing inside consumed, if a handler for {@link #CLOSE} or
  *     {@link #CLOSED} is registered on the window or an ancestor, or the window is shown in an overlay; otherwise
