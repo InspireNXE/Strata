@@ -1748,8 +1748,12 @@ public final class Root {
             if (!layer.open || layer.isToast() || !layer.lightDismiss) {
                 continue;
             }
-            layer.close();
             dismissed = true;
+            // A popup whose handler refuses to close keeps it and the ones under it open, and takes the press
+            if (!this.mayDismiss(layer)) {
+                break;
+            }
+            layer.close();
         }
         if (dismissed) {
             this.swallowedReleases.add(key);
@@ -2470,8 +2474,11 @@ public final class Root {
         }
         if (key == Key.ESCAPE && action == KeyAction.PRESS) {
             for (int i = this.layers.size() - 1; i >= 0; i--) {
-                if (!this.layers.get(i).isToast()) {
-                    this.layers.get(i).close();
+                final Layer layer = this.layers.get(i);
+                if (!layer.isToast()) {
+                    if (this.mayDismiss(layer)) {
+                        layer.close();
+                    }
                     return true;
                 }
             }
@@ -3242,6 +3249,35 @@ public final class Root {
         return this.open(content, anchor, modal, false, 0L);
     }
 
+    /**
+     * Names the node asked {@link Closable#CLOSE} when the user dismisses an overlay with Escape or a press outside,
+     * in place of the overlay's content, as a combo box names itself for its list.
+     *
+     * @param overlay an overlay this root opened
+     * @param target the node to ask, or {@code null} for the content
+     * @throws IllegalArgumentException if this root did not open the overlay
+     */
+    public void setCloseTarget(final Overlay overlay, final Node target) {
+        if (!(overlay instanceof final Layer layer) || layer.root() != this) {
+            throw new IllegalArgumentException(overlay + " is not an overlay of this root");
+        }
+        layer.closeTarget = target;
+    }
+
+    /**
+     * Asks whether the user may dismiss a layer: {@link Closable#CLOSE} on its close target, or on its content when
+     * that is {@link Closable}, inside the input's frame. A layer with neither may always be dismissed.
+     *
+     * @return false if a handler canceled the request
+     */
+    private boolean mayDismiss(final Layer layer) {
+        Node target = layer.closeTarget;
+        if (target == null && layer.node.facade() instanceof Closable<?>) {
+            target = layer.node;
+        }
+        return target == null || target.request(Closable.CLOSE);
+    }
+
     private Layer open(final Component<?> content, final Rect anchor, final boolean modal, final boolean toast,
                        final long expiresAt) {
         this.checkThread();
@@ -3292,6 +3328,8 @@ public final class Root {
         boolean open;
         // Whether a press outside closes the layer; only popups can turn it off
         boolean lightDismiss;
+        // The node asked CLOSE when the user dismisses the layer, or null for the content when it is Closable
+        Node closeTarget;
         // The area a popup opened in an area is laid out in, or null
         Rect area;
         // Whether the layer is drawn cut to its area

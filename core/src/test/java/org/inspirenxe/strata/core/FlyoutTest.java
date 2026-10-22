@@ -190,7 +190,8 @@ class FlyoutTest {
             flyout.openAt(50, 50);
             assertTrue(FlyoutTest.this.key(Key.ESCAPE));
             assertFalse(flyout.isOpen());
-            assertEquals(List.of("opened", "closed"), FlyoutTest.this.heard);
+            // Escape asks the flyout first (design 4.57)
+            assertEquals(List.of("opened", "close?", "closed"), FlyoutTest.this.heard);
         }
 
         @Test
@@ -318,7 +319,8 @@ class FlyoutTest {
             flyout.openAt(100, 100);
             FlyoutTest.this.test.click(15, 15);
             assertFalse(flyout.isOpen());
-            assertEquals(List.of("opened", "closed"), FlyoutTest.this.heard);
+            // A press outside asks the flyout first (design 4.57)
+            assertEquals(List.of("opened", "close?", "closed"), FlyoutTest.this.heard);
         }
 
         @Test

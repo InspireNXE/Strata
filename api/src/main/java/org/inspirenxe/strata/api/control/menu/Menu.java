@@ -66,7 +66,8 @@ import java.util.function.Consumer;
  * <p>A menu is the whole content of its popup and has no parent, so its events ({@link #CHOOSE}, {@link #CHOSEN},
  * {@link Openable#OPENED} and {@link Closable#CLOSED}) reach only the handlers registered on the menu itself. A menu
  * opens only from code, its bar or a drop-down button, and the bar and the button ask on their own behalf, so it
- * never fires {@link Openable#OPEN}. It never fires {@link Closable#CLOSE} either.</p>
+ * never fires {@link Openable#OPEN}. Before Escape or a press outside closes it, it asks {@link Closable#CLOSE}, and a
+ * handler that cancels keeps it open; choosing an item, or {@code close()} from code, asks nothing.</p>
  *
  * <h2>Events</h2>
  * <ul>

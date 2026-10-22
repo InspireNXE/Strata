@@ -57,8 +57,9 @@ import java.util.function.Function;
  *
  * <p>The selection events carry option indexes, so read the option from the box:
  * {@code box.items().get(e.value())}. The open list is private to the box and fires no events of its own. The box
- * reports {@link Closable#CLOSED} each time the list closes, however it closed, and never fires
- * {@link Closable#CLOSE}.</p>
+ * reports {@link Closable#CLOSED} each time the list closes, however it closed. Before Escape or a press outside the
+ * list closes it, the box asks {@link Closable#CLOSE}, and a handler that cancels keeps the list open; choosing an
+ * option, or {@code close()} from code, asks nothing.</p>
  *
  * <p>The box is focusable and tabbable and shows the hand cursor. It asks for its widest option plus padding and
  * the arrow, and one line plus 3 units above and below.</p>

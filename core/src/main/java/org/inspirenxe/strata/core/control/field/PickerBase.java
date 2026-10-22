@@ -324,6 +324,8 @@ abstract class PickerBase<T extends Component<T>, V> extends BuiltInComponent<T>
         final Component<?> content = this.popupContent();
         this.nodeOf(content).setBackground(this.popupPaint);
         this.popup = this.ui.overlays().popup(content, this.bounds());
+        // Escape and a press outside ask the picker itself, since its popup's content is a private part
+        this.hostRoot().setCloseTarget(this.popup, this.node());
         this.popup.onEvent(Overlay.CLOSED, event -> {
             this.popup = null;
             this.report(Closable.CLOSED);
@@ -798,8 +800,10 @@ abstract class PickerBase<T extends Component<T>, V> extends BuiltInComponent<T>
                 case LEFT -> this.field.moveFocus(-1);
                 case RIGHT -> this.field.moveFocus(1);
                 case ESCAPE -> {
-                    this.loadField();
-                    this.close();
+                    if (this.request(Closable.CLOSE)) {
+                        this.loadField();
+                        this.close();
+                    }
                 }
                 default -> {
                     if (key.isEnter() && press) {

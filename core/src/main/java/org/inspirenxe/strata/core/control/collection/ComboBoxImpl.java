@@ -341,6 +341,8 @@ public final class ComboBoxImpl<T> extends BuiltInComponent<ComboBox<T>> impleme
         }
         this.list = options;
         this.popup = this.ui.overlays().popup(options, this.bounds());
+        // Escape and a press outside ask the box itself, since its list is a private part
+        this.hostRoot().setCloseTarget(this.popup, this.node());
         this.popup.onEvent(Overlay.CLOSED, event -> {
             this.popup = null;
             this.list = null;
@@ -609,7 +611,11 @@ public final class ComboBoxImpl<T> extends BuiltInComponent<ComboBox<T>> impleme
             switch (key) {
                 case UP -> this.list.select(Math.max(0, current - 1));
                 case DOWN -> this.list.select(Math.min(this.options.size() - 1, current + 1));
-                case ESCAPE -> this.close();
+                case ESCAPE -> {
+                    if (this.request(CLOSE)) {
+                        this.close();
+                    }
+                }
                 default -> {
                     if (press && (key.isEnter() || key == Key.SPACE)) {
                         final int chosen = current;

@@ -60,7 +60,9 @@ import java.time.LocalTime;
  *     <li>{@link HasTime#TIME_PICKED}: Told after the time changed, by the user or from code.</li>
  *     <li>{@link Openable#OPEN}: Asked before the user opens the popup. Cancel it to keep it closed.</li>
  *     <li>{@link Openable#OPENED} and {@link Closable#CLOSED}: Told after the popup opened and closed, from any source.
- *     The picker never fires {@link Closable#CLOSE}.</li>
+ *     </li>
+ *     <li>{@link Closable#CLOSE}: Asked before Escape or a press outside closes the popup. Cancel it to keep the
+ *     popup open. Enter, or {@code close()} from code, asks nothing.</li>
  * </ul>
  *
  * <h2>Theme keys</h2>

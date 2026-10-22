@@ -32,7 +32,12 @@ import org.inspirenxe.strata.api.geometry.Rect;
  *
  * <p>A popup opened from code never asks {@link Openable#OPEN}. Whatever opens it for the user, such as a drop-down
  * button or a menu bar, asks on its own behalf. A popup reports {@link Openable#OPENED} each time it opens and
- * {@link Closable#CLOSED} each time it closes, for any reason, and never asks {@link Closable#CLOSE}.</p>
+ * {@link Closable#CLOSED} each time it closes, for any reason.</p>
+ *
+ * <p>When the user closes it with Escape or a press outside it, the popup asks {@link Closable#CLOSE} first, with the
+ * user as the origin, so a handler that cancels keeps it open, as a flyout holding an unsaved form may; the key or
+ * press is used up either way. A press outside that a refusing popup keeps also keeps the popups under it open.
+ * {@link #close()} from code, and a popup closed because the one it opened from closed, ask nothing.</p>
  *
  * <p>Do not implement this interface.</p>
  *

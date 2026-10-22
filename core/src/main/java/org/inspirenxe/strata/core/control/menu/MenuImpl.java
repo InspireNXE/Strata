@@ -756,10 +756,13 @@ public final class MenuImpl extends BuiltInComponent<Menu> implements Menu, Core
                 if (!press) {
                     return;
                 }
-                final MenuImpl from = this.parent;
-                this.close();
-                if (from != null) {
-                    from.requestFocus();
+                // A handler that refuses keeps the menu open, and the key is used either way
+                if (this.request(CLOSE)) {
+                    final MenuImpl from = this.parent;
+                    this.close();
+                    if (from != null) {
+                        from.requestFocus();
+                    }
                 }
             }
             default -> {

@@ -72,7 +72,9 @@ import java.time.LocalDate;
  *     <li>{@link HasDate#DATE_PICKED}: Told after the date changed, by the user or from code.</li>
  *     <li>{@link Openable#OPEN}: Asked before the user opens the calendar. Cancel it to keep it closed.</li>
  *     <li>{@link Openable#OPENED} and {@link Closable#CLOSED}: Told after the calendar opened and closed, from any
- *     source. The picker never fires {@link Closable#CLOSE}.</li>
+ *     source.</li>
+ *     <li>{@link Closable#CLOSE}: Asked before Escape or a press outside closes the calendar. Cancel it to keep the
+ *     calendar open. Picking a day, Enter, or {@code close()} from code asks nothing.</li>
  * </ul>
  *
  * <h2>Theme keys</h2>
