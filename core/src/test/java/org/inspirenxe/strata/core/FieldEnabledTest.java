@@ -100,6 +100,8 @@ class FieldEnabledTest {
         void aColorPickersFieldIsDisabledAsSoonAsThePickerIs() {
             final ColorPicker picker = FieldEnabledTest.this.ui.colorPicker().setAnchor(Anchor.TOP_LEFT);
             FieldEnabledTest.this.test.show(picker);
+            // The picker is a tab stop of its own, before its field
+            FieldEnabledTest.this.test.host().key(Key.TAB, KeyAction.PRESS, Modifiers.NONE);
             FieldEnabledTest.this.test.host().key(Key.TAB, KeyAction.PRESS, Modifiers.NONE);
             final TextBox field = (TextBox) FieldEnabledTest.this.test.focused();
 

@@ -243,7 +243,8 @@ class InputControlsTest {
         }
 
         private TextBox field() {
-            return (TextBox) InputControlsTest.this.test.tabOrder().getFirst();
+            // The picker is a tab stop of its own, before its field
+            return (TextBox) InputControlsTest.this.test.tabOrder().get(1);
         }
 
         private void press(final float x, final float y) {

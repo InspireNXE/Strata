@@ -138,6 +138,8 @@ class NumericFieldsTest {
             this.picker = NumericFieldsTest.this.ui.colorPicker().setAlphaShown(alphaShown);
             this.picker.setAnchor(Anchor.TOP_LEFT);
             NumericFieldsTest.this.test.show(this.picker);
+            // The picker is a tab stop of its own, before its field
+            NumericFieldsTest.this.key(Key.TAB);
             NumericFieldsTest.this.key(Key.TAB);
             NumericFieldsTest.this.test.host().key(Key.A, KeyAction.PRESS, Modifiers.of(Modifier.CONTROL));
         }

@@ -16,6 +16,7 @@
 package org.inspirenxe.strata.api.control.field;
 
 import org.inspirenxe.strata.api.component.Component;
+import org.inspirenxe.strata.api.component.Focusable;
 import org.inspirenxe.strata.api.component.HasContextMenu;
 import org.inspirenxe.strata.api.component.HasCursor;
 import org.inspirenxe.strata.api.component.HasTooltip;
@@ -49,13 +50,22 @@ import org.inspirenxe.strata.api.state.PropertyKey;
  *     hidden the field takes no more than six, so the user never sets an alpha they cannot see. Anything else puts the
  *     current color back. It shows {@code #RRGGBB}, or {@code #AARRGGBB} while the alpha strip shows.</li>
  * </ul>
- * <p>The picker is not focusable itself; keyboard users type into the hex field, which is focusable and tabbable. A
- * disabled picker ignores input and draws {@value #STYLE_DISABLED} over its square and strips.</p>
+ * <p>The picker is a tab stop of its own, before its hex field, which is one too, and a press in the square or on
+ * a strip focuses it. While it has focus:</p>
+ * <ul>
+ *     <li>Left and Right move the point in the square by 1 percent of saturation, and Up and Down by 1 percent of
+ *     brightness, 10 percent with Shift.</li>
+ *     <li>Page Up and Page Down move the hue by 1 degree toward the top or the bottom of its strip, 10 with
+ *     Shift.</li>
+ *     <li>Home and End make the color opaque or clear while the alpha strip shows.</li>
+ * </ul>
+ * <p>Each of these asks {@link #PICK}. A disabled picker ignores input and draws {@value #STYLE_DISABLED} over its
+ * square and strips.</p>
  *
  * <h2>Events</h2>
  * <ul>
  *     <li>{@link #PICK}: Asked before the user changes the color: a press or a drag in the square or on a
- *     strip, or a hex code taken from the field. During a drag it fires for each move that would change the color. The
+ *     strip, a key, or a hex code taken from the field. During a drag it fires for each move that would change the color. The
  *     value is the new color. Cancel the event to keep the current color, or set another color, which then applies as
  *     {@link #setColor} does; the value must not be null. A press, drag or hex code that would leave the color as it
  *     is fires nothing, though a press or drag on the hue strip while the color is gray still moves the hue. Fires only
@@ -76,6 +86,9 @@ import org.inspirenxe.strata.api.state.PropertyKey;
  *     and dark colors. Falls back to black.</li>
  *     <li>{@value #STYLE_DISABLED} (paint, optional): drawn over the square and the strips while disabled. Nothing is
  *     drawn if it is missing.</li>
+ *     <li>{@value #STYLE_FOCUS} (paint, optional): a one-unit ring around the square while the picker has focus.
+ *     Falls back to {@value org.inspirenxe.strata.api.control.button.Button#STYLE_FOCUS}; no ring if both are
+ *     missing.</li>
  * </ul>
  * <p>The hex field uses the {@link TextBox} keys. Behind translucent colors, the alpha strip and the swatch draw a
  * gray and white checkerboard.</p>
@@ -96,8 +109,8 @@ import org.inspirenxe.strata.api.state.PropertyKey;
  * <p>Get one from {@link org.inspirenxe.strata.api.ComponentFactory#colorPicker()}. Do not implement this
  * interface.</p>
  */
-public interface ColorPicker extends Component<ColorPicker>, HasCursor<ColorPicker>, HasTooltip<ColorPicker>,
-        HasContextMenu<ColorPicker>, Validatable<ColorPicker> {
+public interface ColorPicker extends Component<ColorPicker>, Focusable<ColorPicker>, HasCursor<ColorPicker>,
+        HasTooltip<ColorPicker>, HasContextMenu<ColorPicker>, Validatable<ColorPicker> {
     /**
      * Style key for the frame behind the square, the strips and the swatch (paint, optional).
      */
@@ -114,6 +127,10 @@ public interface ColorPicker extends Component<ColorPicker>, HasCursor<ColorPick
      * Style key for the shade over the square and strips when disabled (paint, optional).
      */
     String STYLE_DISABLED = "colorpicker.disabled";
+    /**
+     * Style key for the ring around the square while the picker has focus (paint, optional).
+     */
+    String STYLE_FOCUS = "colorpicker.focus";
     /**
      * The side the square asks for, in UI units.
      */

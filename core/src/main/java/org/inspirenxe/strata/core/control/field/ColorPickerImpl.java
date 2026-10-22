@@ -16,10 +16,12 @@
 package org.inspirenxe.strata.core.control.field;
 
 import org.inspirenxe.strata.api.component.CursorKind;
+import org.inspirenxe.strata.api.component.Focusable;
+import org.inspirenxe.strata.api.control.button.Button;
 import org.inspirenxe.strata.api.control.field.ColorPicker;
 import org.inspirenxe.strata.api.control.field.TextBox;
 import org.inspirenxe.strata.api.event.input.DragEvent;
-import org.inspirenxe.strata.api.component.Focusable;
+import org.inspirenxe.strata.api.event.input.KeyEvent;
 import org.inspirenxe.strata.api.event.input.PointerButtonEvent;
 import org.inspirenxe.strata.api.extension.ArrangeContext;
 import org.inspirenxe.strata.api.extension.MeasureContext;
@@ -27,10 +29,12 @@ import org.inspirenxe.strata.api.extension.Painter;
 import org.inspirenxe.strata.api.geometry.Insets;
 import org.inspirenxe.strata.api.geometry.Rect;
 import org.inspirenxe.strata.api.geometry.Size;
+import org.inspirenxe.strata.api.input.Key;
 import org.inspirenxe.strata.api.input.MouseButton;
 import org.inspirenxe.strata.api.layout.Anchor;
 import org.inspirenxe.strata.api.theme.Paint;
 import org.inspirenxe.strata.api.theme.Theme;
+import org.inspirenxe.strata.core.control.Rings;
 import org.inspirenxe.strata.core.node.BuiltInComposite;
 import org.inspirenxe.strata.core.node.ComponentFactoryImpl;
 
@@ -54,6 +58,10 @@ import java.util.function.Function;
  * six gradients between the primary and secondary colors, and the alpha strip one gradient over a checkerboard of
  * {@value #CHECKER}-unit cells. Columns, segments, checker cells and markers are worked out during arrange or after a
  * change, never while painting.</p>
+ *
+ * <p>The picker takes focus itself, before the field in the tab order, and acts only on keys sent to it, not on
+ * those that bubble from the field. A key step rounds the saturation or brightness to a hundredth, so steps of 1
+ * percent land on whole percents, and the hue stops at 0 and 360.</p>
  */
 public final class ColorPickerImpl extends BuiltInComposite<ColorPicker> implements ColorPicker, ConversionTarget {
     /**
@@ -83,6 +91,9 @@ public final class ColorPickerImpl extends BuiltInComposite<ColorPicker> impleme
     private Paint marker;
     private Paint markerOutline;
     private Paint disabledPaint;
+    private Paint focusRing;
+    private final Rings.Ring ring = new Rings.Ring();
+    private Rect squareFrame;
 
     // Computed during arrange
     private Rect square;
@@ -119,7 +130,9 @@ public final class ColorPickerImpl extends BuiltInComposite<ColorPicker> impleme
         this.marker = DEFAULT_MARKER;
         this.markerOutline = DEFAULT_MARKER_OUTLINE;
         this.disabledPaint = Paint.NONE;
+        this.focusRing = Paint.NONE;
         this.square = Rect.ZERO;
+        this.squareFrame = Rect.ZERO;
         this.hueStrip = Rect.ZERO;
         this.alphaStrip = Rect.ZERO;
         this.swatch = Rect.ZERO;
@@ -400,6 +413,7 @@ public final class ColorPickerImpl extends BuiltInComposite<ColorPicker> impleme
         this.marker = theme.paintOr(STYLE_MARKER, DEFAULT_MARKER);
         this.markerOutline = theme.paintOr(STYLE_MARKER_OUTLINE, DEFAULT_MARKER_OUTLINE);
         this.disabledPaint = theme.paintOr(STYLE_DISABLED, Paint.NONE);
+        this.focusRing = theme.paintOr(STYLE_FOCUS, theme.paintOr(Button.STYLE_FOCUS, Paint.NONE));
     }
 
     private float stripsWidth() {
@@ -434,6 +448,7 @@ public final class ColorPickerImpl extends BuiltInComposite<ColorPicker> impleme
             }
         }
         this.frames = frames;
+        this.squareFrame = this.square.grow(Insets.of(1f));
 
         final int count = Math.max(1, (int) Math.ceil(this.square.width()));
         final float columnWidth = this.square.width() / count;
@@ -560,6 +575,9 @@ public final class ColorPickerImpl extends BuiltInComposite<ColorPicker> impleme
         for (final Rect rect : this.markerFills) {
             this.marker.paint(painter, rect);
         }
+        if (this.isFocused() && this.focusRing != Paint.NONE) {
+            this.ring.paint(painter, this.focusRing, this.squareFrame);
+        }
     }
 
     private void paintChecker(final Painter painter, final Rect area, final List<Rect> cells) {
@@ -615,6 +633,44 @@ public final class ColorPickerImpl extends BuiltInComposite<ColorPicker> impleme
     @Override
     protected void onDragEnd(final DragEvent event) {
         this.dragging = Area.NONE;
+    }
+
+    @Override
+    protected void onKey(final KeyEvent event) {
+        if (!event.action().isDown() || !this.isEnabled() || event.target() != this
+                || event.modifiers().control() || event.modifiers().alt()) {
+            return;
+        }
+        final boolean big = event.modifiers().shift();
+        final float point = big ? 0.1f : 0.01f;
+        final float degrees = big ? 10f : 1f;
+        switch (event.key()) {
+            case LEFT -> this.userPick(this.hue, clamp(this.saturation - point), this.brightness, this.alpha);
+            case RIGHT -> this.userPick(this.hue, clamp(this.saturation + point), this.brightness, this.alpha);
+            case UP -> this.userPick(this.hue, this.saturation, clamp(this.brightness + point), this.alpha);
+            case DOWN -> this.userPick(this.hue, this.saturation, clamp(this.brightness - point), this.alpha);
+            case PAGE_UP -> this.userPick(Math.max(0f, this.hue - degrees), this.saturation, this.brightness,
+                    this.alpha);
+            case PAGE_DOWN -> this.userPick(Math.min(360f, this.hue + degrees), this.saturation, this.brightness,
+                    this.alpha);
+            case HOME, END -> {
+                if (!this.alphaShown) {
+                    return;
+                }
+                this.userPick(this.hue, this.saturation, this.brightness, event.key() == Key.HOME ? 0xFF : 0);
+            }
+            default -> {
+                return;
+            }
+        }
+        event.consume();
+    }
+
+    /**
+     * Clamps a saturation or brightness to 0 to 1, rounded to a hundredth so steps of 1 percent land on them.
+     */
+    private static float clamp(final float value) {
+        return Math.max(0f, Math.min(1f, Math.round(value * 100f) / 100f));
     }
 
     /**
