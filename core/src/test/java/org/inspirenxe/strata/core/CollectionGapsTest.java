@@ -349,6 +349,23 @@ class CollectionGapsTest {
         }
 
         @Test
+        void aRowASmoothScrollHasNotReachedIsBuiltForItsEdit() {
+            final TestHost host = new TestHost(new TestPlatform(), Themes.flat().toBuilder()
+                    .metric(ScrollPanel.STYLE_SMOOTH, 200f).build(), 300, 300);
+            final ListView<String> list = host.factory().<String>listView()
+                    .setItems(numbers(50).stream().map(String::valueOf).toList())
+                    .setCellEditor((ui, item, commit, cancel) -> this.editor(ui, item, commit, cancel));
+            list.setSize(150, 100);
+            host.show(host.factory().absolutePanel().add(list, 0, 0));
+            list.requestFocus();
+            list.select(45);
+            host.host().key(Key.F2, KeyAction.PRESS, Modifiers.NONE);
+            assertTrue(list.isEditing());
+            assertTrue(this.editors.getFirst().isAttached());
+            assertTrue(this.editors.getFirst().isFocused());
+        }
+
+        @Test
         void aTableEditsTheColumnUnderThePointerAndATreeItsCell() {
             final ComponentFactory ui = CollectionGapsTest.this.ui;
             final TableColumn<String> fixed = ui.<String>tableColumn("Name").setWidth(GridLength.fixed(50)).setCellText(n -> n);

@@ -448,13 +448,20 @@ public final class ListViewImpl<T> extends BuiltInComposite<ListView<T>> impleme
      */
     Component<?> rowFor(final int row) {
         if (this.rowsStale || !this.rows.containsKey(row)) {
+            // Pinned, the row is built by the next layout even while a smooth scroll has not reached it
+            final int pinned = this.pinnedRow;
+            this.pinnedRow = row;
             this.scrollToIndex(row);
             final Root root = this.hostRoot();
             if (root != null && this.isAttached()) {
                 root.layout();
             }
+            if (this.rowsStale || !this.rows.containsKey(row)) {
+                this.pinnedRow = pinned;
+                return null;
+            }
         }
-        return this.rowsStale ? null : this.rows.get(row);
+        return this.rows.get(row);
     }
 
     /**
@@ -1147,8 +1154,17 @@ public final class ListViewImpl<T> extends BuiltInComposite<ListView<T>> impleme
         }
         final float offset = Math.round(this.scrollY);
         // A row kept built for an edit follows the scrolling outside the viewport, where the clip hides it
-        final Component<?> pinned = this.pinnedRow >= 0 && (this.pinnedRow < first || this.pinnedRow > last)
-                ? this.rows.get(this.pinnedRow) : null;
+        Component<?> pinned = null;
+        if (this.pinnedRow >= 0 && this.pinnedRow < this.items.size()
+                && (this.pinnedRow < first || this.pinnedRow > last)) {
+            pinned = this.rows.get(this.pinnedRow);
+            if (pinned == null) {
+                pinned = this.cellFactory.apply(this.items.get(this.pinnedRow));
+                this.rows.put(this.pinnedRow, pinned);
+                this.addContent(pinned);
+                context.measure(pinned, this.rowWidth, this.rowHeight);
+            }
+        }
         if (pinned != null) {
             context.arrange(pinned, new Rect(this.rowX,
                     this.viewport.y() + this.padding.top() + this.pinnedRow * this.step() - offset,
