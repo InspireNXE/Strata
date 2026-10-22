@@ -452,6 +452,16 @@ class MenuWindowEventsTest {
         }
 
         @Test
+        void escapeKeepsADialogWithAnUnclosableWindowOpen() {
+            final Window window = this.window("Title").setClosable(false);
+            final Overlay overlay = this.dialog(window);
+            ((Button) window.children().getFirst()).requestFocus();
+            assertTrue(MenuWindowEventsTest.this.key(Key.ESCAPE));
+            assertEquals(List.of(), MenuWindowEventsTest.this.heard);
+            assertTrue(overlay.isOpen());
+        }
+
+        @Test
         void codeFiresNoRequestButReports() {
             final Window window = this.window("Title");
             final Overlay overlay = this.dialog(window);
@@ -599,6 +609,16 @@ class MenuWindowEventsTest {
             assertTrue(outer.key(Key.ESCAPE));
             assertEquals(List.of(MessageBox.Result.NO), this.results);
             assertFalse(shown.isOpen());
+        }
+
+        @Test
+        void escapeLeavesABoxWithAnUnclosableWindowOpenAndUnanswered() {
+            this.show();
+            this.box.window().setClosable(false);
+            assertTrue(MenuWindowEventsTest.this.key(Key.ESCAPE));
+            assertEquals(List.of(), MenuWindowEventsTest.this.heard);
+            assertEquals(List.of(), this.results);
+            assertTrue(this.overlay.isOpen());
         }
 
         @Test

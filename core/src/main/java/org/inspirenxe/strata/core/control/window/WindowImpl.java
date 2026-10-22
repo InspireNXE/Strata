@@ -668,22 +668,25 @@ public final class WindowImpl extends BuiltInContainer<Window> implements Window
     }
 
     /**
-     * Closes the window for the user on an Escape press while it is closable, if a handler for {@link #CLOSE} or
-     * {@link #CLOSED} is on its path or it is shown in an overlay, and consumes the press. Ignores every other key
-     * event. A control that holds this window privately calls this for Escape presses that reach the control without
-     * passing through the window.
+     * Acts on an Escape press if a handler for {@link #CLOSE} or {@link #CLOSED} is on the window's path or it is
+     * shown in an overlay: consumes the press and, while the window is closable, closes it for the user. An
+     * unclosable window consumes the press without closing, so the overlay showing it stays open. Ignores every other
+     * key event. A control that holds this window privately calls this for Escape presses that reach the control
+     * without passing through the window.
      *
      * @param event the key event
      */
     void escape(final KeyEvent event) {
-        if (event.key() != Key.ESCAPE || event.action() != KeyAction.PRESS || !this.closable) {
+        if (event.key() != Key.ESCAPE || event.action() != KeyAction.PRESS) {
             return;
         }
         // A screen's own window that nobody listens to leaves Escape to the engine, which closes the screen
         if (this.isHandled(CLOSE) || this.isHandled(CLOSED)
                 || this.isAttached() && this.ui.overlays().of(this).isPresent()) {
             event.consume();
-            this.userClose();
+            if (this.closable) {
+                this.userClose();
+            }
         }
     }
 

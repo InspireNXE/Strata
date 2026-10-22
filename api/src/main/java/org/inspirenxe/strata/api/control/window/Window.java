@@ -45,7 +45,8 @@ import org.inspirenxe.strata.api.text.Text;
  *     closable}. So does an Escape press that nothing inside consumed, if a handler for {@link #CLOSE} or
  *     {@link #CLOSED} is registered on the window or an ancestor, or the window is shown in an overlay; otherwise
  *     Escape goes on to the engine, which usually closes the screen. Either way the window fires {@link #CLOSE}
- *     first.</li>
+ *     first. An unclosable window consumes that Escape press without closing or firing anything, so the overlay
+ *     showing it stays open.</li>
  *     <li>While the window {@linkplain #setResizable is resizable}, dragging the grip, a {@value #GRIP_SIZE}-unit
  *     square in the bottom-right corner, resizes it with its top-left corner in place. With
  *     {@linkplain #setEdgeResizable edge resizing} on, dragging any edge within {@value #EDGE_SIZE} units resizes it
@@ -197,9 +198,9 @@ public interface Window extends Container<Window>, Titled<Window>, Closable<Wind
 
     /**
      * Sets whether the window can be closed by its close button and Escape. An unclosable window shows no close
-     * button.
+     * button, and an Escape press it would have closed on is consumed, as the class description says.
      *
-     * @param closable false to hide the close button and ignore Escape
+     * @param closable false to hide the close button and keep Escape from closing the window
      * @return this window
      */
     Window setClosable(boolean closable);
