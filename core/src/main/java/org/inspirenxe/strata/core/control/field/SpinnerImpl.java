@@ -30,8 +30,10 @@ import org.inspirenxe.strata.api.extension.Painter;
 import org.inspirenxe.strata.api.geometry.Rect;
 import org.inspirenxe.strata.api.geometry.Size;
 import org.inspirenxe.strata.api.input.MouseButton;
+import org.inspirenxe.strata.api.input.ScrollKind;
 import org.inspirenxe.strata.api.layout.Anchor;
 import org.inspirenxe.strata.api.layout.HorizontalAlignment;
+import org.inspirenxe.strata.api.layout.ScrollPanel;
 import org.inspirenxe.strata.api.text.TextStyle;
 import org.inspirenxe.strata.api.theme.Paint;
 import org.inspirenxe.strata.api.theme.Theme;
@@ -71,6 +73,11 @@ import java.util.function.Function;
  * at the spinner.</p>
  */
 public final class SpinnerImpl extends BuiltInComposite<Spinner> implements Spinner, ConversionTarget {
+    /**
+     * How far precise scrolls must add up to, in UI units, for one step: a wheel notch at a scroll panel's default
+     * rate.
+     */
+    public static final float PRECISE_SCROLL_STEP = ScrollPanel.DEFAULT_SCROLL_RATE;
     private final Validity validity;
     private final TextBoxImpl field;
     private double value;
@@ -81,6 +88,8 @@ public final class SpinnerImpl extends BuiltInComposite<Spinner> implements Spin
     private Pattern accepted;
     private Numbers numbers;
     private float pointerY;
+    // The precise scrolling not yet turned into steps, in UI units
+    private float preciseScroll;
     private Rect buttons;
     // The halves of the button column, worked out during arrange
     private Rect upButton;
@@ -448,25 +457,47 @@ public final class SpinnerImpl extends BuiltInComposite<Spinner> implements Spin
         if (event.button() != MouseButton.LEFT || !this.buttons.contains(event.x(), event.y())) {
             return;
         }
-        if (event.y() < this.buttons.y() + (float) Math.floor(this.buttons.height() * 0.5f)) {
-            this.stepBy(1);
-        } else {
-            this.stepBy(-1);
+        final int direction = event.y() < this.buttons.y() + (float) Math.floor(this.buttons.height() * 0.5f) ? 1 : -1;
+        this.stepBy(direction);
+        if (this.hostRoot() != null && this.isEnabled()) {
+            this.hostRoot().startHoldRepeat(this.node(), () -> this.stepBy(direction));
         }
         event.consume();
     }
 
     @Override
+    protected void onPointerRelease(final PointerButtonEvent event) {
+        if (event.button() == MouseButton.LEFT && this.hostRoot() != null) {
+            this.hostRoot().stopHoldRepeat(this.node());
+        }
+    }
+
+    /**
+     * Steps once for each wheel notch, and once for each {@link #PRECISE_SCROLL_STEP} units that precise scrolls add
+     * up to, a notch at a scroll panel's default rate. Precise scrolling left over carries to the next scroll in the
+     * same direction and is dropped when the direction turns or a wheel notch comes.
+     */
+    @Override
     protected void onScroll(final ScrollEvent event) {
         if (!this.isEnabled() || event.scrollY() == 0f) {
             return;
         }
-        if (event.scrollY() > 0f) {
-            this.stepBy(1);
-        } else {
-            this.stepBy(-1);
-        }
         event.consume();
+        if (event.kind() != ScrollKind.PRECISE) {
+            this.preciseScroll = 0f;
+            this.stepBy(event.scrollY() > 0f ? 1 : -1);
+            return;
+        }
+        final float units = event.scrollY() * ScrollPanel.DEFAULT_SCROLL_RATE;
+        if (Math.signum(units) != Math.signum(this.preciseScroll)) {
+            this.preciseScroll = 0f;
+        }
+        this.preciseScroll += units;
+        final int steps = (int) (this.preciseScroll / PRECISE_SCROLL_STEP);
+        if (steps != 0) {
+            this.preciseScroll -= steps * PRECISE_SCROLL_STEP;
+            this.stepBy(steps);
+        }
     }
 
     @Override

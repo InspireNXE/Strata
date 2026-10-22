@@ -37,10 +37,11 @@ import org.inspirenxe.strata.api.layout.HorizontalAlignment;
  * separator in every language, since numeric keypads type one. Typed text becomes the value on Enter and when the field
  * loses focus, clamped to the range; text that is not a number goes back to the current value. Up and Down step by one
  * step while the field has focus, and Page Up and Page Down by ten; held keys repeat, and with Control or Alt held they
- * do nothing. The wheel steps once for each vertical scroll while the pointer is over the spinner, up when it turns
- * away from the user. The buttons sit at the right edge, or the left edge while the spinner runs right to left, {@value
+ * do nothing. The wheel steps once for each notch while the pointer is over the spinner, up when it turns away from
+ * the user; a trackpad's {@linkplain org.inspirenxe.strata.api.input.ScrollKind#PRECISE precise} scrolls add up, and
+ * it steps once for each notch's worth, 10 units at a scroll panel's default rate. The buttons sit at the right edge, or the left edge while the spinner runs right to left, {@value
  * #BUTTON_WIDTH} units wide, the upper half stepping up and the lower half down; a left press on one steps once, and
- * holding it does not repeat. The spinner consumes the keys, scrolls and presses it acts on.</p>
+ * holding it steps again on the key repeat timing until the button is released. The spinner consumes the keys, scrolls and presses it acts on.</p>
  *
  * <p>The field is a private part of the spinner: its {@link TextBox} events reach the spinner but nothing above it,
  * so handlers outside see only {@link #CHANGE} and {@link #CHANGED}.</p>

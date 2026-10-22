@@ -38,7 +38,10 @@ import org.inspirenxe.strata.api.layout.ScrollPanel;
  * <h2>Input</h2>
  * <ul>
  *     <li>A left press on the thumb grabs it, and dragging moves it, even outside the bar. A left press on the track
- *     beside the thumb moves one page toward the pointer.</li>
+ *     beside the thumb moves one page toward the pointer, and holding it pages again on the key repeat timing, until
+ *     the thumb reaches the pointer or the button is released.</li>
+ *     <li>With {@linkplain #setArrowsShown arrows}, a left press on an arrow moves by the scroll rate toward its end,
+ *     and holding it moves again on the key repeat timing until the button is released.</li>
  *     <li>Scrolling over the bar moves it by the {@linkplain #scrollRate() scroll rate} per notch. A horizontal bar
  *     takes vertical scrolling too when there is no horizontal scrolling. The bar consumes a scroll only when the
  *     value changed, so a scroll at the end reaches its ancestors.</li>
@@ -50,7 +53,8 @@ import org.inspirenxe.strata.api.layout.ScrollPanel;
  * and draws its thumb with the disabled look, as does a bar with nothing to scroll.</p>
  *
  * <h2>Drawing</h2>
- * <p>The track covers the bounds. The thumb spans the bar across, and along it its length is the track's length times
+ * <p>The track covers the bounds, less the arrows while they show: square buttons as long as the bar is thick, at
+ * each end. The thumb spans the bar across, and along it its length is the track's length times
  * the visible amount over the content's length (the range plus the visible amount), at least
  * {@link ScrollPanel#MIN_THUMB_LENGTH} units ({@link #SLIM_MIN_THUMB_LENGTH} for a slim bar) and at most the track
  * minus 8, but never longer than the track. On a track shorter than twice that minimum, the minimum is half the
@@ -80,6 +84,18 @@ import org.inspirenxe.strata.api.layout.ScrollPanel;
  *     <li>{@value #STYLE_THUMB_DISABLED} (paint, optional): the thumb when disabled or when there is nothing to
  *     scroll. Falls back to {@value #STYLE_THUMB}.</li>
  * </ul>
+ * <p>The arrows read these keys, for the button behind each arrow. Without {@value #STYLE_ARROW} they are drawn as
+ * triangles in the thumb's paint instead:</p>
+ * <ul>
+ *     <li>{@value #STYLE_ARROW} (paint, optional): an arrow button, its arrow included.</li>
+ *     <li>{@value #STYLE_ARROW_HOVERED} (paint, optional): an arrow button under the pointer. Falls back to
+ *     {@value #STYLE_ARROW}.</li>
+ *     <li>{@value #STYLE_ARROW_PRESSED} (paint, optional): an arrow button held down. Falls back to
+ *     {@value #STYLE_ARROW_HOVERED}.</li>
+ * </ul>
+ * <p>The arrow keys name a button pointing up; a theme that wants each direction drawn differently sets the keys
+ * with the suffixes {@code .up}, {@code .down}, {@code .left} and {@code .right}, such as
+ * {@code scroll.arrow.down.pressed}, which come before the plain keys.</p>
  * <p>A slim bar has keys of its own, each falling back to its standard key, so a theme that has none still draws
  * it:</p>
  * <ul>
@@ -121,6 +137,18 @@ public interface ScrollBar extends Component<ScrollBar>, Focusable<ScrollBar>, H
      * Style key for a slim bar's track (paint, optional).
      */
     String STYLE_SLIM_TRACK = "scroll.slim.track";
+    /**
+     * Style key for an arrow button (paint, optional).
+     */
+    String STYLE_ARROW = "scroll.arrow";
+    /**
+     * Style key for an arrow button under the pointer (paint, optional).
+     */
+    String STYLE_ARROW_HOVERED = "scroll.arrow.hovered";
+    /**
+     * Style key for an arrow button held down (paint, optional).
+     */
+    String STYLE_ARROW_PRESSED = "scroll.arrow.pressed";
     /**
      * Style key for a slim bar's thumb (paint, optional).
      */
@@ -271,6 +299,22 @@ public interface ScrollBar extends Component<ScrollBar>, Focusable<ScrollBar>, H
      * @return this bar
      */
     ScrollBar setSlim(boolean slim);
+
+    /**
+     * Returns whether the bar shows arrow buttons at its ends.
+     *
+     * @return true after {@code setArrowsShown(true)}; false for a new bar
+     */
+    boolean arrowsShown();
+
+    /**
+     * Shows or hides arrow buttons at the bar's ends, which move by the scroll rate and repeat while held. Each is
+     * a square as long as the bar is thick, and the track is shorter by both. A new layout runs.
+     *
+     * @param shown true to show the arrows
+     * @return this bar
+     */
+    ScrollBar setArrowsShown(boolean shown);
 
     /**
      * A scroll bar's own state in a {@link org.inspirenxe.strata.api.component.ComponentSnapshot}.

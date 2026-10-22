@@ -70,6 +70,7 @@ import org.inspirenxe.strata.core.event.ScrollEventImpl;
 import org.inspirenxe.strata.core.frame.FrameRequests;
 import org.inspirenxe.strata.core.frame.UiThreadImpl;
 import org.inspirenxe.strata.core.input.ClickCounter;
+import org.inspirenxe.strata.core.input.HoldRepeater;
 import org.inspirenxe.strata.core.input.KeyRepeater;
 import org.inspirenxe.strata.core.paint.CanvasPainter;
 import org.inspirenxe.strata.core.text.InlineMetrics;
@@ -219,6 +220,7 @@ public final class Root {
     // Each pointer's own click counts
     private final Map<Integer, ClickCounter> clickCounters;
     private final KeyRepeater keyRepeater;
+    private final HoldRepeater holdRepeater;
     private final Map<PressKey, Press> presses;
     // Buttons whose press closed popups or hit a dialog's backdrop, so their release is swallowed too
     private final Set<PressKey> swallowedReleases;
@@ -303,6 +305,7 @@ public final class Root {
         this.painter = new CanvasPainter(metrics);
         this.clickCounters = new HashMap<>();
         this.keyRepeater = new KeyRepeater();
+        this.holdRepeater = new HoldRepeater();
         this.presses = new LinkedHashMap<>();
         this.swallowedReleases = new HashSet<>();
         this.touches = new LinkedHashMap<>();
@@ -433,6 +436,10 @@ public final class Root {
             if (repeat != Long.MAX_VALUE) {
                 next = Math.min(next, repeat * 1_000_000L);
             }
+        }
+        final long hold = this.holdRepeater.nextFire();
+        if (hold != Long.MAX_VALUE) {
+            next = Math.min(next, hold * 1_000_000L);
         }
         return next;
     }
@@ -1181,6 +1188,7 @@ public final class Root {
         this.frames.prune(this.platform.clock().nanoTime());
         this.pumpKeyRepeat();
         this.pumpLongPress();
+        this.pumpHoldRepeat();
         this.expireToasts();
         this.showPendingTooltip();
         if (this.transferDrag != null) {
@@ -1320,6 +1328,48 @@ public final class Root {
             kind = kind.fallback();
         }
         canvas.requestCursor(kind);
+    }
+
+    /**
+     * Repeats an action while a pointer button stays down on a node, on the key repeat timing, as a spinner's step
+     * button or a scroll bar's track does: the node acts once for the press and calls this, and the root runs the
+     * action on later frames, inside a frame with the user as the origin and the mouse as the device, until the node
+     * calls {@link #stopHoldRepeat}, starts another, or is no longer in this tree, visible and enabled. One hold
+     * repeats at a time; a new one replaces it.
+     *
+     * @param node the node the button is held on
+     * @param action what each repeat does
+     */
+    public void startHoldRepeat(final Node node, final Runnable action) {
+        this.holdRepeater.start(node, action, this.platform.clock().millis());
+        this.frames.request();
+    }
+
+    /**
+     * Stops a node's hold repeat, as on the release of the button. Does nothing when another node holds the repeat.
+     *
+     * @param node the node that started it
+     */
+    public void stopHoldRepeat(final Node node) {
+        this.holdRepeater.stop(node);
+    }
+
+    private void pumpHoldRepeat() {
+        final Object owner = this.holdRepeater.owner();
+        if (owner == null) {
+            return;
+        }
+        final Node node = (Node) owner;
+        if (node.root() != this || !isUsable(node)) {
+            this.holdRepeater.stop(node);
+            return;
+        }
+        final Runnable action = this.holdRepeater.poll(this.platform.clock().millis());
+        if (action != null) {
+            try (CauseFrame _ = this.inputFrame(Device.MOUSE, this.modifiers)) {
+                action.run();
+            }
+        }
     }
 
     private void pumpKeyRepeat() {
