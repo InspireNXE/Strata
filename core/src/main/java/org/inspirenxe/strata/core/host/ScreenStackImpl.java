@@ -15,6 +15,8 @@
  */
 package org.inspirenxe.strata.core.host;
 
+import org.inspirenxe.strata.api.transfer.DropEffect;
+import org.inspirenxe.strata.api.transfer.Transfer;
 import org.inspirenxe.strata.api.geometry.Size;
 import org.inspirenxe.strata.api.input.Key;
 import org.inspirenxe.strata.api.input.KeyAction;
@@ -39,6 +41,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 
 /**
  * The core {@link ScreenStack}. It keeps one {@link ScreenHostImpl} per stacked screen, so each screen has its own
@@ -464,6 +467,28 @@ public final class ScreenStackImpl implements ScreenStack {
     @Override
     public boolean charTyped(final int codePoint, final Modifiers modifiers) {
         return this.input().map(host -> host.charTyped(codePoint, modifiers)).orElse(false);
+    }
+
+    @Override
+    public Optional<DropEffect> dragEntered(final float x, final float y, final Transfer transfer,
+                                            final Set<DropEffect> allowed, final Modifiers modifiers) {
+        return this.input().flatMap(host -> host.dragEntered(x, y, transfer, allowed, modifiers));
+    }
+
+    @Override
+    public Optional<DropEffect> dragMoved(final float x, final float y, final Modifiers modifiers) {
+        return this.input().flatMap(host -> host.dragMoved(x, y, modifiers));
+    }
+
+    @Override
+    public void dragExited() {
+        this.input().ifPresent(ScreenHostImpl::dragExited);
+    }
+
+    @Override
+    public Optional<DropEffect> dropped(final float x, final float y, final Transfer transfer,
+                                        final Modifiers modifiers) {
+        return this.input().flatMap(host -> host.dropped(x, y, transfer, modifiers));
     }
 
     /**

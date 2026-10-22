@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 /**
- * Input events: what the user does with the pointer and the keyboard, and focus moving.
+ * Input events: what the user does with the pointer and the keyboard, drags that carry a transfer, and focus moving.
  *
  * <p>The types are the constants in {@link org.inspirenxe.strata.api.event.input.InputEvents}, such as
  * {@code InputEvents.CLICK} and {@code InputEvents.KEY}. Input events are Pre events: canceling one skips the default

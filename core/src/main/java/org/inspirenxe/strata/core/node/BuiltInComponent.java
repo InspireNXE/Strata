@@ -40,6 +40,7 @@ import org.inspirenxe.strata.api.event.input.KeyEvent;
 import org.inspirenxe.strata.api.event.input.PointerButtonEvent;
 import org.inspirenxe.strata.api.event.input.PointerEvent;
 import org.inspirenxe.strata.api.event.input.ScrollEvent;
+import org.inspirenxe.strata.api.event.input.TransferEvent;
 import org.inspirenxe.strata.api.extension.ArrangeContext;
 import org.inspirenxe.strata.api.extension.Environment;
 import org.inspirenxe.strata.api.extension.MeasureContext;
@@ -398,6 +399,47 @@ public abstract class BuiltInComponent<T extends Component<T>> implements Compon
     }
 
     /**
+     * Default behavior for {@link InputEvents#DRAG_ENTER}. The default does nothing.
+     *
+     * @param event the event
+     */
+    protected void onDragEnter(final TransferEvent event) {
+    }
+
+    /**
+     * Default behavior for {@link InputEvents#DRAG_OVER}. Accept the drag here with {@link TransferEvent#accept} to
+     * take the drop. The default does nothing.
+     *
+     * @param event the event
+     */
+    protected void onDragOver(final TransferEvent event) {
+    }
+
+    /**
+     * Default behavior for {@link InputEvents#DRAG_EXIT}. The default does nothing.
+     *
+     * @param event the event
+     */
+    protected void onDragExit(final TransferEvent event) {
+    }
+
+    /**
+     * Default behavior for {@link InputEvents#DROP}. The default does nothing.
+     *
+     * @param event the event
+     */
+    protected void onDrop(final TransferEvent event) {
+    }
+
+    /**
+     * Default behavior for {@link InputEvents#TRANSFER_DONE}, on the source of a drag. The default does nothing.
+     *
+     * @param event the event
+     */
+    protected void onTransferDone(final TransferEvent event) {
+    }
+
+    /**
      * Default behavior for {@link InputEvents#SCROLL}. The default does nothing.
      *
      * @param event the event
@@ -493,6 +535,16 @@ public abstract class BuiltInComponent<T extends Component<T>> implements Compon
             this.onDrag((DragEvent) event);
         } else if (type == InputEvents.DRAG_END) {
             this.onDragEnd((DragEvent) event);
+        } else if (type == InputEvents.DRAG_ENTER) {
+            this.onDragEnter((TransferEvent) event);
+        } else if (type == InputEvents.DRAG_OVER) {
+            this.onDragOver((TransferEvent) event);
+        } else if (type == InputEvents.DRAG_EXIT) {
+            this.onDragExit((TransferEvent) event);
+        } else if (type == InputEvents.DROP) {
+            this.onDrop((TransferEvent) event);
+        } else if (type == InputEvents.TRANSFER_DONE) {
+            this.onTransferDone((TransferEvent) event);
         } else if (type == InputEvents.SCROLL) {
             this.onScroll((ScrollEvent) event);
         } else if (type == InputEvents.KEY) {

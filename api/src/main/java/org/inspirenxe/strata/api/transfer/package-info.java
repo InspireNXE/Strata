@@ -17,6 +17,8 @@
  * What the clipboard and drag and drop carry: a {@link org.inspirenxe.strata.api.transfer.Transfer} holds one
  * payload in one or more {@link org.inspirenxe.strata.api.transfer.DataFormat}s, and a drop takes it with a
  * {@link org.inspirenxe.strata.api.transfer.DropEffect}. Read and write the clipboard through
- * {@code ComponentFactory.clipboard()} or a component's {@code Environment}.
+ * {@code ComponentFactory.clipboard()} or a component's {@code Environment}. Start a drag that carries a transfer
+ * with {@link org.inspirenxe.strata.api.event.input.DragEvent#startTransfer} and take it in the
+ * {@link org.inspirenxe.strata.api.event.input.TransferEvent}s it fires.
  */
 package org.inspirenxe.strata.api.transfer;

@@ -52,6 +52,8 @@ import org.inspirenxe.strata.api.text.Text;
 import org.inspirenxe.strata.api.theme.Paint;
 import org.inspirenxe.strata.api.theme.Theme;
 import org.inspirenxe.strata.api.theme.ThemeException;
+import org.inspirenxe.strata.api.transfer.DropEffect;
+import org.inspirenxe.strata.api.transfer.Transfer;
 import org.inspirenxe.strata.core.animation.AnimatorImpl;
 import org.inspirenxe.strata.core.control.Commands;
 import org.inspirenxe.strata.core.event.CharEventImpl;
@@ -78,6 +80,7 @@ import org.inspirenxe.strata.spi.Canvas;
 import org.inspirenxe.strata.spi.Platform;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.EnumMap;
 import java.util.EnumSet;
@@ -122,6 +125,17 @@ import java.util.function.Consumer;
  * consumed, or a right press where buttons act on the press, opens the context menu of the pressed node or its
  * nearest ancestor that has one, at the pointer.</p>
  *
+ * <p>Transfers: a drag start handler may make its drag carry a transfer (see {@link TransferDrag}). The press then
+ * belongs to the source, the node that started it, so the drag survives the pressed node leaving the tree, as a
+ * list's row does when it scrolls away. Each move fires {@code DRAG_EXIT}, {@code DRAG_ENTER} and {@code DRAG_OVER}
+ * at the deepest usable node under the pointer instead of {@code DRAG} at the source, the release fires {@code DROP}
+ * at the node that accepted last and then {@code TRANSFER_DONE} at the source before the source hears
+ * {@code DRAG_END}, and Escape ends the transfer with no effect. One drag carries a transfer at a time, whether it
+ * started here or in another application. While a drag started here carries one, the canvas is asked for the cursor
+ * of the accepted effect, and the drag image is laid out {@link #DRAG_IMAGE_OFFSET} units right of and below the
+ * pointer, kept inside the host, and drawn on top of everything, the tooltip included. A source that leaves the tree
+ * ends its drag with no events.</p>
+ *
  * <p>Keyboard rules: key events go to the focused node, or else to the top dialog, or else to the content. An unhandled
  * press or repeat runs the first enabled command whose shortcut matches it, as {@link Shortcuts} describes. Where the
  * platform's conventions turn mnemonics on, an unhandled press of Alt with a letter or digit acts on the component in
@@ -164,6 +178,10 @@ public final class Root {
      * How far a tooltip sits from the pointer on each axis, in UI units.
      */
     public static final float TOOLTIP_OFFSET = 12f;
+    /**
+     * How far a drag image sits right of and below the pointer, in UI units.
+     */
+    public static final float DRAG_IMAGE_OFFSET = 8f;
 
     private final Platform platform;
     private final ComponentFactoryImpl ui;
@@ -231,6 +249,8 @@ public final class Root {
     private Node tooltipPending;
     private long tooltipPendingSince;
     private boolean focusFromPress;
+    // The drag that carries a transfer, from this host or another application, or null
+    private TransferDrag transferDrag;
 
     /**
      * Creates an empty root of size 0 by 0, and binds it to its factory.
@@ -277,6 +297,13 @@ public final class Root {
      */
     public UiThreadImpl uiThread() {
         return this.uiThread;
+    }
+
+    /**
+     * Returns the host's factory.
+     */
+    ComponentFactoryImpl factory() {
+        return this.ui;
     }
 
     /**
@@ -556,6 +583,9 @@ public final class Root {
         if (this.tooltipNode != null) {
             tops.add(this.tooltipNode);
         }
+        if (this.transferDrag != null && this.transferDrag.image() != null) {
+            tops.add(this.transferDrag.image());
+        }
         return tops;
     }
 
@@ -715,9 +745,24 @@ public final class Root {
             if (node == this.keyGrab) {
                 this.endKeyGrab();
             }
-            this.presses.values().removeIf(press -> press.target == node);
+            if (this.transferDrag != null) {
+                this.transferDrag.detached(node);
+            }
+            this.presses.values().removeIf(press -> {
+                if (press.target != node) {
+                    return false;
+                }
+                if (press.transfer != null) {
+                    // Its source is leaving, so the drag ends without telling anyone
+                    press.transfer.abandon();
+                }
+                return true;
+            });
             node.detach();
         });
+        if (this.transferDrag != null && this.transferDrag.isAbandoned()) {
+            this.transferDrag.endAbandoned();
+        }
         if (this.tooltipOwner == null && this.tooltipNode != null && this.tooltipNode != subtree) {
             this.closeTooltip();
         }
@@ -751,7 +796,7 @@ public final class Root {
      * Tells every component in a tree this root let go of that it was released, skipping any that is attached
      * again, so a component holding secret text forgets it.
      */
-    private static void release(final Node subtree) {
+    static void release(final Node subtree) {
         visit(subtree, node -> {
             if (node.root() == null) {
                 node.released();
@@ -956,6 +1001,9 @@ public final class Root {
         if (this.tooltipNode != null) {
             this.layoutTooltip();
         }
+        if (this.transferDrag != null && this.transferDrag.image() != null) {
+            this.layoutDragImage(this.transferDrag);
+        }
         while (!this.arrangeRequests.isEmpty()) {
             final List<Node> requests = List.copyOf(this.arrangeRequests);
             this.arrangeRequests.clear();
@@ -991,6 +1039,16 @@ public final class Root {
         x = Math.max(0f, Math.min(x, this.width - tooltipWidth));
         y = Math.max(0f, Math.min(y, this.height - tooltipHeight));
         node.arrange(this.layoutPass, new Rect(x, y, tooltipWidth, tooltipHeight));
+    }
+
+    private void layoutDragImage(final TransferDrag drag) {
+        final Node node = drag.image();
+        node.measure(this.layoutPass, this.width, this.height);
+        final float imageWidth = node.outerWidth();
+        final float imageHeight = node.outerHeight();
+        final float x = Math.max(0f, Math.min(drag.x() + DRAG_IMAGE_OFFSET, this.width - imageWidth));
+        final float y = Math.max(0f, Math.min(drag.y() + DRAG_IMAGE_OFFSET, this.height - imageHeight));
+        node.arrange(this.layoutPass, new Rect(x, y, imageWidth, imageHeight));
     }
 
     /**
@@ -1087,6 +1145,11 @@ public final class Root {
             canvas.nextLayer();
             this.tooltipNode.paint(frame);
         }
+        final Node image = this.transferDrag == null ? null : this.transferDrag.image();
+        if (image != null) {
+            canvas.nextLayer();
+            image.paint(frame);
+        }
         this.requestHoverCursor(canvas);
     }
 
@@ -1120,6 +1183,11 @@ public final class Root {
     }
 
     private void requestHoverCursor(final Canvas canvas) {
+        if (this.transferDrag != null && this.transferDrag.isInternal()) {
+            // A drag started here shows what a drop would do
+            requestCursor(canvas, this.transferDrag.cursor());
+            return;
+        }
         // A disabled node shows the cursor of the nearest node that would take the pointer
         for (Node node = usableAncestor(this.hovered); node != null; node = node.parentNode()) {
             if (node.cursor() != null) {
@@ -1214,10 +1282,20 @@ public final class Root {
                     .put(CauseKeys.CLICKS, press.clicks)) {
                 if (!press.dragging && (Math.abs(x - press.startX) > DRAG_THRESHOLD || Math.abs(y - press.startY) > DRAG_THRESHOLD)) {
                     press.dragging = true;
-                    target.fire(InputEvents.DRAG_START, new DragEventImpl(target.facade(), press.startX, press.startY,
-                            modifiers, entry.getKey(), press.clicks, press.startX, press.startY, 0f, 0f));
+                    final DragEventImpl start = new DragEventImpl(target.facade(), press.startX, press.startY,
+                            modifiers, entry.getKey(), press.clicks, press.startX, press.startY, 0f, 0f);
+                    if (this.transferDrag == null) {
+                        start.allowTransfer();
+                    }
+                    target.fire(InputEvents.DRAG_START, start);
+                    if (start.transferRequest() != null && this.transferDrag == null) {
+                        this.startTransfer(press, start.transferRequest());
+                    }
                 }
-                if (press.dragging && target.root() == this) {
+                if (press.transfer != null) {
+                    press.transfer.moved(x, y, modifiers);
+                    dragging = true;
+                } else if (press.dragging && target.root() == this) {
                     target.fire(InputEvents.DRAG, new DragEventImpl(target.facade(), x, y, modifiers, entry.getKey(),
                             press.clicks, press.startX, press.startY, x - press.lastX, y - press.lastY));
                     dragging = true;
@@ -1233,6 +1311,43 @@ public final class Root {
         }
         this.updateTooltip();
         return dragging || this.hovered != null;
+    }
+
+    /**
+     * Starts the transfer a drag start handler asked for, if its source is still in this tree, and hands the press
+     * to the source.
+     */
+    private void startTransfer(final Press press, final DragEventImpl.TransferRequest request) {
+        final Node source = this.ui.nodeOf(request.source());
+        if (source.root() != this) {
+            return;
+        }
+        final TransferDrag drag = TransferDrag.internal(this, source, request);
+        this.transferDrag = drag;
+        press.transfer = drag;
+        final Node pressed = press.target;
+        if (pressed != source) {
+            press.target = source;
+            if (this.presses.values().stream().noneMatch(other -> other.target == pressed)) {
+                pressed.setPressed(false);
+            }
+        }
+        this.requestLayout();
+    }
+
+    /**
+     * Forgets a drag that ended. {@link TransferDrag} calls it once.
+     */
+    void transferEnded(final TransferDrag drag) {
+        if (this.transferDrag == drag) {
+            this.transferDrag = null;
+        }
+        for (final Press press : this.presses.values()) {
+            if (press.transfer == drag) {
+                press.transfer = null;
+            }
+        }
+        this.requestLayout();
     }
 
     /**
@@ -1369,13 +1484,25 @@ public final class Root {
             target.setPressed(false);
         }
         if (target.root() != this) {
+            if (press.transfer != null) {
+                press.transfer.cancel();
+            }
             return false;
         }
 
         try (CauseFrame _ = this.ui.causes().pushFrame().put(CauseKeys.CLICKS, press.clicks)) {
             target.fire(InputEvents.POINTER_RELEASE, new PointerButtonEventImpl(target.facade(), x, y, modifiers, button,
                     press.clicks));
-            if (press.dragging) {
+            final TransferDrag drag = press.transfer;
+            if (drag != null) {
+                // A release the engine lost drops nothing
+                if (mayClick) {
+                    drag.release(x, y, modifiers, false);
+                } else {
+                    drag.cancel();
+                }
+            }
+            if (press.dragging && target.root() == this) {
                 target.fire(InputEvents.DRAG_END, new DragEventImpl(target.facade(), x, y, modifiers, button,
                         press.clicks, press.startX, press.startY, x - press.lastX, y - press.lastY));
             } else if (mayClick && target.root() == this && isUsable(target) && target.bounds().contains(x, y)) {
@@ -1438,7 +1565,7 @@ public final class Root {
      *
      * @return the node, an ancestor, or {@code null} for a {@code null} node or when no ancestor is usable
      */
-    private static Node usableAncestor(final Node node) {
+    static Node usableAncestor(final Node node) {
         Node usable = node;
         for (Node candidate = node; candidate != null; candidate = candidate.parentNode()) {
             if (!candidate.isVisible() || !candidate.isEnabled()) {
@@ -1502,6 +1629,111 @@ public final class Root {
     }
 
     /**
+     * Handles a drag from another application entering the host. A drag from another application that was still
+     * going is ended first. While a drag started in this host carries a transfer, the call does nothing.
+     *
+     * @param x the pointer's x, in UI units
+     * @param y the pointer's y, in UI units
+     * @param transfer what the drag carries; values may read as empty until the drop
+     * @param allowed the effects the other application allows
+     * @param modifiers the modifiers held
+     * @return the effect the component under the pointer accepted, or empty when nothing did
+     * @throws IllegalArgumentException if {@code allowed} is empty
+     */
+    public Optional<DropEffect> dragEntered(final float x, final float y, final Transfer transfer,
+                                            final Set<DropEffect> allowed, final Modifiers modifiers) {
+        Objects.requireNonNull(transfer, "transfer");
+        if (allowed.isEmpty()) {
+            throw new IllegalArgumentException("A drag must allow at least one drop effect");
+        }
+        this.frames.request();
+        try (CauseFrame _ = this.inputFrame(Device.MOUSE, modifiers)) {
+            if (this.transferDrag != null) {
+                if (this.transferDrag.isInternal()) {
+                    return Optional.empty();
+                }
+                this.transferDrag.cancel();
+            }
+            this.transferDrag = TransferDrag.external(this, transfer,
+                    Collections.unmodifiableSet(EnumSet.copyOf(allowed)));
+            return this.externalMoved(x, y, modifiers);
+        }
+    }
+
+    /**
+     * Handles a drag from another application moving over the host.
+     *
+     * @param x the pointer's x, in UI units
+     * @param y the pointer's y, in UI units
+     * @param modifiers the modifiers held
+     * @return the effect the component under the pointer accepted, or empty when nothing did or no drag from another
+     *     application is going on
+     */
+    public Optional<DropEffect> dragMoved(final float x, final float y, final Modifiers modifiers) {
+        if (this.transferDrag == null || this.transferDrag.isInternal()) {
+            return Optional.empty();
+        }
+        this.frames.request();
+        try (CauseFrame _ = this.inputFrame(Device.MOUSE, modifiers)) {
+            return this.externalMoved(x, y, modifiers);
+        }
+    }
+
+    private Optional<DropEffect> externalMoved(final float x, final float y, final Modifiers modifiers) {
+        this.pointerX = x;
+        this.pointerY = y;
+        this.updateModifiers(modifiers, null, null);
+        this.transferDrag.moved(x, y, modifiers);
+        return Optional.ofNullable(this.transferDrag == null ? null : this.transferDrag.effect());
+    }
+
+    /**
+     * Handles a drag from another application leaving the host or being given up: the component under the pointer
+     * hears {@code DRAG_EXIT}.
+     */
+    public void dragExited() {
+        if (this.transferDrag == null || this.transferDrag.isInternal()) {
+            return;
+        }
+        this.frames.request();
+        try (CauseFrame _ = this.inputFrame(Device.MOUSE, this.modifiers)) {
+            this.transferDrag.cancel();
+        }
+    }
+
+    /**
+     * Handles a drop from another application. The components under the point hear {@code DRAG_OVER} again with the
+     * dropped transfer, whose data can now be read, and the one that accepts hears {@code DROP}. A drop without a
+     * {@link #dragEntered} before it allows every effect.
+     *
+     * @param x the pointer's x, in UI units
+     * @param y the pointer's y, in UI units
+     * @param transfer what was dropped
+     * @param modifiers the modifiers held
+     * @return the effect the target took, or empty when nothing took it or a drag started in this host is going on
+     */
+    public Optional<DropEffect> dropped(final float x, final float y, final Transfer transfer,
+                                        final Modifiers modifiers) {
+        Objects.requireNonNull(transfer, "transfer");
+        if (this.transferDrag != null && this.transferDrag.isInternal()) {
+            return Optional.empty();
+        }
+        this.frames.request();
+        try (CauseFrame _ = this.inputFrame(Device.MOUSE, modifiers)) {
+            if (this.transferDrag == null) {
+                this.transferDrag = TransferDrag.external(this, transfer,
+                        Collections.unmodifiableSet(EnumSet.allOf(DropEffect.class)));
+            } else {
+                this.transferDrag.setTransfer(transfer);
+            }
+            this.pointerX = x;
+            this.pointerY = y;
+            this.updateModifiers(modifiers, null, null);
+            return Optional.ofNullable(this.transferDrag.release(x, y, modifiers, true));
+        }
+    }
+
+    /**
      * Returns where the pointer was last seen, from the last pointer input; 0 before any.
      *
      * @return the x in root coordinates
@@ -1521,6 +1753,9 @@ public final class Root {
 
     private void handlePointerLeft() {
         this.pointerInside = false;
+        if (this.transferDrag != null && this.transferDrag.isInternal()) {
+            this.transferDrag.left();
+        }
         if (this.hovered != null) {
             final Node old = this.hovered;
             final boolean live = this.hoverLive;
@@ -1708,6 +1943,15 @@ public final class Root {
     }
 
     /**
+     * Returns the component drawn at the pointer for the drag that carries a transfer.
+     *
+     * @return the drag image, or empty when no drag with an image is going on
+     */
+    public Optional<Component<?>> dragImage() {
+        return Optional.ofNullable(this.transferDrag == null ? null : this.transferDrag.image()).map(Node::facade);
+    }
+
+    /**
      * Returns the component showing as the tooltip.
      *
      * @return the tooltip's content, or empty when no tooltip shows
@@ -1741,6 +1985,11 @@ public final class Root {
     }
 
     private boolean handleKey(final Key key, final KeyAction action, final Modifiers modifiers) {
+        if (this.transferDrag != null && key == Key.ESCAPE && action == KeyAction.PRESS) {
+            // Escape ends a drag that carries a transfer before anything else hears it
+            this.transferDrag.cancel();
+            return true;
+        }
         if (!this.platform.capabilities().sendsKeyRepeat()) {
             this.keyRepeater.onKey(key, action, modifiers, this.platform.clock().millis());
         }
@@ -2853,7 +3102,9 @@ public final class Root {
     }
 
     private static final class Press {
-        final Node target;
+        // The pressed node, or the source once the drag carries a transfer
+        Node target;
+        TransferDrag transfer;
         final int clicks;
         final float startX;
         final float startY;

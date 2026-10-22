@@ -20,6 +20,11 @@ import org.inspirenxe.strata.api.input.KeyAction;
 import org.inspirenxe.strata.api.input.Modifiers;
 import org.inspirenxe.strata.api.input.MouseButton;
 import org.inspirenxe.strata.api.input.ScrollKind;
+import org.inspirenxe.strata.api.transfer.DropEffect;
+import org.inspirenxe.strata.api.transfer.Transfer;
+
+import java.util.Optional;
+import java.util.Set;
 
 /**
  * Where an adapter sends the engine's input. {@link ScreenHost} and {@link ScreenStack} extend it, and adapters call
@@ -41,6 +46,9 @@ import org.inspirenxe.strata.api.input.ScrollKind;
  *     <li>Call {@link #pointerLeft()} when the pointer leaves the host's area, so nothing stays hovered.</li>
  *     <li>Use Strata's scroll directions whatever the engine's: vertical is positive when the wheel turns away from
  *     the user, horizontal positive toward the left.</li>
+ *     <li>Send a drag from another application with {@link #dragEntered}, {@link #dragMoved} for each move,
+ *     and {@link #dropped} or {@link #dragExited} at its end. A drop the engine reports without a drag before it,
+ *     such as files dropped on a game window, goes to {@link #dropped} alone.</li>
  *     <li>Call on the UI thread only.</li>
  * </ul>
  */
@@ -106,4 +114,58 @@ public interface InputSink {
      * @return true if the focused component consumed it; false if nothing has focus or the value was ignored
      */
     boolean charTyped(int codePoint, Modifiers modifiers);
+
+    /**
+     * A drag from another application entered the host's area. Strata fires {@code DRAG_ENTER} and
+     * {@code DRAG_OVER} at the components under the pointer. An engine that can read only the formats until the
+     * drop passes a transfer whose values are {@linkplain Transfer.Builder#supply supplied} and read as empty until
+     * then. The default does nothing, for an input sink that takes no drags.
+     *
+     * @param x the pointer's x position
+     * @param y the pointer's y position
+     * @param transfer what the drag carries, in the formats the engine can name
+     * @param allowed the effects the other application allows, not empty
+     * @param modifiers the held modifiers
+     * @return the effect a component would take, which the adapter shows and reports to the other application, or
+     *     empty when nothing would take it
+     */
+    default Optional<DropEffect> dragEntered(final float x, final float y, final Transfer transfer,
+                                             final Set<DropEffect> allowed, final Modifiers modifiers) {
+        return Optional.empty();
+    }
+
+    /**
+     * A drag from another application moved over the host's area. The default does nothing.
+     *
+     * @param x the pointer's x position
+     * @param y the pointer's y position
+     * @param modifiers the held modifiers
+     * @return the effect a component would take, or empty when nothing would
+     */
+    default Optional<DropEffect> dragMoved(final float x, final float y, final Modifiers modifiers) {
+        return Optional.empty();
+    }
+
+    /**
+     * A drag from another application left the host's area or was given up. The default does nothing.
+     */
+    default void dragExited() {
+    }
+
+    /**
+     * Something from another application was dropped on the host, such as files from the desktop, which a game
+     * adapter sends from its engine's file drop callback as {@link Transfer#files}. The component that accepts the
+     * drop at the point hears {@code DROP}. The default does nothing.
+     *
+     * @param x the pointer's x position
+     * @param y the pointer's y position
+     * @param transfer what was dropped, with its values readable
+     * @param modifiers the held modifiers, or {@link Modifiers#NONE} if the engine does not report them
+     * @return the effect the target took, which the adapter reports to the other application, or empty when nothing
+     *     took the drop
+     */
+    default Optional<DropEffect> dropped(final float x, final float y, final Transfer transfer,
+                                         final Modifiers modifiers) {
+        return Optional.empty();
+    }
 }

@@ -15,7 +15,14 @@
  */
 package org.inspirenxe.strata.api.event.input;
 
+import org.inspirenxe.strata.api.ComponentFactory;
+import org.inspirenxe.strata.api.component.Component;
 import org.inspirenxe.strata.api.input.MouseButton;
+import org.inspirenxe.strata.api.transfer.DropEffect;
+import org.inspirenxe.strata.api.transfer.Transfer;
+
+import java.util.Set;
+import java.util.function.Function;
 
 /**
  * A drag: the pointer moving while a button that went down on the target is held. Used by
@@ -24,6 +31,10 @@ import org.inspirenxe.strata.api.input.MouseButton;
  * <p>A press only becomes a drag once the pointer moves more than 4 units from where the button went down. From
  * then on the target receives the drag events even while the pointer is outside it, and the release that ends the
  * drag does not also produce a {@link InputEvents#CLICK}. Each button drags independently.</p>
+ *
+ * <p>A {@link InputEvents#DRAG_START} handler can make the drag carry a payload with {@link #startTransfer}. The
+ * components under the pointer then hear the drag as {@link TransferEvent}s instead, and the source hears no more
+ * {@link InputEvents#DRAG}; it still hears the release and {@link InputEvents#DRAG_END}.</p>
  *
  * <p>Only Strata creates events. Do not implement this interface.</p>
  */
@@ -73,4 +84,36 @@ public interface DragEvent extends PointerEvent {
      * @return the vertical movement
      */
     float deltaY();
+
+    /**
+     * Makes this drag carry a payload, with no drag image. See {@link #startTransfer(Transfer, Set, Function)}.
+     *
+     * @param transfer what the drag carries
+     * @param allowed the effects a target may take
+     * @throws IllegalArgumentException if the transfer or the set of effects is empty
+     * @throws IllegalStateException outside a {@link InputEvents#DRAG_START} event, after a transfer was started
+     *     for this drag, or while another drag of the host carries a transfer
+     */
+    void startTransfer(Transfer transfer, Set<DropEffect> allowed);
+
+    /**
+     * Makes this drag carry a payload. Call it from a {@link InputEvents#DRAG_START} handler or a component's
+     * {@code onDragStart} hook. The {@linkplain #current() current} component becomes the drag's source, and the
+     * event is {@linkplain #consume() consumed}, so an ancestor does not start a transfer of its own.
+     *
+     * <p>From then on each move goes to the components under the pointer as {@link InputEvents#DRAG_OVER}, and the
+     * release drops the transfer on the one that accepted last, as {@link TransferEvent} describes. Escape, or a
+     * release where nothing accepted, ends the drag with no effect. The source then hears
+     * {@link InputEvents#TRANSFER_DONE}.</p>
+     *
+     * @param transfer what the drag carries
+     * @param allowed the effects a target may take
+     * @param image builds the component drawn at the pointer while the drag lasts, once, with the host's factory;
+     *     it must return a new component
+     * @throws IllegalArgumentException if the transfer or the set of effects is empty
+     * @throws IllegalStateException outside a {@link InputEvents#DRAG_START} event, after a transfer was started
+     *     for this drag, or while another drag of the host carries a transfer
+     */
+    void startTransfer(Transfer transfer, Set<DropEffect> allowed,
+                       Function<ComponentFactory, ? extends Component<?>> image);
 }

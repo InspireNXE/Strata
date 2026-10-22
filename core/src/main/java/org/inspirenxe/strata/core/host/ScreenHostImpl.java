@@ -15,6 +15,8 @@
  */
 package org.inspirenxe.strata.core.host;
 
+import org.inspirenxe.strata.api.transfer.DropEffect;
+import org.inspirenxe.strata.api.transfer.Transfer;
 import org.inspirenxe.strata.api.ComponentFactory;
 import org.inspirenxe.strata.api.component.Component;
 import org.inspirenxe.strata.api.geometry.Size;
@@ -46,6 +48,7 @@ import org.inspirenxe.strata.spi.ThemeSource;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 
 /**
  * The core {@link ScreenHost}. It owns one factory and one {@link Root}, and passes engine input and frames to the
@@ -464,6 +467,32 @@ public final class ScreenHostImpl implements ScreenHost {
     public boolean charTyped(final int codePoint, final Modifiers modifiers) {
         this.uiThread.record();
         return this.root.charTyped(codePoint, modifiers);
+    }
+
+    @Override
+    public Optional<DropEffect> dragEntered(final float x, final float y, final Transfer transfer,
+                                            final Set<DropEffect> allowed, final Modifiers modifiers) {
+        this.uiThread.record();
+        return this.root.dragEntered(x, y, transfer, allowed, modifiers);
+    }
+
+    @Override
+    public Optional<DropEffect> dragMoved(final float x, final float y, final Modifiers modifiers) {
+        this.uiThread.record();
+        return this.root.dragMoved(x, y, modifiers);
+    }
+
+    @Override
+    public void dragExited() {
+        this.uiThread.record();
+        this.root.dragExited();
+    }
+
+    @Override
+    public Optional<DropEffect> dropped(final float x, final float y, final Transfer transfer,
+                                        final Modifiers modifiers) {
+        this.uiThread.record();
+        return this.root.dropped(x, y, transfer, modifiers);
     }
 
     /**

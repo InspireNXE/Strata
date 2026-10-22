@@ -69,6 +69,34 @@ public final class InputEvents {
      */
     public static final EventType<DragEvent> DRAG_END = EventType.bubbling("drag_end", DragEvent.class);
     /**
+     * A drag that carries a transfer moved onto the target, which is now the deepest component under the pointer, or
+     * its nearest enabled ancestor when that is disabled. Direct. See {@link TransferEvent}.
+     */
+    public static final EventType<TransferEvent> DRAG_ENTER = EventType.direct("drag_enter", TransferEvent.class);
+    /**
+     * A drag that carries a transfer moved over the target. Bubbles from the component {@link #DRAG_ENTER} reached
+     * until a handler {@linkplain TransferEvent#accept accepts} or {@linkplain TransferEvent#reject rejects} it.
+     * Fired on every move, after any {@link #DRAG_EXIT} and {@link #DRAG_ENTER} for it.
+     */
+    public static final EventType<TransferEvent> DRAG_OVER = EventType.bubbling("drag_over", TransferEvent.class);
+    /**
+     * A drag that carries a transfer left the target, the target stopped being the component under the pointer, the
+     * pointer left the host, or the drag ended. Direct.
+     */
+    public static final EventType<TransferEvent> DRAG_EXIT = EventType.direct("drag_exit", TransferEvent.class);
+    /**
+     * The drag was released over the component that accepted it last, which is the target. Bubbles. The drop takes
+     * the event's {@linkplain TransferEvent#effect() effect} unless a handler
+     * {@linkplain TransferEvent#reject() rejects} it.
+     */
+    public static final EventType<TransferEvent> DROP = EventType.bubbling("drop", TransferEvent.class);
+    /**
+     * The drag the target started a transfer for ended, after the {@link #DROP} if there was one. Direct, on the
+     * source. Its {@linkplain TransferEvent#effect() effect} is what the target took, or empty when nothing took it:
+     * after a {@link org.inspirenxe.strata.api.transfer.DropEffect#MOVE} the source removes what it gave away.
+     */
+    public static final EventType<TransferEvent> TRANSFER_DONE = EventType.direct("transfer_done", TransferEvent.class);
+    /**
      * A wheel or trackpad scrolled over the target. Bubbles, so an outer scrolling container receives scrolls its
      * children do not consume.
      */
