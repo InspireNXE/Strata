@@ -597,6 +597,10 @@ public final class TreeViewImpl<T> extends ListBackedControl<T, TreeViewImpl.Ent
         private final TreeViewImpl<T> tree;
         private final Entry<T> entry;
         private final Component<?> cell;
+        // The arrow's lines, and the bounds and state they were made for
+        private Rect[] arrowLines;
+        private Rect arrowBounds;
+        private boolean arrowOpen;
 
         @SuppressWarnings("this-escape")
         Row(final ComponentFactoryImpl ui, final TreeViewImpl<T> tree, final Entry<T> entry) {
@@ -630,14 +634,18 @@ public final class TreeViewImpl<T> extends ListBackedControl<T, TreeViewImpl.Ent
             if (!this.entry.parent) {
                 return;
             }
-            final float x = this.arrowX(bounds);
-            if (this.tree.isExpanded(this.entry.item)) {
-                Rings.down(painter, this.tree.arrow, x + (ARROW_WIDTH - Rings.ARROW_LONG) * 0.5f,
-                        bounds.y() + (bounds.height() - Rings.ARROW_SHORT) * 0.5f);
-            } else {
-                Rings.right(painter, this.tree.arrow, x + (ARROW_WIDTH - Rings.ARROW_SHORT) * 0.5f,
-                        bounds.y() + (bounds.height() - Rings.ARROW_LONG) * 0.5f);
+            final boolean open = this.tree.isExpanded(this.entry.item);
+            if (this.arrowLines == null || this.arrowBounds != bounds || this.arrowOpen != open) {
+                final float x = this.arrowX(bounds);
+                this.arrowLines = open
+                        ? Shapes.down(x + (ARROW_WIDTH - Rings.ARROW_LONG) * 0.5f,
+                                bounds.y() + (bounds.height() - Rings.ARROW_SHORT) * 0.5f)
+                        : Shapes.right(x + (ARROW_WIDTH - Rings.ARROW_SHORT) * 0.5f,
+                                bounds.y() + (bounds.height() - Rings.ARROW_LONG) * 0.5f);
+                this.arrowBounds = bounds;
+                this.arrowOpen = open;
             }
+            Shapes.paint(painter, this.tree.arrow, this.arrowLines);
         }
 
         @Override

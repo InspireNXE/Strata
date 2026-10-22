@@ -38,7 +38,6 @@ import org.inspirenxe.strata.api.text.TextStyle;
 import org.inspirenxe.strata.api.theme.Paint;
 import org.inspirenxe.strata.api.theme.Theme;
 import org.inspirenxe.strata.core.control.Caption;
-import org.inspirenxe.strata.core.control.Rings;
 import org.inspirenxe.strata.core.layout.ScrollTrack;
 import org.inspirenxe.strata.core.layout.ThumbDrag;
 import org.inspirenxe.strata.core.node.BuiltInComposite;
@@ -46,6 +45,7 @@ import org.inspirenxe.strata.core.node.ComponentFactoryImpl;
 import org.inspirenxe.strata.core.text.TextLine;
 
 import java.util.ArrayList;
+import java.util.BitSet;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -63,7 +63,8 @@ import java.util.function.IntUnaryOperator;
 /**
  * The core {@link ListView}. Rows are built during arrange, once the viewport is known: rows that scrolled out are
  * removed, rows that scrolled in are built, measured and placed, and the change schedules one more layout. Rows sit
- * inside the list's border widths. A wheel notch scrolls one row and its spacing.
+ * inside the list's border widths. A wheel notch scrolls one row and its spacing. Arrange also makes the rectangles
+ * painting reads, the rows', the edges' and the thumb's, so a frame with nothing new to draw allocates nothing.
  *
  * @param <T> the type of the items
  */
@@ -106,6 +107,17 @@ public final class ListViewImpl<T> extends BuiltInComposite<ListView<T>> impleme
     private float rowX;
     // Set for a list the factory made, which follows the theme's row width and edges
     private boolean standalone;
+
+    // Made during arrange for painting: each built row's index and rectangle, its ring once first drawn, the edge
+    // lines and the thumb
+    private int[] paintIndex;
+    private Rect[] paintRect;
+    private Rect[][] paintRing;
+    private int paintCount;
+    private Rect[] edges;
+    private Rect thumbRect;
+    // The selected set as bits, so painting tests a row without boxing its index
+    private final BitSet chosenBits;
 
     // Pointer
     private float pointerY;
@@ -158,6 +170,12 @@ public final class ListViewImpl<T> extends BuiltInComposite<ListView<T>> impleme
         this.rowHeight = DEFAULT_ROW_HEIGHT;
         this.selectedIndex = -1;
         this.chosen = new TreeSet<>();
+        this.chosenBits = new BitSet();
+        this.paintIndex = new int[0];
+        this.paintRect = new Rect[0];
+        this.paintRing = new Rect[0][];
+        this.edges = new Rect[0];
+        this.thumbRect = Rect.ZERO;
         this.mode = SelectionMode.SINGLE;
         this.anchor = -1;
         this.reveal = -1;
@@ -235,6 +253,7 @@ public final class ListViewImpl<T> extends BuiltInComposite<ListView<T>> impleme
         this.items = next;
         this.chosen.clear();
         this.chosen.addAll(set);
+        this.chosenChanged();
         this.selectedIndex = index;
         this.anchor = index;
         this.rowsStale = true;
@@ -401,6 +420,16 @@ public final class ListViewImpl<T> extends BuiltInComposite<ListView<T>> impleme
     }
 
     /**
+     * Brings the bits painting reads up to date with the selected set.
+     */
+    private void chosenChanged() {
+        this.chosenBits.clear();
+        for (final int index : this.chosen) {
+            this.chosenBits.set(index);
+        }
+    }
+
+    /**
      * Replaces the selected set and the current row, reporting the set first and then the current row, each only if
      * it changed.
      */
@@ -409,6 +438,7 @@ public final class ListViewImpl<T> extends BuiltInComposite<ListView<T>> impleme
         final int previous = this.selectedIndex;
         this.chosen.clear();
         this.chosen.addAll(set);
+        this.chosenChanged();
         this.selectedIndex = current;
         if (!before.equals(List.copyOf(this.chosen))) {
             this.manyChanged(before);
@@ -870,6 +900,13 @@ public final class ListViewImpl<T> extends BuiltInComposite<ListView<T>> impleme
             }
         }
         final float offset = Math.round(this.scrollY);
+        final int count = Math.max(0, last - first + 1);
+        if (this.paintRect.length < count) {
+            this.paintIndex = new int[count];
+            this.paintRect = new Rect[count];
+            this.paintRing = new Rect[count][];
+        }
+        this.paintCount = 0;
         for (int i = first; i <= last; i++) {
             Component<?> cell = this.rows.get(i);
             if (cell == null) {
@@ -878,14 +915,26 @@ public final class ListViewImpl<T> extends BuiltInComposite<ListView<T>> impleme
                 this.addContent(cell);
                 context.measure(cell, this.rowWidth, this.rowHeight);
             }
-            context.arrange(cell, new Rect(this.rowX, this.viewport.y() + this.padding.top() + i * this.step() - offset,
-                    this.rowWidth, this.rowHeight));
+            final Rect rect = new Rect(this.rowX, this.viewport.y() + this.padding.top() + i * this.step() - offset,
+                    this.rowWidth, this.rowHeight);
+            context.arrange(cell, rect);
+            this.paintIndex[this.paintCount] = i;
+            this.paintRect[this.paintCount] = rect;
+            this.paintRing[this.paintCount] = null;
+            this.paintCount++;
         }
         final float barX = column
                 ? this.rowX + this.rowWidth + this.barGap
                 : inner.right() - ScrollPanel.BAR_WIDTH;
         this.bar.update(new Rect(barX, inner.y(), ScrollPanel.BAR_WIDTH, inner.height()),
                 this.viewport.height(), Math.max(total, this.viewport.height()));
+        this.thumbRect = this.bar.thumb(this.scrollY, this.maxScrollY);
+        this.edges = this.standalone ? new Rect[] {
+                new Rect(bounds.x(), bounds.y() - 1f, bounds.width(), 1f),
+                new Rect(bounds.x(), bounds.bottom(), bounds.width(), 1f),
+                new Rect(bounds.x(), bounds.y() - 2f, bounds.width(), 1f),
+                new Rect(bounds.x(), bounds.bottom() + 1f, bounds.width(), 1f)
+        } : new Rect[0];
     }
 
     @Override
@@ -895,11 +944,11 @@ public final class ListViewImpl<T> extends BuiltInComposite<ListView<T>> impleme
 
     @Override
     protected void paint(final Painter painter, final Rect bounds) {
-        if (this.standalone) {
-            this.edge.paint(painter, new Rect(bounds.x(), bounds.y() - 1f, bounds.width(), 1f));
-            this.edge.paint(painter, new Rect(bounds.x(), bounds.bottom(), bounds.width(), 1f));
-            this.edgeOuter.paint(painter, new Rect(bounds.x(), bounds.y() - 2f, bounds.width(), 1f));
-            this.edgeOuter.paint(painter, new Rect(bounds.x(), bounds.bottom() + 1f, bounds.width(), 1f));
+        if (this.edges.length == 4) {
+            this.edge.paint(painter, this.edges[0]);
+            this.edge.paint(painter, this.edges[1]);
+            this.edgeOuter.paint(painter, this.edges[2]);
+            this.edgeOuter.paint(painter, this.edges[3]);
         }
         this.background.paint(painter, bounds);
         if (this.items.isEmpty()) {
@@ -919,20 +968,22 @@ public final class ListViewImpl<T> extends BuiltInComposite<ListView<T>> impleme
     }
 
     /**
-     * Draws each built row's background, inside the viewport clip.
+     * Draws each built row's background, inside the viewport clip, from the rectangles arrange made.
      */
     private void drawRows() {
         final int hoveredRow = this.isHoverWithin() ? this.rowAt(this.pointerY) : -1;
-        final float offset = Math.round(this.scrollY);
         final boolean focused = this.isFocused();
-        for (final Integer index : this.rows.keySet()) {
-            final Rect rect = new Rect(this.rowX, this.viewport.y() + this.padding.top() + index * this.step() - offset, this.rowWidth,
-                    this.rowHeight);
-            if (this.chosen.contains(index)) {
+        for (int i = 0; i < this.paintCount; i++) {
+            final int index = this.paintIndex[i];
+            final Rect rect = this.paintRect[i];
+            if (this.chosenBits.get(index)) {
                 (focused ? this.rowSelected : this.rowSelectedUnfocused).paint(this.painter, rect);
                 final Paint edge = focused ? this.ring : this.ringUnfocused;
                 if (edge != Paint.NONE) {
-                    Rings.paint(this.painter, edge, rect);
+                    if (this.paintRing[i] == null) {
+                        this.paintRing[i] = Shapes.ring(rect);
+                    }
+                    Shapes.paint(this.painter, edge, this.paintRing[i]);
                 }
             } else {
                 (index == hoveredRow ? this.rowHovered : this.row).paint(this.painter, rect);
@@ -943,7 +994,8 @@ public final class ListViewImpl<T> extends BuiltInComposite<ListView<T>> impleme
     @Override
     protected void paintOverChildren(final Painter painter, final Rect bounds) {
         if (this.barShown) {
-            this.bar.paint(painter, this.scrollY, this.maxScrollY, this.track, this.thumbDrag.isDragging() ? this.thumbHovered : this.thumb);
+            this.track.paint(painter, this.bar.track());
+            (this.thumbDrag.isDragging() ? this.thumbHovered : this.thumb).paint(painter, this.thumbRect);
         }
     }
 

@@ -106,6 +106,11 @@ public final class ComboBoxImpl<T> extends BuiltInComponent<ComboBox<T>> impleme
     private TextLine shown;
     private TextLine shownDisabled;
 
+    // The arrow's lines, and the bounds and padding they were made for
+    private Rect[] arrowLines;
+    private Rect arrowBounds;
+    private Insets arrowPadding;
+
     /**
      * Creates a box with no options.
      *
@@ -395,13 +400,14 @@ public final class ComboBoxImpl<T> extends BuiltInComponent<ComboBox<T>> impleme
         final float textY = innerY + (innerHeight - this.lineHeight) * 0.5f;
         (enabled ? this.shown : this.shownDisabled).draw(painter, bounds.x() + padding.left(), textY);
 
-        // A down arrow from four shrinking lines
-        final int color = (enabled ? this.textStyle : this.disabledTextStyle).color();
-        final float arrowX = bounds.right() - padding.right() - ARROW_WIDTH;
-        final float arrowY = innerY + (innerHeight - 4f) * 0.5f;
-        for (int i = 0; i < 4; i++) {
-            painter.fill(new Rect(arrowX + i, arrowY + i, ARROW_WIDTH - i * 2f, 1f), color);
+        // A down arrow from four shrinking lines, made again only when the bounds or the padding changed
+        if (this.arrowLines == null || this.arrowBounds != bounds || this.arrowPadding != padding) {
+            this.arrowLines = Shapes.down(bounds.right() - padding.right() - ARROW_WIDTH,
+                    innerY + (innerHeight - 4f) * 0.5f);
+            this.arrowBounds = bounds;
+            this.arrowPadding = padding;
         }
+        Shapes.fill(painter, (enabled ? this.textStyle : this.disabledTextStyle).color(), this.arrowLines);
     }
 
     // ------------------------------------------------------------------

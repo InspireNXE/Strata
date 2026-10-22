@@ -92,6 +92,9 @@ public final class TableViewImpl<T> extends ListBackedControl<T, T, TableView<T>
     private float[] columnWidth;
     private TextLine[] titles;
     private float rowsX;
+    // Made during arrange for painting: each title's cell and the lines between columns
+    private Rect[] headerCells;
+    private Rect[] gridLines;
 
     // Theme
     private Paint headerPaint;
@@ -116,6 +119,8 @@ public final class TableViewImpl<T> extends ListBackedControl<T, T, TableView<T>
         this.columnX = new float[0];
         this.columnWidth = new float[0];
         this.titles = new TextLine[0];
+        this.headerCells = new Rect[0];
+        this.gridLines = new Rect[0];
         this.headerPaint = Paint.NONE;
         this.headerHovered = Paint.NONE;
         this.grid = Paint.NONE;
@@ -453,6 +458,15 @@ public final class TableViewImpl<T> extends ListBackedControl<T, T, TableView<T>
         final Rect body = new Rect(bounds.x(), bounds.y() + headHeight, bounds.width(), Math.max(0f, bounds.height() - headHeight));
         this.layoutColumns(context.text(), this.list.rowWidthFor(body));
         this.rowsX = body.x() + this.nodeOf(this.list).border().widths().left();
+        final int count = this.columns.size();
+        this.headerCells = new Rect[count];
+        this.gridLines = new Rect[Math.max(0, count - 1)];
+        for (int i = 0; i < count; i++) {
+            this.headerCells[i] = new Rect(this.rowsX + this.columnX[i], bounds.y(), this.columnWidth[i], headHeight);
+            if (i > 0) {
+                this.gridLines[i - 1] = new Rect(this.rowsX + this.columnX[i] - 1f, bounds.y(), 1f, bounds.height());
+            }
+        }
         context.arrange(this.header, new Rect(bounds.x(), bounds.y(), bounds.width(), headHeight));
         context.arrange(this.list, body);
     }
@@ -497,8 +511,8 @@ public final class TableViewImpl<T> extends ListBackedControl<T, T, TableView<T>
         if (this.grid == Paint.NONE) {
             return;
         }
-        for (int i = 1; i < this.columns.size(); i++) {
-            this.grid.paint(painter, new Rect(this.rowsX + this.columnX[i] - 1f, bounds.y(), 1f, bounds.height()));
+        for (final Rect line : this.gridLines) {
+            this.grid.paint(painter, line);
         }
     }
 
@@ -509,6 +523,10 @@ public final class TableViewImpl<T> extends ListBackedControl<T, T, TableView<T>
         private final TableViewImpl<?> table;
         private float pointerX;
         private float lineHeight;
+        // The sort arrow's lines, and the cell and direction they were made for
+        private Rect[] arrow;
+        private Rect arrowCell;
+        private boolean arrowUp;
 
         Header(final ComponentFactoryImpl ui, final TableViewImpl<?> table) {
             super(ui);
@@ -520,6 +538,22 @@ public final class TableViewImpl<T> extends ListBackedControl<T, T, TableView<T>
         protected Size measure(final MeasureContext context, final float availableWidth, final float availableHeight) {
             this.lineHeight = context.text().lineHeight(this.table.headerText);
             return new Size(0f, ListView.DEFAULT_ROW_HEIGHT);
+        }
+
+        /**
+         * Returns the sort arrow's lines at the right of a cell, made again only when the cell or the direction
+         * changed.
+         */
+        private Rect[] arrow(final Rect cell, final Insets padding) {
+            final boolean up = this.table.ascending;
+            if (this.arrow == null || this.arrowCell != cell || this.arrowUp != up) {
+                final float arrowX = cell.right() - padding.right() - Rings.ARROW_LONG;
+                final float arrowY = cell.y() + (cell.height() - Rings.ARROW_SHORT) * 0.5f;
+                this.arrow = up ? Shapes.up(arrowX, arrowY) : Shapes.down(arrowX, arrowY);
+                this.arrowCell = cell;
+                this.arrowUp = up;
+            }
+            return this.arrow;
         }
 
         private int columnAt(final float x) {
@@ -537,21 +571,15 @@ public final class TableViewImpl<T> extends ListBackedControl<T, T, TableView<T>
             final int hovered = this.isHovered() ? this.columnAt(this.pointerX) : -1;
             final Insets padding = this.table.headerPadding;
             final float textY = bounds.y() + padding.top() + (bounds.height() - padding.vertical() - this.lineHeight) * 0.5f;
-            for (int i = 0; i < this.table.titles.length; i++) {
-                final Rect cell = new Rect(this.table.rowsX + this.table.columnX[i], bounds.y(), this.table.columnWidth[i],
-                        bounds.height());
+            final int count = Math.min(this.table.titles.length, this.table.headerCells.length);
+            for (int i = 0; i < count; i++) {
+                final Rect cell = this.table.headerCells[i];
                 if (i == hovered && this.table.isSortable(i)) {
                     this.table.headerHovered.paint(painter, cell);
                 }
                 this.table.titles[i].draw(painter, cell.x() + padding.left(), textY);
                 if (this.table.sortColumn != null && this.table.columns.get(i) == this.table.sortColumn) {
-                    final float arrowX = cell.right() - padding.right() - Rings.ARROW_LONG;
-                    final float arrowY = cell.y() + (cell.height() - Rings.ARROW_SHORT) * 0.5f;
-                    if (this.table.ascending) {
-                        Rings.up(painter, this.table.headerText.color(), arrowX, arrowY);
-                    } else {
-                        Rings.down(painter, this.table.headerText.color(), arrowX, arrowY);
-                    }
+                    Shapes.fill(painter, this.table.headerText.color(), this.arrow(cell, padding));
                 }
             }
         }

@@ -379,6 +379,10 @@ public final class GridViewImpl<T> extends BuiltInComposite<GridView<T>> impleme
         private final GridViewImpl<T> grid;
         private final int index;
         private Component<?> content;
+        // Where the hovered and selected paints go, and the bounds and insets it was made for
+        private Rect highlight;
+        private Rect highlightBounds;
+        private Insets highlightInsets;
 
         Slot(final ComponentFactoryImpl ui, final GridViewImpl<T> grid, final int index) {
             super(ui);
@@ -416,20 +420,34 @@ public final class GridViewImpl<T> extends BuiltInComposite<GridView<T>> impleme
             }
         }
 
+        /**
+         * Returns the area the hovered and selected paints cover, made again only when the bounds or the theme's
+         * insets changed.
+         */
+        private Rect highlight(final Rect bounds) {
+            final Insets insets = this.grid.highlightInsets;
+            if (this.highlight == null || this.highlightBounds != bounds || this.highlightInsets != insets) {
+                this.highlight = bounds.shrink(insets);
+                this.highlightBounds = bounds;
+                this.highlightInsets = insets;
+            }
+            return this.highlight;
+        }
+
         @Override
         protected void paint(final Painter painter, final Rect bounds) {
             this.grid.cellPaint.paint(painter, bounds);
             if (this.grid.hoveredBackPaint != Paint.NONE && this.isHoverWithin()) {
-                this.grid.hoveredBackPaint.paint(painter, bounds.shrink(this.grid.highlightInsets));
+                this.grid.hoveredBackPaint.paint(painter, this.highlight(bounds));
             }
         }
 
         @Override
         protected void paintOverChildren(final Painter painter, final Rect bounds) {
             if (this.index == this.grid.selectedIndex) {
-                this.grid.selectedPaint.paint(painter, bounds.shrink(this.grid.highlightInsets));
+                this.grid.selectedPaint.paint(painter, this.highlight(bounds));
             } else if (this.isHoverWithin()) {
-                this.grid.hoveredPaint.paint(painter, bounds.shrink(this.grid.highlightInsets));
+                this.grid.hoveredPaint.paint(painter, this.highlight(bounds));
             }
         }
 

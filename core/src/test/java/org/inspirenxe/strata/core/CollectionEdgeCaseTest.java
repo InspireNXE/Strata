@@ -455,4 +455,34 @@ class CollectionEdgeCaseTest {
             assertThrows(UnsupportedOperationException.class, () -> grid.items().set(0, "Dev"));
         }
     }
+
+    @Nested
+    class Painting {
+        private List<String> render() {
+            final DrawLog canvas = new DrawLog();
+            CollectionEdgeCaseTest.this.test.host().render(canvas);
+            return canvas.lines();
+        }
+
+        @Test
+        void aSortArrowAndScrolledRowsAreDrawnAfreshAndAgainTheSame() {
+            final TableView<String> table = CollectionEdgeCaseTest.this.ui.<String>tableView()
+                    .addTextColumn("Name", GridLength.weighted(1f), item -> item)
+                    .setItems(numbers(30).stream().map(n -> "Row " + n).toList());
+            table.setSize(150, 100);
+            final TableColumn<String> name = table.columns().getFirst();
+            table.sortBy(name, false);
+            CollectionEdgeCaseTest.this.test.show(CollectionEdgeCaseTest.this.panel.add(table, 0, 0));
+            final List<String> descending = this.render();
+            assertEquals(descending, this.render());
+            table.sortBy(name, true);
+            final List<String> ascending = this.render();
+            assertEquals(ascending, this.render());
+            assertFalse(descending.equals(ascending));
+            table.setScrollY(30);
+            final List<String> scrolled = this.render();
+            assertEquals(scrolled, this.render());
+            assertFalse(scrolled.equals(ascending));
+        }
+    }
 }
