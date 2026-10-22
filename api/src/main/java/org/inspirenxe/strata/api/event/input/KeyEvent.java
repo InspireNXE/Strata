@@ -47,7 +47,9 @@ public interface KeyEvent extends Cancelable {
     KeyAction action();
 
     /**
-     * Returns the modifiers held at the time of the event.
+     * Returns the modifiers held at the time of the event. For a modifier key's own event they are the modifiers as
+     * the key leaves them, on every engine: a press or repeat of Shift includes {@code SHIFT}, and its release does
+     * not.
      *
      * @return the held modifiers
      */

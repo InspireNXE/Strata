@@ -1285,17 +1285,20 @@ public final class Root {
      *
      * @param key the physical key
      * @param action whether the key went down, repeated or went up
-     * @param modifiers the modifiers held
+     * @param modifiers the modifiers the engine reports as held; for a modifier key's own event the key event and its
+     *     cause carry them with that modifier added on a press or repeat and taken out on a release, since engines
+     *     differ on whether they include it
      * @return true if a node handled the key, it closed an overlay, or it moved focus
      */
     public boolean key(final Key key, final KeyAction action, final Modifiers modifiers) {
-        try (CauseFrame _ = this.inputFrame(Device.KEYBOARD, modifiers)) {
-            return this.handleKey(key, action, modifiers);
+        try (CauseFrame frame = this.inputFrame(Device.KEYBOARD, modifiers)) {
+            this.updateModifiers(modifiers, key, action);
+            frame.put(CauseKeys.MODIFIERS, this.modifiers);
+            return this.handleKey(key, action, this.modifiers);
         }
     }
 
     private boolean handleKey(final Key key, final KeyAction action, final Modifiers modifiers) {
-        this.updateModifiers(modifiers, key, action);
         if (!this.platform.capabilities().sendsKeyRepeat()) {
             this.keyRepeater.onKey(key, action, modifiers, this.platform.clock().millis());
         }
