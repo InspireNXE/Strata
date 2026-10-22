@@ -81,22 +81,28 @@ public interface RowView<S extends RowView<S>> {
     }
 
     /**
-     * Returns the vertical offset.
+     * Returns the vertical offset. It reflects {@link #setScrollY} at once. A {@link #scrollToIndex}, a scroll from
+     * the user and a change of the rows or the control's size show in it after the next layout, which also clamps
+     * it to the rows.
      *
      * @return how far the rows are scrolled down, in UI units
      */
     float scrollY();
 
     /**
-     * Scrolls to an offset, clamped to the rows.
+     * Scrolls to an offset. The offset is at least 0, and once the control has been laid out it is at most what the
+     * current rows need, so an offset set right after the items change, or before the first layout, is kept. The
+     * next layout clamps it to the rows in the control's size.
      *
      * @param scrollY the vertical offset
      * @return this control
+     * @throws IllegalArgumentException if the offset is NaN
      */
     S setScrollY(float scrollY);
 
     /**
-     * Scrolls the least distance that shows a row.
+     * Scrolls the least distance that shows a row. The scroll happens at the next layout, once the control knows its
+     * size; {@link #scrollY()} reports the new offset after it.
      *
      * @param index the row's index, as for {@link SingleSelection}
      * @return this control

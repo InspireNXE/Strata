@@ -341,28 +341,4 @@ public interface ListView<T> extends Component<ListView<T>>, Focusable<ListView<
      * @return this list
      */
     ListView<T> setPlaceholder(Text placeholder);
-
-    /**
-     * Returns the vertical offset.
-     *
-     * @return how far the rows are scrolled down, in UI units
-     */
-    float scrollY();
-
-    /**
-     * Scrolls to an offset, clamped to the rows.
-     *
-     * @param scrollY the vertical offset
-     * @return this list
-     */
-    ListView<T> setScrollY(float scrollY);
-
-    /**
-     * Scrolls the least distance that shows a row.
-     *
-     * @param index the row's index
-     * @return this list
-     * @throws IndexOutOfBoundsException if the index is not an item's index
-     */
-    ListView<T> scrollToIndex(int index);
 }

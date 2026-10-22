@@ -96,6 +96,7 @@ public final class ListViewImpl<T> extends BuiltInComposite<ListView<T>> impleme
     // Layout results
     private float scrollY;
     private float maxScrollY;
+    private boolean arranged;
     private boolean barShown;
     private Rect viewport;
     private float rowWidth;
@@ -509,6 +510,9 @@ public final class ListViewImpl<T> extends BuiltInComposite<ListView<T>> impleme
 
     @Override
     public ListView<T> setScrollY(final float scrollY) {
+        if (Float.isNaN(scrollY)) {
+            throw new IllegalArgumentException("A scroll offset must not be NaN");
+        }
         this.scrollTo(scrollY);
         return this;
     }
@@ -628,8 +632,14 @@ public final class ListViewImpl<T> extends BuiltInComposite<ListView<T>> impleme
         }
     }
 
+    /**
+     * Moves to an offset, at least 0. Once the list has been laid out it is also clamped to the rows, measured from
+     * the current items and the last viewport, so an offset set right after {@link #setItems} is not clamped to the
+     * old items. The next arrange clamps it again.
+     */
     private boolean scrollTo(final float scrollY) {
-        final float next = Math.max(0f, Math.min(scrollY, this.maxScrollY));
+        final float max = this.arranged ? Math.max(0f, this.totalHeight() - this.viewport.height()) : Float.MAX_VALUE;
+        final float next = Math.max(0f, Math.min(scrollY, max));
         if (next == this.scrollY) {
             return false;
         }
@@ -795,6 +805,7 @@ public final class ListViewImpl<T> extends BuiltInComposite<ListView<T>> impleme
         }
         this.reveal = -1;
         this.scrollY = Math.max(0f, Math.min(this.scrollY, this.maxScrollY));
+        this.arranged = true;
         this.rowWidth = column ? this.rowLimit : this.viewport.width();
         this.rowX = column ? Caption.center(this.viewport.x(), this.viewport.width(), this.rowWidth) : this.viewport.x();
 
