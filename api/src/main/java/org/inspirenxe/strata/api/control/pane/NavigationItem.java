@@ -37,7 +37,7 @@ import java.util.function.Function;
  *
  * <pre>{@code
  * NavigationItem market = factory.navigationItem("Market")
- *         .setIcon(SpriteId.of("examplemod", "icon/market"))
+ *         .setIcon(SpriteId.of("example", "icon/market"))
  *         .setBadge(3)
  *         .setPage(MarketPage::new);
  * }</pre>

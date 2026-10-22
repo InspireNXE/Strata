@@ -25,7 +25,7 @@ import org.inspirenxe.strata.api.visual.Visual;
 import java.util.Objects;
 
 /**
- * A sprite or an engine {@link Visual} drawn at a size you choose, such as an icon, a picture or a game item.
+ * A sprite or an engine {@link Visual} drawn at a size you choose, such as an icon, a picture or a product photo.
  *
  * <p>Strata cannot ask the engine how big a sprite's image is, so the image's size in UI units is set with
  * {@link #setImageSize}; it is 16 by 16 by default. A visual brings its own natural size, which becomes the image
@@ -38,7 +38,7 @@ import java.util.Objects;
  * events.</p>
  *
  * <pre>{@code
- * Image icon = factory.image(SpriteId.of("examplemod", "icon/gear")).setImageSize(9, 9);
+ * Image icon = factory.image(SpriteId.of("example", "icon/gear")).setImageSize(9, 9);
  * }</pre>
  *
  * <p>Get one from {@link org.inspirenxe.strata.api.ComponentFactory#image()},

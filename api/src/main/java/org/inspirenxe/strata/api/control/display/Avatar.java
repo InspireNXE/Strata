@@ -34,7 +34,7 @@ import java.util.Optional;
  * <ol>
  *     <li>A sprite or visual set with {@link #setSprite} or {@link #setVisual}, stretched over the square.</li>
  *     <li>The icon of the {@linkplain #setValue value}'s {@linkplain org.inspirenxe.strata.api.appearance.Appearances
- *     appearance}, so an engine adapter that registers an appearance for its user or account type makes
+ *     appearance}, so code that registers an appearance for its account type makes
  *     {@code avatar.setValue(account)} show that face with no more code.</li>
  *     <li>The {@linkplain #initials() initials}: those set with {@link #setInitials}, else worked out from the
  *     {@linkplain #setName name}, else from the value's name. They draw centered in the {@value #STYLE_INITIALS}

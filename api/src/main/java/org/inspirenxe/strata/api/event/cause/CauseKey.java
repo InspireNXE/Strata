@@ -36,7 +36,7 @@ public final class CauseKey<V> {
      * Creates a key.
      *
      * @param <V> the type of the value
-     * @param name a readable name, such as {@code mymod:listing}, for debugging
+     * @param name a readable name, such as {@code myapp:listing}, for debugging
      * @param type the type of the value
      * @return the new key
      */
