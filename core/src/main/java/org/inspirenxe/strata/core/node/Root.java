@@ -64,6 +64,7 @@ import org.inspirenxe.strata.spi.Platform;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.EnumMap;
+import java.util.IdentityHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -149,6 +150,8 @@ public final class Root {
 
     private Node hovered;
     private Node focused;
+    // The node a focus change in progress assigned but has not told yet; it never had focus to lose
+    private Node focusArriving;
     private List<Node> tabOrder;
     private float pointerX;
     private float pointerY;
@@ -1249,7 +1252,9 @@ public final class Root {
 
     /**
      * Moves focus to the next or previous node in {@link #tabOrder()}, wrapping at the ends. With nothing focused,
-     * forward goes to the first node and backward to the last.
+     * forward goes to the first node and backward to the last. A focused node that is not in the order, such as one
+     * that is focusable but not tabbable, counts as if it were, at the place its tab index and tree position give it,
+     * so Tab goes on from where focus is.
      *
      * @param backwards true to move to the previous node
      * @return true if focus moved; false if no node is tabbable
@@ -1261,13 +1266,45 @@ public final class Root {
         }
         final int index = this.focused == null ? -1 : order.indexOf(this.focused);
         final int next;
-        if (index < 0) {
-            next = backwards ? order.size() - 1 : 0;
-        } else {
+        if (index >= 0) {
             next = Math.floorMod(index + (backwards ? -1 : 1), order.size());
+        } else {
+            final int place = this.focused == null ? -1 : this.placeInOrder(order, this.focused);
+            if (place < 0) {
+                next = backwards ? order.size() - 1 : 0;
+            } else {
+                // place is how many nodes in the order come before the focused node
+                next = backwards ? Math.floorMod(place - 1, order.size()) : place % order.size();
+            }
         }
         this.changeFocus(order.get(next));
         return true;
+    }
+
+    /**
+     * Returns how many nodes of a tab order come before a node that is not in it, by tab index and then tree order,
+     * or -1 if the node is not in the scope the order was collected from.
+     */
+    private int placeInOrder(final List<Node> order, final Node node) {
+        final Layer dialog = this.topDialog();
+        final Node scope = dialog != null ? dialog.node : this.content;
+        if (scope == null) {
+            return -1;
+        }
+        final Map<Node, Integer> treeOrder = new IdentityHashMap<>();
+        visit(scope, candidate -> treeOrder.put(candidate, treeOrder.size()));
+        final Integer position = treeOrder.get(node);
+        if (position == null) {
+            return -1;
+        }
+        int place = 0;
+        for (final Node candidate : order) {
+            final int byIndex = Integer.compare(candidate.tabIndex(), node.tabIndex());
+            if (byIndex < 0 || byIndex == 0 && treeOrder.get(candidate) < position) {
+                place++;
+            }
+        }
+        return place;
     }
 
     /**
@@ -1342,31 +1379,47 @@ public final class Root {
         return layer != Integer.MIN_VALUE && layer >= this.topDialogIndex();
     }
 
+    /**
+     * Moves focus. The old node loses focus and hears {@code FOCUS_LOST} first, then the new one gains it and hears
+     * {@code FOCUS_GAINED}. A focus-lost handler may move focus again, as a field that refuses to let go does: that
+     * change runs to the end, and this one stops there, so the node it was moving to never hears that it gained or
+     * lost focus. A focus-lost handler that throws still lets the new node gain focus before the exception goes on.
+     */
     private void changeFocus(final Node next) {
         if (next == this.focused) {
             return;
         }
         final Node previous = this.focused;
+        // A node another change assigned but has not told yet never had focus, so it has none to lose
+        final Node lost = previous == this.focusArriving ? null : previous;
         this.focused = next;
-
-        if (previous != null) {
-            previous.setFocused(false);
-            if (previous.acceptsTextInput() && (next == null || !next.acceptsTextInput())) {
-                this.platform.textInput().stop();
+        this.focusArriving = next;
+        try {
+            if (lost != null) {
+                lost.setFocused(false);
+                if (lost.acceptsTextInput() && (next == null || !next.acceptsTextInput())) {
+                    this.platform.textInput().stop();
+                }
+                lost.fire(Focusable.FOCUS_LOST, new FocusEventImpl(lost.facade(), next == null ? null : next.facade()));
             }
-            previous.fire(Focusable.FOCUS_LOST, new FocusEventImpl(previous.facade(),
-                    next == null ? null : next.facade()));
+        } finally {
+            if (this.focused == next) {
+                this.focusArriving = null;
+                if (next != null) {
+                    this.focusGained(next, lost);
+                }
+            }
         }
-        if (next != null) {
-            next.setFocused(true);
-            if (next.acceptsTextInput()) {
-                this.platform.textInput().start(next.bounds(), next.textInputKind());
-            }
-            next.fire(Focusable.FOCUS_GAINED, new FocusEventImpl(next.facade(),
-                    previous == null ? null : previous.facade()));
-            for (Node ancestor = next.parentNode(); ancestor != null && this.focused == next; ancestor = ancestor.parentNode()) {
-                ancestor.hooks().descendantFocused(next.facade());
-            }
+    }
+
+    private void focusGained(final Node next, final Node lost) {
+        next.setFocused(true);
+        if (next.acceptsTextInput()) {
+            this.platform.textInput().start(next.bounds(), next.textInputKind());
+        }
+        next.fire(Focusable.FOCUS_GAINED, new FocusEventImpl(next.facade(), lost == null ? null : lost.facade()));
+        for (Node ancestor = next.parentNode(); ancestor != null && this.focused == next; ancestor = ancestor.parentNode()) {
+            ancestor.hooks().descendantFocused(next.facade());
         }
     }
 

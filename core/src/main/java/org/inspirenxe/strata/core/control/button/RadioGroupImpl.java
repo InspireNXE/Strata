@@ -48,6 +48,8 @@ public final class RadioGroupImpl<T> implements RadioGroup<T> {
     private final List<T> values;
     private EventDispatcher dispatcher;
     private RadioButtonImpl selected;
+    // The button a choice in progress selected but has not reported yet
+    private RadioButtonImpl arriving;
 
     /**
      * Creates an empty group.
@@ -131,26 +133,39 @@ public final class RadioGroupImpl<T> implements RadioGroup<T> {
     /**
      * Makes a button the selected one, or none. If that changed anything, the deselected and the selected button
      * report {@code TOGGLED}, in that order, and the group fires {@code SELECTED} to its own handlers. That event's
-     * target is the newly selected button, or the deselected one when none is selected now.
+     * target is the newly selected button, or the deselected one when none is selected now. A handler of either
+     * report that selects another button makes that change report itself, and this one reports nothing more, so the
+     * last events always describe the selection the group has.
      */
     void choose(final RadioButtonImpl button) {
         final RadioButtonImpl previous = this.selected;
         if (previous == button) {
             return;
         }
+        // A button selected by a choice that has not reported yet has no deselect to report
+        final RadioButtonImpl told = previous == this.arriving ? null : previous;
         this.selected = button;
-        if (previous != null) {
+        this.arriving = button;
+        if (told != null) {
             // The group deselects the old button, so it is on that report's cause chain
             try (CauseFrame _ = this.ui.causes().pushFrame().push(this)) {
-                previous.reportToggled(false);
+                told.reportToggled(false);
+            }
+            if (this.selected != button) {
+                return;
             }
         }
+        this.arriving = null;
         if (button != null) {
             button.reportToggled(true);
+            if (this.selected != button) {
+                return;
+            }
         }
         if (this.dispatcher != null && this.dispatcher.hasHandlers(SELECTED)) {
             final ValueEventImpl<Selection<?, ?>, Integer> event = new ValueEventImpl<>(
-                    button == null ? previous : button, this, this.buttons.indexOf(button), this.buttons.indexOf(previous));
+                    button != null ? button : told != null ? told : previous, this, this.buttons.indexOf(button),
+                    this.buttons.indexOf(told));
             event.setCauses(this.ui.causes());
             this.dispatcher.fire(SELECTED, event);
         }
