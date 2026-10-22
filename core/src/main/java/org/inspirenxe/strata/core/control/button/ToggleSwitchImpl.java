@@ -193,6 +193,11 @@ public final class ToggleSwitchImpl extends BuiltInComponent<ToggleSwitch> imple
     }
 
     @Override
+    protected float baseline() {
+        return this.layout.baseline(this.desiredHeight());
+    }
+
+    @Override
     protected void paint(final Painter painter, final Rect bounds) {
         final Rect bar = this.layout.box(bounds);
         final boolean enabled = this.isEnabled();

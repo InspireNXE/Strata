@@ -285,6 +285,11 @@ public final class CheckBoxImpl extends BuiltInComponent<CheckBox> implements Ch
     }
 
     @Override
+    protected float baseline() {
+        return this.layout.baseline(this.desiredHeight());
+    }
+
+    @Override
     protected void paint(final Painter painter, final Rect bounds) {
         final Rect box = this.layout.box(bounds);
         final boolean enabled = this.isEnabled();

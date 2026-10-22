@@ -254,6 +254,20 @@ final class ButtonContent {
         return Math.max(this.captionHeight, icon ? this.iconHeight : 0f);
     }
 
+    /**
+     * Returns the caption's baseline in a button of a given height, as {@link #paintContent} places the caption.
+     *
+     * @param height the button's height
+     * @param padding the padding
+     * @return the baseline below the button's top, or NaN when there is no caption
+     */
+    float baseline(final float height, final Insets padding) {
+        if (this.caption.isEmpty()) {
+            return Float.NaN;
+        }
+        return padding.top() + (height - padding.vertical() - this.captionHeight) * 0.5f + this.caption.baseline();
+    }
+
     // ------------------------------------------------------------------
     // Painting
     // ------------------------------------------------------------------

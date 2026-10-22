@@ -325,6 +325,12 @@ public final class SpinnerImpl extends BuiltInComposite<Spinner> implements Spin
     }
 
     @Override
+    protected float baseline() {
+        // The field sits at the spinner's top
+        return this.nodeOf(this.field).baseline();
+    }
+
+    @Override
     protected void paint(final Painter painter, final Rect bounds) {
         this.paintButton(painter, this.upButton, this.value < this.max, true);
         this.paintButton(painter, this.downButton, this.value > this.min, false);

@@ -279,6 +279,11 @@ public final class DropDownButtonImpl extends BuiltInComponent<DropDownButton> i
     }
 
     @Override
+    protected float baseline() {
+        return this.content.baseline(this.desiredHeight(), this.content.padding(false));
+    }
+
+    @Override
     protected void paint(final Painter painter, final Rect bounds) {
         final ButtonContent content = this.content;
         final boolean enabled = this.isEnabled();

@@ -33,7 +33,7 @@ public final class TextLine {
     /**
      * A line with no text and no height.
      */
-    public static final TextLine EMPTY = new TextLine(List.of(), new float[0], new float[0], 0f, 0f);
+    public static final TextLine EMPTY = new TextLine(List.of(), new float[0], new float[0], 0f, 0f, Float.NaN);
 
     private final List<TextSpan> spans;
     private final float[] offsets;
@@ -41,14 +41,16 @@ public final class TextLine {
     private final float[] tops;
     private final float width;
     private final float height;
+    private final float baseline;
 
     private TextLine(final List<TextSpan> spans, final float[] offsets, final float[] tops, final float width,
-                     final float height) {
+                     final float height, final float baseline) {
         this.spans = spans;
         this.offsets = offsets;
         this.tops = tops;
         this.width = width;
         this.height = height;
+        this.baseline = baseline;
     }
 
     /**
@@ -84,7 +86,8 @@ public final class TextLine {
             tops[i] = (height - (span.isInline() ? inline.height(span) : textHeight)) * 0.5f;
             x += inline.width(span);
         }
-        return new TextLine(List.copyOf(spans), offsets, tops, x, height);
+        final float baseline = (height - textHeight) * 0.5f + inline.ascent(base);
+        return new TextLine(List.copyOf(spans), offsets, tops, x, height, baseline);
     }
 
     /**
@@ -113,6 +116,16 @@ public final class TextLine {
      */
     public float height() {
         return this.height;
+    }
+
+    /**
+     * Returns where the characters' baseline lies: their top, centered in the line as drawing centers them, plus the
+     * base style's ascent.
+     *
+     * @return the baseline in UI units below the line's top; NaN for {@link #EMPTY}
+     */
+    public float baseline() {
+        return this.baseline;
     }
 
     /**

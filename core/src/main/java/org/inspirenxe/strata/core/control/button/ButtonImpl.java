@@ -232,6 +232,11 @@ public final class ButtonImpl extends BuiltInComponent<Button> implements Button
     }
 
     @Override
+    protected float baseline() {
+        return this.content.baseline(this.desiredHeight(), this.content.padding(this.link));
+    }
+
+    @Override
     protected void paint(final Painter painter, final Rect bounds) {
         final ButtonContent content = this.content;
         final boolean enabled = this.isEnabled();

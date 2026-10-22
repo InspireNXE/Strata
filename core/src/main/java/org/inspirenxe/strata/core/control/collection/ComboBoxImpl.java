@@ -372,6 +372,13 @@ public final class ComboBoxImpl<T> extends BuiltInComponent<ComboBox<T>> impleme
     }
 
     @Override
+    protected float baseline() {
+        final Insets padding = this.padding;
+        return padding.top() + (this.desiredHeight() - padding.vertical() - this.lineHeight) * 0.5f
+                + this.environment().text().ascent(this.textStyle);
+    }
+
+    @Override
     protected void paint(final Painter painter, final Rect bounds) {
         final boolean enabled = this.isEnabled();
         final Paint face;

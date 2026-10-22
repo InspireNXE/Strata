@@ -97,6 +97,19 @@ public final class BoxCaption {
     }
 
     /**
+     * Returns the caption's baseline in a control of a given height, as {@link #paintCaption} places the caption.
+     *
+     * @param height the control's height
+     * @return the baseline below the control's top, or NaN for an empty caption
+     */
+    public float baseline(final float height) {
+        if (this.caption.isEmpty()) {
+            return Float.NaN;
+        }
+        return height * 0.5f - this.captionHeight * 0.5f + this.caption.baseline();
+    }
+
+    /**
      * Draws the caption the gap right of the box, centered on the bounds' middle, in the normal or disabled style.
      * Draws nothing for an empty caption.
      *

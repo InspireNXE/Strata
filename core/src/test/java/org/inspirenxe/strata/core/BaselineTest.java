@@ -36,6 +36,12 @@ import org.inspirenxe.strata.api.text.TextSpan;
 import org.inspirenxe.strata.api.text.TextStyle;
 import org.junit.jupiter.api.Test;
 
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.util.List;
+import java.util.function.Function;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -233,6 +239,44 @@ class BaselineTest {
         this.test.show(probe);
 
         assertTrue(Float.isNaN(probe.measured));
+    }
+
+    /**
+     * Checks that a control reports the baseline of the first text it draws: that text's top plus the ascent.
+     */
+    private void reportsWhereItDrawsText(final String name, final Function<ComponentFactory, Component<?>> make) {
+        final TestHost host = new TestHost(300, 100);
+        final Component<?> control = make.apply(host.factory());
+        control.setMargin(0, 3, 0, 0);
+        final Probe probe = new Probe(host.factory());
+        probe.add(control);
+        host.show(probe);
+        final DrawLog canvas = new DrawLog();
+        host.host().render(canvas);
+        final List<String> texts = canvas.lines("text ");
+        assertTrue(!texts.isEmpty(), name + " draws text");
+        final String[] parts = texts.getFirst().split(" ");
+        final float y = Float.parseFloat(parts[parts.length - 2].split(",")[1]);
+        assertEquals(y + TestPlatform.ASCENT, probe.measured, 0.001f, name);
+        assertEquals(probe.measured, probe.arranged, 0.001f, name);
+    }
+
+    @Test
+    void textControlsReportTheBaselineOfTheTextTheyDraw() {
+        this.reportsWhereItDrawsText("button", ui -> ui.button("Ana"));
+        this.reportsWhereItDrawsText("drop-down button", ui -> ui.dropDownButton("Ana"));
+        this.reportsWhereItDrawsText("cycle button", ui -> ui.<String>cycleButton("Name").setItems(List.of("Ana")));
+        this.reportsWhereItDrawsText("check box", ui -> ui.checkBox("Ana"));
+        this.reportsWhereItDrawsText("toggle switch", ui -> ui.toggleSwitch("Ana"));
+        this.reportsWhereItDrawsText("text box", ui -> ui.textBox().setText("Ana"));
+        this.reportsWhereItDrawsText("password box", ui -> ui.passwordTextBox().setPassword("Ana".toCharArray()));
+        this.reportsWhereItDrawsText("combo box", ui -> ui.<String>comboBox().setItems(List.of("Ana")).select(0));
+        this.reportsWhereItDrawsText("spinner", ui -> ui.spinner().setValue(5));
+        this.reportsWhereItDrawsText("date picker", ui -> ui.datePicker(LocalDate.of(2026, 10, 22)));
+        this.reportsWhereItDrawsText("time picker", ui -> ui.timePicker(LocalTime.of(9, 30)));
+        this.reportsWhereItDrawsText("date and time picker",
+                ui -> ui.dateTimePicker(LocalDateTime.of(2026, 10, 22, 9, 30)));
+        this.reportsWhereItDrawsText("tab bar", ui -> ui.tabBar().addTab("Ana").addTab("Ben"));
     }
 
     @Test

@@ -601,6 +601,12 @@ public final class TextBoxImpl extends BuiltInComponent<TextBox> implements Text
     }
 
     @Override
+    protected float baseline() {
+        return this.textPadding.top() + (this.desiredHeight() - this.textPadding.vertical() - this.lineHeight) * 0.5f
+                + this.environment().text().ascent(this.style());
+    }
+
+    @Override
     protected void paint(final Painter painter, final Rect bounds) {
         final Paint face;
         if (!this.isEnabled()) {

@@ -584,6 +584,13 @@ abstract class PickerBase<T extends Component<T>, V> extends BuiltInComponent<T>
     }
 
     @Override
+    protected float baseline() {
+        final float inner = Math.max(0f, this.desiredHeight() - this.padding.vertical());
+        return this.padding.top() + (float) Math.floor((inner - this.lineHeight) * 0.5f)
+                + this.environment().text().ascent(this.textStyle);
+    }
+
+    @Override
     protected void paint(final Painter painter, final Rect bounds) {
         this.build(bounds);
         final boolean enabled = this.isEnabled();

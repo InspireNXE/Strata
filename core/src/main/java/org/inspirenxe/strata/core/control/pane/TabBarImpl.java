@@ -286,6 +286,12 @@ public final class TabBarImpl extends BuiltInComposite<TabBar> implements TabBar
     }
 
     @Override
+    protected float baseline() {
+        // Every tab is as tall as the bar and starts at its top, so the first tab's caption gives the baseline
+        return this.views.isEmpty() ? Float.NaN : this.views.getFirst().baselineAt(this.desiredHeight());
+    }
+
+    @Override
     protected void onFocusGained(final FocusEvent event) {
         this.keyboardFocus = !this.isFocusFromPress();
     }
@@ -421,6 +427,20 @@ public final class TabBarImpl extends BuiltInComposite<TabBar> implements TabBar
             final float ends = Math.max(this.padding.top() + this.padding.bottom(),
                     this.selectedPadding.top() + this.selectedPadding.bottom());
             return new Size(this.textWidth + sides, this.lineHeight + ends);
+        }
+
+        /**
+         * Returns the caption's baseline in a tab of a given height, with the padding of a tab that is not selected.
+         */
+        float baselineAt(final float height) {
+            final Insets pad = this.padding;
+            return pad.top() + (height - pad.top() - pad.bottom() - this.lineHeight) * 0.5f
+                    + this.environment().text().ascent(this.textStyle);
+        }
+
+        @Override
+        protected float baseline() {
+            return this.baselineAt(this.desiredHeight());
         }
 
         @Override
