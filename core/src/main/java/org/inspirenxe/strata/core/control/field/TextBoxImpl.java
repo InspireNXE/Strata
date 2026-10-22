@@ -179,6 +179,7 @@ public final class TextBoxImpl extends BuiltInComponent<TextBox> implements Text
     private TextStyle selectedSpansStyle;
     // The bounds less the padding, made again when either changes
     private Rect contentBox;
+    private boolean contentRightToLeft;
     private Rect contentFor;
     private Insets contentPadding;
 
@@ -768,10 +769,14 @@ public final class TextBoxImpl extends BuiltInComponent<TextBox> implements Text
             this.validity.paintOutline(painter, bounds);
         }
 
-        if (!bounds.equals(this.contentFor) || this.textPadding != this.contentPadding) {
-            this.contentBox = bounds.shrink(this.textPadding);
+        final boolean rightToLeft = this.isRightToLeft();
+        if (!bounds.equals(this.contentFor) || this.textPadding != this.contentPadding
+                || rightToLeft != this.contentRightToLeft) {
+            // Right to left the padding's left is at the start, the right
+            this.contentBox = this.flow(bounds.shrink(this.textPadding));
             this.contentFor = bounds;
             this.contentPadding = this.textPadding;
+            this.contentRightToLeft = rightToLeft;
         }
         final Rect contentBox = this.contentBox;
         final float textY = contentBox.y() + (contentBox.height() - this.lineHeight) * 0.5f;
@@ -1113,6 +1118,11 @@ public final class TextBoxImpl extends BuiltInComponent<TextBox> implements Text
         @Override
         public float placeholderWidth() {
             return TextBoxImpl.this.placeholderLine.width();
+        }
+
+        @Override
+        public boolean rightToLeft() {
+            return TextBoxImpl.this.isRightToLeft();
         }
 
         @Override

@@ -335,7 +335,8 @@ public final class CheckBoxImpl extends BuiltInComponent<CheckBox> implements Ch
 
     @Override
     protected void paint(final Painter painter, final Rect bounds) {
-        final Rect box = this.layout.box(bounds);
+        final boolean rightToLeft = this.isRightToLeft();
+        final Rect box = this.layout.box(bounds, rightToLeft);
         final boolean enabled = this.isEnabled();
         final boolean lit = this.isHovered() || this.isFocused();
 
@@ -365,7 +366,7 @@ public final class CheckBoxImpl extends BuiltInComponent<CheckBox> implements Ch
             this.ring.paint(painter, this.focusRing, box);
         }
         this.layout.paintCaption(painter, bounds, enabled,
-                this.hostRoot() != null && this.hostRoot().showsMnemonics());
+                this.hostRoot() != null && this.hostRoot().showsMnemonics(), rightToLeft);
     }
 
     /**

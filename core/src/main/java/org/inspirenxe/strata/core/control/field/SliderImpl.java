@@ -15,6 +15,8 @@
  */
 package org.inspirenxe.strata.core.control.field;
 
+import org.inspirenxe.strata.core.layout.Flow;
+import org.inspirenxe.strata.api.input.Key;
 import org.inspirenxe.strata.api.component.CursorKind;
 import org.inspirenxe.strata.api.control.field.Slider;
 import org.inspirenxe.strata.api.event.input.DragEvent;
@@ -50,7 +52,8 @@ import java.util.function.Function;
 /**
  * The core {@link Slider}. The track covers the whole bounds; the thumb is {@value #THUMB_WIDTH} units along the
  * track and spans the slider across it. A pointer position maps to the value whose thumb would be centered on it,
- * along the track's axis only. A vertical slider swaps the desired width and height and counts from the bottom.
+ * along the track's axis only. A vertical slider swaps the desired width and height and counts from the bottom. A
+ * horizontal slider that runs right to left counts from the right, and Left and Right swap on it.
  *
  * <p>Snapping: a value is clamped to the range, then moved to the nearest {@code min + k * step}, worked out in
  * decimal from the two numbers as written so that steps such as 0.1 land on the decimals they name; if the maximum is
@@ -267,7 +270,9 @@ public final class SliderImpl extends BuiltInComponent<Slider> implements Slider
         final double fraction;
         if (this.orientation == Orientation.HORIZONTAL) {
             final float travel = bounds.width() - THUMB_WIDTH;
-            fraction = travel > 0f ? ((double) x - bounds.x() - THUMB_WIDTH * 0.5d) / travel : 0d;
+            // Right to left the value rises toward the left
+            final double along = this.isRightToLeft() ? (double) bounds.right() - x : (double) x - bounds.x();
+            fraction = travel > 0f ? (along - THUMB_WIDTH * 0.5d) / travel : 0d;
         } else {
             final float travel = bounds.height() - THUMB_WIDTH;
             fraction = travel > 0f ? ((double) bounds.bottom() - y - THUMB_WIDTH * 0.5d) / travel : 0d;
@@ -374,8 +379,11 @@ public final class SliderImpl extends BuiltInComponent<Slider> implements Slider
         }
         if (this.orientation == Orientation.HORIZONTAL) {
             final float travel = Math.max(0f, bounds.width() - THUMB_WIDTH);
-            this.thumbRect = Rects.reuse(this.thumbRect, bounds.x() + (float) (this.fraction() * travel), bounds.y(),
-                    Math.min(THUMB_WIDTH, bounds.width()), bounds.height());
+            final float along = (float) (this.fraction() * travel);
+            final float width = Math.min(THUMB_WIDTH, bounds.width());
+            this.thumbRect = Rects.reuse(this.thumbRect,
+                    this.isRightToLeft() ? bounds.right() - width - along : bounds.x() + along, bounds.y(), width,
+                    bounds.height());
         } else {
             final float length = Math.min(THUMB_WIDTH, bounds.height());
             final float travel = Math.max(0f, bounds.height() - THUMB_WIDTH);
@@ -440,7 +448,10 @@ public final class SliderImpl extends BuiltInComponent<Slider> implements Slider
             return;
         }
         final double keyStep = this.keyStep();
-        final double next = switch (event.key()) {
+        // Right to left, Left raises a horizontal slider's value
+        final Key key = this.orientation == Orientation.HORIZONTAL ? Flow.key(event.key(), this.isRightToLeft())
+                : event.key();
+        final double next = switch (key) {
             case LEFT, DOWN -> this.value - keyStep;
             case RIGHT, UP -> this.value + keyStep;
             case PAGE_DOWN -> this.value - keyStep * PAGE_STEPS;

@@ -186,6 +186,8 @@ public final class TextAreaImpl extends BuiltInComponent<TextArea> implements Te
     // How far each row is shifted right by the alignment, worked out with the viewport
     private float[] rowShift;
     private float shiftedFor;
+    // The direction the rows were shifted for
+    private boolean alignedRightToLeft;
     private final StyledText styled;
     private TextHighlighter highlighter;
     private float widestRow;
@@ -609,6 +611,13 @@ public final class TextAreaImpl extends BuiltInComponent<TextArea> implements Te
         return this.textAlignment;
     }
 
+    /**
+     * The share of the free room before each row: the alignment's, with left and right swapped right to left.
+     */
+    private float alignment() {
+        return this.alignedRightToLeft ? 1f - this.alignment : this.alignment;
+    }
+
     @Override
     public TextArea setTextAlignment(final HorizontalAlignment alignment) {
         this.textAlignment = Objects.requireNonNull(alignment, "alignment");
@@ -749,19 +758,26 @@ public final class TextAreaImpl extends BuiltInComponent<TextArea> implements Te
             this.shiftedFor = Float.NaN;
         }
         final float bottomGutter = this.horizontalBarShown ? GUTTER : 0f;
-        this.viewport = Rects.reuse(this.viewport, inner.x(), inner.y(), inner.width() - (this.barShown ? GUTTER : 0f),
-                inner.height() - bottomGutter);
+        // Right to left the vertical bar sits at the left and the rows after it
+        final boolean rightToLeft = this.isRightToLeft();
+        final float sideGutter = this.barShown ? GUTTER : 0f;
+        this.viewport = Rects.reuse(this.viewport, rightToLeft ? inner.x() + sideGutter : inner.x(), inner.y(),
+                inner.width() - sideGutter, inner.height() - bottomGutter);
         final float total = this.rowCount * this.lineHeight;
         this.maxScrollY = Math.max(0f, total - this.viewport.height());
         this.scrollY = Math.max(0f, Math.min(this.scrollY, this.maxScrollY));
-        this.barTrack = Rects.reuse(this.barTrack, inner.right() - ScrollPanel.BAR_WIDTH, inner.y(), ScrollPanel.BAR_WIDTH,
-                inner.height() - bottomGutter);
+        this.barTrack = Rects.reuse(this.barTrack, rightToLeft ? inner.x() : inner.right() - ScrollPanel.BAR_WIDTH,
+                inner.y(), ScrollPanel.BAR_WIDTH, inner.height() - bottomGutter);
         this.bar.update(this.barTrack, this.viewport.height(), Math.max(total, this.viewport.height()));
         final float wide = this.widestRow + 1f;
         this.maxScrollX = this.wrap ? 0f : Math.max(0f, wide - this.viewport.width());
         this.scrollX = Math.max(0f, Math.min(this.scrollX, this.maxScrollX));
-        this.horizontalTrack = Rects.reuse(this.horizontalTrack, inner.x(), inner.bottom() - ScrollPanel.BAR_WIDTH,
-                this.viewport.width(), ScrollPanel.BAR_WIDTH);
+        this.horizontalTrack = Rects.reuse(this.horizontalTrack, this.viewport.x(),
+                inner.bottom() - ScrollPanel.BAR_WIDTH, this.viewport.width(), ScrollPanel.BAR_WIDTH);
+        if (rightToLeft != this.alignedRightToLeft) {
+            this.alignedRightToLeft = rightToLeft;
+            this.shiftedFor = Float.NaN;
+        }
         this.horizontalBar.update(this.horizontalTrack, this.viewport.width(), Math.max(wide, this.viewport.width()));
         this.alignRows(Math.max(wide, this.viewport.width()));
     }
@@ -775,9 +791,10 @@ public final class TextAreaImpl extends BuiltInComponent<TextArea> implements Te
             return;
         }
         this.shiftedFor = span;
+        final float alignment = this.alignment();
         for (int row = 0; row < this.rowCount; row++) {
-            this.rowShift[row] = this.alignment == 0f ? 0f
-                    : Math.round(Math.max(0f, span - (this.rowWidth[row] + 1f)) * this.alignment);
+            this.rowShift[row] = alignment == 0f ? 0f
+                    : Math.round(Math.max(0f, span - (this.rowWidth[row] + 1f)) * alignment);
         }
     }
 
@@ -1012,8 +1029,9 @@ public final class TextAreaImpl extends BuiltInComponent<TextArea> implements Te
         final float offset = Math.round(this.scrollY);
         if (this.buffer.length() == 0) {
             if (!this.placeholderLine.isEmpty() && !(this.look.hidePlaceholder() && this.isFocused())) {
-                final float shift = this.alignment == 0f ? 0f
-                        : Math.round(Math.max(0f, this.viewport.width() - this.placeholderLine.width()) * this.alignment);
+                final float alignment = this.alignment();
+                final float shift = alignment == 0f ? 0f
+                        : Math.round(Math.max(0f, this.viewport.width() - this.placeholderLine.width()) * alignment);
                 this.placeholderLine.draw(this.painter, this.viewport.x() + shift, this.viewport.y() - offset);
             }
             return;
@@ -1329,6 +1347,11 @@ public final class TextAreaImpl extends BuiltInComponent<TextArea> implements Te
      * What the area tells its {@link TextEditor}: how the user's edits apply. Copying is always allowed.
      */
     private final class Editing implements TextEditor.Host {
+
+        @Override
+        public boolean rightToLeft() {
+            return TextAreaImpl.this.isRightToLeft();
+        }
         @Override
         public Environment environment() {
             return TextAreaImpl.this.environment();

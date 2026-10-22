@@ -111,7 +111,29 @@ public final class Caption {
      */
     public boolean draw(final Painter painter, final TextLine line, final Rect bounds, final Insets padding,
                         final float lead, final float width, final float y, final long millis) {
-        final float clipRight = bounds.right() - (this.clip != null ? this.clip.right() : padding.right());
+        return this.draw(painter, line, bounds, padding, lead, 0f, width, y, millis);
+    }
+
+    /**
+     * Draws a caption inside a piece of a given width with something before it, after it, or both, as
+     * {@link #draw(Painter, TextLine, Rect, Insets, float, float, float, long)} does, and cut or scrolled
+     * {@code trail} units before the clip area's right. A control that runs right to left puts its icon after the
+     * caption this way.
+     *
+     * @param painter what to draw with
+     * @param line the caption
+     * @param bounds the control's bounds
+     * @param padding the control's padding, which centering leaves out
+     * @param lead the width of what comes before the caption, its gap included
+     * @param trail the width of what comes after the caption, its gap included
+     * @param width the width of the whole piece, as measured
+     * @param y the caption's top
+     * @param millis the platform's clock, for scrolling
+     * @return true if the caption slides
+     */
+    public boolean draw(final Painter painter, final TextLine line, final Rect bounds, final Insets padding,
+                        final float lead, final float trail, final float width, final float y, final long millis) {
+        final float clipRight = bounds.right() - (this.clip != null ? this.clip.right() : padding.right()) - trail;
         final float left = this.start(bounds, padding, width) + lead;
         final float space = Math.max(0f, clipRight - left);
         final float overflow = line.width() - space;

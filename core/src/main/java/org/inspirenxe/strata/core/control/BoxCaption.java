@@ -23,10 +23,12 @@ import org.inspirenxe.strata.api.text.TextMetrics;
 import org.inspirenxe.strata.api.text.TextStyle;
 import org.inspirenxe.strata.core.text.MnemonicLine;
 import org.inspirenxe.strata.core.text.Mnemonics;
+import org.inspirenxe.strata.core.text.TextLine;
 
 /**
  * The layout a checkbox, a radio button and a toggle switch share: a box at the left edge, vertically centered, and
- * a caption a gap to its right, centered on the box's middle. Each control keeps one, measures its caption and sizes
+ * a caption a gap to its right, centered on the box's middle. Right to left, the box is at the right edge and the
+ * caption a gap to its left. Each control keeps one, measures its caption and sizes
  * its box through it, and draws its own box in the rectangle {@link #box} gives.
  *
  * <p>The caption is resolved in the normal and disabled styles, and the wider and taller of the two count, so
@@ -97,14 +99,17 @@ public final class BoxCaption {
     }
 
     /**
-     * Returns the box's rectangle in a control's bounds: at the left edge, centered vertically.
+     * Returns the box's rectangle in a control's bounds: at the left edge, or the right edge right to left,
+     * centered vertically.
      *
      * @param bounds the control's bounds
+     * @param rightToLeft whether the control runs right to left
      * @return the box, the same rectangle as last time while it did not move or change size
      */
-    public Rect box(final Rect bounds) {
+    public Rect box(final Rect bounds, final boolean rightToLeft) {
         final float middle = bounds.y() + bounds.height() * 0.5f;
-        return this.box.at(bounds.x(), middle - this.boxHeight * 0.5f, this.boxWidth, this.boxHeight);
+        return this.box.at(rightToLeft ? bounds.right() - this.boxWidth : bounds.x(), middle - this.boxHeight * 0.5f,
+                this.boxWidth, this.boxHeight);
     }
 
     /**
@@ -121,21 +126,24 @@ public final class BoxCaption {
     }
 
     /**
-     * Draws the caption the gap right of the box, centered on the bounds' middle, in the normal or disabled style.
-     * Draws nothing for an empty caption.
+     * Draws the caption the gap beside the box, right of it or left of it right to left, centered on the bounds'
+     * middle, in the normal or disabled style. Draws nothing for an empty caption.
      *
      * @param painter what to draw with
      * @param bounds the control's bounds
      * @param enabled false for the disabled style
      * @param showMnemonic true to underline the mnemonic
+     * @param rightToLeft whether the control runs right to left
      */
     public void paintCaption(final Painter painter, final Rect bounds, final boolean enabled,
-                             final boolean showMnemonic) {
+                             final boolean showMnemonic, final boolean rightToLeft) {
         if (this.caption.plain().isEmpty()) {
             return;
         }
         final float middle = bounds.y() + bounds.height() * 0.5f;
-        (enabled ? this.caption : this.disabledCaption).line(showMnemonic).draw(painter,
-                bounds.x() + this.boxWidth + this.gap, middle - this.captionHeight * 0.5f);
+        final TextLine line = (enabled ? this.caption : this.disabledCaption).line(showMnemonic);
+        final float x = rightToLeft ? bounds.right() - this.boxWidth - this.gap - line.width()
+                : bounds.x() + this.boxWidth + this.gap;
+        line.draw(painter, x, middle - this.captionHeight * 0.5f);
     }
 }

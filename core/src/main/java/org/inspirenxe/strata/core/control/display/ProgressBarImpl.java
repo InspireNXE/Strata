@@ -15,6 +15,7 @@
  */
 package org.inspirenxe.strata.core.control.display;
 
+import org.inspirenxe.strata.core.layout.Flow;
 import org.inspirenxe.strata.api.control.display.ProgressBar;
 import org.inspirenxe.strata.api.extension.MeasureContext;
 import org.inspirenxe.strata.api.extension.Painter;
@@ -87,6 +88,7 @@ public final class ProgressBarImpl extends BuiltInComponent<ProgressBar> impleme
     // The indeterminate segment at each whole-unit step, for the bounds they were worked out for
     private Rect[] segments;
     private Rect segmentBounds;
+    private boolean segmentsRightToLeft;
     private final RectCache fillRect = new RectCache();
     // The fraction the fill is drawn at, which eases toward the value's
     private float shownFraction;
@@ -221,7 +223,7 @@ public final class ProgressBarImpl extends BuiltInComponent<ProgressBar> impleme
     protected void paint(final Painter painter, final Rect bounds) {
         this.trackPaint.paint(painter, bounds);
         if (this.indeterminate) {
-            final Rect[] steps = this.segments(bounds);
+            final Rect[] steps = this.segments(bounds, this.isRightToLeft());
             if (steps.length > 0) {
                 final long phase = Math.floorMod(this.environment().millis(), SEGMENT_PERIOD);
                 final int index = (int) (phase * steps.length / SEGMENT_PERIOD);
@@ -236,8 +238,10 @@ public final class ProgressBarImpl extends BuiltInComponent<ProgressBar> impleme
         } else {
             final float fraction = this.shownFraction;
             if (fraction > 0f) {
-                this.fillPaint.paint(painter, this.fillRect.at(bounds.x(), bounds.y(), bounds.width() * fraction,
-                        bounds.height()));
+                // Right to left the fill grows from the right
+                final float width = bounds.width() * fraction;
+                this.fillPaint.paint(painter, this.fillRect.at(this.isRightToLeft() ? bounds.right() - width
+                        : bounds.x(), bounds.y(), width, bounds.height()));
             }
         }
         if (!this.line.isEmpty()) {
@@ -250,10 +254,11 @@ public final class ProgressBarImpl extends BuiltInComponent<ProgressBar> impleme
 
     /**
      * Returns the segment at each whole-unit step across the bounds, cut to them, working them out again only when
-     * the bounds changed. A step whose segment would be empty holds null.
+     * the bounds or the direction changed. Right to left the segments are mirrored, so they run from the right. A
+     * step whose segment would be empty holds null.
      */
-    private Rect[] segments(final Rect bounds) {
-        if (bounds.equals(this.segmentBounds)) {
+    private Rect[] segments(final Rect bounds, final boolean rightToLeft) {
+        if (bounds.equals(this.segmentBounds) && rightToLeft == this.segmentsRightToLeft) {
             return this.segments;
         }
         final float width = bounds.width();
@@ -263,10 +268,12 @@ public final class ProgressBarImpl extends BuiltInComponent<ProgressBar> impleme
         for (int i = 0; i < count; i++) {
             final float left = Math.max(bounds.x(), bounds.x() - length + i);
             final float right = Math.min(bounds.right(), bounds.x() + i);
-            steps[i] = right > left ? new Rect(left, bounds.y(), right - left, bounds.height()) : null;
+            final Rect step = right > left ? new Rect(left, bounds.y(), right - left, bounds.height()) : null;
+            steps[i] = step != null && rightToLeft ? Flow.mirror(step, bounds) : step;
         }
         this.segments = steps;
         this.segmentBounds = bounds;
+        this.segmentsRightToLeft = rightToLeft;
         return steps;
     }
 }

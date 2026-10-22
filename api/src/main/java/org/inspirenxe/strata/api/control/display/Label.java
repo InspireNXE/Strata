@@ -179,7 +179,9 @@ public interface Label extends Component<Label>, HasCursor<Label>, HasTooltip<La
 
     /**
      * Sets how each line sits within the label's width. It only shows when the label is wider than its text, for
-     * example when stretched. {@link HorizontalAlignment#STRETCH} acts like {@link HorizontalAlignment#LEFT}.
+     * example when stretched. {@link HorizontalAlignment#STRETCH} acts like {@link HorizontalAlignment#LEFT}. While the
+     * label's {@linkplain #flowDirection() direction} is right to left, left and right swap, so {@code LEFT} puts
+     * lines at the start.
      *
      * @param textAlignment the alignment
      * @return this label

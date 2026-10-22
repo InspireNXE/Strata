@@ -123,6 +123,7 @@ public final class ComboBoxImpl<T> extends BuiltInComponent<ComboBox<T>> impleme
     private Rect[] arrowLines;
     private Rect arrowBounds;
     private Insets arrowPadding;
+    private boolean arrowRightToLeft;
 
     /**
      * Creates a box with no options.
@@ -532,14 +533,20 @@ public final class ComboBoxImpl<T> extends BuiltInComponent<ComboBox<T>> impleme
         final float innerY = bounds.y() + padding.top();
         final float innerHeight = bounds.height() - padding.vertical();
         final float textY = innerY + (innerHeight - this.lineHeight) * 0.5f;
-        (enabled ? this.shown : this.shownDisabled).draw(painter, bounds.x() + padding.left(), textY);
+        // Right to left the text starts at the right and the arrow sits at the left
+        final boolean rightToLeft = this.isRightToLeft();
+        final TextLine line = enabled ? this.shown : this.shownDisabled;
+        line.draw(painter, rightToLeft ? bounds.right() - padding.left() - line.width() : bounds.x() + padding.left(),
+                textY);
 
-        // A down arrow from four shrinking lines, made again only when the bounds or the padding changed
-        if (this.arrowLines == null || this.arrowBounds != bounds || this.arrowPadding != padding) {
-            this.arrowLines = Shapes.down(bounds.right() - padding.right() - ARROW_WIDTH,
-                    innerY + (innerHeight - 4f) * 0.5f);
+        // A down arrow from four shrinking lines, made again only when the bounds, the padding or the side changed
+        if (this.arrowLines == null || this.arrowBounds != bounds || this.arrowPadding != padding
+                || this.arrowRightToLeft != rightToLeft) {
+            this.arrowLines = Shapes.down(rightToLeft ? bounds.x() + padding.right()
+                    : bounds.right() - padding.right() - ARROW_WIDTH, innerY + (innerHeight - 4f) * 0.5f);
             this.arrowBounds = bounds;
             this.arrowPadding = padding;
+            this.arrowRightToLeft = rightToLeft;
         }
         Shapes.fill(painter, (enabled ? this.textStyle : this.disabledTextStyle).color(), this.arrowLines);
     }

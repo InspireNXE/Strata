@@ -27,6 +27,7 @@ import org.inspirenxe.strata.api.text.TextOverflow;
 import org.inspirenxe.strata.api.text.TextSpan;
 import org.inspirenxe.strata.api.text.TextStyle;
 import org.inspirenxe.strata.api.theme.Theme;
+import org.inspirenxe.strata.core.layout.Flow;
 import org.inspirenxe.strata.core.node.BuiltInComponent;
 import org.inspirenxe.strata.core.node.ComponentFactoryImpl;
 import org.inspirenxe.strata.core.node.MnemonicTarget;
@@ -382,10 +383,12 @@ public final class LabelImpl extends BuiltInComponent<Label> implements Label, M
         final float top = this.paintBounds.y() / scale;
         final float width = this.paintBounds.width() / scale;
         final InlineMetrics metrics = InlineMetrics.of(this.environment().text());
+        // Right to left, left means the start
+        final HorizontalAlignment alignment = Flow.resolve(this.textAlignment, this.isRightToLeft());
         float y = top;
         for (int i = 0; i < shown.size(); i++) {
             final float lineWidth = widths.get(i);
-            final float x = switch (this.textAlignment) {
+            final float x = switch (alignment) {
                 case LEFT, STRETCH -> left;
                 case CENTER -> left + (width - lineWidth) * 0.5f;
                 case RIGHT -> left + width - lineWidth;

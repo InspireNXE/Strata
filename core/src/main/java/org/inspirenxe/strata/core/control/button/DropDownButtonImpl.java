@@ -311,13 +311,17 @@ public final class DropDownButtonImpl extends BuiltInComponent<DropDownButton> i
         if (this.hostRoot() != null && this.hostRoot().showsMnemonics()) {
             shown = content.marked(shown);
         }
-        if (content.paintContent(painter, this.contentArea.at(bounds.x(), bounds.y(),
-                        bounds.width() - ComboBoxImpl.ARROW_GAP - ComboBoxImpl.ARROW_WIDTH, bounds.height()), padding,
-                enabled, shown, this.environment().millis())) {
+        // Right to left the arrow sits at the left, and the content after it
+        final boolean rightToLeft = this.isRightToLeft();
+        final float beside = ComboBoxImpl.ARROW_GAP + ComboBoxImpl.ARROW_WIDTH;
+        if (content.paintContent(painter, this.contentArea.at(rightToLeft ? bounds.x() + beside : bounds.x(),
+                        bounds.y(), bounds.width() - beside, bounds.height()), padding,
+                enabled, shown, this.environment().millis(), rightToLeft)) {
             this.repaintAfter(FrameRequests.CONTINUOUS_MILLIS);
         }
 
-        final float arrowX = bounds.right() - padding.right() - ComboBoxImpl.ARROW_WIDTH;
+        final float arrowX = rightToLeft ? bounds.x() + padding.right()
+                : bounds.right() - padding.right() - ComboBoxImpl.ARROW_WIDTH;
         final float arrowY = innerY + (innerHeight - Rings.ARROW_SHORT) * 0.5f;
         if (enabled && this.arrow != Paint.NONE) {
             this.arrowLines.down(painter, this.arrow, arrowX, arrowY);

@@ -137,6 +137,7 @@ public final class PasswordTextBoxImpl extends BuiltInComposite<PasswordTextBox>
     private Rect contentFor;
     private Insets contentPadding;
     private boolean contentRevealable;
+    private boolean contentRightToLeft;
     private float contentLineHeight;
 
     // The text as drawn, made again after each edit: the mask, or the shown text and its boundaries
@@ -623,14 +624,19 @@ public final class PasswordTextBoxImpl extends BuiltInComposite<PasswordTextBox>
             this.validity.paintOutline(painter, bounds);
         }
 
+        final boolean rightToLeft = this.isRightToLeft();
         if (!bounds.equals(this.contentFor) || this.textPadding != this.contentPadding
-                || this.revealable != this.contentRevealable || this.lineHeight != this.contentLineHeight) {
-            this.contentBox = bounds.shrink(this.textPadding);
-            // The text keeps the eye's room whenever the box is revealable, so it does not move when the eye appears
+                || this.revealable != this.contentRevealable || this.lineHeight != this.contentLineHeight
+                || rightToLeft != this.contentRightToLeft) {
+            this.contentBox = this.flow(bounds.shrink(this.textPadding));
+            // The text keeps the eye's room whenever the box is revealable, so it does not move when the eye appears;
+            // right to left the eye is mirrored to the left, as the node mirrors it, and the text sits after it
+            final float room = this.lineHeight + REVEAL_GAP;
             this.textBox = this.revealable
-                    ? new Rect(this.contentBox.x(), this.contentBox.y(),
-                            this.contentBox.width() - this.lineHeight - REVEAL_GAP, this.contentBox.height())
+                    ? new Rect(rightToLeft ? this.contentBox.x() + room : this.contentBox.x(), this.contentBox.y(),
+                            this.contentBox.width() - room, this.contentBox.height())
                     : this.contentBox;
+            this.contentRightToLeft = rightToLeft;
             this.contentFor = bounds;
             this.contentPadding = this.textPadding;
             this.contentRevealable = this.revealable;
@@ -913,6 +919,11 @@ public final class PasswordTextBoxImpl extends BuiltInComposite<PasswordTextBox>
         @Override
         public float placeholderWidth() {
             return PasswordTextBoxImpl.this.placeholderLine.width();
+        }
+
+        @Override
+        public boolean rightToLeft() {
+            return PasswordTextBoxImpl.this.isRightToLeft();
         }
 
         @Override

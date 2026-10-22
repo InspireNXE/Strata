@@ -16,6 +16,7 @@
 package org.inspirenxe.strata.core.layout;
 
 import org.inspirenxe.strata.api.geometry.Rect;
+import org.inspirenxe.strata.api.input.Key;
 import org.inspirenxe.strata.api.layout.HorizontalAlignment;
 
 /**
@@ -48,6 +49,25 @@ public final class Flow {
      */
     public static float mirrorX(final float x, final Rect box) {
         return box.x() + box.right() - x;
+    }
+
+    /**
+     * Returns the key that moves the same way through content in a direction: right to left, Left and Right swap,
+     * so a control that steps forward on Right steps forward on Left there. Other keys come back as they are.
+     *
+     * @param key the key pressed
+     * @param rightToLeft whether the content runs right to left
+     * @return the key to act on as for left to right
+     */
+    public static Key key(final Key key, final boolean rightToLeft) {
+        if (!rightToLeft) {
+            return key;
+        }
+        return switch (key) {
+            case LEFT -> Key.RIGHT;
+            case RIGHT -> Key.LEFT;
+            default -> key;
+        };
     }
 
     /**

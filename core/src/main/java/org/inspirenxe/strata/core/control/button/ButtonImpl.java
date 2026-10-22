@@ -345,7 +345,7 @@ public final class ButtonImpl extends BuiltInComponent<Button> implements Button
         }
         // Centered in the button less its padding, which is the whole button when the padding is even
         if (content.paintContent(painter, bounds, content.padding(this.link), enabled, shown,
-                this.environment().millis())) {
+                this.environment().millis(), this.isRightToLeft())) {
             this.repaintAfter(FrameRequests.CONTINUOUS_MILLIS);
         }
     }

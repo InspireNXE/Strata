@@ -380,7 +380,9 @@ public final class SpinnerImpl extends BuiltInComposite<Spinner> implements Spin
     protected void arrange(final ArrangeContext context, final Rect bounds) {
         final float fieldWidth = Math.max(0f, bounds.width() - BUTTON_WIDTH);
         context.arrange(this.field, new Rect(bounds.x(), bounds.y(), fieldWidth, bounds.height()));
-        this.buttons = new Rect(bounds.x() + fieldWidth, bounds.y(), bounds.width() - fieldWidth, bounds.height());
+        // Right to left the node mirrors the field to the right, and the buttons go to the left
+        this.buttons = this.flow(new Rect(bounds.x() + fieldWidth, bounds.y(), bounds.width() - fieldWidth,
+                bounds.height()));
         final float half = (float) Math.floor(this.buttons.height() * 0.5f);
         this.upButton = new Rect(this.buttons.x(), this.buttons.y(), this.buttons.width(), half);
         this.downButton = new Rect(this.buttons.x(), this.buttons.y() + half, this.buttons.width(),

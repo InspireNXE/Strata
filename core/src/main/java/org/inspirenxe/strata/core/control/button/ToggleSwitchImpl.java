@@ -215,14 +215,17 @@ public final class ToggleSwitchImpl extends BuiltInComponent<ToggleSwitch> imple
 
     @Override
     protected void paint(final Painter painter, final Rect bounds) {
-        final Rect bar = this.layout.box(bounds);
+        final boolean rightToLeft = this.isRightToLeft();
+        final Rect bar = this.layout.box(bounds, rightToLeft);
         final boolean enabled = this.isEnabled();
         (enabled ? (this.on ? this.trackOn : this.track) : this.trackDisabled).paint(painter, bar);
 
         final Insets inset = this.knobPadding;
         final float knobSize = Math.max(0f, this.trackHeight - inset.vertical());
         final float left = bar.x() + inset.left();
-        final float knobX = left + (bar.right() - inset.right() - knobSize - left) * this.knobPlace;
+        final float leftX = left + (bar.right() - inset.right() - knobSize - left) * this.knobPlace;
+        // Right to left, on is at the left
+        final float knobX = rightToLeft ? bar.x() + bar.right() - leftX - knobSize : leftX;
         final Paint face;
         if (!enabled) {
             face = this.knobDisabled;
@@ -235,7 +238,7 @@ public final class ToggleSwitchImpl extends BuiltInComponent<ToggleSwitch> imple
             this.ring.paint(painter, this.focusRing, bar);
         }
         this.layout.paintCaption(painter, bounds, enabled,
-                this.hostRoot() != null && this.hostRoot().showsMnemonics());
+                this.hostRoot() != null && this.hostRoot().showsMnemonics(), rightToLeft);
     }
 
     @Override

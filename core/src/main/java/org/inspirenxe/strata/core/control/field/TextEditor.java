@@ -15,6 +15,7 @@
  */
 package org.inspirenxe.strata.core.control.field;
 
+import org.inspirenxe.strata.core.layout.Flow;
 import org.inspirenxe.strata.api.event.input.DragEvent;
 import org.inspirenxe.strata.api.event.input.PointerButtonEvent;
 import org.inspirenxe.strata.api.extension.Environment;
@@ -449,10 +450,12 @@ final class TextEditor {
                 return edited;
             }
         }
+        // Right to left, Left moves toward the end of the text and Right toward its start
+        final Key moving = Flow.key(key, this.host.rightToLeft());
         if (modifiers.control()) {
-            return this.controlKey(key, shift);
+            return this.controlKey(moving, shift);
         }
-        return this.plainKey(key, shift);
+        return this.plainKey(moving, shift);
     }
 
     /**
@@ -675,6 +678,11 @@ final class TextEditor {
          * The field's environment, for the clock and the clipboard.
          */
         Environment environment();
+
+        /**
+         * Whether the field runs right to left, which swaps Left and Right and the alignment's left and right.
+         */
+        boolean rightToLeft();
 
         /**
          * Asks the field's host for a frame after a time, for the caret's next blink.

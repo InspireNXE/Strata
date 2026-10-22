@@ -246,7 +246,8 @@ public final class RadioButtonImpl extends BuiltInComponent<RadioButton> impleme
 
     @Override
     protected void paint(final Painter painter, final Rect bounds) {
-        final Rect box = this.layout.box(bounds);
+        final boolean rightToLeft = this.isRightToLeft();
+        final Rect box = this.layout.box(bounds, rightToLeft);
         final boolean enabled = this.isEnabled();
         final boolean lit = this.isHovered() || this.isFocused();
         final boolean selected = this.isSelected();
@@ -270,7 +271,7 @@ public final class RadioButtonImpl extends BuiltInComponent<RadioButton> impleme
             this.ring.paint(painter, this.focusRing, box);
         }
         this.layout.paintCaption(painter, bounds, enabled,
-                this.hostRoot() != null && this.hostRoot().showsMnemonics());
+                this.hostRoot() != null && this.hostRoot().showsMnemonics(), rightToLeft);
     }
 
     @Override

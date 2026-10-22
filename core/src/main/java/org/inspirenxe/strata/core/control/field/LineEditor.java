@@ -44,7 +44,8 @@ import org.inspirenxe.strata.api.theme.Paint;
  *
  * <p>Text narrower than the content box, with one unit for the caret, is shifted by the field's alignment: all the
  * free room for right, half of it for center, rounded to whole units. Wider text starts at the left and scrolls, so
- * alignment never hides the caret. The placeholder is aligned the same way by its own width.</p>
+ * alignment never hides the caret. The placeholder is aligned the same way by its own width. While the owner runs
+ * right to left, left and right swap, so left means the start.</p>
  */
 final class LineEditor {
     /**
@@ -304,9 +305,10 @@ final class LineEditor {
         this.updateVisuals(this.owner.environment().text());
         this.revealCaret();
         final float view = contentBox.width();
-        this.shift = Math.round(Math.max(0f, view - (this.textWidth + 1f)) * this.alignment);
-        this.placeholderShift = this.alignment == 0f ? 0f
-                : Math.round(Math.max(0f, view - this.owner.placeholderWidth()) * this.alignment);
+        final float alignment = this.owner.rightToLeft() ? 1f - this.alignment : this.alignment;
+        this.shift = Math.round(Math.max(0f, view - (this.textWidth + 1f)) * alignment);
+        this.placeholderShift = alignment == 0f ? 0f
+                : Math.round(Math.max(0f, view - this.owner.placeholderWidth()) * alignment);
 
         this.painter = painter;
         try {
