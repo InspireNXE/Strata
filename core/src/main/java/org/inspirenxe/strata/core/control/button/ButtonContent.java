@@ -62,6 +62,8 @@ final class ButtonContent {
     private float iconWidth;
     private float iconHeight;
     private final Caption captionDrawer = new Caption();
+    // Kept from one frame to the next while the icon stays in place
+    private Rect iconRect = Rect.ZERO;
 
     // Theme
     Paint normal;
@@ -279,8 +281,8 @@ final class ButtonContent {
 
     /**
      * Draws the icon and a caption centered together in the bounds less the padding: horizontally across it, and
-     * each vertically in it. A caption with no icon is drawn by a {@link Caption}, so one too wide is cut or
-     * scrolled as the theme says.
+     * each vertically in it. The caption is drawn by a {@link Caption}, so one too wide is cut or scrolled as the
+     * theme says; beside an icon, the icon starts at the clip area's left edge and the caption is cut after it.
      *
      * @param painter what to draw with
      * @param bounds the bounds to center in, less anything the button draws beside its content
@@ -304,19 +306,27 @@ final class ButtonContent {
             }
             return;
         }
-        float x = Caption.center(left, width, this.contentWidth());
-        if (icon) {
-            final Rect iconRect = new Rect(x, top + (height - this.iconHeight) * 0.5f, this.iconWidth, this.iconHeight);
-            final int tint = enabled ? 0xFFFFFFFF : DISABLED_ICON_TINT;
-            if (this.iconVisual != null) {
-                painter.visual(this.iconVisual, iconRect, tint);
-            } else {
-                painter.sprite(this.iconSprite, iconRect, tint);
-            }
-            x += this.iconWidth + ButtonImpl.ICON_GAP;
+        final float contentWidth = this.contentWidth();
+        final float x = hasText ? this.captionDrawer.start(bounds, padding, contentWidth)
+                : Caption.center(left, width, this.iconWidth);
+        final Rect iconRect = this.iconRect(x, top + (height - this.iconHeight) * 0.5f);
+        final int tint = enabled ? 0xFFFFFFFF : DISABLED_ICON_TINT;
+        if (this.iconVisual != null) {
+            painter.visual(this.iconVisual, iconRect, tint);
+        } else {
+            painter.sprite(this.iconSprite, iconRect, tint);
         }
         if (hasText) {
-            shown.draw(painter, x, top + (height - this.captionHeight) * 0.5f);
+            this.captionDrawer.draw(painter, shown, bounds, padding, this.iconWidth + ButtonImpl.ICON_GAP,
+                    contentWidth, top + (height - this.captionHeight) * 0.5f, millis);
         }
+    }
+
+    private Rect iconRect(final float x, final float y) {
+        final Rect last = this.iconRect;
+        if (last.x() != x || last.y() != y || last.width() != this.iconWidth || last.height() != this.iconHeight) {
+            this.iconRect = new Rect(x, y, this.iconWidth, this.iconHeight);
+        }
+        return this.iconRect;
     }
 }
