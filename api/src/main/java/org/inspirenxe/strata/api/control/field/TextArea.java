@@ -161,7 +161,8 @@ public interface TextArea extends Component<TextArea>, Focusable<TextArea>, HasC
     int maxLength();
 
     /**
-     * Sets the length limit, cutting the text if it is longer. {@link #EDITED} fires if the text was cut.
+     * Sets the length limit, cutting the text if it is longer, never in the middle of a grapheme cluster.
+     * {@link #EDITED} fires if the text was cut.
      *
      * @param maxLength the most code points the text may hold
      * @return this text area
@@ -230,7 +231,7 @@ public interface TextArea extends Component<TextArea>, Focusable<TextArea>, HasC
     String selectedText();
 
     /**
-     * Selects a range, clamped to the text. An index in the middle of a surrogate pair moves to its start.
+     * Selects a range, clamped to the text. An index in the middle of a grapheme cluster moves to its start.
      *
      * @param anchor the end that stays put
      * @param caret the end that moves
@@ -315,7 +316,7 @@ public interface TextArea extends Component<TextArea>, Focusable<TextArea>, HasC
      * Returns the column of a char index on its line, counted in code points from the line's start, as a code
      * editor shows it.
      *
-     * @param index a char index; clamped to the text, and moved off the middle of a surrogate pair
+     * @param index a char index; clamped to the text, and moved to the start of its grapheme cluster
      * @return the column, from 0
      */
     int columnOf(int index);

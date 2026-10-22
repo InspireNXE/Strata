@@ -37,7 +37,7 @@ public final class RichText {
     /**
      * Splits spans into lines no wider than a width, by the rule {@link LineBreaks} describes, as {@link TextWrap#wrap}
      * splits text in one style: newlines always break, a row breaks after the last whitespace that fits, the
-     * whitespace where it breaks is dropped, and a word wider than a whole line breaks between code points. Each part
+     * whitespace where it breaks is dropped, and a word wider than a whole line breaks between grapheme clusters. Each part
      * of a line is measured in its own span's style, and an inline element is one character that is not whitespace. A
      * single span wraps exactly as {@link TextWrap} wraps its text.
      *
@@ -69,7 +69,7 @@ public final class RichText {
         final String text = joined.toString();
         final int[] owners = owner.stream().mapToInt(Integer::intValue).toArray();
         final LineBreaks.Measure measure = (start, end) -> width(spans, owners, text, start, end, metrics);
-        final LineBreaks.Characters characters = LineBreaks.codePoints(text);
+        final LineBreaks.Characters characters = Graphemes.of(text);
 
         int paragraphStart = 0;
         while (true) {
@@ -105,8 +105,8 @@ public final class RichText {
     }
 
     /**
-     * Shortens a line to fit a width, ending it in {@link #ELLIPSIS} in the style of the last character kept. A
-     * line that already fits comes back unchanged.
+     * Shortens a line to fit a width, ending it in {@link #ELLIPSIS} in the style of the last character kept. The
+     * cut falls between grapheme clusters. A line that already fits comes back unchanged.
      *
      * @param line the spans of the line
      * @param maxWidth the width to fit, in UI units

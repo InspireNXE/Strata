@@ -29,8 +29,10 @@ import org.inspirenxe.strata.api.state.PropertyKey;
  * may read; a {@link org.inspirenxe.strata.api.control.field.PasswordTextBox} has only this, so a handler written
  * against it learns how long the text is and when it changed, never what it says.</p>
  *
- * <p>Indexes are char indexes into the text, from 0 to its length in chars, and never fall inside a surrogate pair.
- * Lengths are counted in code points. On a control whose text code cannot read, the indexes are into text the
+ * <p>Indexes are char indexes into the text, from 0 to its length in chars, and never fall inside a character: on a
+ * control whose text code may read a character is a grapheme cluster, such as a flag, an emoji with its skin tone or
+ * a letter with its accents, and on one whose text code cannot read it is a code point. Lengths are counted in code
+ * points. On a control whose text code cannot read, the indexes are into text the
  * caller cannot see, and out-of-range indexes are still clamped.</p>
  *
  * <p>Handle {@link #MODIFY} to refuse what the user types into any field, and {@link #MODIFIED} to react to every
@@ -98,7 +100,8 @@ public interface TextEntry<S extends TextEntry<S>> extends EventTarget<S> {
     int maxLength();
 
     /**
-     * Limits the text length. Text already longer is cut, which reports the change.
+     * Limits the text length. Text already longer is cut, which reports the change. A cut never splits a grapheme
+     * cluster: a cluster that would cross the limit is left out whole.
      *
      * @param maxLength the most code points the control may hold
      * @return this control
@@ -145,7 +148,7 @@ public interface TextEntry<S extends TextEntry<S>> extends EventTarget<S> {
 
     /**
      * Selects a range. The anchor is the fixed end and the caret the moving end, as after a Shift+arrow. Indexes
-     * outside the text are clamped, and an index inside a surrogate pair moves to the pair's start.
+     * outside the text are clamped, and an index inside a character moves to the character's start.
      *
      * @param anchor the fixed end of the selection
      * @param caret where the caret goes

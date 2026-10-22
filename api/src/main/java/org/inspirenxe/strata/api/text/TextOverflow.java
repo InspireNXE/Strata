@@ -24,8 +24,9 @@ public enum TextOverflow {
      */
     VISIBLE,
     /**
-     * Cut the line between code points so it fits with {@code ...} after it, in the style of the last character
-     * kept. If not even the dots fit, nothing of the line is drawn.
+     * Cut the line between characters so it fits with {@code ...} after it, in the style of the last character
+     * kept. A character is a grapheme cluster, so a flag, an emoji with its skin tone or a letter with its accents is
+     * kept or left out whole. If not even the dots fit, nothing of the line is drawn.
      */
     ELLIPSIS
 }

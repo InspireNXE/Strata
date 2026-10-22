@@ -15,6 +15,8 @@
  */
 package org.inspirenxe.strata.core.control.field;
 
+import org.inspirenxe.strata.core.text.Graphemes;
+
 import java.util.Objects;
 import java.util.function.Consumer;
 import java.util.function.UnaryOperator;
@@ -318,18 +320,13 @@ final class PlainEdits {
     }
 
     /**
-     * Cuts text to a number of code points.
+     * Cuts text to a number of code points without cutting a grapheme cluster apart: a cluster that would cross the
+     * limit is left out whole.
      *
      * @return the text, or its start; empty for a count of 0 or less
      */
     static String truncate(final String text, final int codePoints) {
-        if (codePoints <= 0) {
-            return "";
-        }
-        if (text.codePointCount(0, text.length()) <= codePoints) {
-            return text;
-        }
-        return text.substring(0, text.offsetByCodePoints(0, codePoints));
+        return text.substring(0, Graphemes.cut(text, codePoints));
     }
 
     /**

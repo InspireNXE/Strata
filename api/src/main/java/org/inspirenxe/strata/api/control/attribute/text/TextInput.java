@@ -24,8 +24,9 @@ import org.inspirenxe.strata.api.text.TextHighlighter;
 /**
  * A control the user types into and whose text code may read, such as a text box or a text area.
  *
- * <p>Indexes are char indexes into {@link #text()}, from 0 to its length, and never fall inside a surrogate pair.
- * Lengths are counted in code points.</p>
+ * <p>Indexes are char indexes into {@link #text()}, from 0 to its length, and never fall inside a grapheme cluster,
+ * the character a reader sees, such as a flag or a letter with its accents. Lengths are counted in code points, and
+ * text cut to a length limit loses a cluster that would cross it whole.</p>
  *
  * <p>Handle {@link #EDIT} to refuse or rewrite what the user types, and {@link #EDITED} to react to every change of
  * the text. A field fires these as well as {@link TextEntry#MODIFY} and {@link TextEntry#MODIFIED}: a user's edit
@@ -111,8 +112,8 @@ public interface TextInput<S extends TextInput<S>> extends TextEntry<S> {
     S insert(String text);
 
     /**
-     * Replaces a range of the text as code. The range is clamped to the text and its ends move off the middle of a
-     * surrogate pair, as {@link #select} moves them. The new text is cleaned and cut as {@link #insert} says. The
+     * Replaces a range of the text as code. The range is clamped to the text and its ends move to the start of the
+     * grapheme cluster they fall in, as {@link #select} moves them. The new text is cleaned and cut as {@link #insert} says. The
      * caret and the selection anchor stay with the chars they were next to: after the range they shift with the
      * change, inside it they go to the end of the new text, and before it they stay. A caret at the end of the range
      * counts as after it. The view scrolls only as far as needed to keep a moved caret in sight. Reports

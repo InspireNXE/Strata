@@ -105,9 +105,10 @@ import java.util.Objects;
  * consumes Up, Down, Tab, Enter and Escape itself. A disabled box ignores input.</p>
  *
  * <h2>Text and indexes</h2>
- * <p>Caret and selection indexes count UTF-16 chars, like {@link String} indexes, but never fall inside a surrogate
- * pair, and the keys and the pointer keep the caret off the middle of a character as the editing list describes it.
- * {@link #select} may still put it there. {@link #maxLength()} counts code points. The box holds one line; line
+ * <p>Caret and selection indexes count UTF-16 chars, like {@link String} indexes, but never fall inside a
+ * character, a grapheme cluster as the editing list describes it; {@link #select} and the edits from code move an
+ * index inside one to its start. {@link #maxLength()} counts code points, and a cut to it leaves out a cluster that
+ * would cross it whole. The box holds one line; line
  * breaks and other control characters given to {@link #setText} or pasted are removed. For a password, use a
  * {@link PasswordTextBox}, which keeps its text out of events, snapshots and the clipboard.</p>
  *
@@ -419,7 +420,7 @@ public interface TextBox extends Component<TextBox>, Focusable<TextBox>, HasCurs
 
     /**
      * Selects a range. The anchor is the fixed end and the caret the moving end, as after a Shift+arrow. Indexes
-     * outside the text are clamped, and an index inside a surrogate pair moves to the pair's start.
+     * outside the text are clamped, and an index inside a grapheme cluster moves to the cluster's start.
      *
      * @param anchor the fixed end of the selection
      * @param caret where the caret goes

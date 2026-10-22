@@ -141,29 +141,6 @@ public final class LineBreaks {
     }
 
     /**
-     * Returns the code point boundaries of a text, for wrapping that breaks a word between code points.
-     *
-     * @param text the text
-     * @return its code point boundaries
-     */
-    public static Characters codePoints(final CharSequence text) {
-        return new Characters() {
-            @Override
-            public int next(final int index) {
-                if (index >= text.length()) {
-                    return text.length();
-                }
-                return index + Character.charCount(Character.codePointAt(text, index));
-            }
-
-            @Override
-            public int previous(final int index) {
-                return index <= 0 ? 0 : index - Character.charCount(Character.codePointBefore(text, index));
-            }
-        };
-    }
-
-    /**
      * Measures ranges of the text being wrapped.
      */
     @FunctionalInterface
@@ -180,8 +157,8 @@ public final class LineBreaks {
     }
 
     /**
-     * The boundaries between the characters of the text being wrapped: code points, or grapheme clusters for a field
-     * that keeps them whole.
+     * The boundaries between the characters of the text being wrapped: its grapheme clusters, as {@link Graphemes}
+     * finds them, or a password's code points.
      */
     public interface Characters {
 

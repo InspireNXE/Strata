@@ -33,11 +33,11 @@ public final class TextWrap {
 
     /**
      * Splits text into lines no wider than a width. Newlines always break. Within a line, each row takes as much as
-     * fits and breaks after the last whitespace that fits, or between code points when a word alone is wider than the
-     * width. The whitespace where a row breaks is dropped; whitespace anywhere else, at the start of a line included,
+     * fits and breaks after the last whitespace that fits, or between grapheme clusters when a word alone is wider than
+     * the width. The whitespace where a row breaks is dropped; whitespace anywhere else, at the start of a line included,
      * is kept.
      *
-     * <p>A single code point wider than the width still gets a line of its own, so the result can be wider than
+     * <p>A single cluster wider than the width still gets a line of its own, so the result can be wider than
      * {@code maxWidth} when the width is smaller than one character.</p>
      *
      * @param text the text, with {@code \n} as the only line break
@@ -49,7 +49,7 @@ public final class TextWrap {
     public static List<String> wrap(final String text, final TextStyle style, final float maxWidth, final TextMetrics metrics) {
         final List<String> lines = new ArrayList<>();
         final LineBreaks.Measure measure = (start, end) -> width(text.substring(start, end), style, metrics);
-        final LineBreaks.Characters characters = LineBreaks.codePoints(text);
+        final LineBreaks.Characters characters = Graphemes.of(text);
         int lineStart = 0;
         while (true) {
             final int newline = text.indexOf('\n', lineStart);
@@ -68,36 +68,37 @@ public final class TextWrap {
     }
 
     /**
-     * Returns how much of the start of a string fits in a width, in whole code points. It measures O(log n)
-     * prefixes, by binary search.
+     * Returns how much of the start of a string fits in a width, in whole grapheme clusters, so a flag or a letter
+     * with its accents is kept or left out whole. It measures O(log n) prefixes, by binary search.
      *
      * @param text the text
      * @param style the style to measure with
      * @param maxWidth the width to fit, in UI units
      * @param metrics the engine's text metrics
-     * @return the length in {@code char}s of the longest fitting prefix, never splitting a surrogate pair; 0 if
-     *     not even the first code point fits
+     * @return the length in {@code char}s of the longest fitting prefix, never splitting a cluster; 0 if not even the
+     *     first cluster fits
      */
     public static int fittingPrefix(final String text, final TextStyle style, final float maxWidth, final TextMetrics metrics) {
-        if (text.isEmpty() || width(text.substring(0, text.offsetByCodePoints(0, 1)), style, metrics) > maxWidth) {
+        if (text.isEmpty()) {
             return 0;
         }
+        final LineBreaks.Characters clusters = Graphemes.of(text);
         // The longest prefix that fits lies in [low, high]
-        int low = text.offsetByCodePoints(0, 1);
+        int low = clusters.next(0);
+        if (width(text.substring(0, low), style, metrics) > maxWidth) {
+            return 0;
+        }
         int high = text.length();
         while (low < high) {
             int mid = low + (high - low + 1) / 2;
-            if (mid < text.length() && Character.isLowSurrogate(text.charAt(mid))
-                    && Character.isHighSurrogate(text.charAt(mid - 1))) {
-                mid--;
-            }
+            mid = Graphemes.snap(clusters, mid);
             if (mid <= low) {
-                mid = text.offsetByCodePoints(low, 1);
+                mid = clusters.next(low);
             }
             if (width(text.substring(0, mid), style, metrics) <= maxWidth) {
                 low = mid;
             } else {
-                high = text.offsetByCodePoints(mid, -1);
+                high = clusters.previous(mid);
             }
         }
         return low;

@@ -83,11 +83,19 @@ final class TextBoundaries implements LineBreaks.Characters {
     }
 
     /**
-     * Clamps an index to the text and moves it off the middle of a surrogate pair.
+     * Clamps an index to the text and moves it to the start of the character it falls in: of its grapheme cluster
+     * over a field's text, of its surrogate pair over a password.
      */
     int snap(final int index) {
         final int length = this.buffer.length();
         final int clamped = Math.max(0, Math.min(length, index));
+        if (this.plain != null) {
+            if (clamped == 0 || clamped == length) {
+                return clamped;
+            }
+            this.sync();
+            return this.characters.isBoundary(clamped) ? clamped : this.characters.preceding(clamped);
+        }
         if (clamped > 0 && clamped < length
                 && Character.isLowSurrogate(this.buffer.charAt(clamped))
                 && Character.isHighSurrogate(this.buffer.charAt(clamped - 1))) {
