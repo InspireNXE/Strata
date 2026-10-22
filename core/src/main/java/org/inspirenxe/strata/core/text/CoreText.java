@@ -233,7 +233,8 @@ sealed interface CoreText extends Text {
                         literal.append(c);
                         continue;
                     }
-                    index = Integer.parseInt(pattern, i + 1, j, 10) - 1;
+                    // More digits than an int holds can only be out of range, which shows the specifier as written
+                    index = j - (i + 1) > 9 ? -1 : Integer.parseInt(pattern, i + 1, j, 10) - 1;
                     specifierEnd = j + 2;
                 } else {
                     literal.append(c);
