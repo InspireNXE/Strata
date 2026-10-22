@@ -186,19 +186,48 @@ public final class ScreenHostImpl implements ScreenHost {
 
     @Override
     public void setTheme(final Theme theme) {
-        this.root.setTheme(theme);
-        this.theme = theme;
+        this.applyTheme(theme);
         this.themeRef = null;
     }
 
     @Override
     public void setTheme(final ThemeRef theme) {
         final Resolution resolution = Resolution.of(this.resolver, this.themes, Objects.requireNonNull(theme, "theme"));
-        this.root.setTheme(resolution.theme());
-        this.theme = resolution.theme();
+        this.applyTheme(resolution.theme());
         this.themeRef = theme;
         this.themeVersion = resolution.sourceVersion();
         this.registryVersion = resolution.registryVersion();
+    }
+
+    /**
+     * Checks a theme against the open tree and its overlays without changing anything, so a stack can check every
+     * screen before it changes any.
+     *
+     * @param theme the theme
+     * @throws ThemeException if the theme lacks keys the tree or an overlay needs
+     */
+    public void checkTheme(final Theme theme) {
+        this.root.checkTheme(theme);
+    }
+
+    /**
+     * Sets the host's theme, which the factory reports, and then gives it to the root, so components that read
+     * {@code ComponentFactory.theme()} while the theme is applied see the new one. If the root refuses the theme,
+     * the host keeps the old one.
+     */
+    private void applyTheme(final Theme theme) {
+        Objects.requireNonNull(theme, "theme");
+        final Theme previous = this.theme;
+        this.theme = theme;
+        boolean done = false;
+        try {
+            this.root.setTheme(theme);
+            done = true;
+        } finally {
+            if (!done) {
+                this.theme = previous;
+            }
+        }
     }
 
     @Override
@@ -221,9 +250,7 @@ public final class ScreenHostImpl implements ScreenHost {
         this.themeVersion = version;
         this.registryVersion = registry;
         try {
-            final Theme resolved = this.resolver.resolve(this.themeRef);
-            this.root.setTheme(resolved);
-            this.theme = resolved;
+            this.applyTheme(this.resolver.resolve(this.themeRef));
         } catch (final ThemeException e) {
             LOGGER.log(System.Logger.Level.WARNING, "Keeping theme " + this.theme.name() + " after a reload: "
                     + e.getMessage());

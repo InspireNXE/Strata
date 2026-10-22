@@ -169,9 +169,15 @@ public final class ScreenStackImpl implements ScreenStack {
         }
     }
 
+    /**
+     * Gives every screen that follows the stack's theme a new theme. Every such screen is checked first, so a theme
+     * that lacks a key one of them needs changes no screen and leaves the stack's theme as it was.
+     */
     @Override
     public void setTheme(final Theme theme) {
-        this.theme = Objects.requireNonNull(theme, "theme");
+        Objects.requireNonNull(theme, "theme");
+        this.checkTheme(theme);
+        this.theme = theme;
         this.themeRef = null;
         for (final Entry entry : this.entries) {
             if (!entry.ownTheme()) {
@@ -180,9 +186,14 @@ public final class ScreenStackImpl implements ScreenStack {
         }
     }
 
+    /**
+     * Resolves a theme ref and gives the result to every screen that follows the stack's theme, as
+     * {@link #setTheme(Theme)} does, checking every such screen first.
+     */
     @Override
     public void setTheme(final ThemeRef theme) {
         final Theme resolved = new ThemeResolver(this.platform.themes()).resolve(theme);
+        this.checkTheme(resolved);
         for (final Entry entry : this.entries) {
             if (!entry.ownTheme()) {
                 entry.host().setTheme(theme);
@@ -190,6 +201,14 @@ public final class ScreenStackImpl implements ScreenStack {
         }
         this.theme = resolved;
         this.themeRef = theme;
+    }
+
+    private void checkTheme(final Theme theme) {
+        for (final Entry entry : this.entries) {
+            if (!entry.ownTheme()) {
+                entry.host().checkTheme(theme);
+            }
+        }
     }
 
     @Override

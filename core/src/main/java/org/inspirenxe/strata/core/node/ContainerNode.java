@@ -117,6 +117,8 @@ public final class ContainerNode extends Node implements ContainerPeer {
      * @throws IndexOutOfBoundsException if the index is negative or greater than the number of children
      * @throws IllegalArgumentException if the child already has a parent, this container included, is a host's
      *     content, would create a cycle, or was made by another factory
+     * @throws org.inspirenxe.strata.api.theme.ThemeException if this container is attached and the root's theme
+     *     lacks a style key the child's tree requires; the child is not added
      */
     @Override
     public void insert(final int index, final Component<?> child) {
@@ -131,12 +133,16 @@ public final class ContainerNode extends Node implements ContainerPeer {
         if (node.root() != null) {
             throw new IllegalArgumentException(child + " is the content of a host and cannot be added to a container");
         }
+        final Root root = this.root();
+        if (root != null) {
+            // Before anything changes, so a theme that lacks a key leaves the container as it was
+            root.checkTheme(node);
+        }
         this.childNodes.add(index, node);
         this.children.add(index, node.facade());
         node.setParent(this);
         node.setPaintSequence(++this.topSequence);
         this.paintOrderValid = false;
-        final Root root = this.root();
         if (root != null) {
             root.attachTree(node);
         }
@@ -157,6 +163,7 @@ public final class ContainerNode extends Node implements ContainerPeer {
      * @throws IndexOutOfBoundsException if the index is negative or greater than the number of children
      * @throws IllegalArgumentException if the child already has a parent, is a host's content, would create a
      *     cycle, or was made by another factory
+     * @throws org.inspirenxe.strata.api.theme.ThemeException as for {@link #insert(int, Component)}
      */
     public void insertContent(final int index, final Component<?> child) {
         this.insert(index, child);

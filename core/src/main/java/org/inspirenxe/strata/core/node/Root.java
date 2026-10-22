@@ -325,15 +325,36 @@ public final class Root {
      * @throws ThemeException if the theme lacks a style key the tree or an overlay requires
      */
     public void setTheme(final Theme theme) {
-        Objects.requireNonNull(theme, "theme");
-        for (final Node top : this.tops()) {
-            this.validateTheme(theme, top);
-        }
+        this.checkTheme(theme);
         this.theme = theme;
         for (final Node top : this.tops()) {
             visit(top, node -> node.applyTheme(theme));
         }
         this.requestLayout();
+    }
+
+    /**
+     * Checks a theme against every node this root holds, overlays and tooltip included, without changing anything,
+     * so a caller that changes several roots can check them all first.
+     *
+     * @param theme the theme
+     * @throws ThemeException if the theme lacks a style key the tree or an overlay requires
+     */
+    public void checkTheme(final Theme theme) {
+        Objects.requireNonNull(theme, "theme");
+        for (final Node top : this.tops()) {
+            this.validateTheme(theme, top);
+        }
+    }
+
+    /**
+     * Checks this root's theme against a subtree about to be attached, so a container can refuse a child before it
+     * changes anything.
+     *
+     * @throws ThemeException if the theme lacks a style key the subtree requires
+     */
+    void checkTheme(final Node subtree) {
+        this.validateTheme(this.theme, subtree);
     }
 
     /**
@@ -1073,6 +1094,8 @@ public final class Root {
         if (node.parentNode() != null || node.root() != null) {
             throw new IllegalArgumentException("A tooltip builder must return a new component, not one already in a tree");
         }
+        // Checked before the tooltip is recorded, so a theme that lacks a key leaves no tooltip behind
+        this.validateTheme(this.theme, node);
         this.tooltipOwner = owner;
         this.tooltipShown = tooltip;
         this.tooltipNode = node;
