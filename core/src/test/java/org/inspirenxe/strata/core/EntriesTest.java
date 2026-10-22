@@ -307,7 +307,7 @@ class EntriesTest {
             assertEquals(Optional.empty(), image.sprite());
             assertEquals(Optional.empty(), image.visual());
             final MessageBox box = ui.messageBox();
-            assertEquals(MessageBox.Buttons.OK, box.buttons());
+            assertEquals(MessageBox.Buttons.OK.results(), box.results());
             assertEquals("", box.text().plain());
         }
 
@@ -347,7 +347,8 @@ class EntriesTest {
                     .setButtons(MessageBox.Buttons.YES_NO);
             assertEquals("Delete?", box.window().title().plain());
             assertEquals("This cannot be undone.", box.text().plain());
-            assertEquals(MessageBox.Buttons.YES_NO, box.buttons());
+            assertEquals(MessageBox.Buttons.YES_NO.results(), box.results());
+            assertEquals(MessageBox.Result.NO, box.dismissResult());
         }
     }
 }

@@ -40,6 +40,7 @@ import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -502,6 +503,13 @@ class MenuWindowEventsTest {
         }
     }
 
+    /**
+     * Names a result by its id in capitals, or null for none.
+     */
+    private static String name(final MessageBox.Result result) {
+        return result == null ? "null" : result.id().toUpperCase(Locale.ROOT);
+    }
+
     @Nested
     class MessageBoxes {
         private final List<MessageBox.Result> results = new ArrayList<>();
@@ -512,7 +520,7 @@ class MenuWindowEventsTest {
             final MenuWindowEventsTest outer = MenuWindowEventsTest.this;
             outer.test.show(outer.ui.absolutePanel());
             this.box = outer.ui.messageBox("Save", "Save?", MessageBox.Buttons.YES_NO_CANCEL)
-                    .onEvent(MessageBox.ANSWER, e -> outer.heard.add("answer " + e.value()))
+                    .onEvent(MessageBox.ANSWER, e -> outer.heard.add("answer " + name(e.value())))
                     .onEvent(MessageBox.ANSWERED, e -> {
                         assertSame(e.value(), e.previous());
                         this.results.add(e.value());
@@ -656,8 +664,8 @@ class MenuWindowEventsTest {
             final AbsolutePanel panel = outer.ui.absolutePanel().add(embedded, 0, 0);
             outer.test.show(panel);
             final List<String> outside = new ArrayList<>();
-            panel.onEvent(MessageBox.ANSWER, e -> outside.add("answer " + e.value() + " " + (e.target() == embedded)))
-                    .onEvent(MessageBox.ANSWERED, e -> outside.add("answered " + e.value()))
+            panel.onEvent(MessageBox.ANSWER, e -> outside.add("answer " + name(e.value()) + " " + (e.target() == embedded)))
+                    .onEvent(MessageBox.ANSWERED, e -> outside.add("answered " + name(e.value())))
                     .onEvent(Closable.CLOSE, e -> outside.add("window close"))
                     .onEvent(Closable.CLOSED, e -> outside.add("window closed"));
             embedded.onEvent(Closable.CLOSED, e -> outer.heard.add("box heard window closed"));
