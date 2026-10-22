@@ -45,6 +45,7 @@ import org.inspirenxe.strata.api.geometry.Insets;
 import org.inspirenxe.strata.api.geometry.Rect;
 import org.inspirenxe.strata.api.geometry.Size;
 import org.inspirenxe.strata.api.input.TextInputKind;
+import org.inspirenxe.strata.api.layout.Anchor;
 import org.inspirenxe.strata.api.layout.HorizontalAlignment;
 import org.inspirenxe.strata.api.layout.VerticalAlignment;
 import org.inspirenxe.strata.api.state.PropertyKey;
@@ -607,6 +608,21 @@ public abstract class CustomComponent<T extends Component<T>> implements Compone
     }
 
     @Override
+    public final T setMargin(final float all) {
+        return Component.super.setMargin(all);
+    }
+
+    @Override
+    public final T setMargin(final float horizontal, final float vertical) {
+        return Component.super.setMargin(horizontal, vertical);
+    }
+
+    @Override
+    public final T setMargin(final float left, final float top, final float right, final float bottom) {
+        return Component.super.setMargin(left, top, right, bottom);
+    }
+
+    @Override
     public final float minWidth() {
         return this.peer.minWidth();
     }
@@ -651,6 +667,11 @@ public abstract class CustomComponent<T extends Component<T>> implements Compone
     }
 
     @Override
+    public final T setSize(final float width, final float height) {
+        return Component.super.setSize(width, height);
+    }
+
+    @Override
     public final HorizontalAlignment horizontalAlignment() {
         return this.peer.horizontalAlignment();
     }
@@ -664,6 +685,11 @@ public abstract class CustomComponent<T extends Component<T>> implements Compone
     public final T setAlignment(final HorizontalAlignment horizontal, final VerticalAlignment vertical) {
         this.peer.setAlignment(horizontal, vertical);
         return this.self();
+    }
+
+    @Override
+    public final T setAnchor(final Anchor anchor) {
+        return Component.super.setAnchor(anchor);
     }
 
     @Override
@@ -936,6 +962,11 @@ public abstract class CustomComponent<T extends Component<T>> implements Compone
      */
     protected final void invalidateLayout() {
         this.peer.invalidateLayout();
+    }
+
+    @Override
+    public final <E extends Event> T onEvent(final EventType<E> type, final EventHandler<? super E> handler) {
+        return this.onEvent(type, 0, handler);
     }
 
     @Override

@@ -48,10 +48,20 @@ public interface HasTooltip<S extends HasTooltip<S>> {
     /**
      * Sets what the host shows near the pointer while it rests on this component or a descendant that sets none.
      *
-     * @param tooltip the tooltip, or {@code null} for none
+     * @param tooltip the tooltip, or {@code null} for none; {@code setTooltip(null)} does not compile, since three
+     *     overloads take null, so write {@link #clearTooltip()} or {@code setTooltip((Tooltip) null)}
      * @return this component
      */
     S setTooltip(Tooltip tooltip);
+
+    /**
+     * Removes the tooltip, as {@code setTooltip((Tooltip) null)} does.
+     *
+     * @return this component
+     */
+    default S clearTooltip() {
+        return this.setTooltip((Tooltip) null);
+    }
 
     /**
      * Sets a tooltip of text. Line breaks ({@code \n}) start new lines.

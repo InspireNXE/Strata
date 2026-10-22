@@ -247,6 +247,16 @@ public interface ComponentFactory {
     Label cellLabel(Text text);
 
     /**
+     * Makes a {@linkplain #cellLabel(Text) cell label} with no text, as {@code cellLabel("")} does, for a cell factory
+     * that sets the text later.
+     *
+     * @return a new label
+     */
+    default Label cellLabel() {
+        return this.cellLabel("");
+    }
+
+    /**
      * Does the same as {@link #cellLabel(Text)} with literal text.
      *
      * @param text the text
@@ -362,7 +372,8 @@ public interface ComponentFactory {
     Image image(Visual visual);
 
     /**
-     * Makes an {@link Image} of a value's icon, with the value's tooltip; see {@link Image#setValue}.
+     * Makes an {@link Image} of a value's icon, with the value's tooltip; see {@link Image#setValue}. For an image
+     * with no value, call {@link #image()}: {@code image(null)} does not compile, since three overloads take null.
      *
      * @param value the value
      * @return a new image
