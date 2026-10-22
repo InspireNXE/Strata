@@ -102,7 +102,8 @@ class DisabledInputTest {
         void aPressOnADisabledComponentLeavesFocusWhereItIs() {
             final TextBox field = DisabledInputTest.this.ui.textBox();
             final Box box = new Box(DisabledInputTest.this.ui, 50, 50);
-            DisabledInputTest.this.test.show(DisabledInputTest.this.ui.absolutePanel().add(field, 0, 100).add(box, 0, 0));
+            DisabledInputTest.this.test.show(DisabledInputTest.this.ui.absolutePanel().add(field, 0, 100)
+                    .add(box, 0, 0));
             box.setEnabled(false);
             assertTrue(field.requestFocus());
 
