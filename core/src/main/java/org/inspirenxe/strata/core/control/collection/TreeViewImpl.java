@@ -43,6 +43,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.function.Function;
+import java.util.function.IntUnaryOperator;
 
 /**
  * The core {@link TreeView}. It flattens the shown part of the hierarchy into entries of item, depth and whether the
@@ -117,15 +118,28 @@ public final class TreeViewImpl<T> extends BuiltInComposite<TreeView<T>> impleme
 
     @Override
     public TreeView<T> setItems(final List<? extends T> items) {
+        final List<T> previous = this.roots;
         this.roots = List.copyOf(items);
-        this.rebuild();
+        try {
+            this.rebuild();
+        } catch (final RuntimeException | Error e) {
+            // A children or key function that threw left the rows as they were; keep the roots that match them
+            this.roots = previous;
+            throw e;
+        }
         return this;
     }
 
     @Override
     public TreeView<T> setChildren(final Function<? super T, ? extends List<? extends T>> children) {
+        final Function<? super T, ? extends List<? extends T>> previous = this.children;
         this.children = Objects.requireNonNull(children, "children");
-        this.rebuild();
+        try {
+            this.rebuild();
+        } catch (final RuntimeException | Error e) {
+            this.children = previous;
+            throw e;
+        }
         return this;
     }
 
@@ -208,20 +222,23 @@ public final class TreeViewImpl<T> extends BuiltInComposite<TreeView<T>> impleme
     }
 
     /**
-     * Flattens the shown hierarchy and hands it to the list, which keeps the selection on the same key.
+     * Flattens the shown hierarchy and hands it to the list, which keeps the selection on the same key. The children
+     * and key functions run before anything changes, so one that throws leaves the rows as they were.
      */
     private void flattenShown() {
         final List<Entry<T>> flat = new ArrayList<>();
         for (final T root : this.roots) {
             this.flatten(root, 0, flat);
         }
-        this.entries = List.copyOf(flat);
+        final List<Entry<T>> entries = List.copyOf(flat);
         final List<T> items = new ArrayList<>(flat.size());
         for (final Entry<T> entry : flat) {
             items.add(entry.item);
         }
+        final IntUnaryOperator moves = this.list.keyMoves(entries);
+        this.entries = entries;
         this.shown = List.copyOf(items);
-        this.list.setItems(this.entries);
+        this.list.replaceItems(entries, moves);
     }
 
     private void flatten(final T item, final int depth, final List<Entry<T>> into) {

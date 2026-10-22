@@ -66,8 +66,9 @@ import java.util.function.Function;
  * </ul>
  *
  * <p>{@link #setItems} keeps each selected item selected if an item with the same {@linkplain #setKeyFunction key}
- * is still there, so a list refreshed from the server keeps the row the user picked. If no item has that key,
- * nothing is selected.</p>
+ * is still there, so a list refreshed from the server keeps the row the user picked. Items with equal keys are
+ * matched in order: the second item with a key stays on the second one, or on the last when there are fewer. If no
+ * item has that key, nothing is selected.</p>
  *
  * <p>The events carry row indexes, so read the item from the list: {@code list.items().get(e.value())}. Handle
  * {@link Selection#SELECT} or {@link Activatable#ACTIVATE} to refuse or change what the user does, and

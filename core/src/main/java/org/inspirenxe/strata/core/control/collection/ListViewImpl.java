@@ -57,6 +57,7 @@ import java.util.Set;
 import java.util.TreeSet;
 import java.util.function.Function;
 import java.util.function.IntConsumer;
+import java.util.function.IntUnaryOperator;
 
 /**
  * The core {@link ListView}. Rows are built during arrange, once the viewport is known: rows that scrolled out are
@@ -181,34 +182,57 @@ public final class ListViewImpl<T> extends BuiltInComposite<ListView<T>> impleme
 
     @Override
     public ListView<T> setItems(final List<? extends T> items) {
+        final List<T> next = List.copyOf(items);
+        this.replaceItems(next, this.keyMoves(next));
+        return this;
+    }
+
+    /**
+     * Works out where the selected rows move when the items become {@code next}, by key, as
+     * {@link Items#moves} describes. Changes nothing, so an owner can run it before it changes its own state.
+     *
+     * @param next the new items
+     * @return the new index of each selected row, or -1
+     */
+    IntUnaryOperator keyMoves(final List<T> next) {
+        final Set<Integer> rows = new HashSet<>(this.chosen);
+        if (this.selectedIndex >= 0) {
+            rows.add(this.selectedIndex);
+        }
+        return Items.moves(this.items, next, this.keyFunction, rows);
+    }
+
+    /**
+     * Replaces the items and moves each selected row where {@code moves} says, dropping rows it sends to -1. The
+     * current row moves too, or becomes the last selected row if it went. Calls nothing a developer wrote before the
+     * new state is in place, then reports {@code SELECTED_MANY} and {@code SELECTED} as {@link #setItems} does.
+     *
+     * @param next the new items, which the list keeps as they are
+     * @param moves the new index of each selected row, or -1
+     */
+    void replaceItems(final List<T> next, final IntUnaryOperator moves) {
         final Optional<T> before = this.selected();
         final int beforeIndex = this.selectedIndex;
         final List<Integer> beforeSet = List.copyOf(this.chosen);
         final List<T> beforeItems = this.selectedItems();
-        final Set<Object> keys = new HashSet<>();
-        for (final T item : beforeItems) {
-            keys.add(this.keyFunction.apply(item));
-        }
-        final Object currentKey = before.map(this.keyFunction).orElse(null);
-        this.items = List.copyOf(items);
-        int index = -1;
-        this.chosen.clear();
-        for (int i = 0; i < this.items.size(); i++) {
-            final Object key = this.keyFunction.apply(this.items.get(i));
-            if (keys.contains(key)) {
-                this.chosen.add(i);
-            }
-            if (index < 0 && before.isPresent() && Objects.equals(currentKey, key)) {
-                index = i;
+        final TreeSet<Integer> set = new TreeSet<>();
+        for (final int row : this.chosen) {
+            final int moved = moves.applyAsInt(row);
+            if (moved >= 0) {
+                set.add(moved);
             }
         }
-        if (index < 0 && !this.chosen.isEmpty()) {
-            index = this.chosen.last();
+        int index = beforeIndex < 0 ? -1 : moves.applyAsInt(beforeIndex);
+        if (index < 0 && !set.isEmpty()) {
+            index = set.last();
         }
         if (index >= 0 && this.mode == SelectionMode.SINGLE) {
-            this.chosen.clear();
-            this.chosen.add(index);
+            set.clear();
+            set.add(index);
         }
+        this.items = next;
+        this.chosen.clear();
+        this.chosen.addAll(set);
         this.selectedIndex = index;
         this.anchor = index;
         this.rowsStale = true;
@@ -219,7 +243,6 @@ public final class ListViewImpl<T> extends BuiltInComposite<ListView<T>> impleme
         if (index != beforeIndex || !this.selected().equals(before)) {
             this.selectionChanged(beforeIndex);
         }
-        return this;
     }
 
     @Override

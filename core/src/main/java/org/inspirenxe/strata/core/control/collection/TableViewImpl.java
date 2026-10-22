@@ -46,6 +46,7 @@ import org.inspirenxe.strata.core.node.ComponentFactoryImpl;
 import org.inspirenxe.strata.core.text.TextLine;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.List;
@@ -53,6 +54,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.function.Function;
+import java.util.function.IntUnaryOperator;
 
 /**
  * The core {@link TableView}: a header component above a {@link ListViewImpl} whose cells are rows that place one
@@ -82,6 +84,8 @@ public final class TableViewImpl<T> extends BuiltInComposite<TableView<T>> imple
     private final Header header;
     private List<T> items;
     private List<T> shown;
+    // The index in items of each shown row
+    private int[] order;
     private TableColumnImpl<T> sortColumn;
     private boolean ascending;
 
@@ -109,6 +113,7 @@ public final class TableViewImpl<T> extends BuiltInComposite<TableView<T>> imple
         this.columns = new ArrayList<>();
         this.items = List.of();
         this.shown = List.of();
+        this.order = new int[0];
         this.ascending = true;
         this.columnX = new float[0];
         this.columnWidth = new float[0];
@@ -212,7 +217,7 @@ public final class TableViewImpl<T> extends BuiltInComposite<TableView<T>> imple
             if (column.comparator().isEmpty()) {
                 this.clearSort(column);
             } else {
-                this.resort();
+                this.reorder(column, this.ascending);
             }
         }
         this.invalidateLayout();
@@ -223,9 +228,7 @@ public final class TableViewImpl<T> extends BuiltInComposite<TableView<T>> imple
      */
     private void clearSort(final TableColumnImpl<T> previous) {
         final boolean wasAscending = this.ascending;
-        this.sortColumn = null;
-        this.ascending = true;
-        this.resort();
+        this.reorder(null, true);
         this.report(SORTED, new Sort(null, true), new Sort(previous, wasAscending));
     }
 
@@ -237,9 +240,7 @@ public final class TableViewImpl<T> extends BuiltInComposite<TableView<T>> imple
         final TableColumnImpl<T> next = column == null ? null : this.impl(column);
         final TableColumnImpl<T> previousColumn = this.sortColumn;
         final boolean previousAscending = this.ascending;
-        this.sortColumn = next;
-        this.ascending = next == null || ascending;
-        this.resort();
+        this.reorder(next, next == null || ascending);
         if (next != previousColumn || this.ascending != previousAscending) {
             this.report(SORTED, new Sort(next, this.ascending), new Sort(previousColumn, previousAscending));
         }
@@ -256,17 +257,59 @@ public final class TableViewImpl<T> extends BuiltInComposite<TableView<T>> imple
         return this.ascending;
     }
 
+    /**
+     * Works out the order rows show in for a sort, as indexes into some items: the set order for no column, else a
+     * stable sort by the column's comparator. Runs the comparator and changes nothing.
+     */
     @SuppressWarnings("unchecked")
-    private void resort() {
-        if (this.sortColumn == null) {
-            this.shown = this.items;
-        } else {
-            final Comparator<T> comparator = (Comparator<T>) this.sortColumn.comparator().orElseThrow();
-            final List<T> sorted = new ArrayList<>(this.items);
-            sorted.sort(this.ascending ? comparator : comparator.reversed());
-            this.shown = List.copyOf(sorted);
+    private int[] orderOf(final List<T> items, final TableColumnImpl<T> column, final boolean ascending) {
+        final Integer[] rows = new Integer[items.size()];
+        for (int i = 0; i < rows.length; i++) {
+            rows[i] = i;
         }
-        this.list.setItems(this.shown);
+        if (column != null) {
+            final Comparator<T> comparator = (Comparator<T>) column.comparator().orElseThrow();
+            final Comparator<T> direction = ascending ? comparator : comparator.reversed();
+            Arrays.sort(rows, (a, b) -> direction.compare(items.get(a), items.get(b)));
+        }
+        final int[] order = new int[rows.length];
+        for (int i = 0; i < rows.length; i++) {
+            order[i] = rows[i];
+        }
+        return order;
+    }
+
+    /**
+     * Returns the items in an order, or the items themselves when the rows are in the set order.
+     */
+    private static <T> List<T> inOrder(final List<T> items, final int[] order, final boolean sorted) {
+        if (!sorted) {
+            return items;
+        }
+        final List<T> shown = new ArrayList<>(order.length);
+        for (final int index : order) {
+            shown.add(items.get(index));
+        }
+        return List.copyOf(shown);
+    }
+
+    /**
+     * Shows the same items in another sort. Each selected row follows its own item, so a sort never moves the
+     * selection to another item with the same key. The comparator runs before anything changes.
+     */
+    private void reorder(final TableColumnImpl<T> column, final boolean ascending) {
+        final int[] order = this.orderOf(this.items, column, ascending);
+        final List<T> sorted = inOrder(this.items, order, column != null);
+        final int[] rowOf = new int[order.length];
+        for (int i = 0; i < order.length; i++) {
+            rowOf[order[i]] = i;
+        }
+        final int[] previous = this.order;
+        this.sortColumn = column;
+        this.ascending = ascending;
+        this.order = order;
+        this.shown = sorted;
+        this.list.replaceItems(sorted, row -> rowOf[previous[row]]);
     }
 
     /**
@@ -342,8 +385,15 @@ public final class TableViewImpl<T> extends BuiltInComposite<TableView<T>> imple
 
     @Override
     public TableView<T> setItems(final List<? extends T> items) {
-        this.items = List.copyOf(items);
-        this.resort();
+        // The comparator and the key function run before anything changes
+        final List<T> next = List.copyOf(items);
+        final int[] order = this.orderOf(next, this.sortColumn, this.ascending);
+        final List<T> sorted = inOrder(next, order, this.sortColumn != null);
+        final IntUnaryOperator moves = this.list.keyMoves(sorted);
+        this.items = next;
+        this.order = order;
+        this.shown = sorted;
+        this.list.replaceItems(sorted, moves);
         return this;
     }
 

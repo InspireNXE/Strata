@@ -22,6 +22,7 @@ import org.inspirenxe.strata.api.control.attribute.item.SelectionMode;
 import org.inspirenxe.strata.api.control.attribute.popup.Closable;
 import org.inspirenxe.strata.api.control.collection.ComboBox;
 import org.inspirenxe.strata.api.control.collection.ListView;
+import org.inspirenxe.strata.api.control.collection.TableColumn;
 import org.inspirenxe.strata.api.control.collection.TableView;
 import org.inspirenxe.strata.api.control.collection.TreeView;
 import org.inspirenxe.strata.api.input.Key;
@@ -38,12 +39,14 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.IntStream;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -215,6 +218,112 @@ class CollectionEdgeCaseTest {
             assertEquals(List.of(HOVERED), this.thumbFills(host));
             host.host().pointerButton(97, 5, MouseButton.LEFT, false, Modifiers.NONE);
             assertEquals(List.of(THUMB), this.thumbFills(host));
+        }
+    }
+
+    /**
+     * Items keyed by their first letter, so "a1" and "a2" share a key.
+     */
+    private static Object letter(final String item) {
+        if (item.equals("boom")) {
+            throw new IllegalStateException("No key for " + item);
+        }
+        return item.charAt(0);
+    }
+
+    @Nested
+    class EqualKeys {
+        private final List<String> items = List.of("a1", "b1", "a2");
+
+        @Test
+        void aListKeepsTheSelectionOnTheSameOneOfSeveralEqualKeys() {
+            final ListView<String> list = CollectionEdgeCaseTest.this.ui.<String>listView()
+                    .setKeyFunction(CollectionEdgeCaseTest::letter)
+                    .setItems(this.items)
+                    .select(2);
+            list.setItems(List.of("a1", "c1", "a2", "b1"));
+            assertEquals(2, list.selectedIndex());
+            list.setItems(List.of("a3"));
+            assertEquals(0, list.selectedIndex());
+        }
+
+        @Test
+        void aMultipleListSelectsOnlyTheMatchingOneOfSeveralEqualKeys() {
+            final ListView<String> list = CollectionEdgeCaseTest.this.ui.<String>listView()
+                    .setKeyFunction(CollectionEdgeCaseTest::letter)
+                    .setSelectionMode(SelectionMode.MULTIPLE)
+                    .setItems(this.items)
+                    .selectIndexes(List.of(1, 2));
+            list.setItems(this.items);
+            assertEquals(List.of(1, 2), list.selectedIndexes());
+        }
+
+        @Test
+        void sortingATableKeepsTheSelectedItemAmongEqualKeys() {
+            final TableView<String> table = CollectionEdgeCaseTest.this.ui.<String>tableView()
+                    .addTextColumn("Name", GridLength.weighted(1f), item -> item)
+                    .setKeyFunction(CollectionEdgeCaseTest::letter)
+                    .setItems(this.items)
+                    .select(0);
+            final TableColumn<String> name = table.columns().getFirst();
+            table.sortBy(name, false);
+            assertEquals(List.of("b1", "a2", "a1"), table.shownItems());
+            assertEquals(Optional.of("a1"), table.selected());
+            table.sortBy(name, true);
+            assertEquals(Optional.of("a1"), table.selected());
+            assertEquals(0, table.selectedIndex());
+        }
+    }
+
+    @Nested
+    class ThrowingCallbacks {
+        @Test
+        void aKeyFunctionThatThrowsLeavesTheListAsItWas() {
+            final ListView<String> list = CollectionEdgeCaseTest.this.ui.<String>listView()
+                    .setKeyFunction(CollectionEdgeCaseTest::letter)
+                    .setItems(List.of("a1", "b1", "c1"))
+                    .select(2);
+            assertThrows(IllegalStateException.class, () -> list.setItems(List.of("a1", "boom")));
+            assertEquals(List.of("a1", "b1", "c1"), list.items());
+            assertEquals(Optional.of("c1"), list.selected());
+        }
+
+        @Test
+        void aComparatorThatThrowsLeavesTheTableAsItWas() {
+            final TableColumn<String> name = CollectionEdgeCaseTest.this.ui.<String>tableColumn("Name")
+                    .setCellText(item -> item)
+                    .setComparator(Comparator.comparing(item -> letter(item).toString()));
+            final TableView<String> table = CollectionEdgeCaseTest.this.ui.<String>tableView()
+                    .addColumn(name)
+                    .setItems(List.of("c1", "boom"))
+                    .select(1);
+            assertThrows(IllegalStateException.class, () -> table.sortBy(name, true));
+            assertEquals(Optional.empty(), table.sortColumn());
+            assertEquals(List.of("c1", "boom"), table.shownItems());
+            assertEquals(Optional.of("boom"), table.selected());
+
+            table.setItems(List.of("b1", "a1")).sortBy(name, true).select(1);
+            assertThrows(IllegalStateException.class, () -> table.setItems(List.of("c1", "boom")));
+            assertEquals(List.of("b1", "a1"), table.items());
+            assertEquals(List.of("a1", "b1"), table.shownItems());
+            assertEquals(Optional.of("b1"), table.selected());
+        }
+
+        @Test
+        void aChildrenFunctionThatThrowsLeavesTheTreeAsItWas() {
+            final TreeView<String> tree = CollectionEdgeCaseTest.this.ui.<String>treeView()
+                    .setChildren(item -> {
+                        if (item.equals("boom")) {
+                            throw new IllegalStateException("No children for " + item);
+                        }
+                        return List.of();
+                    })
+                    .setItems(List.of("Ana", "Ben"))
+                    .select(1);
+            assertThrows(IllegalStateException.class, () -> tree.setItems(List.of("Cleo", "boom")));
+            assertEquals(List.of("Ana", "Ben"), tree.items());
+            assertEquals(List.of("Ana", "Ben"), tree.shownItems());
+            assertEquals(Optional.of("Ben"), tree.selected());
         }
     }
 }
