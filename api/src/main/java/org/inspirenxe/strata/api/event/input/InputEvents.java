@@ -76,7 +76,8 @@ public final class InputEvents {
     /**
      * A drag that carries a transfer moved over the target. Bubbles from the component {@link #DRAG_ENTER} reached
      * until a handler {@linkplain TransferEvent#accept accepts} or {@linkplain TransferEvent#reject rejects} it.
-     * Fired on every move, after any {@link #DRAG_EXIT} and {@link #DRAG_ENTER} for it.
+     * Fired on every move, after any {@link #DRAG_EXIT} and {@link #DRAG_ENTER} for it. Default behavior: a list
+     * whose rows are being dragged accepts them over itself, to reorder them.
      */
     public static final EventType<TransferEvent> DRAG_OVER = EventType.bubbling("drag_over", TransferEvent.class);
     /**
@@ -87,7 +88,7 @@ public final class InputEvents {
     /**
      * The drag was released over the component that accepted it last, which is the target. Bubbles. The drop takes
      * the event's {@linkplain TransferEvent#effect() effect} unless a handler
-     * {@linkplain TransferEvent#reject() rejects} it.
+     * {@linkplain TransferEvent#reject() rejects} it. Default behavior: a list moves its own dragged rows there.
      */
     public static final EventType<TransferEvent> DROP = EventType.bubbling("drop", TransferEvent.class);
     /**

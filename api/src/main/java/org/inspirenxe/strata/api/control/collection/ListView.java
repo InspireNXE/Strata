@@ -23,6 +23,7 @@ import org.inspirenxe.strata.api.component.HasTooltip;
 import org.inspirenxe.strata.api.control.attribute.item.Activatable;
 import org.inspirenxe.strata.api.control.attribute.item.CellEditing;
 import org.inspirenxe.strata.api.control.attribute.item.CellSource;
+import org.inspirenxe.strata.api.control.attribute.item.ItemDragging;
 import org.inspirenxe.strata.api.control.attribute.item.ItemSource;
 import org.inspirenxe.strata.api.control.attribute.item.RowView;
 import org.inspirenxe.strata.api.control.attribute.item.MultiSelection;
@@ -66,6 +67,11 @@ import java.util.function.Function;
  *     {@link CellEditing} describes, and a double press no longer activates.</li>
  *     <li>The wheel and the scroll bar scroll as in {@link org.inspirenxe.strata.api.layout.ScrollPanel}, and the
  *     list uses its theme keys for the bar.</li>
+ *     <li>With a {@linkplain #setDragTransfer drag transfer}, a left drag from a row drags the selected rows, as
+ *     {@link ItemDragging} describes, and a drag of them within the list moves them. In
+ *     {@link SelectionMode#MULTIPLE} mode a plain press on one of several selected rows then selects it alone only
+ *     on its release, when no drag started, so a drag carries them all. A drag that carries a transfer near the top
+ *     or bottom scrolls the rows, as {@link #setDragScroll} describes.</li>
  * </ul>
  *
  * <p>{@link #setItems} keeps each selected item selected if an item with the same {@linkplain #setKeyFunction key}
@@ -99,6 +105,11 @@ import java.util.function.Function;
  *     the items is ignored. Fires only for the user's actions.</li>
  *     <li>{@link Activatable#ACTIVATED}: Told after the user activated a row. The value is the row's index, and the
  *     previous value is the same index. The list has no method that activates a row from code.</li>
+ *     <li>{@link ItemDragging#MOVE_ITEMS}: Asked before the user moves rows inside the list by dragging them, once a
+ *     {@linkplain #setDragTransfer drag transfer} is set. The value names the rows and where they go. If no handler
+ *     cancels it, the list moves its items with {@link #setItems}. Fires only for the user's actions.</li>
+ *     <li>{@code InputEvents.DRAG_OVER} and {@code InputEvents.DROP}: the list takes drags of its own rows itself,
+ *     and leaves drags from elsewhere to the project's handlers.</li>
  * </ul>
  *
  * <h2>Theme keys</h2>
@@ -111,6 +122,8 @@ import java.util.function.Function;
  *     {@value #STYLE_ROW}.</li>
  *     <li>{@value #STYLE_PLACEHOLDER} (text style, optional): the {@linkplain #setPlaceholder placeholder}. Falls
  *     back to the default style.</li>
+ *     <li>{@value #STYLE_DROP} (paint, optional): the line, {@value #DROP_MARK_HEIGHT} units high across the rows,
+ *     where dragged rows would land. Falls back to {@value #STYLE_ROW_SELECTED}.</li>
  *     <li>{@value #STYLE_CELL_PADDING} (insets, optional): the margin of the cell labels that
  *     {@link org.inspirenxe.strata.api.ComponentFactory#cellLabel(String)} makes. Defaults to
  *     {@value org.inspirenxe.strata.api.ComponentFactory#CELL_PADDING} at the sides and none at the top and
@@ -133,7 +146,8 @@ import java.util.function.Function;
  */
 public interface ListView<T> extends Component<ListView<T>>, Focusable<ListView<T>>, HasCursor<ListView<T>>,
         HasTooltip<ListView<T>>, HasContextMenu<ListView<T>>, ItemSource<T, ListView<T>>, CellSource<T, ListView<T>>,
-        MultiSelection<T, ListView<T>>, Activatable<ListView<T>>, RowView<ListView<T>>, CellEditing<T, ListView<T>> {
+        MultiSelection<T, ListView<T>>, Activatable<ListView<T>>, RowView<ListView<T>>, CellEditing<T, ListView<T>>,
+        ItemDragging<T, ListView<T>> {
     /**
      * Style key for the list's area behind its rows (paint, optional).
      */
@@ -202,6 +216,15 @@ public interface ListView<T> extends Component<ListView<T>>, Focusable<ListView<
      * Style key for the placeholder text (text style, optional).
      */
     String STYLE_PLACEHOLDER = "list.placeholder";
+    /**
+     * Style key for the line where dragged rows would land (paint, optional). Defaults to
+     * {@value #STYLE_ROW_SELECTED}.
+     */
+    String STYLE_DROP = "list.drop";
+    /**
+     * How high the line where dragged rows would land is, in UI units.
+     */
+    float DROP_MARK_HEIGHT = 2f;
     /**
      * Style key for the margin around the default cell of lists, trees and tables, the cells
      * {@link org.inspirenxe.strata.api.ComponentFactory#cell(Object)} and

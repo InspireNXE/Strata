@@ -19,6 +19,7 @@ import org.inspirenxe.strata.api.animation.Animator;
 import org.inspirenxe.strata.api.appearance.Appearances;
 import org.inspirenxe.strata.api.component.Component;
 import org.inspirenxe.strata.api.control.attribute.item.CellEditor;
+import org.inspirenxe.strata.api.control.attribute.item.ItemDragging.ItemMove;
 import org.inspirenxe.strata.api.control.attribute.item.SelectionMode;
 import org.inspirenxe.strata.api.control.collection.ListView;
 import org.inspirenxe.strata.api.event.input.CharEvent;
@@ -27,6 +28,7 @@ import org.inspirenxe.strata.api.event.input.KeyEvent;
 import org.inspirenxe.strata.api.event.input.PointerButtonEvent;
 import org.inspirenxe.strata.api.event.input.PointerEvent;
 import org.inspirenxe.strata.api.event.input.ScrollEvent;
+import org.inspirenxe.strata.api.event.input.TransferEvent;
 import org.inspirenxe.strata.api.extension.ArrangeContext;
 import org.inspirenxe.strata.api.extension.MeasureContext;
 import org.inspirenxe.strata.api.extension.Painter;
@@ -42,6 +44,8 @@ import org.inspirenxe.strata.api.text.Text;
 import org.inspirenxe.strata.api.text.TextStyle;
 import org.inspirenxe.strata.api.theme.Paint;
 import org.inspirenxe.strata.api.theme.Theme;
+import org.inspirenxe.strata.api.transfer.DropEffect;
+import org.inspirenxe.strata.api.transfer.Transfer;
 import org.inspirenxe.strata.core.control.Caption;
 import org.inspirenxe.strata.core.control.Motion;
 import org.inspirenxe.strata.core.layout.EdgeScroll;
@@ -55,6 +59,7 @@ import org.inspirenxe.strata.core.text.TextLine;
 import java.util.ArrayList;
 import java.util.BitSet;
 import java.util.Collection;
+import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -93,6 +98,7 @@ public final class ListViewImpl<T> extends BuiltInComposite<ListView<T>> impleme
     private final ScrollTrack bar;
     private final ThumbDrag thumbDrag;
     private final Runnable drawRows;
+    private final Runnable drawDrop;
     private List<T> items;
     private Function<? super T, ? extends Component<?>> cellFactory;
     private Function<? super T, ?> keyFunction;
@@ -118,6 +124,15 @@ public final class ListViewImpl<T> extends BuiltInComposite<ListView<T>> impleme
     private boolean rowsStale;
     private int reveal;
     private boolean dragScroll = true;
+    // Dragging rows: what makes their payload, the rows a drag carries, and where they would land and its line
+    private Function<? super List<T>, Transfer> dragTransfer;
+    private List<Integer> draggedRows;
+    private int dropGap = -1;
+    // A plain press on one of several selected rows of a list whose rows drag, which selects that row alone only on
+    // a release that ended no drag, so a drag can carry them all
+    private int pendingPick = -1;
+    private Rect dropMark;
+    private Paint drop;
 
     // Layout results
     private float scrollY;
@@ -188,6 +203,7 @@ public final class ListViewImpl<T> extends BuiltInComposite<ListView<T>> impleme
         this.bar = new ScrollTrack(true);
         this.thumbDrag = new ThumbDrag(this.bar, true);
         this.drawRows = this::drawRows;
+        this.drawDrop = () -> this.drop.paint(this.painter, this.dropMark);
         this.items = List.of();
         this.cellFactory = Objects.requireNonNull(cellFactory, "cellFactory");
         this.keyFunction = Function.identity();
@@ -1089,6 +1105,7 @@ public final class ListViewImpl<T> extends BuiltInComposite<ListView<T>> impleme
         this.rowSelected = theme.paintOr(STYLE_ROW_SELECTED, Paint.NONE);
         this.rowSelectedUnfocused = theme.paintOr(STYLE_ROW_SELECTED_UNFOCUSED, this.rowSelected);
         this.ring = theme.paintOr(STYLE_ROW_RING, Paint.NONE);
+        this.drop = theme.paintOr(STYLE_DROP, this.rowSelected);
         this.ringUnfocused = theme.paintOr(STYLE_ROW_RING_UNFOCUSED, Paint.NONE);
         this.edge = theme.paintOr(STYLE_EDGE, Paint.NONE);
         this.edgeOuter = theme.paintOr(STYLE_EDGE_OUTER, Paint.NONE);
@@ -1290,6 +1307,14 @@ public final class ListViewImpl<T> extends BuiltInComposite<ListView<T>> impleme
 
     @Override
     protected void paintOverChildren(final Painter painter, final Rect bounds) {
+        if (this.dropMark != null && this.isHoverWithin()) {
+            this.painter = painter;
+            try {
+                painter.clipped(this.viewport, this.drawDrop);
+            } finally {
+                this.painter = null;
+            }
+        }
         if (this.barShown) {
             this.track.paint(painter, this.bar.track());
             (this.thumbDrag.isDragging() ? this.thumbHovered : this.thumb).paint(painter, this.thumbRect);
@@ -1326,7 +1351,12 @@ public final class ListViewImpl<T> extends BuiltInComposite<ListView<T>> impleme
         if (index < 0) {
             return;
         }
-        if (this.mode == SelectionMode.MULTIPLE) {
+        this.pendingPick = -1;
+        if (this.mode == SelectionMode.MULTIPLE && this.dragTransfer != null && event.clicks() == 1
+                && !event.modifiers().control() && !event.modifiers().shift() && this.chosenBits.get(index)
+                && this.chosen.size() > 1) {
+            this.pendingPick = index;
+        } else if (this.mode == SelectionMode.MULTIPLE) {
             this.userPick(index, event.modifiers().control(), event.modifiers().shift(), event.clicks() == 1);
         } else if (this.deselectable && index == this.selectedIndex && event.clicks() == 1) {
             this.userSelect(-1);
@@ -1353,7 +1383,114 @@ public final class ListViewImpl<T> extends BuiltInComposite<ListView<T>> impleme
 
     @Override
     protected void onDragStart(final DragEvent event) {
+        this.pendingPick = -1;
         this.onDrag(event);
+        if (event.isHandled() || this.dragTransfer == null || event.button() != MouseButton.LEFT) {
+            return;
+        }
+        final int pressed = this.rowAt(event.startY());
+        if (pressed < 0) {
+            return;
+        }
+        final List<Integer> rows = this.chosenBits.get(pressed) ? List.copyOf(this.chosen) : List.of(pressed);
+        final List<T> dragged = new ArrayList<>(rows.size());
+        for (final int row : rows) {
+            dragged.add(this.items.get(row));
+        }
+        final Transfer transfer = this.dragTransfer.apply(List.copyOf(dragged));
+        if (transfer == null || transfer.isEmpty()) {
+            return;
+        }
+        final T first = dragged.getFirst();
+        final float width = this.rowWidth;
+        final float height = this.rowHeight;
+        final Function<? super T, ? extends Component<?>> cells = this.cellFactory;
+        this.draggedRows = rows;
+        event.startTransfer(transfer, EnumSet.of(DropEffect.MOVE, DropEffect.COPY), factory -> {
+            final Component<?> image = cells.apply(first);
+            image.setSize(width, height);
+            image.setOpacity(0.75f);
+            return image;
+        });
+    }
+
+    @Override
+    protected void onDragOver(final TransferEvent event) {
+        if (this.draggedRows == null || event.source().orElse(null) != this
+                || !event.allowed().contains(DropEffect.MOVE)) {
+            return;
+        }
+        final int gap = this.gapAt(event.y());
+        if (gap != this.dropGap) {
+            this.dropGap = gap;
+            final float y = this.viewport.y() + this.padding.top() + gap * this.step() - Math.round(this.scrollY)
+                    - this.rowSpacing * 0.5f - DROP_MARK_HEIGHT * 0.5f;
+            this.dropMark = new Rect(this.rowX, y, this.rowWidth, DROP_MARK_HEIGHT);
+            this.repaint();
+        }
+        event.accept(DropEffect.MOVE);
+    }
+
+    @Override
+    protected void onDrop(final TransferEvent event) {
+        final List<Integer> rows = this.draggedRows;
+        final int gap = this.dropGap;
+        if (rows == null || gap < 0 || event.source().orElse(null) != this
+                || event.effect().orElse(null) != DropEffect.MOVE) {
+            return;
+        }
+        final ItemMove move = new ItemMove(rows, Math.min(gap, this.items.size()));
+        if (this.changesNothing(move)) {
+            return;
+        }
+        this.request(MOVE_ITEMS, move, this::applyMove);
+    }
+
+    @Override
+    protected void onTransferDone(final TransferEvent event) {
+        this.draggedRows = null;
+        this.dropGap = -1;
+        if (this.dropMark != null) {
+            this.dropMark = null;
+            this.repaint();
+        }
+    }
+
+    /**
+     * Returns the gap between rows nearest a point: 0 above the first row, the number of items below the last.
+     */
+    private int gapAt(final float y) {
+        final float along = y - this.viewport.y() + Math.round(this.scrollY) - this.padding.top();
+        return Math.max(0, Math.min(this.items.size(), Math.round(along / this.step())));
+    }
+
+    private boolean changesNothing(final ItemMove move) {
+        final List<Integer> rows = move.indexes();
+        final boolean together = rows.getLast() - rows.getFirst() == rows.size() - 1;
+        return together && move.before() >= rows.getFirst() && move.before() <= rows.getLast() + 1;
+    }
+
+    /**
+     * Moves the items as a move request ended with, ignoring a move that names no rows of the list or changes
+     * nothing.
+     */
+    private void applyMove(final ItemMove move) {
+        if (move == null || move.indexes().getLast() >= this.items.size() || move.before() > this.items.size()
+                || this.changesNothing(move)) {
+            return;
+        }
+        this.setItems(move.apply(this.items));
+    }
+
+    @Override
+    public Optional<Function<? super List<T>, Transfer>> dragTransfer() {
+        return Optional.ofNullable(this.dragTransfer);
+    }
+
+    @Override
+    public ListView<T> setDragTransfer(final Function<? super List<T>, Transfer> transfer) {
+        this.dragTransfer = transfer;
+        return this;
     }
 
     @Override
@@ -1375,6 +1512,11 @@ public final class ListViewImpl<T> extends BuiltInComposite<ListView<T>> impleme
         // A press on the thumb that never became a drag ends here, with no drag end
         if (event.button() == MouseButton.LEFT) {
             this.thumbDrag.release();
+            final int pick = this.pendingPick;
+            this.pendingPick = -1;
+            if (pick >= 0 && pick < this.items.size()) {
+                this.userPick(pick, false, false, true);
+            }
         }
     }
 

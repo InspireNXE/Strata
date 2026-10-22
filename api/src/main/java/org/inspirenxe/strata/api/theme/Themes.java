@@ -124,6 +124,7 @@ public final class Themes {
                 .paint(ListView.STYLE_ROW, Paint.solid(0xFF1F2024))
                 .paint(ListView.STYLE_ROW_HOVERED, Paint.solid(0xFF2E3136))
                 .paint(ListView.STYLE_ROW_SELECTED, Paint.solid(0xFF3A4D6E))
+                .paint(ListView.STYLE_DROP, Paint.solid(0xFF8FB4F0))
                 .textStyle(ListView.STYLE_PLACEHOLDER, TextStyle.DEFAULT.withColor(0xFF808080))
                 .paint(ComboBox.STYLE_NORMAL, Paint.solid(0xFF1B1C1F))
                 .paint(ComboBox.STYLE_HOVERED, Paint.solid(0xFF2E3136))

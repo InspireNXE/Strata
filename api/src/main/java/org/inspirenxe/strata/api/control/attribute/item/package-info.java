@@ -24,7 +24,8 @@
  * {@link org.inspirenxe.strata.api.control.attribute.item.SingleSelection},
  * {@link org.inspirenxe.strata.api.control.attribute.item.MultiSelection} with its
  * {@link org.inspirenxe.strata.api.control.attribute.item.SelectionMode},
- * {@link org.inspirenxe.strata.api.control.attribute.item.Activatable} and
- * {@link org.inspirenxe.strata.api.control.attribute.item.RowView}.</p>
+ * {@link org.inspirenxe.strata.api.control.attribute.item.Activatable},
+ * {@link org.inspirenxe.strata.api.control.attribute.item.RowView} and
+ * {@link org.inspirenxe.strata.api.control.attribute.item.ItemDragging}.</p>
  */
 package org.inspirenxe.strata.api.control.attribute.item;
