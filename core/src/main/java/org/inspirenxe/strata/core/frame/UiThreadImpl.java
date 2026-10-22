@@ -101,6 +101,21 @@ public final class UiThreadImpl implements UiThread {
         return this.check != null ? this.check.getAsBoolean() : this.thread == Thread.currentThread();
     }
 
+    /**
+     * Returns whether the calling thread is known not to be the UI thread: the platform's test says no, or a thread
+     * was recorded and this is another. Before a thread is known it is false, so code that hands work over only when
+     * this is true still runs inline in a test that has not driven a host yet.
+     *
+     * @return true off the UI thread, once Strata knows which thread that is
+     */
+    public boolean isElsewhere() {
+        if (this.check != null) {
+            return !this.check.getAsBoolean();
+        }
+        final Thread ui = this.thread;
+        return ui != null && ui != Thread.currentThread();
+    }
+
     @Override
     public void checkCurrent() {
         final boolean ok;

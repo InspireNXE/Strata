@@ -44,11 +44,13 @@ public interface ScreenStack extends InputSink, ScreenController {
 
     /**
      * Opens a screen on top of the stack, at the stack's current size and theme. A screen that asks to close
-     * through its handle is removed from wherever it is in the stack.
+     * through its handle is removed from wherever it is in the stack. Called off the UI thread, it hands the opening
+     * to the UI thread and returns at once; the screen opens there in order with other work handed over, and an
+     * opening that throws there is logged.
      *
      * @param screen the screen to open
-     * @throws org.inspirenxe.strata.api.theme.ThemeException if the theme lacks keys the screen's tree needs; the
-     *                                                         screen is not pushed
+     * @throws org.inspirenxe.strata.api.theme.ThemeException if the theme lacks keys the screen's tree needs, when
+     *                                                         called on the UI thread; the screen is not pushed
      */
     void push(Screen screen);
 
@@ -57,11 +59,18 @@ public interface ScreenStack extends InputSink, ScreenController {
      * {@link #setTheme} leaves alone. A screen that asks to close through its handle is removed from wherever it is
      * in the stack.
      *
+     * <p>Called off the UI thread, it hands the opening to the UI thread and returns a handle at once, as an engine
+     * adapter's controller does (design section 4.19). The handle's methods hand themselves over too and reach
+     * the screen once it has opened; closing it before then cancels the opening, and its {@code factory()} throws
+     * {@link IllegalStateException} until then. An opening that throws on the UI thread is logged, and the handle
+     * then counts as closed.</p>
+     *
      * @param screen the screen to open
      * @param theme the theme for its components
      * @return the screen's handle
      * @throws org.inspirenxe.strata.api.theme.ThemeException if the ref cannot be resolved, or the theme lacks keys
-     *                                                         the screen's tree needs; the screen is not pushed
+     *                                                         the screen's tree needs, when called on the UI thread;
+     *                                                         the screen is not pushed
      */
     @Override
     ScreenHandle open(Screen screen, ThemeRef theme);

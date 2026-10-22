@@ -107,12 +107,28 @@ public final class ScreenStackImpl implements ScreenStack {
 
     @Override
     public void push(final Screen screen) {
+        Objects.requireNonNull(screen, "screen");
+        final UiThreadImpl ui = this.uiThread();
+        if (ui.isElsewhere()) {
+            ui.execute(() -> this.insert(this.entries.size(), screen, null));
+            return;
+        }
         this.insert(this.entries.size(), screen, null);
     }
 
+    /**
+     * Opens a screen on top in a theme of its own. Called off the UI thread, it hands the opening to the UI thread
+     * and returns at once a handle whose methods hand themselves over too; see {@link HandedOverHandle}.
+     */
     @Override
     public ScreenHandle open(final Screen screen, final ThemeRef theme) {
-        return this.insert(this.entries.size(), screen, Objects.requireNonNull(theme, "theme"));
+        Objects.requireNonNull(screen, "screen");
+        Objects.requireNonNull(theme, "theme");
+        final UiThreadImpl ui = this.uiThread();
+        if (ui.isElsewhere()) {
+            return new HandedOverHandle(ui, () -> this.insert(this.entries.size(), screen, theme));
+        }
+        return this.insert(this.entries.size(), screen, theme);
     }
 
     /**
@@ -471,6 +487,14 @@ public final class ScreenStackImpl implements ScreenStack {
 
         @Override
         public ScreenHandle open(final Screen screen, final ThemeRef theme) {
+            final UiThreadImpl ui = ScreenStackImpl.this.uiThread();
+            if (ui.isElsewhere()) {
+                return new HandedOverHandle(ui, () -> this.openNow(screen, theme));
+            }
+            return this.openNow(screen, theme);
+        }
+
+        private ScreenHandle openNow(final Screen screen, final ThemeRef theme) {
             final int index = ScreenStackImpl.this.indexOf(this.host);
             if (index < 0) {
                 throw new IllegalStateException("The screen has left the stack and cannot open another");
