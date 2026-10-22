@@ -52,7 +52,8 @@ import org.inspirenxe.strata.api.layout.ScrollPanel;
  * <p>The track covers the bounds. The thumb spans the bar across, and along it its length is the track's length times
  * the visible amount over the content's length (the range plus the visible amount), at least
  * {@link ScrollPanel#MIN_THUMB_LENGTH} units ({@link #SLIM_MIN_THUMB_LENGTH} for a slim bar) and at most the track
- * minus 8, but never longer than the track. With nothing to scroll the thumb fills the track. A vertical bar wants
+ * minus 8, but never longer than the track. On a track shorter than twice that minimum, the minimum is half the
+ * track, so the thumb can always move. With nothing to scroll the thumb fills the track. A vertical bar wants
  * {@link #THICKNESS} by 100 units and a horizontal one 100 by {@link #THICKNESS}; a {@linkplain #setSlim slim} bar
  * is {@link #SLIM_THICKNESS} thick. Stretch it along the content it scrolls.</p>
  *
