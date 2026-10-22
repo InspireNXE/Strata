@@ -47,7 +47,8 @@ import java.util.Optional;
  *
  * @param <T> the type callers see the container as, so setters can return it for chaining
  */
-public interface Container<T extends Container<T>> extends Component<T>, HasCursor<T>, HasTooltip<T> {
+public interface Container<T extends Container<T>> extends Component<T>, HasCursor<T>, HasTooltip<T>,
+        HasContextMenu<T> {
 
     /**
      * Returns the children in layout order, the order layout, focus and Tab follow. The list is a live, unmodifiable

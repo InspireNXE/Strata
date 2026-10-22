@@ -19,9 +19,11 @@ import org.inspirenxe.strata.api.animation.Animator;
 import org.inspirenxe.strata.api.component.Component;
 import org.inspirenxe.strata.api.component.CursorKind;
 import org.inspirenxe.strata.api.component.Focusable;
+import org.inspirenxe.strata.api.component.HasContextMenu;
 import org.inspirenxe.strata.api.component.HasCursor;
 import org.inspirenxe.strata.api.component.HasTooltip;
 import org.inspirenxe.strata.api.component.Tooltip;
+import org.inspirenxe.strata.api.control.attribute.popup.Popup;
 import org.inspirenxe.strata.api.event.Event;
 import org.inspirenxe.strata.api.event.EventHandler;
 import org.inspirenxe.strata.api.event.EventType;
@@ -961,6 +963,26 @@ public abstract class BuiltInComponent<T extends Component<T>> implements Compon
      */
     public final T clearTooltip() {
         this.node.setTooltip(null);
+        return this.self();
+    }
+
+    /**
+     * Returns the context menu. See {@link HasContextMenu#contextMenu()}.
+     *
+     * @return the popup, or empty for none
+     */
+    public final Optional<Popup<?>> contextMenu() {
+        return Optional.ofNullable(this.node.contextMenu());
+    }
+
+    /**
+     * Sets the context menu. See {@link HasContextMenu#setContextMenu(Popup)}.
+     *
+     * @param popup the popup, or {@code null} for none
+     * @return this component
+     */
+    public final T setContextMenu(final Popup<?> popup) {
+        this.node.setContextMenu(popup);
         return this.self();
     }
 

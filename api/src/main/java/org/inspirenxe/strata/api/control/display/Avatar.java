@@ -16,6 +16,7 @@
 package org.inspirenxe.strata.api.control.display;
 
 import org.inspirenxe.strata.api.component.Component;
+import org.inspirenxe.strata.api.component.HasContextMenu;
 import org.inspirenxe.strata.api.component.HasCursor;
 import org.inspirenxe.strata.api.component.HasTooltip;
 import org.inspirenxe.strata.api.state.PropertyKey;
@@ -90,7 +91,7 @@ import java.util.Optional;
  * <p>Get one from {@link org.inspirenxe.strata.api.ComponentFactory#avatar()}. Do not implement this
  * interface.</p>
  */
-public interface Avatar extends Component<Avatar>, HasCursor<Avatar>, HasTooltip<Avatar> {
+public interface Avatar extends Component<Avatar>, HasCursor<Avatar>, HasTooltip<Avatar>, HasContextMenu<Avatar> {
     /**
      * Style key for behind the square (paint, required).
      */

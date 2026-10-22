@@ -17,6 +17,7 @@ package org.inspirenxe.strata.api.control.field;
 
 import org.inspirenxe.strata.api.component.Component;
 import org.inspirenxe.strata.api.component.Focusable;
+import org.inspirenxe.strata.api.component.HasContextMenu;
 import org.inspirenxe.strata.api.component.HasCursor;
 import org.inspirenxe.strata.api.component.HasTooltip;
 import org.inspirenxe.strata.api.control.attribute.value.HasDate;
@@ -131,7 +132,7 @@ import java.util.function.Predicate;
  * interface.</p>
  */
 public interface CalendarView extends Component<CalendarView>, Focusable<CalendarView>, HasCursor<CalendarView>,
-        HasTooltip<CalendarView>, HasDate<CalendarView> {
+        HasTooltip<CalendarView>, HasContextMenu<CalendarView>, HasDate<CalendarView> {
     /**
      * Style key for behind the whole calendar (paint, optional).
      */

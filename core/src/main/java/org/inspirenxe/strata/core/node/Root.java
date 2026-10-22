@@ -22,8 +22,10 @@ import org.inspirenxe.strata.api.command.Shortcuts;
 import org.inspirenxe.strata.api.component.Component;
 import org.inspirenxe.strata.api.component.CursorKind;
 import org.inspirenxe.strata.api.component.Focusable;
+import org.inspirenxe.strata.api.component.HasContextMenu;
 import org.inspirenxe.strata.api.component.Tooltip;
 import org.inspirenxe.strata.api.control.attribute.popup.Closable;
+import org.inspirenxe.strata.api.control.attribute.popup.Popup;
 import org.inspirenxe.strata.api.control.window.Window;
 import org.inspirenxe.strata.api.event.Event;
 import org.inspirenxe.strata.api.event.EventHandler;
@@ -116,20 +118,22 @@ import java.util.function.Consumer;
  * and enabled, as must every ancestor. A scroll goes to the hovered node, or over a disabled node to its nearest
  * enabled ancestor. After a scroll that a node handled, hover is worked out again, since content may have moved
  * under the pointer; the first frame after the tree changes does the same while the pointer is inside the host, so
- * a node disabled or enabled under a still pointer loses or gains its hover then.</p>
+ * a node disabled or enabled under a still pointer loses or gains its hover then. A right click that nothing
+ * consumed, or a right press where buttons act on the press, opens the context menu of the pressed node or its
+ * nearest ancestor that has one, at the pointer.</p>
  *
- * <p>Keyboard rules: key events go to the focused node, or else to the top dialog, or else to the content. An
- * unhandled press or repeat runs the first enabled command whose shortcut matches it, as {@link Shortcuts}
- * describes. Where the platform's conventions turn mnemonics on, an unhandled press of Alt with a letter or digit
- * acts on the component in the top layer whose caption has that mnemonic, and Alt pressed and released alone, or an
- * unhandled F10, gives the keys to the first menu bar, as {@link #grabKeys} describes; while a node holds the keys,
- * they go to it ahead of the focused node. Then an unhandled Enter or Escape press with no modifiers presses the
- * default or cancel button of the
- * target's scope, as {@link #pressDialogButton} describes. An unhandled Escape press closes the top overlay that is
- * not a toast. An unhandled Tab press or repeat without Ctrl
- * or Alt moves focus, backwards with Shift, among the nodes of the top dialog or, with no dialog, of the content.
- * Typed characters go only to the focused node. When the platform does not send key repeats, the root makes them
- * with a {@link KeyRepeater}; each repeat goes to whatever has focus when it fires.</p>
+ * <p>Keyboard rules: key events go to the focused node, or else to the top dialog, or else to the content. An unhandled
+ * press or repeat runs the first enabled command whose shortcut matches it, as {@link Shortcuts} describes. Where the
+ * platform's conventions turn mnemonics on, an unhandled press of Alt with a letter or digit acts on the component in
+ * the top layer whose caption has that mnemonic, and Alt pressed and released alone, or an unhandled F10, gives the
+ * keys to the first menu bar, as {@link #grabKeys} describes; while a node holds the keys, they go to it ahead of the
+ * focused node. Then an unhandled Enter or Escape press with no modifiers presses the default or cancel button of the
+ * target's scope, as {@link #pressDialogButton} describes. An unhandled Escape press closes the top overlay that is not
+ * a toast. The Menu key, and Shift+F10, open the context menu of the key's target or its nearest ancestor that has one,
+ * below it, before the default and cancel buttons are tried. An unhandled Tab press or repeat without Ctrl or Alt moves
+ * focus, backwards with Shift, among the nodes of the top dialog or, with no dialog, of the content. Typed characters
+ * go only to the focused node. When the platform does not send key repeats, the root makes them with a
+ * {@link KeyRepeater}; each repeat goes to whatever has focus when it fires.</p>
  *
  * <p>A popup opened next to an anchor takes its desired size below or above the anchor. A popup opened in an area
  * is measured with the area's size and arranged into it, where its own alignment places it, as a dialog is in the
@@ -1310,9 +1314,13 @@ public final class Root {
         final int clicks = this.clickCounter.press(target, button, x, y, this.platform.clock().millis());
         this.presses.put(button, new Press(target, clicks, x, y));
         target.setPressed(true);
+        final boolean handled;
         try (CauseFrame _ = this.ui.causes().pushFrame().put(CauseKeys.CLICKS, clicks)) {
-            target.fire(InputEvents.POINTER_PRESS, new PointerButtonEventImpl(target.facade(), x, y, modifiers, button,
-                    clicks));
+            handled = target.fire(InputEvents.POINTER_PRESS, new PointerButtonEventImpl(target.facade(), x, y,
+                    modifiers, button, clicks)).isHandled();
+        }
+        if (button == MouseButton.RIGHT && !handled && this.activatesOnPress() && target.root() == this) {
+            this.openContextMenu(target, x, y, true);
         }
         return true;
     }
@@ -1327,7 +1335,10 @@ public final class Root {
             // The release of a press that closed popups or hit a dialog's backdrop is used up with it
             return this.swallowedReleases.remove(button);
         }
-        this.endPress(press, button, x, y, modifiers, true);
+        final boolean clicked = this.endPress(press, button, x, y, modifiers, true);
+        if (clicked && button == MouseButton.RIGHT && !this.activatesOnPress()) {
+            this.openContextMenu(press.target, x, y, true);
+        }
         this.updateHover(x, y, modifiers);
         return true;
     }
@@ -1336,15 +1347,17 @@ public final class Root {
      * Ends a press that was taken out of the tracked presses: clears the target's pressed state unless another button
      * still holds it, fires the release, and then either ends the drag or, when {@code mayClick} is true and the
      * release lands inside the target while it and every ancestor are visible and enabled, fires a click.
+     *
+     * @return true if a click fired and nothing consumed it
      */
-    private void endPress(final Press press, final MouseButton button, final float x, final float y,
-                          final Modifiers modifiers, final boolean mayClick) {
+    private boolean endPress(final Press press, final MouseButton button, final float x, final float y,
+                             final Modifiers modifiers, final boolean mayClick) {
         final Node target = press.target;
         if (this.presses.values().stream().noneMatch(other -> other.target == target)) {
             target.setPressed(false);
         }
         if (target.root() != this) {
-            return;
+            return false;
         }
 
         try (CauseFrame _ = this.ui.causes().pushFrame().put(CauseKeys.CLICKS, press.clicks)) {
@@ -1354,10 +1367,45 @@ public final class Root {
                 target.fire(InputEvents.DRAG_END, new DragEventImpl(target.facade(), x, y, modifiers, button,
                         press.clicks, press.startX, press.startY, x - press.lastX, y - press.lastY));
             } else if (mayClick && target.root() == this && isUsable(target) && target.bounds().contains(x, y)) {
-                target.fire(InputEvents.CLICK, new PointerButtonEventImpl(target.facade(), x, y, modifiers, button,
-                        press.clicks));
+                return !target.fire(InputEvents.CLICK, new PointerButtonEventImpl(target.facade(), x, y, modifiers,
+                        button, press.clicks)).isHandled() && target.root() == this;
             }
         }
+        return false;
+    }
+
+    /**
+     * Opens the context menu of a node or its nearest ancestor that has one, starting from the node itself when it
+     * and every ancestor are visible and enabled, else from its nearest ancestor that is. It asks
+     * {@link HasContextMenu#SHOW_CONTEXT_MENU} with the popup first, and opens what the request ends with at the
+     * pointer or below the owner.
+     *
+     * @param from the node under the pointer, or the node with focus
+     * @param x the pointer's x, for a menu opened at the pointer
+     * @param y the pointer's y, for a menu opened at the pointer
+     * @param atPointer true to open at the pointer, false below the owner
+     * @return true if a node with a context menu was found, whether or not a handler let it open
+     */
+    private boolean openContextMenu(final Node from, final float x, final float y, final boolean atPointer) {
+        for (Node node = usableAncestor(from); node != null; node = node.parentNode()) {
+            final Popup<?> popup = node.contextMenu();
+            if (popup == null) {
+                continue;
+            }
+            final Node owner = node;
+            owner.request(HasContextMenu.SHOW_CONTEXT_MENU, popup, chosen -> {
+                if (chosen == null || chosen.isOpen()) {
+                    return;
+                }
+                if (atPointer) {
+                    chosen.openAt(x, y);
+                } else {
+                    chosen.open(owner.bounds());
+                }
+            });
+            return true;
+        }
+        return false;
     }
 
     /**
@@ -1723,6 +1771,11 @@ public final class Root {
             if (key == Key.F10 && modifiers.isEmpty() && this.keyGrab == null && this.enterMenuBar()) {
                 return true;
             }
+        }
+        if (action == KeyAction.PRESS && (key == Key.MENU && modifiers.isEmpty()
+                || key == Key.F10 && modifiers.equals(Modifiers.of(Modifier.SHIFT)))
+                && this.openContextMenu(target, 0f, 0f, false)) {
+            return true;
         }
         if (action == KeyAction.PRESS && modifiers.isEmpty() && (key.isEnter() || key == Key.ESCAPE)
                 && this.pressDialogButton(target, key == Key.ESCAPE)) {

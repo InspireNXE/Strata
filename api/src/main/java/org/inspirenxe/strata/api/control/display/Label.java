@@ -16,6 +16,7 @@
 package org.inspirenxe.strata.api.control.display;
 
 import org.inspirenxe.strata.api.component.Component;
+import org.inspirenxe.strata.api.component.HasContextMenu;
 import org.inspirenxe.strata.api.component.HasCursor;
 import org.inspirenxe.strata.api.component.HasTooltip;
 import org.inspirenxe.strata.api.control.attribute.text.HasText;
@@ -63,7 +64,8 @@ import java.util.Objects;
  * <p>Get one from {@link org.inspirenxe.strata.api.ComponentFactory#label(String)}. Do not implement this
  * interface.</p>
  */
-public interface Label extends Component<Label>, HasCursor<Label>, HasTooltip<Label>, HasText<Label> {
+public interface Label extends Component<Label>, HasCursor<Label>, HasTooltip<Label>, HasContextMenu<Label>,
+        HasText<Label> {
     /**
      * Style key for the label's text style (text style, optional).
      */

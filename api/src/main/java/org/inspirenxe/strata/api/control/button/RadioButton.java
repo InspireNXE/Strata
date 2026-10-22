@@ -17,6 +17,7 @@ package org.inspirenxe.strata.api.control.button;
 
 import org.inspirenxe.strata.api.component.Component;
 import org.inspirenxe.strata.api.component.Focusable;
+import org.inspirenxe.strata.api.component.HasContextMenu;
 import org.inspirenxe.strata.api.component.HasCursor;
 import org.inspirenxe.strata.api.component.HasTooltip;
 import org.inspirenxe.strata.api.control.attribute.text.HasText;
@@ -68,7 +69,7 @@ import java.util.Objects;
  * <p>Get one from {@link RadioGroup#add}. Do not implement this interface.</p>
  */
 public interface RadioButton extends Component<RadioButton>, Focusable<RadioButton>, HasCursor<RadioButton>,
-        HasTooltip<RadioButton>, HasText<RadioButton>, Toggle<RadioButton> {
+        HasTooltip<RadioButton>, HasContextMenu<RadioButton>, HasText<RadioButton>, Toggle<RadioButton> {
     /**
      * Style key for the box when not selected (paint, required).
      */

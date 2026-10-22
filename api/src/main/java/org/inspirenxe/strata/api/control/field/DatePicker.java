@@ -17,6 +17,7 @@ package org.inspirenxe.strata.api.control.field;
 
 import org.inspirenxe.strata.api.component.Component;
 import org.inspirenxe.strata.api.component.Focusable;
+import org.inspirenxe.strata.api.component.HasContextMenu;
 import org.inspirenxe.strata.api.component.HasCursor;
 import org.inspirenxe.strata.api.component.HasTooltip;
 import org.inspirenxe.strata.api.control.attribute.popup.Closable;
@@ -103,7 +104,8 @@ import java.time.LocalDate;
  * interface.</p>
  */
 public interface DatePicker extends Component<DatePicker>, Focusable<DatePicker>, HasCursor<DatePicker>,
-        HasTooltip<DatePicker>, HasDate<DatePicker>, Openable<DatePicker>, Validatable<DatePicker> {
+        HasTooltip<DatePicker>, HasContextMenu<DatePicker>, HasDate<DatePicker>, Openable<DatePicker>,
+        Validatable<DatePicker> {
     /**
      * Style key for behind the focused part (paint, optional).
      */

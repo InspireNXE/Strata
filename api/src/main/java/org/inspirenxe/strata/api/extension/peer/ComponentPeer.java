@@ -18,6 +18,7 @@ package org.inspirenxe.strata.api.extension.peer;
 import org.inspirenxe.strata.api.component.Component;
 import org.inspirenxe.strata.api.component.CursorKind;
 import org.inspirenxe.strata.api.component.Tooltip;
+import org.inspirenxe.strata.api.control.attribute.popup.Popup;
 import org.inspirenxe.strata.api.event.Event;
 import org.inspirenxe.strata.api.event.EventHandler;
 import org.inspirenxe.strata.api.event.EventType;
@@ -398,6 +399,20 @@ public interface ComponentPeer {
      * @param tooltip the tooltip, or null
      */
     void setTooltip(Tooltip tooltip);
+
+    /**
+     * See {@link org.inspirenxe.strata.api.component.HasContextMenu#contextMenu()}.
+     *
+     * @return the popup, or null
+     */
+    Popup<?> contextMenu();
+
+    /**
+     * See {@link org.inspirenxe.strata.api.component.HasContextMenu#setContextMenu(Popup)}.
+     *
+     * @param popup the popup, or null
+     */
+    void setContextMenu(Popup<?> popup);
 
     /**
      * See {@link org.inspirenxe.strata.api.component.Container#background()}.

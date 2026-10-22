@@ -17,6 +17,7 @@ package org.inspirenxe.strata.api.control.field;
 
 import org.inspirenxe.strata.api.component.Component;
 import org.inspirenxe.strata.api.component.Focusable;
+import org.inspirenxe.strata.api.component.HasContextMenu;
 import org.inspirenxe.strata.api.component.HasCursor;
 import org.inspirenxe.strata.api.component.HasTooltip;
 import org.inspirenxe.strata.api.control.attribute.value.Ranged;
@@ -102,7 +103,7 @@ import java.util.function.DoubleFunction;
  * interface.</p>
  */
 public interface Slider extends Component<Slider>, Focusable<Slider>, HasCursor<Slider>, HasTooltip<Slider>,
-        Stepped<Slider>, Validatable<Slider> {
+        HasContextMenu<Slider>, Stepped<Slider>, Validatable<Slider> {
     /**
      * Style key for the track (paint, required).
      */

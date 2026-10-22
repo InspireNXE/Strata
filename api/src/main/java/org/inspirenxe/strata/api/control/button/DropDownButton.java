@@ -17,6 +17,7 @@ package org.inspirenxe.strata.api.control.button;
 
 import org.inspirenxe.strata.api.component.Component;
 import org.inspirenxe.strata.api.component.Focusable;
+import org.inspirenxe.strata.api.component.HasContextMenu;
 import org.inspirenxe.strata.api.component.HasCursor;
 import org.inspirenxe.strata.api.component.HasTooltip;
 import org.inspirenxe.strata.api.control.attribute.popup.Closable;
@@ -85,8 +86,8 @@ import java.util.Optional;
  * <p>Get one from {@link org.inspirenxe.strata.api.ComponentFactory#dropDownButton(String)}. Do not implement this
  * interface.</p>
  */
-public interface DropDownButton extends Component<DropDownButton>, Focusable<DropDownButton>,
-        HasCursor<DropDownButton>, HasTooltip<DropDownButton>, HasText<DropDownButton>, HasIcon<DropDownButton>,
+public interface DropDownButton extends Component<DropDownButton>, Focusable<DropDownButton>, HasCursor<DropDownButton>,
+        HasTooltip<DropDownButton>, HasContextMenu<DropDownButton>, HasText<DropDownButton>, HasIcon<DropDownButton>,
         Openable<DropDownButton> {
     /**
      * Style key for the arrow (paint, optional).

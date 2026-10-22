@@ -17,6 +17,7 @@ package org.inspirenxe.strata.api.control.field;
 
 import org.inspirenxe.strata.api.component.Component;
 import org.inspirenxe.strata.api.component.Focusable;
+import org.inspirenxe.strata.api.component.HasContextMenu;
 import org.inspirenxe.strata.api.component.HasCursor;
 import org.inspirenxe.strata.api.component.HasTooltip;
 import org.inspirenxe.strata.api.control.attribute.text.TextEntry;
@@ -188,7 +189,7 @@ import java.util.Objects;
  * interface.</p>
  */
 public interface TextBox extends Component<TextBox>, Focusable<TextBox>, HasCursor<TextBox>, HasTooltip<TextBox>,
-        TextInput<TextBox>, Validatable<TextBox> {
+        HasContextMenu<TextBox>, TextInput<TextBox>, Validatable<TextBox> {
     /**
      * Style key for the background when not focused (paint, required).
      */

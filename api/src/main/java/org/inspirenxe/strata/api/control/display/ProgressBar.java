@@ -16,6 +16,7 @@
 package org.inspirenxe.strata.api.control.display;
 
 import org.inspirenxe.strata.api.component.Component;
+import org.inspirenxe.strata.api.component.HasContextMenu;
 import org.inspirenxe.strata.api.component.HasCursor;
 import org.inspirenxe.strata.api.component.HasTooltip;
 import org.inspirenxe.strata.api.control.attribute.text.HasText;
@@ -58,7 +59,7 @@ import org.inspirenxe.strata.api.text.Text;
  * interface.</p>
  */
 public interface ProgressBar extends Component<ProgressBar>, HasCursor<ProgressBar>, HasTooltip<ProgressBar>,
-        HasText<ProgressBar>, Ranged<ProgressBar> {
+        HasContextMenu<ProgressBar>, HasText<ProgressBar>, Ranged<ProgressBar> {
     /**
      * Style key for the bar's track (paint, required).
      */

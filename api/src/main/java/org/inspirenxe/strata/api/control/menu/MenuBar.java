@@ -16,6 +16,7 @@
 package org.inspirenxe.strata.api.control.menu;
 
 import org.inspirenxe.strata.api.component.Component;
+import org.inspirenxe.strata.api.component.HasContextMenu;
 import org.inspirenxe.strata.api.component.HasCursor;
 import org.inspirenxe.strata.api.component.HasTooltip;
 import org.inspirenxe.strata.api.control.attribute.item.SingleSelection;
@@ -83,8 +84,8 @@ import java.util.Optional;
  * <p>Get one from {@link org.inspirenxe.strata.api.ComponentFactory#menuBar()}. Do not implement this
  * interface.</p>
  */
-public interface MenuBar extends Component<MenuBar>, HasCursor<MenuBar>, HasTooltip<MenuBar>, SingleSelection<Menu,
-        MenuBar> {
+public interface MenuBar extends Component<MenuBar>, HasCursor<MenuBar>, HasTooltip<MenuBar>, HasContextMenu<MenuBar>,
+        SingleSelection<Menu, MenuBar> {
     /**
      * Style key for the bar's background (paint, optional).
      */

@@ -16,6 +16,7 @@
 package org.inspirenxe.strata.api.control.window;
 
 import org.inspirenxe.strata.api.component.Component;
+import org.inspirenxe.strata.api.component.HasContextMenu;
 import org.inspirenxe.strata.api.component.HasCursor;
 import org.inspirenxe.strata.api.component.HasTooltip;
 import org.inspirenxe.strata.api.control.attribute.text.HasText;
@@ -68,7 +69,7 @@ import java.util.List;
  * interface.</p>
  */
 public interface MessageBox extends Component<MessageBox>, HasCursor<MessageBox>, HasTooltip<MessageBox>,
-        Titled<MessageBox>, HasText<MessageBox> {
+        HasContextMenu<MessageBox>, Titled<MessageBox>, HasText<MessageBox> {
     /**
      * The width the message wraps at, in UI units.
      */

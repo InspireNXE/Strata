@@ -17,6 +17,7 @@ package org.inspirenxe.strata.api.control.field;
 
 import org.inspirenxe.strata.api.component.Component;
 import org.inspirenxe.strata.api.component.Focusable;
+import org.inspirenxe.strata.api.component.HasContextMenu;
 import org.inspirenxe.strata.api.component.HasCursor;
 import org.inspirenxe.strata.api.component.HasTooltip;
 import org.inspirenxe.strata.api.control.attribute.popup.Closable;
@@ -86,8 +87,8 @@ import java.util.Optional;
  * <p>Get one from {@link org.inspirenxe.strata.api.ComponentFactory#dateTimePicker()}. Do not implement this
  * interface.</p>
  */
-public interface DateTimePicker extends Component<DateTimePicker>, Focusable<DateTimePicker>,
-        HasCursor<DateTimePicker>, HasTooltip<DateTimePicker>, HasDate<DateTimePicker>, HasTime<DateTimePicker>,
+public interface DateTimePicker extends Component<DateTimePicker>, Focusable<DateTimePicker>, HasCursor<DateTimePicker>,
+        HasTooltip<DateTimePicker>, HasContextMenu<DateTimePicker>, HasDate<DateTimePicker>, HasTime<DateTimePicker>,
         Openable<DateTimePicker>, Validatable<DateTimePicker> {
     /**
      * Style key for behind the focused part (paint, optional).

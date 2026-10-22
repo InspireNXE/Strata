@@ -17,6 +17,7 @@ package org.inspirenxe.strata.api.control.menu;
 
 import org.inspirenxe.strata.api.component.Component;
 import org.inspirenxe.strata.api.component.Focusable;
+import org.inspirenxe.strata.api.component.HasContextMenu;
 import org.inspirenxe.strata.api.component.HasTooltip;
 import org.inspirenxe.strata.api.control.attribute.popup.Closable;
 import org.inspirenxe.strata.api.control.attribute.popup.Openable;
@@ -67,7 +68,8 @@ import java.util.Optional;
  *
  * <p>Get one from {@link org.inspirenxe.strata.api.ComponentFactory#flyout()}. Do not implement this interface.</p>
  */
-public interface Flyout extends Component<Flyout>, Focusable<Flyout>, HasTooltip<Flyout>, Popup<Flyout> {
+public interface Flyout extends Component<Flyout>, Focusable<Flyout>, HasTooltip<Flyout>, HasContextMenu<Flyout>,
+        Popup<Flyout> {
     /**
      * Style key for the flyout's background (paint, optional).
      */

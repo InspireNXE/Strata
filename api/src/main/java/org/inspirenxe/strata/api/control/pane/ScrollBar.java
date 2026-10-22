@@ -17,6 +17,7 @@ package org.inspirenxe.strata.api.control.pane;
 
 import org.inspirenxe.strata.api.component.Component;
 import org.inspirenxe.strata.api.component.Focusable;
+import org.inspirenxe.strata.api.component.HasContextMenu;
 import org.inspirenxe.strata.api.component.HasCursor;
 import org.inspirenxe.strata.api.component.HasTooltip;
 import org.inspirenxe.strata.api.control.attribute.value.Ranged;
@@ -98,7 +99,7 @@ import org.inspirenxe.strata.api.layout.ScrollPanel;
  * interface.</p>
  */
 public interface ScrollBar extends Component<ScrollBar>, Focusable<ScrollBar>, HasCursor<ScrollBar>,
-        HasTooltip<ScrollBar>, Ranged<ScrollBar> {
+        HasTooltip<ScrollBar>, HasContextMenu<ScrollBar>, Ranged<ScrollBar> {
     /**
      * Style key for the track (paint, optional). The same key as {@link ScrollPanel#STYLE_TRACK}.
      */

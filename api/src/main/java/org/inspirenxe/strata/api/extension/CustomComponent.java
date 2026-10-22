@@ -20,9 +20,11 @@ import org.inspirenxe.strata.api.component.Component;
 import org.inspirenxe.strata.api.component.ComponentSnapshot;
 import org.inspirenxe.strata.api.component.CursorKind;
 import org.inspirenxe.strata.api.component.Focusable;
+import org.inspirenxe.strata.api.component.HasContextMenu;
 import org.inspirenxe.strata.api.component.HasCursor;
 import org.inspirenxe.strata.api.component.HasTooltip;
 import org.inspirenxe.strata.api.component.Tooltip;
+import org.inspirenxe.strata.api.control.attribute.popup.Popup;
 import org.inspirenxe.strata.api.event.Event;
 import org.inspirenxe.strata.api.event.EventHandler;
 import org.inspirenxe.strata.api.event.EventType;
@@ -104,9 +106,9 @@ import java.util.function.Supplier;
  * state and handlers. Every {@link Component} method is {@code final} here and goes to the peer, so the component
  * behaves like every other one in layout, focus and events.</p>
  *
- * <p>The methods of {@link Focusable}, {@link HasCursor} and {@link HasTooltip} are here too, so a subclass takes
- * part in focus, chooses a cursor or shows a tooltip just by declaring the interface, as {@code ColorSwatch} does
- * above. Strata ignores them on a subclass that does not declare the interface. A component that implements
+ * <p>The methods of {@link Focusable}, {@link HasCursor}, {@link HasTooltip} and {@link HasContextMenu} are here too,
+ * so a subclass takes part in focus, chooses a cursor, shows a tooltip or opens a context menu just by declaring the
+ * interface, as {@code ColorSwatch} does above. Strata ignores them on a subclass that does not declare the interface. A component that implements
  * {@link Focusable} starts out focusable and tabbable.</p>
  *
  * <h2>Requirements for subclasses</h2>
@@ -926,6 +928,27 @@ public abstract class CustomComponent<T extends Component<T>> implements Compone
      */
     public final T clearTooltip() {
         this.peer.setTooltip(null);
+        return this.self();
+    }
+
+    /**
+     * Returns the context menu. See {@link HasContextMenu#contextMenu()}.
+     *
+     * @return the popup, or empty for none
+     */
+    public final Optional<Popup<?>> contextMenu() {
+        return Optional.ofNullable(this.peer.contextMenu());
+    }
+
+    /**
+     * Sets the context menu. See {@link HasContextMenu#setContextMenu(Popup)}. It opens only for a subclass that
+     * declares {@code implements HasContextMenu<Self>} or a container, which always can.
+     *
+     * @param popup the popup, or {@code null} for none
+     * @return this component
+     */
+    public final T setContextMenu(final Popup<?> popup) {
+        this.peer.setContextMenu(popup);
         return this.self();
     }
 

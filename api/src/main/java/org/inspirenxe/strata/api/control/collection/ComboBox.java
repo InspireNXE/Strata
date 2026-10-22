@@ -17,6 +17,7 @@ package org.inspirenxe.strata.api.control.collection;
 
 import org.inspirenxe.strata.api.component.Component;
 import org.inspirenxe.strata.api.component.Focusable;
+import org.inspirenxe.strata.api.component.HasContextMenu;
 import org.inspirenxe.strata.api.component.HasCursor;
 import org.inspirenxe.strata.api.component.HasTooltip;
 import org.inspirenxe.strata.api.control.attribute.item.ItemSource;
@@ -113,7 +114,7 @@ import java.util.function.Function;
  * @param <T> the type of the options
  */
 public interface ComboBox<T> extends Component<ComboBox<T>>, Focusable<ComboBox<T>>, HasCursor<ComboBox<T>>,
-        HasTooltip<ComboBox<T>>, ItemSource<T, ComboBox<T>>,
+        HasTooltip<ComboBox<T>>, HasContextMenu<ComboBox<T>>, ItemSource<T, ComboBox<T>>,
         SingleSelection<T, ComboBox<T>>, Openable<ComboBox<T>>, Validatable<ComboBox<T>> {
     /**
      * Style key for the box (paint, required).

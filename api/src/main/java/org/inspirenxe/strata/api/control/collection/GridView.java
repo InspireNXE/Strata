@@ -17,6 +17,7 @@ package org.inspirenxe.strata.api.control.collection;
 
 import org.inspirenxe.strata.api.component.Component;
 import org.inspirenxe.strata.api.component.Focusable;
+import org.inspirenxe.strata.api.component.HasContextMenu;
 import org.inspirenxe.strata.api.component.HasCursor;
 import org.inspirenxe.strata.api.component.HasTooltip;
 import org.inspirenxe.strata.api.component.Tooltip;
@@ -127,7 +128,7 @@ import java.util.function.Function;
  * @param <T> the type of the items
  */
 public interface GridView<T> extends Component<GridView<T>>, Focusable<GridView<T>>, HasCursor<GridView<T>>,
-        HasTooltip<GridView<T>>, ItemSource<T, GridView<T>>, CellSource<T, GridView<T>>,
+        HasTooltip<GridView<T>>, HasContextMenu<GridView<T>>, ItemSource<T, GridView<T>>, CellSource<T, GridView<T>>,
         MultiSelection<T, GridView<T>>, Activatable<GridView<T>>, CellEditing<T, GridView<T>> {
     /**
      * Style key drawn over the cursor cell while the grid has focus (paint, optional). Falls back to

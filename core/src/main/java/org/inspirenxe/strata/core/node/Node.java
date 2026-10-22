@@ -19,9 +19,11 @@ import org.inspirenxe.strata.api.component.Component;
 import org.inspirenxe.strata.api.component.ComponentSnapshot;
 import org.inspirenxe.strata.api.component.CursorKind;
 import org.inspirenxe.strata.api.component.Focusable;
+import org.inspirenxe.strata.api.component.HasContextMenu;
 import org.inspirenxe.strata.api.component.HasCursor;
 import org.inspirenxe.strata.api.component.HasTooltip;
 import org.inspirenxe.strata.api.component.Tooltip;
+import org.inspirenxe.strata.api.control.attribute.popup.Popup;
 import org.inspirenxe.strata.api.text.Text;
 import org.inspirenxe.strata.api.event.Event;
 import org.inspirenxe.strata.api.event.EventHandler;
@@ -154,6 +156,7 @@ public class Node implements ComponentPeer {
     // A message shown ahead of the tooltip, such as a validation's, and the tooltip made of both
     private Text tooltipNotice;
     private Tooltip noticeTooltip;
+    private Popup<?> contextMenu;
 
     private float opacity;
 
@@ -1520,6 +1523,21 @@ public class Node implements ComponentPeer {
         if (this.root != null) {
             this.root.tooltipChanged(this);
         }
+    }
+
+    /**
+     * Returns the context menu, which only a component that has {@link HasContextMenu} can have.
+     *
+     * @return the popup, or {@code null} for none or for a component without the attribute
+     */
+    @Override
+    public final Popup<?> contextMenu() {
+        return this.facade instanceof HasContextMenu<?> ? this.contextMenu : null;
+    }
+
+    @Override
+    public final void setContextMenu(final Popup<?> popup) {
+        this.contextMenu = popup;
     }
 
     @Override

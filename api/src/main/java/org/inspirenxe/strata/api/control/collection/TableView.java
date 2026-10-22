@@ -17,6 +17,7 @@ package org.inspirenxe.strata.api.control.collection;
 
 import org.inspirenxe.strata.api.component.Component;
 import org.inspirenxe.strata.api.component.Focusable;
+import org.inspirenxe.strata.api.component.HasContextMenu;
 import org.inspirenxe.strata.api.component.HasCursor;
 import org.inspirenxe.strata.api.component.HasTooltip;
 import org.inspirenxe.strata.api.control.attribute.item.Activatable;
@@ -141,7 +142,7 @@ import java.util.function.Function;
  * @param <T> the type of the items
  */
 public interface TableView<T> extends Component<TableView<T>>, Focusable<TableView<T>>, HasCursor<TableView<T>>,
-        HasTooltip<TableView<T>>, ItemSource<T, TableView<T>>,
+        HasTooltip<TableView<T>>, HasContextMenu<TableView<T>>, ItemSource<T, TableView<T>>,
         MultiSelection<T, TableView<T>>, Activatable<TableView<T>>, RowView<TableView<T>>,
         CellEditing<T, TableView<T>> {
     /**

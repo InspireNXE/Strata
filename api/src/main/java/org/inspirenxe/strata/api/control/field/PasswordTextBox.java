@@ -17,6 +17,7 @@ package org.inspirenxe.strata.api.control.field;
 
 import org.inspirenxe.strata.api.component.Component;
 import org.inspirenxe.strata.api.component.Focusable;
+import org.inspirenxe.strata.api.component.HasContextMenu;
 import org.inspirenxe.strata.api.component.HasCursor;
 import org.inspirenxe.strata.api.component.HasTooltip;
 import org.inspirenxe.strata.api.control.attribute.text.TextEntry;
@@ -144,8 +145,8 @@ import java.util.function.IntPredicate;
  * interface.</p>
  */
 public interface PasswordTextBox extends Component<PasswordTextBox>, Focusable<PasswordTextBox>,
-        HasCursor<PasswordTextBox>, HasTooltip<PasswordTextBox>, TextEntry<PasswordTextBox>,
-        Validatable<PasswordTextBox> {
+        HasCursor<PasswordTextBox>, HasTooltip<PasswordTextBox>, HasContextMenu<PasswordTextBox>,
+        TextEntry<PasswordTextBox>, Validatable<PasswordTextBox> {
     /**
      * Style key for the mask while the box is enabled and editable (text style, optional).
      */

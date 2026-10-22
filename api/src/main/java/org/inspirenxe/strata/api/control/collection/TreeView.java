@@ -17,6 +17,7 @@ package org.inspirenxe.strata.api.control.collection;
 
 import org.inspirenxe.strata.api.component.Component;
 import org.inspirenxe.strata.api.component.Focusable;
+import org.inspirenxe.strata.api.component.HasContextMenu;
 import org.inspirenxe.strata.api.component.HasCursor;
 import org.inspirenxe.strata.api.component.HasTooltip;
 import org.inspirenxe.strata.api.control.attribute.item.Activatable;
@@ -105,9 +106,8 @@ import java.util.function.Predicate;
  * @param <T> the type of the items
  */
 public interface TreeView<T> extends Component<TreeView<T>>, Focusable<TreeView<T>>, HasCursor<TreeView<T>>,
-        HasTooltip<TreeView<T>>, ItemSource<T, TreeView<T>>, CellSource<T, TreeView<T>>,
-        MultiSelection<T, TreeView<T>>, Activatable<TreeView<T>>, RowView<TreeView<T>>,
-        CellEditing<T, TreeView<T>> {
+        HasTooltip<TreeView<T>>, HasContextMenu<TreeView<T>>, ItemSource<T, TreeView<T>>, CellSource<T, TreeView<T>>,
+        MultiSelection<T, TreeView<T>>, Activatable<TreeView<T>>, RowView<TreeView<T>>, CellEditing<T, TreeView<T>> {
     /**
      * Style key for the expand arrows (paint, optional).
      */

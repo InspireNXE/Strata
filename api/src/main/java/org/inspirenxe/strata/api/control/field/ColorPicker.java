@@ -16,6 +16,7 @@
 package org.inspirenxe.strata.api.control.field;
 
 import org.inspirenxe.strata.api.component.Component;
+import org.inspirenxe.strata.api.component.HasContextMenu;
 import org.inspirenxe.strata.api.component.HasCursor;
 import org.inspirenxe.strata.api.component.HasTooltip;
 import org.inspirenxe.strata.api.control.attribute.value.Validatable;
@@ -96,7 +97,7 @@ import org.inspirenxe.strata.api.state.PropertyKey;
  * interface.</p>
  */
 public interface ColorPicker extends Component<ColorPicker>, HasCursor<ColorPicker>, HasTooltip<ColorPicker>,
-        Validatable<ColorPicker> {
+        HasContextMenu<ColorPicker>, Validatable<ColorPicker> {
     /**
      * Style key for the frame behind the square, the strips and the swatch (paint, optional).
      */

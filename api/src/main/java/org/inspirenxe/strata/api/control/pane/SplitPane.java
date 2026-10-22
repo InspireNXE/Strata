@@ -16,6 +16,7 @@
 package org.inspirenxe.strata.api.control.pane;
 
 import org.inspirenxe.strata.api.component.Component;
+import org.inspirenxe.strata.api.component.HasContextMenu;
 import org.inspirenxe.strata.api.component.HasCursor;
 import org.inspirenxe.strata.api.component.HasTooltip;
 import org.inspirenxe.strata.api.control.display.Separator;
@@ -60,7 +61,8 @@ import java.util.Optional;
  * <p>Get one from {@link org.inspirenxe.strata.api.ComponentFactory#splitPane()}, which is side by side, or
  * {@link org.inspirenxe.strata.api.ComponentFactory#splitPane(Orientation)}. Do not implement this interface.</p>
  */
-public interface SplitPane extends Component<SplitPane>, HasCursor<SplitPane>, HasTooltip<SplitPane> {
+public interface SplitPane extends Component<SplitPane>, HasCursor<SplitPane>, HasTooltip<SplitPane>,
+        HasContextMenu<SplitPane> {
     /**
      * Style key for the divider (paint, optional).
      */

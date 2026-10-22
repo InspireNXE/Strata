@@ -18,6 +18,7 @@ package org.inspirenxe.strata.api.control.pane;
 import org.inspirenxe.strata.api.ComponentFactory;
 import org.inspirenxe.strata.api.component.Component;
 import org.inspirenxe.strata.api.component.Focusable;
+import org.inspirenxe.strata.api.component.HasContextMenu;
 import org.inspirenxe.strata.api.component.HasCursor;
 import org.inspirenxe.strata.api.component.HasTooltip;
 import org.inspirenxe.strata.api.control.attribute.item.Activatable;
@@ -167,8 +168,8 @@ import java.util.function.Function;
  * <p>Get one from {@link org.inspirenxe.strata.api.ComponentFactory#navigationView()}. Do not implement this
  * interface.</p>
  */
-public interface NavigationView extends Component<NavigationView>, Focusable<NavigationView>,
-        HasCursor<NavigationView>, HasTooltip<NavigationView>, Titled<NavigationView>,
+public interface NavigationView extends Component<NavigationView>, Focusable<NavigationView>, HasCursor<NavigationView>,
+        HasTooltip<NavigationView>, HasContextMenu<NavigationView>, Titled<NavigationView>,
         SingleSelection<NavigationItem, NavigationView>, Activatable<NavigationView> {
     /**
      * Style key for behind the pane beside the content and the bar of {@code MINIMAL} (paint, optional).

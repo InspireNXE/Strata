@@ -17,6 +17,7 @@ package org.inspirenxe.strata.api.control.pane;
 
 import org.inspirenxe.strata.api.component.Component;
 import org.inspirenxe.strata.api.component.Focusable;
+import org.inspirenxe.strata.api.component.HasContextMenu;
 import org.inspirenxe.strata.api.component.HasCursor;
 import org.inspirenxe.strata.api.component.HasTooltip;
 import org.inspirenxe.strata.api.control.attribute.text.Titled;
@@ -67,7 +68,7 @@ import java.util.Optional;
  * interface.</p>
  */
 public interface Expander extends Component<Expander>, Focusable<Expander>, HasCursor<Expander>, HasTooltip<Expander>,
-        Titled<Expander> {
+        HasContextMenu<Expander>, Titled<Expander> {
     /**
      * Style key for the header (paint, optional).
      */

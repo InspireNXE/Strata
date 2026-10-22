@@ -17,6 +17,7 @@ package org.inspirenxe.strata.api.control.collection;
 
 import org.inspirenxe.strata.api.component.Component;
 import org.inspirenxe.strata.api.component.Focusable;
+import org.inspirenxe.strata.api.component.HasContextMenu;
 import org.inspirenxe.strata.api.component.HasCursor;
 import org.inspirenxe.strata.api.component.HasTooltip;
 import org.inspirenxe.strata.api.control.attribute.item.Activatable;
@@ -131,9 +132,8 @@ import java.util.function.Function;
  * @param <T> the type of the items
  */
 public interface ListView<T> extends Component<ListView<T>>, Focusable<ListView<T>>, HasCursor<ListView<T>>,
-        HasTooltip<ListView<T>>, ItemSource<T, ListView<T>>, CellSource<T, ListView<T>>,
-        MultiSelection<T, ListView<T>>, Activatable<ListView<T>>, RowView<ListView<T>>,
-        CellEditing<T, ListView<T>> {
+        HasTooltip<ListView<T>>, HasContextMenu<ListView<T>>, ItemSource<T, ListView<T>>, CellSource<T, ListView<T>>,
+        MultiSelection<T, ListView<T>>, Activatable<ListView<T>>, RowView<ListView<T>>, CellEditing<T, ListView<T>> {
     /**
      * Style key for the list's area behind its rows (paint, optional).
      */
