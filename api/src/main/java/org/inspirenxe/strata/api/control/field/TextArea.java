@@ -36,7 +36,8 @@ import java.util.Objects;
  * as {@code \r} or the line separator U+2028, become {@code \n}, and other control characters are dropped.</p>
  *
  * <p>With wrapping on, which is the default, a line too long for the width breaks after the last space that fits,
- * or between characters when a word alone is too wide. A space where the line breaks stays at the end of the row.
+ * or between characters when a word alone is too wide, as a wrapping label's does. The spaces where the line breaks
+ * stay at the end of the row, past its edge if they do not fit, and a caret among them is drawn at the edge.
  * With wrapping off, rows are the lines of the text, and a row wider than the view scrolls sideways, with a scroll
  * bar at the bottom edge, by horizontal wheel, by dragging the thumb and to keep the caret in sight. Text taller than
  * the view scrolls vertically, with a scroll bar at the right edge, by wheel, by dragging the thumb and to keep the

@@ -23,7 +23,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Greedy word wrapping with an engine's text metrics. Labels use it to measure and paint wrapped text.
+ * Word wrapping of text in one style with an engine's text metrics, by the rule {@link LineBreaks} describes. Labels
+ * use it, through {@link RichText}, to measure and paint wrapped text.
  */
 public final class TextWrap {
 
@@ -31,9 +32,10 @@ public final class TextWrap {
     }
 
     /**
-     * Splits text into lines no wider than a width. Each line takes as many space-separated words as fit. Newlines
-     * always break, and a word wider than a whole line breaks between code points. The space at each wrap point is
-     * dropped; other spaces are kept.
+     * Splits text into lines no wider than a width. Newlines always break. Within a line, each row takes as much as
+     * fits and breaks after the last whitespace that fits, or between code points when a word alone is wider than the
+     * width. The whitespace where a row breaks is dropped; whitespace anywhere else, at the start of a line included,
+     * is kept.
      *
      * <p>A single code point wider than the width still gets a line of its own, so the result can be wider than
      * {@code maxWidth} when the width is smaller than one character.</p>
@@ -46,50 +48,28 @@ public final class TextWrap {
      */
     public static List<String> wrap(final String text, final TextStyle style, final float maxWidth, final TextMetrics metrics) {
         final List<String> lines = new ArrayList<>();
-        for (final String paragraph : text.split("\n", -1)) {
-            if (Float.isInfinite(maxWidth)) {
-                lines.add(paragraph);
-            } else {
-                wrapParagraph(paragraph, style, maxWidth, metrics, lines);
+        final LineBreaks.Measure measure = (start, end) -> width(text.substring(start, end), style, metrics);
+        final LineBreaks.Characters characters = LineBreaks.codePoints(text);
+        int lineStart = 0;
+        while (true) {
+            final int newline = text.indexOf('\n', lineStart);
+            final int lineEnd = newline < 0 ? text.length() : newline;
+            int start = lineStart;
+            do {
+                final long row = LineBreaks.row(text, start, lineEnd, maxWidth, measure, characters);
+                lines.add(text.substring(start, LineBreaks.drawnEnd(row)));
+                start = LineBreaks.end(row);
+            } while (start < lineEnd);
+            if (newline < 0) {
+                return lines;
             }
+            lineStart = newline + 1;
         }
-        return lines;
-    }
-
-    private static void wrapParagraph(final String paragraph, final TextStyle style, final float maxWidth,
-                                      final TextMetrics metrics, final List<String> out) {
-        if (paragraph.isEmpty()) {
-            out.add("");
-            return;
-        }
-
-        final StringBuilder line = new StringBuilder();
-        for (final String word : paragraph.split(" ", -1)) {
-            final String candidate = line.isEmpty() ? word : line + " " + word;
-            if (width(candidate, style, metrics) <= maxWidth) {
-                line.setLength(0);
-                line.append(candidate);
-                continue;
-            }
-            if (!line.isEmpty()) {
-                out.add(line.toString());
-                line.setLength(0);
-            }
-            // The word alone may still be too wide: break it between code points, at least one per line
-            String rest = word;
-            while (!rest.isEmpty() && width(rest, style, metrics) > maxWidth) {
-                final int prefix = fittingPrefix(rest, style, maxWidth, metrics);
-                final int fit = prefix > 0 ? prefix : rest.offsetByCodePoints(0, 1);
-                out.add(rest.substring(0, fit));
-                rest = rest.substring(fit);
-            }
-            line.append(rest);
-        }
-        out.add(line.toString());
     }
 
     /**
-     * Returns how much of the start of a string fits in a width, in whole code points.
+     * Returns how much of the start of a string fits in a width, in whole code points. It measures O(log n)
+     * prefixes, by binary search.
      *
      * @param text the text
      * @param style the style to measure with
@@ -99,17 +79,28 @@ public final class TextWrap {
      *     not even the first code point fits
      */
     public static int fittingPrefix(final String text, final TextStyle style, final float maxWidth, final TextMetrics metrics) {
-        int fit = 0;
-        int index = 0;
-        while (index < text.length()) {
-            final int next = text.offsetByCodePoints(index, 1);
-            if (width(text.substring(0, next), style, metrics) > maxWidth) {
-                break;
-            }
-            fit = next;
-            index = next;
+        if (text.isEmpty() || width(text.substring(0, text.offsetByCodePoints(0, 1)), style, metrics) > maxWidth) {
+            return 0;
         }
-        return fit;
+        // The longest prefix that fits lies in [low, high]
+        int low = text.offsetByCodePoints(0, 1);
+        int high = text.length();
+        while (low < high) {
+            int mid = low + (high - low + 1) / 2;
+            if (mid < text.length() && Character.isLowSurrogate(text.charAt(mid))
+                    && Character.isHighSurrogate(text.charAt(mid - 1))) {
+                mid--;
+            }
+            if (mid <= low) {
+                mid = text.offsetByCodePoints(low, 1);
+            }
+            if (width(text.substring(0, mid), style, metrics) <= maxWidth) {
+                low = mid;
+            } else {
+                high = text.offsetByCodePoints(mid, -1);
+            }
+        }
+        return low;
     }
 
     private static float width(final String text, final TextStyle style, final TextMetrics metrics) {

@@ -15,6 +15,8 @@
  */
 package org.inspirenxe.strata.core.control.field;
 
+import org.inspirenxe.strata.core.text.LineBreaks;
+
 import java.text.BreakIterator;
 
 /**
@@ -31,7 +33,7 @@ import java.text.BreakIterator;
  * the whole text is one word, so word movement and double clicks never look at what the text holds and no
  * {@code String} of it is made.</p>
  */
-final class TextBoundaries {
+final class TextBoundaries implements LineBreaks.Characters {
     private static final int SPACE = 0;
     private static final int LINE = 1;
     private static final int WORD = 2;
@@ -111,7 +113,8 @@ final class TextBoundaries {
     /**
      * The boundary one character before an index, or 0: for Left and Backspace.
      */
-    int previous(final int index) {
+    @Override
+    public int previous(final int index) {
         if (this.plain == null || index <= 0) {
             return this.previousCodePoint(index);
         }
@@ -124,7 +127,8 @@ final class TextBoundaries {
     /**
      * The boundary one character after an index, or the end: for Right and Delete.
      */
-    int next(final int index) {
+    @Override
+    public int next(final int index) {
         final int length = this.buffer.length();
         if (this.plain == null || index >= length) {
             return this.nextCodePoint(index);

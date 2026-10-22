@@ -43,6 +43,7 @@ import org.inspirenxe.strata.api.theme.Theme;
 import org.inspirenxe.strata.core.layout.ScrollTrack;
 import org.inspirenxe.strata.core.node.BuiltInComponent;
 import org.inspirenxe.strata.core.node.ComponentFactoryImpl;
+import org.inspirenxe.strata.core.text.LineBreaks;
 import org.inspirenxe.strata.core.text.StyledText;
 import org.inspirenxe.strata.core.text.TextLine;
 
@@ -60,8 +61,10 @@ import java.util.function.UnaryOperator;
  * puts the caret at its end and scrolls back to the top, and the view stays there until the caret moves, so new text
  * shows its start.
  *
- * <p>A row that wraps keeps its trailing space, and the caret cannot sit after its last character: that position is
- * the start of the next row. The view scrolls to keep the caret in sight after the caret moves, but not on other
+ * <p>Rows break by the rule {@code LineBreaks} describes, which labels share, between grapheme clusters when a word is
+ * too wide. A row that wraps keeps the whitespace it breaks at, past its edge if it must, and the caret cannot sit
+ * after its last character: that position is the start of the next row. A caret in that whitespace is drawn at the
+ * edge. The view scrolls to keep the caret in sight after the caret moves, but not on other
  * frames, so the wheel can scroll it away. Each wheel notch scrolls three lines, and selecting a whole line past its
  * end shows a 3-unit stub for the line break.</p>
  *
@@ -469,9 +472,15 @@ public final class TextAreaImpl extends BuiltInComponent<TextArea> implements Te
                 ScrollPanel.BAR_WIDTH), this.viewport.width(), Math.max(wide, this.viewport.width()));
     }
 
+    /**
+     * Lays the text out in rows by the rule {@link LineBreaks} describes, breaking a word too wide for a row between
+     * grapheme clusters. Whitespace where a row breaks stays in the row, so the caret can sit in it.
+     */
     private void buildRows(final TextMetrics metrics, final TextStyle style, final float width) {
         this.rowCount = 0;
         this.widestRow = 0f;
+        final String text = this.styled.text();
+        final LineBreaks.Measure measure = (start, end) -> this.width(metrics, style, start, end);
         int lineStart = 0;
         final int length = this.buffer.length();
         while (true) {
@@ -481,24 +490,8 @@ public final class TextAreaImpl extends BuiltInComponent<TextArea> implements Te
             }
             int start = lineStart;
             do {
-                int end = this.fit(metrics, style, start, lineEnd, width);
-                boolean soft = false;
-                if (end < lineEnd) {
-                    soft = true;
-                    if (Character.isWhitespace(this.buffer.codePointAt(end))) {
-                        // The space that does not fit stays at the end of the row
-                        end = this.nextCodePoint(end);
-                    } else {
-                        // Break after the last whitespace that fits, or between characters
-                        for (int i = end; i > start; i = this.previousCodePoint(i)) {
-                            if (Character.isWhitespace(this.buffer.codePointBefore(i))) {
-                                end = i;
-                                break;
-                            }
-                        }
-                    }
-                }
-                this.addRow(metrics, style, start, end, soft);
+                final int end = LineBreaks.end(LineBreaks.row(text, start, lineEnd, width, measure, this.boundaries));
+                this.addRow(metrics, style, start, end, end < lineEnd);
                 start = end;
             } while (start < lineEnd);
             if (lineEnd >= length) {
@@ -506,30 +499,6 @@ public final class TextAreaImpl extends BuiltInComponent<TextArea> implements Te
             }
             lineStart = lineEnd + 1;
         }
-    }
-
-    /**
-     * The furthest index from {@code start}, at most {@code end}, whose text fits a width, and at least one code point
-     * past {@code start} while there is one.
-     */
-    private int fit(final TextMetrics metrics, final TextStyle style, final int start, final int end, final float width) {
-        if (Float.isInfinite(width) || this.width(metrics, style, start, end) <= width) {
-            return end;
-        }
-        int low = this.nextCodePoint(start);
-        int high = end;
-        while (low < high) {
-            final int mid = this.boundaries.snap(low + (high - low + 1) / 2);
-            if (mid <= low) {
-                break;
-            }
-            if (this.width(metrics, style, start, mid) <= width) {
-                low = mid;
-            } else {
-                high = this.previousCodePoint(mid);
-            }
-        }
-        return low;
     }
 
     private float width(final TextMetrics metrics, final TextStyle style, final int start, final int end) {
@@ -701,7 +670,11 @@ public final class TextAreaImpl extends BuiltInComponent<TextArea> implements Te
         }
 
         if (this.isFocused() && this.isEnabled() && !this.readOnly && this.editor.caretShown(this.look.blinkMillis())) {
-            final float x = this.viewport.x() + this.caretX - this.scrollX;
+            float x = this.viewport.x() + this.caretX - this.scrollX;
+            if (this.wrap) {
+                // A caret in the spaces that hang past the end of a wrapped row stops at the edge
+                x = Math.min(x, this.viewport.right() - 1f);
+            }
             final float y = this.viewport.y() + this.caretRow * this.lineHeight - Math.round(this.scrollY);
             if (x >= this.viewport.x() && x < this.viewport.right() && y + this.lineHeight > this.viewport.y()
                     && y < this.viewport.bottom()) {
@@ -955,10 +928,6 @@ public final class TextAreaImpl extends BuiltInComponent<TextArea> implements Te
 
     private int previousCodePoint(final int index) {
         return this.boundaries.previousCodePoint(index);
-    }
-
-    private int nextCodePoint(final int index) {
-        return this.boundaries.nextCodePoint(index);
     }
 
     private int lineStart(final int index) {
