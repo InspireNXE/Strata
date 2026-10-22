@@ -294,6 +294,31 @@ class ButtonPaneEventsTest {
         }
 
         @Test
+        void tabStopsAtTheSelectedButtonOrElseTheFirst() {
+            this.show();
+            final TestHost test = ButtonPaneEventsTest.this.test;
+            assertEquals(List.of(this.easy), test.tabOrder());
+            this.group.select(2);
+            assertEquals(List.of(this.hard), test.tabOrder());
+            this.hard.requestFocus();
+            ButtonPaneEventsTest.this.key(Key.UP);
+            assertEquals(List.of(this.normal), test.tabOrder());
+            this.group.select(-1);
+            assertEquals(List.of(this.easy), test.tabOrder());
+        }
+
+        @Test
+        void tabLeavesTheGroupFromItsSelectedButton() {
+            this.show();
+            final Button after = ButtonPaneEventsTest.this.ui.button("After");
+            this.column.add(after);
+            this.group.select(1);
+            this.normal.requestFocus();
+            ButtonPaneEventsTest.this.key(Key.TAB);
+            assertSame(after, ButtonPaneEventsTest.this.test.focused());
+        }
+
+        @Test
         void clicksAndArrowsSelect() {
             this.show();
             this.click(this.easy);

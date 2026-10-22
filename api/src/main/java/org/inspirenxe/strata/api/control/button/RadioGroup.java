@@ -34,6 +34,11 @@ import java.util.Optional;
  * or Alt are left alone. The focused button consumes the arrows it acts on, even when no other button can take the
  * selection.</p>
  *
+ * <p>The group is one stop for Tab: only the selected button is {@linkplain RadioButton#isTabbable() tabbable}, or
+ * the first button while none is selected, so Tab moves into the group and out of it in one step and the arrows move
+ * inside it. The group sets this on each new button and each change of the selection, which replaces what
+ * {@code setTabbable} set on its buttons.</p>
+ *
  * <p>The group is an {@link EventTarget} of its own for {@link SingleSelection#SELECTED}, which carries the index
  * of the selected button in {@link #buttons()}. The event's {@linkplain org.inspirenxe.strata.api.event.Event#target()
  * target} is the newly selected button, or the deselected one when the selection was cleared. Its events reach only

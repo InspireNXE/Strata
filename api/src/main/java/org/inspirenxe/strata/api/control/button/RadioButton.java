@@ -36,8 +36,10 @@ import java.util.Objects;
  * {@link SingleSelection#SELECTED} on the group. A disabled button does none of this and draws its disabled
  * look.</p>
  *
- * <p>It is focusable and tabbable and shows the hand cursor. It measures and lays out like a {@link CheckBox}: a
- * square box the caption's line height plus 8 units on a side, the caption 4 units to its right.</p>
+ * <p>It is focusable and shows the hand cursor, and Tab stops at it when it is its group's selected button, or its
+ * group's first while none is selected, as {@link RadioGroup} says. It measures and lays out like a
+ * {@link CheckBox}: a square box the caption's line height plus 8 units on a side, rounded to a whole unit, and the
+ * caption 4 units to its right.</p>
  *
  * <h2>Theme keys</h2>
  * <ul>

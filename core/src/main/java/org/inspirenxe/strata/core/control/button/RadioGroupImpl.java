@@ -37,7 +37,8 @@ import java.util.Optional;
 /**
  * The core {@link RadioGroup}. It holds its buttons and their values side by side and tracks the selected button;
  * the buttons ask it whether they are selected. Its handlers live in a dispatcher of its own, created on the first
- * registration, and the group's {@code SELECTED} reaches only them.
+ * registration, and the group's {@code SELECTED} reaches only them. After each new button and each change of the
+ * selection it sets which buttons are tabbable: the selected one, or the first while none is selected.
  *
  * @param <T> the type of the values the buttons stand for
  */
@@ -68,7 +69,20 @@ public final class RadioGroupImpl<T> implements RadioGroup<T> {
         final RadioButtonImpl button = new RadioButtonImpl(this.ui, this, text);
         this.buttons.add(button);
         this.values.add(value);
+        this.updateTabStops();
         return button;
+    }
+
+    /**
+     * Makes the selected button the group's only tab stop, or the first button while none is selected, so Tab
+     * enters and leaves the group in one step and the arrows move inside it.
+     */
+    private void updateTabStops() {
+        final RadioButtonImpl stop = this.selected != null ? this.selected
+                : this.buttons.isEmpty() ? null : this.buttons.getFirst();
+        for (final RadioButtonImpl button : this.buttons) {
+            button.setTabbable(button == stop);
+        }
     }
 
     @Override
@@ -146,6 +160,7 @@ public final class RadioGroupImpl<T> implements RadioGroup<T> {
         final RadioButtonImpl told = previous == this.arriving ? null : previous;
         this.selected = button;
         this.arriving = button;
+        this.updateTabStops();
         if (told != null) {
             // The group deselects the old button, so it is on that report's cause chain
             try (CauseFrame _ = this.ui.causes().pushFrame().push(this)) {
