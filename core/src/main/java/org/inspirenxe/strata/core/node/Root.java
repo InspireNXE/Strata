@@ -1284,11 +1284,12 @@ public final class Root {
     }
 
     /**
-     * Handles a typed character by firing a char event at the focused node.
+     * Handles a typed character by firing a char event at the focused node. A value that is not a Unicode code point,
+     * or is a lone surrogate, is ignored.
      *
      * @param codePoint the Unicode code point
      * @param modifiers the modifiers held
-     * @return true if a node handled it; false when nothing has focus
+     * @return true if a node handled it; false when nothing has focus or the code point was ignored
      */
     public boolean charTyped(final int codePoint, final Modifiers modifiers) {
         try (CauseFrame _ = this.inputFrame(Device.KEYBOARD, modifiers)) {
@@ -1297,7 +1298,8 @@ public final class Root {
     }
 
     private boolean handleCharTyped(final int codePoint, final Modifiers modifiers) {
-        if (this.focused == null) {
+        if (this.focused == null || !Character.isValidCodePoint(codePoint)
+                || codePoint >= Character.MIN_SURROGATE && codePoint <= Character.MAX_SURROGATE) {
             return false;
         }
         return this.focused.fire(InputEvents.CHAR, new CharEventImpl(this.focused.facade(), codePoint, modifiers)).isHandled();

@@ -97,11 +97,13 @@ public interface InputSink {
     boolean key(Key key, KeyAction action, Modifiers modifiers);
 
     /**
-     * A character was typed.
+     * A character was typed. An engine that reports a character outside the Basic Multilingual Plane as two UTF-16
+     * units must join them and send one code point, and must not send its value for "no character", such as AWT's
+     * {@code CHAR_UNDEFINED}. Strata ignores a value that is not a code point, and a lone surrogate.
      *
      * @param codePoint the character as a Unicode code point
      * @param modifiers the held modifiers, or {@link Modifiers#NONE} if the engine does not report them
-     * @return true if the focused component consumed it
+     * @return true if the focused component consumed it; false if nothing has focus or the value was ignored
      */
     boolean charTyped(int codePoint, Modifiers modifiers);
 }
