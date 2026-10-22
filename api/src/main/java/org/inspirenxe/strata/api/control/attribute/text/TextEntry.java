@@ -54,6 +54,15 @@ public interface TextEntry<S extends TextEntry<S>> extends EventTarget<S> {
      */
     EventType<ValueEvent<TextEntry<?>, Integer>> MODIFIED = EventType.valueReport("text_entry.modified");
     /**
+     * Told after the caret or the selection anchor moved, by the user or from code: a key, a press or a drag, an
+     * edit, focus, or a call such as {@link #select}. The value is where they are now and the previous value where
+     * they were. It fires once for each input or call that moved them, after {@link TextInput#EDITED} and
+     * {@link #MODIFIED} when an edit moved them. There is no request, since moving the caret changes nothing a
+     * handler would need to refuse. A field whose text code cannot read reports it too: its indexes show only where in
+     * the length the caret is.
+     */
+    EventType<ValueEvent<TextEntry<?>, Caret>> CARET_MOVED = EventType.valueReport("text_entry.caret_moved");
+    /**
      * Whether the control is read-only, as {@link #isReadOnly()} and {@link #setReadOnly} say. Binds one way.
      */
     PropertyKey<TextEntry<?>, Boolean> READ_ONLY = PropertyKey.of("text_entry.read_only", TextEntry::isReadOnly,
@@ -198,5 +207,41 @@ public interface TextEntry<S extends TextEntry<S>> extends EventTarget<S> {
      */
     default S setTextPadding(final float left, final float top, final float right, final float bottom) {
         return this.setTextPadding(new Insets(left, top, right, bottom));
+    }
+
+    /**
+     * Where the caret and the selection anchor are, as {@link #CARET_MOVED} reports them.
+     *
+     * @param anchor the fixed end of the selection, a char index
+     * @param caret the caret, the moving end of the selection, a char index
+     */
+    record Caret(int anchor, int caret) {
+
+        /**
+         * Returns the start of the selection.
+         *
+         * @return the smaller of {@code caret} and {@code anchor}
+         */
+        public int selectionStart() {
+            return Math.min(this.caret, this.anchor);
+        }
+
+        /**
+         * Returns the end of the selection.
+         *
+         * @return the larger of {@code caret} and {@code anchor}
+         */
+        public int selectionEnd() {
+            return Math.max(this.caret, this.anchor);
+        }
+
+        /**
+         * Returns whether any text is selected.
+         *
+         * @return true if {@code caret} and {@code anchor} differ
+         */
+        public boolean hasSelection() {
+            return this.caret != this.anchor;
+        }
     }
 }

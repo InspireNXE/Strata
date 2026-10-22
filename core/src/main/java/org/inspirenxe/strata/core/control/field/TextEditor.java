@@ -29,6 +29,9 @@ import org.inspirenxe.strata.api.input.Modifiers;
  * <p>It never changes the text itself: every edit goes to the {@link Host}, which fires its requests and reports and
  * then places the caret with {@link #place}. Character and word movement and double clicks use the
  * {@link TextBoundaries} it is given. Keys held with Alt are never editing keys, so they reach the engine.</p>
+ *
+ * <p>It remembers where it last reported the caret and the anchor, and {@link #settle} tells the host when either
+ * moved since, so each field reports {@code CARET_MOVED} once at the end of an input or a call.</p>
  */
 final class TextEditor {
     private final EditBuffer buffer;
@@ -38,6 +41,9 @@ final class TextEditor {
     private final Runnable onMoved;
     private int caret;
     private int anchor;
+    // Where CARET_MOVED last said they were
+    private int reportedCaret;
+    private int reportedAnchor;
     private long blinkStart;
     // The x that Up and Down keep while they move the caret from row to row, or NaN
     private float goal;
@@ -137,6 +143,30 @@ final class TextEditor {
     void clamp() {
         this.caret = Math.min(this.caret, this.buffer.length());
         this.anchor = Math.min(this.anchor, this.buffer.length());
+    }
+
+    /**
+     * Tells the host the caret or the anchor moved, if either differs from what it last told. Each field calls this at
+     * the end of every input handler and every public method that can move them, so an input or a call reports once,
+     * after the edit's own reports.
+     */
+    void settle() {
+        if (this.caret == this.reportedCaret && this.anchor == this.reportedAnchor) {
+            return;
+        }
+        final int previousAnchor = this.reportedAnchor;
+        final int previousCaret = this.reportedCaret;
+        this.reportedAnchor = this.anchor;
+        this.reportedCaret = this.caret;
+        this.host.caretMoved(previousAnchor, previousCaret, this.anchor, this.caret);
+    }
+
+    /**
+     * Takes the caret and anchor as reported without telling the host, for a field that wipes itself silently.
+     */
+    void settleQuietly() {
+        this.reportedAnchor = this.anchor;
+        this.reportedCaret = this.caret;
     }
 
     /**
@@ -497,6 +527,11 @@ final class TextEditor {
          * Called before a key moves the caret.
          */
         void beforeMove();
+
+        /**
+         * Reports that the caret or the anchor moved, from {@link #settle}.
+         */
+        void caretMoved(int previousAnchor, int previousCaret, int anchor, int caret);
     }
 
     /**

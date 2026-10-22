@@ -72,7 +72,9 @@ import java.util.function.UnaryOperator;
  * the edit; a canceled {@code MODIFY} ends the edit there. The final text then has its line breaks and other control
  * characters dropped, is cut to the length limit and goes through the internal filter, and the caret goes as many
  * characters from its end as the edit left it, with nothing selected. With neither handler on the path the edit
- * applies directly, without putting the old text back first. Every change reports {@link TextBox#EDITED} and then {@link TextBox#MODIFIED}. Enter fires
+ * applies directly, without putting the old text back first. Every change reports {@link TextBox#EDITED} and then
+ * {@link TextBox#MODIFIED}, and each input or call that moved the caret or the anchor then reports
+ * {@link TextBox#CARET_MOVED} once; a press that gives the box focus reports once for the focus and the press. Enter fires
  * {@link TextBox#SUBMIT} on every press, but is consumed only when a handler for {@link TextBox#SUBMIT} or
  * {@link TextBox#SUBMITTED} is on the path, so an ancestor's key handler still sees Enter from a box nobody
  * submits.</p>
@@ -218,6 +220,7 @@ public final class TextBoxImpl extends BuiltInComponent<TextBox> implements Text
             this.editor.place(this.buffer.length());
             this.hideSuggestions();
             this.changed(previous);
+            this.editor.settle();
         }
         return this;
     }
@@ -253,6 +256,7 @@ public final class TextBoxImpl extends BuiltInComponent<TextBox> implements Text
             this.buffer.truncate(this.buffer.offsetByCodePoints(0, maxLength));
             this.editor.clamp();
             this.changed(previous);
+            this.editor.settle();
         }
         return this;
     }
@@ -308,12 +312,14 @@ public final class TextBoxImpl extends BuiltInComponent<TextBox> implements Text
     @Override
     public TextBox select(final int anchor, final int caret) {
         this.editor.select(anchor, caret);
+        this.editor.settle();
         return this;
     }
 
     @Override
     public TextBox selectAll() {
         this.editor.selectAll();
+        this.editor.settle();
         return this;
     }
 
@@ -492,6 +498,7 @@ public final class TextBoxImpl extends BuiltInComponent<TextBox> implements Text
         this.hideSuggestions();
         this.refocus();
         this.request(COMPLETE, suggestion, this::applySuggestion);
+        this.editor.settle();
     }
 
     /**
@@ -661,6 +668,7 @@ public final class TextBoxImpl extends BuiltInComponent<TextBox> implements Text
             return;
         }
         this.editor.press(event, event.localX() - this.textPadding.left());
+        this.editor.settle();
     }
 
     @Override
@@ -678,6 +686,7 @@ public final class TextBoxImpl extends BuiltInComponent<TextBox> implements Text
             return;
         }
         this.editor.drag(event, event.localX() - this.textPadding.left());
+        this.editor.settle();
     }
 
     // ------------------------------------------------------------------
@@ -691,6 +700,10 @@ public final class TextBoxImpl extends BuiltInComponent<TextBox> implements Text
             return;
         }
         this.editor.focusGained(this.selectAllOnFocus, this.isFocusFromPress());
+        // A press that gave focus places the caret next and reports once for both
+        if (!this.isFocusFromPress()) {
+            this.editor.settle();
+        }
     }
 
     @Override
@@ -705,6 +718,11 @@ public final class TextBoxImpl extends BuiltInComponent<TextBox> implements Text
 
     @Override
     protected void onKey(final KeyEvent event) {
+        this.handleKey(event);
+        this.editor.settle();
+    }
+
+    private void handleKey(final KeyEvent event) {
         if (!event.action().isDown() || !this.isEnabled()) {
             return;
         }
@@ -754,6 +772,7 @@ public final class TextBoxImpl extends BuiltInComponent<TextBox> implements Text
             return;
         }
         this.editor.type(codePoint);
+        this.editor.settle();
         event.consume();
     }
 
@@ -892,6 +911,13 @@ public final class TextBoxImpl extends BuiltInComponent<TextBox> implements Text
         @Override
         public void beforeMove() {
             TextBoxImpl.this.hideSuggestions();
+        }
+
+        @Override
+        public void caretMoved(final int previousAnchor, final int previousCaret, final int anchor, final int caret) {
+            if (TextBoxImpl.this.isHandled(CARET_MOVED)) {
+                TextBoxImpl.this.report(CARET_MOVED, new Caret(anchor, caret), new Caret(previousAnchor, previousCaret));
+            }
         }
     }
 

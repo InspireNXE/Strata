@@ -153,6 +153,13 @@ final class LineEditor {
     }
 
     /**
+     * Reports the caret if it moved since the last report. See {@link TextEditor#settle}.
+     */
+    void settle() {
+        this.editor.settle();
+    }
+
+    /**
      * Marks the drawing out of date, after the owner's style or text changed.
      */
     void invalidate() {

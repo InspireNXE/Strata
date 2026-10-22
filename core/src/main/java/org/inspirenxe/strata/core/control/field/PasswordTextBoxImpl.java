@@ -78,11 +78,13 @@ import java.util.function.IntPredicate;
  * <p>A user's edit asks {@link PasswordTextBox#MODIFY} with the buffer unchanged and applies only if it was not
  * canceled, so the box never needs a second copy of its text to fall back to. An edit that would put back the chars
  * it replaces asks nothing, which the box checks against the buffer without copying it. Every change reports
- * {@link PasswordTextBox#MODIFIED} with the lengths. Core never logs the text or a typed code point.</p>
+ * {@link PasswordTextBox#MODIFIED} with the lengths, and each input or call that moved the caret or the anchor then
+ * reports {@link PasswordTextBox#CARET_MOVED} once. It keeps no undo history. Core never logs the text or a typed code
+ * point.</p>
  *
  * <p>The box wipes itself in {@link #onReleased()}, which the root calls after the screen that holds it closes or
  * rebuilds and after the overlay that holds it closes, and hides its text in {@link #onDisabled()} when it is
- * disabled.</p>
+ * disabled. A wipe reports nothing, the caret's move to the start included.</p>
  */
 public final class PasswordTextBoxImpl extends BuiltInComposite<PasswordTextBox> implements PasswordTextBox {
     /**
@@ -238,6 +240,7 @@ public final class PasswordTextBoxImpl extends BuiltInComposite<PasswordTextBox>
             this.fromCode = !this.buffer.isEmpty();
             this.setRevealed(false);
             this.changed(before);
+            this.editor.settle();
         } finally {
             next.clear();
         }
@@ -264,6 +267,7 @@ public final class PasswordTextBoxImpl extends BuiltInComposite<PasswordTextBox>
         this.editor.place(0);
         this.fromCode = false;
         this.changed(before);
+        this.editor.settle();
         return this;
     }
 
@@ -271,6 +275,7 @@ public final class PasswordTextBoxImpl extends BuiltInComposite<PasswordTextBox>
     protected void onReleased() {
         this.buffer.clear();
         this.editor.place(0);
+        this.editor.editor().settleQuietly();
         this.fromCode = false;
         this.revealed = false;
         this.forgetDrawn();
@@ -305,6 +310,7 @@ public final class PasswordTextBoxImpl extends BuiltInComposite<PasswordTextBox>
             this.buffer.delete(this.buffer.offsetByCodePoints(0, maxLength), this.buffer.length());
             this.editor.clamp();
             this.changed(before);
+            this.editor.settle();
         }
         return this;
     }
@@ -339,12 +345,14 @@ public final class PasswordTextBoxImpl extends BuiltInComposite<PasswordTextBox>
     @Override
     public PasswordTextBox select(final int anchor, final int caret) {
         this.editor.select(anchor, caret);
+        this.editor.settle();
         return this;
     }
 
     @Override
     public PasswordTextBox selectAll() {
         this.editor.selectAll();
+        this.editor.settle();
         return this;
     }
 
@@ -611,6 +619,7 @@ public final class PasswordTextBoxImpl extends BuiltInComposite<PasswordTextBox>
             return;
         }
         this.editor.press(event, event.localX() - this.textPadding.left());
+        this.editor.settle();
     }
 
     @Override
@@ -628,11 +637,16 @@ public final class PasswordTextBoxImpl extends BuiltInComposite<PasswordTextBox>
             return;
         }
         this.editor.drag(event, event.localX() - this.textPadding.left());
+        this.editor.settle();
     }
 
     @Override
     protected void onFocusGained(final FocusEvent event) {
         this.editor.focusGained(this.selectAllOnFocus, this.isFocusFromPress());
+        // A press that gave focus places the caret next and reports once for both
+        if (!this.isFocusFromPress()) {
+            this.editor.settle();
+        }
     }
 
     @Override
@@ -670,12 +684,14 @@ public final class PasswordTextBoxImpl extends BuiltInComposite<PasswordTextBox>
         if (handled || (!modifiers.control() && !modifiers.alt() && key.isPrintable())) {
             event.consume();
         }
+        this.editor.settle();
     }
 
     @Override
     protected void onChar(final CharEvent event) {
         // Typed characters stop here, read-only or not, so no ancestor's handler sees them
         this.editor.type(event.codePoint());
+        this.editor.settle();
         event.consume();
     }
 
@@ -924,6 +940,14 @@ public final class PasswordTextBoxImpl extends BuiltInComposite<PasswordTextBox>
 
         @Override
         public void beforeMove() {
+        }
+
+        @Override
+        public void caretMoved(final int previousAnchor, final int previousCaret, final int anchor, final int caret) {
+            final PasswordTextBoxImpl box = PasswordTextBoxImpl.this;
+            if (box.isHandled(CARET_MOVED)) {
+                box.report(CARET_MOVED, new Caret(anchor, caret), new Caret(previousAnchor, previousCaret));
+            }
         }
     }
 

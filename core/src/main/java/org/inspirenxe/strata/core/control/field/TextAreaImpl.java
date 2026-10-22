@@ -80,7 +80,8 @@ import java.util.function.UnaryOperator;
  * the edit; a canceled {@code MODIFY} ends the edit there. The final text then has its line breaks turned into
  * {@code \n} and its control characters other than tabs dropped, and is cut to the length limit, and the caret goes
  * as many characters from its end as the edit left it, with nothing selected. With neither handler on the path the edit applies directly, without putting the old text
- * back first. Every change reports {@link TextArea#EDITED} and then {@link TextArea#MODIFIED}.</p>
+ * back first. Every change reports {@link TextArea#EDITED} and then {@link TextArea#MODIFIED}, and each input or call
+ * that moved the caret or the anchor then reports {@link TextArea#CARET_MOVED} once.</p>
  *
  * <p>The text is a {@code PlainBuffer}. The caret, the selection, the keys and the pointer are a {@code TextEditor},
  * which the text box and the password box share, with the area's rows plugged in for Home, End, Up, Down, Page Up,
@@ -275,6 +276,7 @@ public final class TextAreaImpl extends BuiltInComponent<TextArea> implements Te
             this.scrollX = 0f;
             this.scrollY = 0f;
             this.changed(previous, false);
+            this.editor.settle();
         }
         return this;
     }
@@ -310,6 +312,7 @@ public final class TextAreaImpl extends BuiltInComponent<TextArea> implements Te
             this.buffer.truncate(this.buffer.offsetByCodePoints(0, maxLength));
             this.editor.clamp();
             this.changed(previous, true);
+            this.editor.settle();
         }
         return this;
     }
@@ -381,12 +384,14 @@ public final class TextAreaImpl extends BuiltInComponent<TextArea> implements Te
     @Override
     public TextArea select(final int anchor, final int caret) {
         this.editor.select(anchor, caret);
+        this.editor.settle();
         return this;
     }
 
     @Override
     public TextArea selectAll() {
         this.editor.selectAll();
+        this.editor.settle();
         return this;
     }
 
@@ -869,6 +874,7 @@ public final class TextAreaImpl extends BuiltInComponent<TextArea> implements Te
             return;
         }
         this.editor.press(event, this.indexAt(event.localX(), event.localY()));
+        this.editor.settle();
     }
 
     @Override
@@ -896,6 +902,7 @@ public final class TextAreaImpl extends BuiltInComponent<TextArea> implements Te
             return;
         }
         this.editor.drag(event, this.indexAt(event.localX(), event.localY()));
+        this.editor.settle();
     }
 
     @Override
@@ -967,6 +974,7 @@ public final class TextAreaImpl extends BuiltInComponent<TextArea> implements Te
         if (handled || TextEditor.typesCharacter(key, modifiers)) {
             event.consume();
         }
+        this.editor.settle();
     }
 
     @Override
@@ -974,6 +982,7 @@ public final class TextAreaImpl extends BuiltInComponent<TextArea> implements Te
         if (this.isEnabled() && this.editor.type(event.codePoint())) {
             event.consume();
         }
+        this.editor.settle();
     }
 
     // ------------------------------------------------------------------
@@ -1086,6 +1095,13 @@ public final class TextAreaImpl extends BuiltInComponent<TextArea> implements Te
 
         @Override
         public void beforeMove() {
+        }
+
+        @Override
+        public void caretMoved(final int previousAnchor, final int previousCaret, final int anchor, final int caret) {
+            if (TextAreaImpl.this.isHandled(CARET_MOVED)) {
+                TextAreaImpl.this.report(CARET_MOVED, new Caret(anchor, caret), new Caret(previousAnchor, previousCaret));
+            }
         }
     }
 
