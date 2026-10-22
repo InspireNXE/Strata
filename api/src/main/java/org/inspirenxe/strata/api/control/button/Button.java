@@ -291,7 +291,8 @@ public interface Button extends Component<Button>, Focusable<Button>, HasCursor<
      * Makes the button a link or a framed button again. A link draws no face and no focus ring, only its caption in
      * the link text styles, and the caption underlines while the link is hovered or focused. It has no minimum size
      * and, unless {@link #setTextPadding} was called, no padding; turning the link off restores the minimum width of
-     * 20 and the desired height of at least 20. A new layout runs.
+     * 20 and the desired height of at least 20. A minimum size set with {@code setMinSize} is kept either way, before
+     * or after this call. A new layout runs.
      *
      * @param link true for a link
      * @return this button

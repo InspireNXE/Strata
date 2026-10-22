@@ -80,6 +80,10 @@ public final class ButtonImpl extends BuiltInComponent<Button> implements Button
      * in UI units. A smaller height set on one applies.
      */
     public static final float MIN_HEIGHT = 20f;
+    /**
+     * The minimum width of a framed button, in UI units.
+     */
+    public static final float MIN_WIDTH = 20f;
 
     private final ButtonContent content;
     private boolean link;
@@ -95,7 +99,7 @@ public final class ButtonImpl extends BuiltInComponent<Button> implements Button
         super(ui);
         this.content = new ButtonContent(text);
         this.setCursor(CursorKind.HAND);
-        this.setMinSize(20f, 0f);
+        this.setMinSize(MIN_WIDTH, 0f);
     }
 
     @Override
@@ -170,14 +174,17 @@ public final class ButtonImpl extends BuiltInComponent<Button> implements Button
         return this.link;
     }
 
+    /**
+     * Makes the button a link or a framed button. The minimum size follows, 0 by 0 for a link and 20 by 0 for a
+     * framed button, only while it is still the one the button set itself, so a minimum set in code is kept whatever
+     * the order of the calls.
+     */
     @Override
     public Button setLink(final boolean link) {
-        this.link = link;
-        if (link) {
-            this.setMinSize(0f, 0f);
-        } else {
-            this.setMinSize(20f, 0f);
+        if (link != this.link && this.minWidth() == (this.link ? 0f : MIN_WIDTH) && this.minHeight() == 0f) {
+            this.setMinSize(link ? 0f : MIN_WIDTH, 0f);
         }
+        this.link = link;
         this.invalidateLayout();
         return this;
     }

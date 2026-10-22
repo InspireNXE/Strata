@@ -327,5 +327,29 @@ class ButtonVariantsTest {
             assertEquals(new Rect(0, 0, 46, 20), this.link.bounds());
             assertFalse(this.render().fills().isEmpty());
         }
+
+        @Test
+        void aMinimumSetInCodeOutlivesSwitchingToALinkAndBack() {
+            final Button before = ButtonVariantsTest.this.ui.button("Go").setMinSize(50, 10);
+            before.setLink(true);
+            assertEquals(50f, before.minWidth());
+            assertEquals(10f, before.minHeight());
+            before.setLink(false);
+            assertEquals(50f, before.minWidth());
+
+            final Button after = ButtonVariantsTest.this.ui.button("Go").setLink(true).setMinSize(40, 0);
+            after.setLink(false);
+            assertEquals(40f, after.minWidth());
+        }
+
+        @Test
+        void theButtonsOwnMinimumFollowsTheLink() {
+            final Button button = ButtonVariantsTest.this.ui.button("Go");
+            assertEquals(20f, button.minWidth());
+            button.setLink(true);
+            assertEquals(0f, button.minWidth());
+            button.setLink(false);
+            assertEquals(20f, button.minWidth());
+        }
     }
 }
