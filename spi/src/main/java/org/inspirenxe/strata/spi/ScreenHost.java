@@ -20,6 +20,7 @@ import org.inspirenxe.strata.api.component.Component;
 import org.inspirenxe.strata.api.screen.Screen;
 import org.inspirenxe.strata.api.screen.ScreenController;
 import org.inspirenxe.strata.api.screen.ScreenHandle;
+import org.inspirenxe.strata.api.text.Text;
 import org.inspirenxe.strata.api.theme.Theme;
 import org.inspirenxe.strata.api.theme.ThemeRef;
 
@@ -39,6 +40,10 @@ import java.util.Optional;
  *     <li>Call {@link #render} once per frame. It builds pending screens, runs layout if needed, draws, and asks for
  *     the cursor.</li>
  *     <li>Call {@link #close()} when the engine screen goes away, so the Strata screen's {@code closed()} runs.</li>
+ *     <li>When the user asks to close the engine screen, with its close button or a key the engine closes screens
+ *     with, call {@link #requestClose()} first and close the engine screen only if it returns true.</li>
+ *     <li>If the engine shows a title, show {@link #title()}, and compare it with the one shown on each frame, since
+ *     the screen can change it.</li>
  *     <li>Call everything on the UI thread.</li>
  * </ul>
  */
@@ -64,9 +69,29 @@ public interface ScreenHost extends InputSink {
     void open(Screen screen);
 
     /**
-     * Closes the current screen: calls its {@code closed()} and detaches its tree. Does nothing if none is open.
+     * Closes the current screen: calls its {@code closed()} and detaches its tree. Does nothing if none is open. The
+     * screen is not asked first; see {@link #requestClose()}.
      */
     void close();
+
+    /**
+     * Asks the open screen whether it may close, for the engine's or the window's own close button and keys. The
+     * host calls the screen's {@link Screen#closeRequested} with its handle and, if it agrees, closes it as
+     * {@link #close()} does. The runnable given to {@code StrataCore.createScreenHost} does not run: the adapter asked,
+     * so it closes its own screen when this returns true.
+     *
+     * @return true if no screen is open or the open screen agreed and was closed; false if it refused and stays open
+     */
+    boolean requestClose();
+
+    /**
+     * Returns the open screen's title as of now: its {@link Screen#title()} as read when it opened, or the last
+     * title it set with {@link ScreenHandle#setTitle} since. The text is returned as it is, so an adapter resolves it
+     * again when translations change.
+     *
+     * @return the title, or {@link Text#empty()} if no screen is open
+     */
+    Text title();
 
     /**
      * Returns the screen being shown.

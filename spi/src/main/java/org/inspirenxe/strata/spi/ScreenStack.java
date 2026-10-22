@@ -18,6 +18,7 @@ package org.inspirenxe.strata.spi;
 import org.inspirenxe.strata.api.screen.Screen;
 import org.inspirenxe.strata.api.screen.ScreenController;
 import org.inspirenxe.strata.api.screen.ScreenHandle;
+import org.inspirenxe.strata.api.text.Text;
 import org.inspirenxe.strata.api.theme.Theme;
 import org.inspirenxe.strata.api.theme.ThemeRef;
 
@@ -86,9 +87,26 @@ public interface ScreenStack extends InputSink, ScreenController {
     boolean isEmpty();
 
     /**
-     * Closes and removes every screen, top first.
+     * Closes and removes every screen, top first. The screens are not asked first; see {@link #requestClose()}.
      */
     void clear();
+
+    /**
+     * Asks the screens to close as the user would, for the window's own close button: the top screen is asked
+     * through its {@link Screen#closeRequested} and removed if it agrees, then the next, and so on, stopping at the
+     * first screen that refuses.
+     *
+     * @return true if the stack is empty afterwards; false if a screen refused, which stays open with every screen
+     *     below it
+     */
+    boolean requestClose();
+
+    /**
+     * Returns the top screen's title as of now, as {@link ScreenHost#title()} describes.
+     *
+     * @return the title, or {@link Text#empty()} if the stack is empty
+     */
+    Text title();
 
     /**
      * Replaces the theme of every screen in the stack and of screens pushed later, except screens opened with a

@@ -94,8 +94,8 @@ public final class StrataCore {
     }
 
     /**
-     * Creates a host for one screen at a time. A screen that asks to close through its handle is closed by the
-     * host itself.
+     * Creates a host for one screen at a time. A screen whose handle closes it, through {@code close()} or through a
+     * {@code requestClose()} the screen agreed to, is closed by the host itself.
      *
      * @param platform the engine's platform
      * @param theme the theme for every component the host shows
@@ -110,8 +110,10 @@ public final class StrataCore {
      *
      * @param platform the engine's platform
      * @param theme the theme for every component the host shows
-     * @param closeRequested runs when the open screen asks to close through its handle; an engine with its own
-     *                       screens may close the engine screen here, which in turn closes the host
+     * @param closeRequested runs when the open screen's handle closes it, through {@code close()} or through a
+     *                       {@code requestClose()} the screen agreed to; an engine with its own screens may close the
+     *                       engine screen here, which in turn closes the host. It does not run for
+     *                       {@link ScreenHost#requestClose()}, which the adapter itself calls
      * @return a new host, with no screen open and a size of zero until resized
      */
     public static ScreenHost createScreenHost(final Platform platform, final Theme theme, final Runnable closeRequested) {
@@ -135,8 +137,9 @@ public final class StrataCore {
      *
      * @param platform the engine's platform
      * @param theme the theme ref for every component the host shows
-     * @param closeRequested runs when the open screen asks to close through its handle, or {@code null} to have
-     *                       the host close the screen itself
+     * @param closeRequested runs when the open screen's handle closes it, through {@code close()} or through a
+     *                       {@code requestClose()} the screen agreed to, or {@code null} to have the host close the
+     *                       screen itself
      * @return a new host, with no screen open and a size of zero until resized
      * @throws org.inspirenxe.strata.api.theme.ThemeException if the ref cannot be resolved
      */

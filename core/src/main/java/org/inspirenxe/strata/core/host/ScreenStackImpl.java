@@ -23,6 +23,7 @@ import org.inspirenxe.strata.api.input.ScrollKind;
 import org.inspirenxe.strata.api.screen.Screen;
 import org.inspirenxe.strata.api.screen.ScreenController;
 import org.inspirenxe.strata.api.screen.ScreenHandle;
+import org.inspirenxe.strata.api.text.Text;
 import org.inspirenxe.strata.api.theme.Theme;
 import org.inspirenxe.strata.api.theme.ThemeRef;
 import org.inspirenxe.strata.core.node.Root;
@@ -222,6 +223,29 @@ public final class ScreenStackImpl implements ScreenStack {
         while (!this.entries.isEmpty()) {
             this.pop();
         }
+    }
+
+    /**
+     * Asks each screen from the top down through its handle's {@code requestClose()}, which removes a screen that
+     * agrees from the stack.
+     */
+    @Override
+    public boolean requestClose() {
+        while (!this.entries.isEmpty()) {
+            final ScreenHostImpl host = this.topHost();
+            if (!host.handle().map(ScreenHandle::requestClose).orElse(true)) {
+                return false;
+            }
+            // A host whose screen closed while it opened has no handle, and stays until removed here
+            this.remove(host);
+        }
+        return true;
+    }
+
+    @Override
+    public Text title() {
+        final ScreenHostImpl top = this.topHost();
+        return top == null ? Text.empty() : top.title();
     }
 
     /**

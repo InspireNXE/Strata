@@ -25,6 +25,7 @@ import org.inspirenxe.strata.api.input.ScrollKind;
 import org.inspirenxe.strata.api.screen.Screen;
 import org.inspirenxe.strata.api.screen.ScreenController;
 import org.inspirenxe.strata.api.screen.ScreenHandle;
+import org.inspirenxe.strata.api.text.Text;
 import org.inspirenxe.strata.api.theme.Theme;
 import org.inspirenxe.strata.api.theme.ThemeException;
 import org.inspirenxe.strata.api.theme.ThemeRef;
@@ -70,6 +71,8 @@ public final class ScreenHostImpl implements ScreenHost {
     private long textVersion = Translations.version();
     private Screen screen;
     private Handle handle;
+    // The open screen's title: read from it on open, replaced through its handle
+    private Text title = Text.empty();
     private ScreenController opener;
     private boolean rebuild;
 
@@ -78,8 +81,8 @@ public final class ScreenHostImpl implements ScreenHost {
      *
      * @param platform the engine's platform
      * @param theme the starting theme
-     * @param closeRequested runs when the open screen asks to close through its handle, or {@code null} to have
-     *     the host close the screen itself
+     * @param closeRequested runs when the open screen's handle closes it, through {@code close()} or a
+     *     {@code requestClose()} the screen agreed to, or {@code null} to have the host close the screen itself
      */
     public ScreenHostImpl(final Platform platform, final Theme theme, final Runnable closeRequested) {
         this.theme = Objects.requireNonNull(theme, "theme");
@@ -96,8 +99,8 @@ public final class ScreenHostImpl implements ScreenHost {
      *
      * @param platform the engine's platform
      * @param theme the theme to resolve
-     * @param closeRequested runs when the open screen asks to close through its handle, or {@code null} to have
-     *     the host close the screen itself
+     * @param closeRequested runs when the open screen's handle closes it, through {@code close()} or a
+     *     {@code requestClose()} the screen agreed to, or {@code null} to have the host close the screen itself
      * @throws ThemeException if the ref cannot be resolved
      */
     public ScreenHostImpl(final Platform platform, final ThemeRef theme, final Runnable closeRequested) {
@@ -145,6 +148,8 @@ public final class ScreenHostImpl implements ScreenHost {
         final Handle opened = new Handle(screen);
         this.screen = screen;
         this.handle = opened;
+        final Text title = screen.title();
+        this.title = title != null ? title : Text.empty();
         this.root.setScreen(screen);
         this.rebuild = false;
         screen.opened(opened);
@@ -163,12 +168,37 @@ public final class ScreenHostImpl implements ScreenHost {
         final Screen closing = this.screen;
         this.screen = null;
         this.handle = null;
+        this.title = Text.empty();
         try {
             closing.closed();
         } finally {
             this.root.setContent(null);
             this.root.setScreen(null);
         }
+    }
+
+    /**
+     * Asks the open screen whether it may close and closes it if it agrees. A screen that closes itself through its
+     * handle while it is asked counts as agreeing.
+     */
+    @Override
+    public boolean requestClose() {
+        final Handle asked = this.handle;
+        if (asked == null) {
+            return true;
+        }
+        if (!asked.owner.closeRequested(asked)) {
+            return false;
+        }
+        if (this.handle == asked) {
+            this.close();
+        }
+        return true;
+    }
+
+    @Override
+    public Text title() {
+        return this.title;
     }
 
     @Override
@@ -388,6 +418,32 @@ public final class ScreenHostImpl implements ScreenHost {
             if (this.current()) {
                 ScreenHostImpl.this.closeRequested.run();
             }
+        }
+
+        @Override
+        public boolean requestClose() {
+            if (!this.current() || !this.owner.closeRequested(this)) {
+                return false;
+            }
+            // The screen may have closed itself while it was asked
+            if (this.current()) {
+                ScreenHostImpl.this.closeRequested.run();
+            }
+            return true;
+        }
+
+        @Override
+        public boolean isOpen() {
+            return this.current();
+        }
+
+        @Override
+        public ScreenHandle setTitle(final Text title) {
+            Objects.requireNonNull(title, "title");
+            if (this.current()) {
+                ScreenHostImpl.this.title = title;
+            }
+            return this;
         }
 
         @Override
