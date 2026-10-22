@@ -57,6 +57,10 @@ final class AnimationImpl implements Animation, Binding.Deferral {
         this.running = true;
     }
 
+    long start() {
+        return this.start;
+    }
+
     Object target() {
         return this.target;
     }

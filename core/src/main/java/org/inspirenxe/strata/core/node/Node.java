@@ -147,6 +147,8 @@ public class Node implements ComponentPeer {
     private Border border;
     private Tooltip tooltip;
 
+    private float opacity;
+
     // Drawing order among siblings: the z index, then the sequence number the parent gave when adding or raising
     private int zIndex;
     private long paintSequence;
@@ -179,6 +181,7 @@ public class Node implements ComponentPeer {
         this.hooks = Objects.requireNonNull(hooks, "hooks");
         this.visible = true;
         this.enabled = true;
+        this.opacity = 1f;
         this.margin = Insets.NONE;
         this.minWidth = 0f;
         this.maxWidth = Float.POSITIVE_INFINITY;
@@ -561,16 +564,31 @@ public class Node implements ComponentPeer {
     /**
      * Paints the component. If it has {@link Component#PAINT} handlers they run first, and canceling skips the
      * component's own drawing but still paints its children. Then come its background and border, its paint hook,
-     * its children, its over-children hook, and last any {@link Component#PAINTED} handlers. Hidden components and
-     * components with empty bounds paint nothing. The paint event object is made once and reused.
+     * its children, its over-children hook, and last any {@link Component#PAINTED} handlers. Hidden components,
+     * components with empty bounds and components with an opacity of 0 paint nothing. A component whose opacity is
+     * between 0 and 1 paints inside a {@code Canvas.pushOpacity} of it. The paint event object is made once and
+     * reused.
      *
      * @param painter the painter for this frame
      */
-    @SuppressWarnings("unchecked")
     public final void paint(final CanvasPainter painter) {
-        if (!this.visible || this.bounds.isEmpty()) {
+        if (!this.visible || this.bounds.isEmpty() || this.opacity <= 0f) {
             return;
         }
+        if (this.opacity >= 1f) {
+            this.paintOpaque(painter);
+            return;
+        }
+        painter.canvas().pushOpacity(this.opacity);
+        try {
+            this.paintOpaque(painter);
+        } finally {
+            painter.canvas().popOpacity();
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    private void paintOpaque(final CanvasPainter painter) {
         final EventDispatcher handlers = this.dispatcher;
         boolean own = true;
         if (handlers != null && handlers.hasHandlers(Component.PAINT)) {
@@ -1318,6 +1336,22 @@ public class Node implements ComponentPeer {
             this.offsetX = offsetX;
             this.offsetY = offsetY;
             this.invalidateArrangement();
+        }
+    }
+
+    @Override
+    public final float opacity() {
+        return this.opacity;
+    }
+
+    @Override
+    public final void setOpacity(final float opacity) {
+        if (!(opacity >= 0f && opacity <= 1f)) {
+            throw new IllegalArgumentException("An opacity must be from 0 to 1: " + opacity);
+        }
+        if (this.opacity != opacity) {
+            this.opacity = opacity;
+            this.repaint();
         }
     }
 

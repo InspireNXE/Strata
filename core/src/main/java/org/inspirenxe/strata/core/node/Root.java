@@ -15,6 +15,8 @@
  */
 package org.inspirenxe.strata.core.node;
 
+import org.inspirenxe.strata.api.animation.Easing;
+import org.inspirenxe.strata.api.animation.Interpolator;
 import org.inspirenxe.strata.api.component.Component;
 import org.inspirenxe.strata.api.component.CursorKind;
 import org.inspirenxe.strata.api.component.Focusable;
@@ -119,7 +121,9 @@ import java.util.function.Consumer;
  * whole host; the area is cut to the host, and core can move it while the popup is open.</p>
  *
  * <p>Toasts are overlays placed down the top-right corner. Presses elsewhere and Escape leave them open; each closes
- * on a click that nothing in it consumed, or on the first frame rendered after its time runs out.</p>
+ * on a click that nothing in it consumed, or on the first frame rendered after its time runs out. With the theme's
+ * {@value Overlays#STYLE_TOAST_FADE} metric above 0, a toast's content fades in from an opacity of 0 as it opens, and
+ * on the first frame rendered once less than that time is left it starts fading out, closing when the fade ends.</p>
  *
  * <p>Tooltips: the hovered node's tooltip, or its nearest ancestor's, shows whether or not they are enabled, so a
  * disabled control can say why it is disabled. Its corner is offset from the pointer's whole-unit position by the
@@ -305,8 +309,8 @@ public final class Root {
         long next = this.frames.earliest();
         for (int i = 0; i < this.layers.size(); i++) {
             final Layer layer = this.layers.get(i);
-            if (layer.isToast()) {
-                next = Math.min(next, layer.expiresAt * 1_000_000L);
+            if (layer.isToast() && !layer.fadingOut) {
+                next = Math.min(next, layer.fadeOutAt() * 1_000_000L);
             }
         }
         if (this.tooltipPending != null) {
@@ -1007,14 +1011,22 @@ public final class Root {
         boolean due = false;
         for (int i = 0; i < this.layers.size() && !due; i++) {
             final Layer layer = this.layers.get(i);
-            due = layer.isToast() && now >= layer.expiresAt;
+            due = layer.isToast() && !layer.fadingOut && now >= layer.fadeOutAt();
         }
         if (!due) {
             return;
         }
         for (final Layer layer : List.copyOf(this.layers)) {
-            if (layer.isToast() && now >= layer.expiresAt) {
-                layer.close();
+            if (layer.isToast() && !layer.fadingOut && now >= layer.fadeOutAt()) {
+                if (layer.fadeMillis > 0L) {
+                    // It closes when the fade ends, at its time or on the next frame after it
+                    layer.fadingOut = true;
+                    this.animator.animate(layer.node.facade(), Component.OPACITY, 0f,
+                            Math.max(0L, layer.expiresAt - now), Easing.EASE_IN, Interpolator.FLOAT)
+                            .onFinished(layer::close);
+                } else {
+                    layer.close();
+                }
             }
         }
     }
@@ -2011,6 +2023,9 @@ public final class Root {
         Rect area;
         // Whether the layer is drawn cut to its area
         boolean clipped;
+        // A toast's fade time, and whether its fade out has started
+        long fadeMillis;
+        boolean fadingOut;
 
         Layer(final Node node, final Rect anchor, final boolean modal, final boolean toast, final long expiresAt) {
             this.node = node;
@@ -2056,6 +2071,14 @@ public final class Root {
 
         boolean isToast() {
             return this.toast;
+        }
+
+        /**
+         * Returns when a toast's fade out starts, by the platform's clock: its fade time before it expires, or when it
+         * expires if it has no fade.
+         */
+        long fadeOutAt() {
+            return this.expiresAt - this.fadeMillis;
         }
 
         /**
@@ -2188,7 +2211,15 @@ public final class Root {
             if (millis <= 0L) {
                 throw new IllegalArgumentException("A toast must show for some time: " + millis);
             }
-            final Layer layer = Root.this.open(content, null, false, true, Root.this.platform.clock().millis() + millis);
+            final long now = Root.this.platform.clock().millis();
+            final Layer layer = Root.this.open(content, null, false, true, now + millis);
+            final Theme theme = Root.this.theme();
+            final long fade = Math.min(millis / 2L, Math.max(0L, (long) theme.metricOr(STYLE_TOAST_FADE, 0f)));
+            if (fade > 0L) {
+                layer.fadeMillis = fade;
+                content.setOpacity(0f);
+                Root.this.animator.animate(content, Component.OPACITY, 1f, fade, Easing.EASE_OUT, Interpolator.FLOAT);
+            }
             content.onEvent(InputEvents.CLICK, Integer.MAX_VALUE, event -> {
                 if (!event.isCancelled()) {
                     layer.close();

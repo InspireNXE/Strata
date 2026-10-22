@@ -138,6 +138,13 @@ public interface Component<T extends Component<T>> extends EventTarget<T>, Enabl
     PropertyKey<Component<?>, Boolean> VISIBLE = PropertyKey.of("component.visible", Component::isVisible,
             Component::setVisible);
 
+    /**
+     * The component's opacity, as {@link #opacity()} and {@link #setOpacity} say. Binds one way, and is what a fade
+     * animates: {@code ui.animator().animate(card, Component.OPACITY, 0f, 200, Easing.EASE_IN, Interpolator.FLOAT)}.
+     */
+    PropertyKey<Component<?>, Float> OPACITY = PropertyKey.of("component.opacity", Component::opacity,
+            Component::setOpacity);
+
     // Identity
 
     /**
@@ -502,6 +509,28 @@ public interface Component<T extends Component<T>> extends EventTarget<T>, Enabl
      * @return the desired height
      */
     float desiredHeight();
+
+    // Opacity
+
+    /**
+     * Returns how opaque the component is drawn.
+     *
+     * @return from 0, not drawn, to 1, opaque; 1 by default
+     */
+    float opacity();
+
+    /**
+     * Sets how opaque the component and everything inside it are drawn. Opacities multiply down the tree, so a
+     * child at 0.5 inside a parent at 0.5 draws at 0.25. It changes drawing only: a component at 0 still takes up
+     * its room, takes the pointer and keeps focus. A component at 0 is not drawn at all; one between 0 and 1 is
+     * drawn through the engine's canvas, and draws opaque on an engine that cannot fade. A change redraws but lays
+     * nothing out again.
+     *
+     * @param opacity from 0 to 1
+     * @return this component
+     * @throws IllegalArgumentException if {@code opacity} is NaN or outside 0 to 1
+     */
+    T setOpacity(float opacity);
 
     // Drawing order
 

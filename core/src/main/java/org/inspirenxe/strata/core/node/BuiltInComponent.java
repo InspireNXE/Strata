@@ -764,6 +764,17 @@ public abstract class BuiltInComponent<T extends Component<T>> implements Compon
     }
 
     @Override
+    public final float opacity() {
+        return this.node.opacity();
+    }
+
+    @Override
+    public final T setOpacity(final float opacity) {
+        this.node.setOpacity(opacity);
+        return this.self();
+    }
+
+    @Override
     public final int zIndex() {
         return this.node.zIndex();
     }

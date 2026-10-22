@@ -776,6 +776,17 @@ public abstract class CustomComponent<T extends Component<T>> implements Compone
     }
 
     @Override
+    public final float opacity() {
+        return this.peer.opacity();
+    }
+
+    @Override
+    public final T setOpacity(final float opacity) {
+        this.peer.setOpacity(opacity);
+        return this.self();
+    }
+
+    @Override
     public final int zIndex() {
         return this.peer.zIndex();
     }

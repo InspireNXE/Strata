@@ -206,6 +206,26 @@ public interface Canvas {
     void popTransform();
 
     /**
+     * Multiplies the alpha of every later color and tint by a factor, until the matching {@link #popOpacity()}.
+     * Factors multiply when nested. Core pushes one around each component whose opacity is between 0 and 1, so a
+     * fade covers everything the component and its children draw.
+     *
+     * <p>The default does nothing, so an adapter that does not override both methods draws such components opaque
+     * and fades show as jumps at their end. An engine that can fade only some kinds of draw, such as text and fills
+     * but not its own visuals, says which in its canvas Javadoc.</p>
+     *
+     * @param opacity the factor, from 0 exclusive to 1 exclusive
+     */
+    default void pushOpacity(final float opacity) {
+    }
+
+    /**
+     * Restores the opacity in place before the matching {@link #pushOpacity(float)}. The default does nothing.
+     */
+    default void popOpacity() {
+    }
+
+    /**
      * Draws an engine visual stretched over a rectangle. Draw the visuals this adapter makes; for any other visual
      * draw a visible placeholder instead of throwing, as for a missing sprite.
      *

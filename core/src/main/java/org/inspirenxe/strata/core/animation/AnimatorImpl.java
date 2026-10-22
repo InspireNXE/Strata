@@ -109,6 +109,8 @@ public final class AnimatorImpl implements Animator {
                 easing, step, target, keyName);
         this.running.add(animation);
         this.frames.request();
+        // Due at once, even if the request comes while a frame is being prepared and is forgotten when it paints
+        this.frames.at(animation.start());
         return animation;
     }
 

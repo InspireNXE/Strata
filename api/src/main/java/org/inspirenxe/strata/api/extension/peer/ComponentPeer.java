@@ -344,6 +344,20 @@ public interface ComponentPeer {
     void setOffset(float offsetX, float offsetY);
 
     /**
+     * See {@link org.inspirenxe.strata.api.component.Component#opacity()}.
+     *
+     * @return the opacity
+     */
+    float opacity();
+
+    /**
+     * See {@link org.inspirenxe.strata.api.component.Component#setOpacity(float)}.
+     *
+     * @param opacity the opacity
+     */
+    void setOpacity(float opacity);
+
+    /**
      * See {@link org.inspirenxe.strata.api.component.Component#zIndex()}.
      *
      * @return the z index

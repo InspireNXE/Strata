@@ -91,6 +91,15 @@ public interface Overlays {
      */
     String STYLE_TOAST_MARGIN = "toast.margin";
     /**
+     * Style key for how long a toast takes to fade in when it opens and to fade out before its time runs out, in
+     * milliseconds (metric, optional). The fade animates the content's
+     * {@linkplain org.inspirenxe.strata.api.component.Component#OPACITY opacity}; the fade out starts that long
+     * before the toast's time is up and the toast closes when it ends. A toast that shows for less than twice the
+     * time fades in and out over half its time each. A click still closes a toast at once. Defaults to 0: toasts
+     * appear and go at once.
+     */
+    String STYLE_TOAST_FADE = "toast.fade";
+    /**
      * How long a toast shows unless told otherwise, in milliseconds.
      */
     long DEFAULT_TOAST_MILLIS = 3000L;
