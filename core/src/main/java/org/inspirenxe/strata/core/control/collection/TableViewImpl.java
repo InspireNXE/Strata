@@ -361,7 +361,7 @@ public final class TableViewImpl<T> extends ListBackedControl<T, T, TableView<T>
     @Override
     public TableView<T> setItems(final List<? extends T> items) {
         // The comparator and the key function run before anything changes
-        final List<T> next = List.copyOf(items);
+        final List<T> next = Items.copyOf(items);
         final int[] order = this.orderOf(next, this.sortColumn, this.ascending);
         final List<T> sorted = inOrder(next, order, this.sortColumn != null);
         final IntUnaryOperator moves = this.list.keyMoves(sorted);

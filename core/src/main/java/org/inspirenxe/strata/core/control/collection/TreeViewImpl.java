@@ -105,7 +105,7 @@ public final class TreeViewImpl<T> extends ListBackedControl<T, TreeViewImpl.Ent
     @Override
     public TreeView<T> setItems(final List<? extends T> items) {
         final List<T> previous = this.roots;
-        this.roots = List.copyOf(items);
+        this.roots = Items.copyOf(items);
         try {
             this.rebuild();
         } catch (final RuntimeException | Error e) {

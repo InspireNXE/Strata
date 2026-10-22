@@ -180,7 +180,7 @@ public final class ListViewImpl<T> extends BuiltInComposite<ListView<T>> impleme
 
     @Override
     public ListView<T> setItems(final List<? extends T> items) {
-        final List<T> next = List.copyOf(items);
+        final List<T> next = Items.copyOf(items);
         this.replaceItems(next, this.keyMoves(next));
         return this;
     }

@@ -126,7 +126,7 @@ public interface Selection<T, S extends Selection<T, S>> extends EventTarget<S> 
      * Selects the first entry equal to the given one, or with the same key on a control with an
      * {@linkplain ItemSource#setKeyFunction key function}. Clears the selection if there is none.
      *
-     * @param item the entry to find; may be null where the control holds null entries
+     * @param item the entry to find; on a control with {@link ItemSource} items, null clears the selection
      * @return this control
      */
     S selectItem(T item);

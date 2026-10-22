@@ -26,6 +26,17 @@ import java.util.function.Function;
  * <p>The control keeps a copy of the list it is given. Change what it shows with {@link #setItems}, or with
  * {@link #refresh} when the items themselves changed inside.</p>
  *
+ * <p>Items are not null, except in a grid, where a null item is an empty cell. Every other control refuses a null
+ * item in {@link #setItems}, and {@link Selection#selectItem} with null clears its selection, a grid's too.</p>
+ *
+ * <p>A control with a {@linkplain Selection selection} keeps it on the same items when they change: each selected
+ * item moves to the new item with the same {@linkplain #setKeyFunction key}. Items with equal keys are matched in
+ * order, so the second item with a key moves to the second new one, or to the last when there are fewer. A selected
+ * item that no new item matches leaves the selection, and nothing is selected in its place. Three controls depart
+ * from this, as each describes. A grid is positional: it keeps the selected index while that cell exists. A combo box
+ * that has never had a selection selects its first option when it gets options. A cycle button, which always shows
+ * a value, selects its first item when its selected item is gone.</p>
+ *
  * <p>Do not implement this interface.</p>
  *
  * @param <T> the type of the items
@@ -59,11 +70,12 @@ public interface ItemSource<T, S extends ItemSource<T, S>> {
     List<T> items();
 
     /**
-     * Replaces the items. A control with a {@linkplain Selection selection} keeps it as the control describes,
-     * usually on the item with the selected item's {@linkplain #setKeyFunction key}.
+     * Replaces the items. A control with a {@linkplain Selection selection} keeps it as this interface describes,
+     * on the items with the selected items' {@linkplain #setKeyFunction keys}.
      *
      * @param items the items; the control keeps a copy
      * @return this control
+     * @throws NullPointerException if an item is null, on any control but a grid
      */
     S setItems(List<? extends T> items);
 

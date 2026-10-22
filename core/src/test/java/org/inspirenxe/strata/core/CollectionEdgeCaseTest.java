@@ -41,6 +41,7 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
@@ -359,6 +360,63 @@ class CollectionEdgeCaseTest {
             assertEquals(List.of("Ana", "Ben", "Ana"), tree.shownItems());
             assertDoesNotThrow(() -> tree.selectItem("Ben"));
             assertEquals(1, tree.selectedIndex());
+        }
+    }
+
+    @Nested
+    class SelectionPolicy {
+        @Test
+        void aComboBoxSelectsItsFirstOptionOnlyBeforeItHadASelection() {
+            final ComboBox<String> combo = CollectionEdgeCaseTest.this.ui.<String>comboBox();
+            combo.setItems(List.of());
+            combo.setItems(List.of("Ana", "Ben"));
+            assertEquals(Optional.of("Ana"), combo.selected());
+            combo.setItems(List.of("Cleo", "Dev"));
+            assertEquals(-1, combo.selectedIndex());
+            combo.setItems(List.of("Eli"));
+            assertEquals(-1, combo.selectedIndex());
+        }
+
+        @Test
+        void aClearedComboBoxStaysClearedAcrossNewOptions() {
+            final ComboBox<String> combo = CollectionEdgeCaseTest.this.ui.<String>comboBox();
+            combo.clearSelection();
+            combo.setItems(List.of("Ana", "Ben"));
+            assertEquals(-1, combo.selectedIndex());
+
+            final ComboBox<String> other = CollectionEdgeCaseTest.this.ui.<String>comboBox().setItems(List.of("Ana"));
+            other.clearSelection();
+            other.setItems(List.of("Ana", "Ben"));
+            assertEquals(-1, other.selectedIndex());
+        }
+
+        @Test
+        void selectingNullClearsTheSelectionOfEveryCollectionControl() {
+            final ComponentFactory ui = CollectionEdgeCaseTest.this.ui;
+            final ListView<String> list = ui.<String>listView().setItems(List.of("Ana")).select(0).selectItem(null);
+            assertEquals(-1, list.selectedIndex());
+            final TableView<String> table = ui.<String>tableView().setItems(List.of("Ana")).select(0).selectItem(null);
+            assertEquals(-1, table.selectedIndex());
+            final TreeView<String> tree = ui.<String>treeView().setItems(List.of("Ana")).select(0).selectItem(null);
+            assertEquals(-1, tree.selectedIndex());
+            final ComboBox<String> combo = ui.<String>comboBox().setItems(List.of("Ana")).selectItem(null);
+            assertEquals(-1, combo.selectedIndex());
+            final GridView<String> grid = ui.<String>gridView(ui::label).setItems(Arrays.asList("Ana", null))
+                    .select(0).selectItem(null);
+            assertEquals(-1, grid.selectedIndex());
+        }
+
+        @Test
+        void nullItemsAreRefusedByNameExceptInAGrid() {
+            final ComponentFactory ui = CollectionEdgeCaseTest.this.ui;
+            final List<String> holed = Arrays.asList("Ana", null);
+            final NullPointerException thrown = assertThrows(NullPointerException.class,
+                    () -> ui.<String>listView().setItems(holed));
+            assertTrue(thrown.getMessage().contains("1"));
+            assertThrows(NullPointerException.class, () -> ui.<String>tableView().setItems(holed));
+            assertThrows(NullPointerException.class, () -> ui.<String>treeView().setItems(holed));
+            assertThrows(NullPointerException.class, () -> ui.<String>comboBox().setItems(holed));
+            assertEquals(holed, ui.<String>gridView(ui::label).setItems(holed).items());
         }
     }
 }

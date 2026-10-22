@@ -137,10 +137,12 @@ public interface TreeView<T> extends Component<TreeView<T>>, HasCursor<TreeView<
     List<T> items();
 
     /**
-     * Replaces the top-level items, the roots. Expanded keys and the selection carry over to items with the same key.
+     * Replaces the top-level items, the roots. Expanded keys and the selection carry over to items with the same key,
+     * as {@link ItemSource} describes.
      *
      * @param items the new roots, copied
      * @return this tree
+     * @throws NullPointerException if a root is null
      */
     @Override
     TreeView<T> setItems(List<? extends T> items);

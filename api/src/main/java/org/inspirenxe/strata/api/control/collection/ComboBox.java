@@ -45,9 +45,10 @@ import java.util.function.Function;
  * <p>Options are drawn with the {@linkplain #setLabelFunction label function}. The one that
  * {@link org.inspirenxe.strata.api.ComponentFactory#comboBox()} sets shows each option by its appearance's name, or
  * by {@link String#valueOf(Object)} when it has no appearance. When options are set, the selection moves to the
- * option with the selected option's {@linkplain #setKeyFunction key}, or to the first option if there is none.
- * Code can clear the selection with {@link #clearSelection()}; the box then shows no text until something is
- * selected.</p>
+ * option with the selected option's {@linkplain #setKeyFunction key}, or clears if no option has it, as
+ * {@link ItemSource} describes. A box that has never had a selection selects its first option when it gets options;
+ * once an option was selected, or code called {@link #select} or {@link #clearSelection()}, new options never select
+ * one by themselves. With nothing selected the box shows no text.</p>
  *
  * <p>The selection events carry option indexes, so read the option from the box:
  * {@code box.items().get(e.value())}. The open list is private to the box and fires no events of its own. The box
@@ -152,10 +153,13 @@ public interface ComboBox<T> extends Component<ComboBox<T>>, Focusable<ComboBox<
 
     /**
      * Closes the list, then replaces the options, so a {@link Closable#CLOSED} handler sees the options and the
-     * selection from before. The selection moves to the option with the selected option's key, or to the first one. {@link SingleSelection#SELECTED} fires if the selected option or its index changed.
+     * selection from before. The selection moves to the option with the selected option's key, or clears if none
+     * has it. A box that has never had a selection, and that code has not cleared, selects the first option.
+     * {@link SingleSelection#SELECTED} fires if the selected option or its index changed.
      *
      * @param items the options; the box keeps a copy
      * @return this box
+     * @throws NullPointerException if an option is null
      */
     @Override
     ComboBox<T> setItems(List<? extends T> items);
@@ -198,7 +202,7 @@ public interface ComboBox<T> extends Component<ComboBox<T>>, Focusable<ComboBox<
     /**
      * Selects the first option with the same key as the given one, or nothing if there is none.
      *
-     * @param item the option
+     * @param item the option, or null to select nothing
      * @return this box
      */
     @Override

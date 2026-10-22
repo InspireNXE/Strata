@@ -216,12 +216,13 @@ public interface ListView<T> extends Component<ListView<T>>, Focusable<ListView<
     List<T> items();
 
     /**
-     * Replaces the items and rebuilds the rows in view. The selection moves to the item with the selected item's
-     * key, or clears; {@link #SELECTED} fires if the selected item or its index changed. The scroll offset is kept,
-     * clamped to the new length.
+     * Replaces the items and rebuilds the rows in view. Each selected item moves to the item with its key, as
+     * {@link ItemSource} describes, or leaves the selection; {@link #SELECTED} fires if the selected item or its
+     * index changed. The scroll offset is kept, clamped to the new length.
      *
      * @param items the items; the list keeps a copy
      * @return this list
+     * @throws NullPointerException if an item is null
      */
     ListView<T> setItems(List<? extends T> items);
 
@@ -307,7 +308,7 @@ public interface ListView<T> extends Component<ListView<T>>, Focusable<ListView<
     /**
      * Selects the first item with the same key as the given one, or clears the selection if there is none.
      *
-     * @param item the item to find by its key
+     * @param item the item to find by its key, or null to clear the selection
      * @return this list
      */
     ListView<T> selectItem(T item);

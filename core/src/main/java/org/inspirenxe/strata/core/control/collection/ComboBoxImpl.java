@@ -83,6 +83,8 @@ public final class ComboBoxImpl<T> extends BuiltInComponent<ComboBox<T>> impleme
     private Function<? super T, ?> labelFunction;
     private Function<? super T, ?> keyFunction;
     private int selectedIndex;
+    // Set once an option was selected or code set the selection; until then new options select the first one
+    private boolean settled;
     private int maxVisible;
     private Overlay popup;
     private ListViewImpl<T> list;
@@ -143,20 +145,20 @@ public final class ComboBoxImpl<T> extends BuiltInComponent<ComboBox<T>> impleme
 
     @Override
     public ComboBox<T> setItems(final List<? extends T> items) {
-        final List<T> next = List.copyOf(items);
+        final List<T> next = Items.copyOf(items);
         // Closing first lets a CLOSED handler see the box as it was, with its index inside its options
         this.close();
         final Optional<T> before = this.selected();
         final int beforeIndex = this.selectedIndex;
-        int index = next.isEmpty() ? -1 : 0;
+        final int index;
         if (beforeIndex >= 0) {
-            final int found = Items.indexOf(next, this.keyFunction, this.options.get(beforeIndex));
-            if (found >= 0) {
-                index = found;
-            }
+            index = Items.indexOf(next, this.keyFunction, this.options.get(beforeIndex));
+        } else {
+            index = this.settled || next.isEmpty() ? -1 : 0;
         }
         this.options = next;
         this.selectedIndex = index;
+        this.settled |= index >= 0;
         this.shownIndex = -2;
         this.invalidateLayout();
         if (index != beforeIndex || !this.selected().equals(before)) {
@@ -204,6 +206,7 @@ public final class ComboBoxImpl<T> extends BuiltInComponent<ComboBox<T>> impleme
             Objects.checkIndex(index, this.options.size());
         }
         final int previous = this.selectedIndex;
+        this.settled = true;
         if (index != previous) {
             this.selectedIndex = index;
             this.shownIndex = -2;

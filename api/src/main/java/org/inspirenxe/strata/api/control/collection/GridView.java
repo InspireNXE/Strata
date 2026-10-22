@@ -41,7 +41,8 @@ import java.util.function.Function;
  * the item, inset by the theme's {@value #STYLE_CELL_PADDING}, one unit by default, and the tooltip its tooltip
  * function gives. Cells are rebuilt when the items, the
  * cell factory or the tooltip function change. Unlike a list, the grid is positional: {@link #setItems} keeps the
- * selection on the same index, and {@link #setKeyFunction} only affects {@link #selectItem}.</p>
+ * selection on the same index, and {@link #setKeyFunction} only affects {@link #selectItem}, which finds filled
+ * cells only. {@code selectItem(null)} clears the selection; select an empty cell by its index.</p>
  *
  * <p>Clicking a cell with any button fires {@link #CLICK} and then {@link #CLICKED}, empty cells included, and
  * consumes the click. A {@linkplain #setSelectable selectable} grid also selects the cell clicked with the left

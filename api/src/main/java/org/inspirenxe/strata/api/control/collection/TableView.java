@@ -280,6 +280,7 @@ public interface TableView<T> extends Component<TableView<T>>, HasCursor<TableVi
      *
      * @param items the new items, copied
      * @return this table
+     * @throws NullPointerException if an item is null
      */
     TableView<T> setItems(List<? extends T> items);
 
@@ -341,7 +342,7 @@ public interface TableView<T> extends Component<TableView<T>>, HasCursor<TableVi
     /**
      * Selects the row of an item with the same key, or nothing if there is none.
      *
-     * @param item the item
+     * @param item the item, or null to select nothing
      * @return this table
      */
     TableView<T> selectItem(T item);
