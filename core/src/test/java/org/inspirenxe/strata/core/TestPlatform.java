@@ -109,8 +109,20 @@ public final class TestPlatform implements Platform {
         };
     }
 
+    private Clipboard clipboardOverride;
+
+    /**
+     * Makes {@link #clipboard()} return a clipboard of the test's own, or the text one again for null.
+     */
+    public void setClipboard(final Clipboard clipboard) {
+        this.clipboardOverride = clipboard;
+    }
+
     @Override
     public Clipboard clipboard() {
+        if (this.clipboardOverride != null) {
+            return this.clipboardOverride;
+        }
         return new Clipboard() {
             @Override
             public Optional<String> get() {

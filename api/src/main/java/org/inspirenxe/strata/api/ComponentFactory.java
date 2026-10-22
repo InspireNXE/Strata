@@ -91,6 +91,7 @@ import org.inspirenxe.strata.api.state.State;
 import org.inspirenxe.strata.api.text.Text;
 import org.inspirenxe.strata.api.theme.SpriteId;
 import org.inspirenxe.strata.api.theme.Theme;
+import org.inspirenxe.strata.api.transfer.Transfer;
 import org.inspirenxe.strata.api.visual.Visual;
 
 import java.time.LocalDate;
@@ -168,6 +169,22 @@ public interface ComponentFactory {
      * @throws IllegalStateException if the factory has no host yet
      */
     Animator animator();
+
+    /**
+     * Reads the clipboard of the host's platform in every format it holds, as {@code Environment.clipboard()}
+     * describes.
+     *
+     * @return the clipboard's content, or empty if it holds nothing or the engine has no clipboard
+     */
+    Optional<Transfer> clipboard();
+
+    /**
+     * Puts a transfer on the clipboard of the host's platform, as {@code Environment.setClipboard} describes: the
+     * engine gets every format but the local ones, and this process gets the whole transfer back.
+     *
+     * @param transfer what to put on the clipboard
+     */
+    void setClipboard(Transfer transfer);
 
     /**
      * Calls a listener when a source's value changes, for screen code that acts on a change, such as saving a setting

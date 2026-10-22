@@ -17,6 +17,7 @@ package org.inspirenxe.strata.api.extension;
 
 import org.inspirenxe.strata.api.input.Modifiers;
 import org.inspirenxe.strata.api.text.TextMetrics;
+import org.inspirenxe.strata.api.transfer.Transfer;
 
 import java.util.Optional;
 
@@ -47,18 +48,39 @@ public interface Environment {
     long millis();
 
     /**
-     * Reads text from the clipboard.
+     * Reads text from the clipboard: the {@link org.inspirenxe.strata.api.transfer.DataFormat#TEXT} of
+     * {@link #clipboard()}.
      *
      * @return the clipboard text, or empty if it holds none or the engine has no clipboard
      */
     Optional<String> clipboardText();
 
     /**
-     * Puts text on the clipboard. Engines without a clipboard ignore it.
+     * Puts text on the clipboard, as {@link #setClipboard} does with {@link Transfer#text}. Engines without a
+     * clipboard ignore it.
      *
      * @param text the text
      */
     void setClipboardText(String text);
+
+    /**
+     * Reads the clipboard in every format it holds. While the engine's clipboard still holds the text of the last
+     * transfer this process {@linkplain #setClipboard set}, it is that whole transfer, local formats included;
+     * otherwise it is what the engine reads, which is at least the text.
+     *
+     * @return the clipboard's content, or empty if it holds nothing or the engine has no clipboard
+     */
+    Optional<Transfer> clipboard();
+
+    /**
+     * Puts a transfer on the clipboard. The engine gets every format but the
+     * {@linkplain org.inspirenxe.strata.api.transfer.DataFormat#isLocal() local} ones, in what it can hold, which
+     * is at least the text; the whole transfer is kept for {@link #clipboard()} in this process. So rows copied as
+     * text and as objects paste back as objects in the application and as text everywhere else.
+     *
+     * @param transfer what to put on the clipboard
+     */
+    void setClipboard(Transfer transfer);
 
     /**
      * Returns the modifier keys held, as of the latest input the host received.

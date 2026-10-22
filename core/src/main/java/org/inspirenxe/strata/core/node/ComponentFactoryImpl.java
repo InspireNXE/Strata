@@ -100,6 +100,7 @@ import org.inspirenxe.strata.api.text.Text;
 import org.inspirenxe.strata.api.text.TextOverflow;
 import org.inspirenxe.strata.api.theme.SpriteId;
 import org.inspirenxe.strata.api.theme.Theme;
+import org.inspirenxe.strata.api.transfer.Transfer;
 import org.inspirenxe.strata.api.visual.Visual;
 import org.inspirenxe.strata.core.control.button.ButtonImpl;
 import org.inspirenxe.strata.core.control.button.CheckBoxImpl;
@@ -286,6 +287,16 @@ public final class ComponentFactoryImpl implements ComponentFactory {
             throw new IllegalStateException("This factory has no host yet");
         }
         return this.root.watch(source, listener);
+    }
+
+    @Override
+    public Optional<Transfer> clipboard() {
+        return this.environment.clipboard();
+    }
+
+    @Override
+    public void setClipboard(final Transfer transfer) {
+        this.environment.setClipboard(transfer);
     }
 
     @Override

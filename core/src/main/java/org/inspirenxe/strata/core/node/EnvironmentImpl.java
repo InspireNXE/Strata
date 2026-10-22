@@ -18,7 +18,10 @@ package org.inspirenxe.strata.core.node;
 import org.inspirenxe.strata.api.extension.Environment;
 import org.inspirenxe.strata.api.input.Modifiers;
 import org.inspirenxe.strata.api.text.TextMetrics;
+import org.inspirenxe.strata.api.transfer.DataFormat;
+import org.inspirenxe.strata.api.transfer.Transfer;
 import org.inspirenxe.strata.core.text.InlineMetrics;
+import org.inspirenxe.strata.core.transfer.Clipboards;
 import org.inspirenxe.strata.spi.Platform;
 
 import java.util.Objects;
@@ -53,12 +56,22 @@ final class EnvironmentImpl implements Environment {
 
     @Override
     public Optional<String> clipboardText() {
-        return this.platform.clipboard().get();
+        return this.clipboard().flatMap(transfer -> transfer.get(DataFormat.TEXT));
     }
 
     @Override
     public void setClipboardText(final String text) {
-        this.platform.clipboard().set(Objects.requireNonNull(text, "text"));
+        this.setClipboard(Transfer.text(Objects.requireNonNull(text, "text")));
+    }
+
+    @Override
+    public Optional<Transfer> clipboard() {
+        return Clipboards.read(this.platform);
+    }
+
+    @Override
+    public void setClipboard(final Transfer transfer) {
+        Clipboards.write(this.platform, Objects.requireNonNull(transfer, "transfer"));
     }
 
     @Override

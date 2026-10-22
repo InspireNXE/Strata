@@ -24,6 +24,8 @@ import org.inspirenxe.strata.api.text.TextSpan;
 import org.inspirenxe.strata.api.text.TextStyle;
 import org.inspirenxe.strata.api.theme.ThemeId;
 import org.inspirenxe.strata.api.theme.Themes;
+import org.inspirenxe.strata.api.transfer.DataFormat;
+import org.inspirenxe.strata.api.transfer.Transfer;
 import org.inspirenxe.strata.spi.Capabilities;
 import org.inspirenxe.strata.spi.Clipboard;
 import org.inspirenxe.strata.spi.Clock;
@@ -284,6 +286,29 @@ public abstract class PlatformContract {
         final Clipboard clipboard = this.platform().clipboard();
         clipboard.set("strata clipboard check 😀");
         assertEquals(Optional.of("strata clipboard check 😀"), clipboard.get());
+    }
+
+    @Test
+    void clipboardTransfersNeverThrow() {
+        final Clipboard clipboard = this.platform().clipboard();
+        assertDoesNotThrow(() -> {
+            clipboard.setTransfer(Transfer.text("strata"));
+            clipboard.setTransfer(Transfer.builder().add(DataFormat.TEXT, "a,b").add(DataFormat.mime("text/csv"), "a,b")
+                    .build());
+            clipboard.setTransfer(Transfer.empty());
+            clipboard.getTransfer();
+        });
+    }
+
+    @Test
+    void clipboardTransfersKeepTheirText() {
+        assumeTrue(this.hasClipboard(), "the platform has no working clipboard here");
+        final Clipboard clipboard = this.platform().clipboard();
+        clipboard.setTransfer(Transfer.builder().add(DataFormat.TEXT, "Ana	12").add(DataFormat.mime("text/csv"), "Ana,12")
+                .build());
+        assertEquals(Optional.of("Ana	12"), clipboard.get(), "get() reads the text setTransfer wrote");
+        assertEquals(Optional.of("Ana	12"), clipboard.getTransfer().flatMap(transfer -> transfer.get(DataFormat.TEXT)),
+                "getTransfer() holds the text");
     }
 
     @Test
