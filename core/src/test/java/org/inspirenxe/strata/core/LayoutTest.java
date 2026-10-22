@@ -17,7 +17,10 @@ package org.inspirenxe.strata.core;
 
 import org.inspirenxe.strata.api.ComponentFactory;
 import org.inspirenxe.strata.api.control.display.Label;
+import org.inspirenxe.strata.api.extension.CustomComponent;
+import org.inspirenxe.strata.api.extension.MeasureContext;
 import org.inspirenxe.strata.api.geometry.Rect;
+import org.inspirenxe.strata.api.geometry.Size;
 import org.inspirenxe.strata.api.layout.Anchor;
 import org.inspirenxe.strata.api.layout.AnchorPanel;
 import org.inspirenxe.strata.api.layout.GridLength;
@@ -27,7 +30,10 @@ import org.inspirenxe.strata.api.layout.StackPanel;
 import org.inspirenxe.strata.api.layout.VerticalAlignment;
 import org.junit.jupiter.api.Test;
 
+import java.util.List;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class LayoutTest {
@@ -178,5 +184,108 @@ class LayoutTest {
 
         assertEquals(100, box.desiredWidth());
         assertEquals(20, box.desiredHeight());
+    }
+
+    /**
+     * Records the space it was last measured with.
+     */
+    private static final class Probe extends CustomComponent<Probe> {
+        private float offeredWidth;
+        private float offeredHeight;
+
+        Probe(final ComponentFactory ui) {
+            super(ui);
+        }
+
+        @Override
+        protected Size measure(final MeasureContext context, final float availableWidth, final float availableHeight) {
+            this.offeredWidth = availableWidth;
+            this.offeredHeight = availableHeight;
+            return new Size(5, 5);
+        }
+    }
+
+    @Test
+    void gridWeightedColumnKeepsItsChildsMinimum() {
+        final TestHost test = new TestHost(200, 50);
+        final ComponentFactory ui = test.factory();
+        final Box wide = new Box(ui, 5, 5).setAnchor(Anchor.FILL).setMinSize(150, 0);
+        final Box other = new Box(ui, 5, 5).setAnchor(Anchor.FILL);
+        final GridPanel grid = ui.gridPanel()
+                .columns(GridLength.weighted(1), GridLength.weighted(1))
+                .rows(GridLength.weighted(1));
+        grid.add(wide, 0, 0).add(other, 0, 1);
+        grid.setAnchor(Anchor.FILL);
+
+        test.show(grid);
+
+        // Half of 200 is below 150, so the first column keeps 150 and the second gets the rest
+        assertEquals(new Rect(0, 0, 150, 50), wide.bounds());
+        assertEquals(new Rect(150, 0, 50, 50), other.bounds());
+    }
+
+    @Test
+    void gridCappedWeightedColumnLeavesItsShareToTheOthers() {
+        final TestHost test = new TestHost(200, 50);
+        final ComponentFactory ui = test.factory();
+        final Box capped = new Box(ui, 5, 5).setAnchor(Anchor.FILL).setMaxSize(40, Float.POSITIVE_INFINITY);
+        final Box other = new Box(ui, 5, 5).setAnchor(Anchor.FILL);
+        final GridPanel grid = ui.gridPanel()
+                .columns(GridLength.weighted(1), GridLength.weighted(1))
+                .rows(GridLength.weighted(1));
+        grid.add(capped, 0, 0).add(other, 0, 1);
+        grid.setAnchor(Anchor.FILL);
+
+        test.show(grid);
+
+        assertEquals(new Rect(0, 0, 40, 50), capped.bounds());
+        assertEquals(new Rect(40, 0, 160, 50), other.bounds());
+    }
+
+    @Test
+    void gridWithoutDefinitionsFollowsASmallerSlot() {
+        final TestHost test = new TestHost(300, 300);
+        final ComponentFactory ui = test.factory();
+        final Box box = new Box(ui, 10, 10).setAnchor(Anchor.FILL);
+        final GridPanel grid = ui.gridPanel().add(box);
+        grid.setAnchor(Anchor.FILL);
+        final Squeeze squeeze = new Squeeze(ui, 200, 100).add(grid);
+        test.show(squeeze);
+        assertEquals(new Rect(0, 0, 200, 100), box.bounds());
+
+        squeeze.squeeze(100, 50);
+        test.host().layout();
+
+        assertEquals(new Rect(0, 0, 100, 50), box.bounds());
+    }
+
+    @Test
+    void gridOffersChildrenOfWeightedRowsTheirRowsShare() {
+        final TestHost test = new TestHost(200, 100);
+        final ComponentFactory ui = test.factory();
+        final Probe autoColumn = new Probe(ui);
+        final Probe weightedColumn = new Probe(ui);
+        final GridPanel grid = ui.gridPanel()
+                .columns(GridLength.auto(), GridLength.weighted(1))
+                .rows(GridLength.fixed(20), GridLength.weighted(1), GridLength.weighted(3));
+        grid.add(autoColumn, 1, 0).add(weightedColumn, 2, 1);
+        grid.setAnchor(Anchor.FILL);
+
+        test.show(grid);
+
+        // The weighted rows share the 80 the fixed row leaves by 1 to 3; the auto column is 5 wide
+        assertEquals(20, autoColumn.offeredHeight);
+        assertEquals(60, weightedColumn.offeredHeight);
+        assertEquals(195, weightedColumn.offeredWidth);
+    }
+
+    @Test
+    void gridDefinitionsRefuseANullLength() {
+        final TestHost test = new TestHost(100, 100);
+        final GridPanel grid = test.factory().gridPanel().columns(GridLength.auto());
+
+        assertThrows(NullPointerException.class, () -> grid.columns(GridLength.auto(), null));
+        assertThrows(NullPointerException.class, () -> grid.rows((GridLength) null));
+        assertEquals(List.of(GridLength.auto()), grid.columnDefinitions());
     }
 }

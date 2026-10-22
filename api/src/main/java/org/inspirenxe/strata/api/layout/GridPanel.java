@@ -29,8 +29,14 @@ import java.util.List;
  * the cells it spans, with the spacing between them) and it aligns itself there like in any container. Several
  * children may share a cell.</p>
  *
- * <p>A grid with no row or column definitions acts as one auto cell. Cells outside the defined rows and columns
- * are moved to the last row or column, and spans are cut to fit.</p>
+ * <p>A weighted track keeps within the size limits of the visible children that sit only in it, margins included:
+ * it is never smaller than the largest {@linkplain Component#minWidth() minimum} among them, nor larger than the
+ * largest {@linkplain Component#maxWidth() maximum}. A track held at a limit leaves the other weighted tracks to
+ * share the rest by their weights.</p>
+ *
+ * <p>Without column definitions a grid has one column, which fills the content box, or is as wide as its widest
+ * child when that is wider; rows work the same way. Cells outside the defined rows and columns are moved to the
+ * last row or column, and spans are cut to fit.</p>
  *
  * <pre>{@code
  * GridPanel form = factory.gridPanel()

@@ -19,9 +19,9 @@ package org.inspirenxe.strata.api.layout;
  * How big a {@link GridPanel} row or column is.
  *
  * <p>The grid first gives fixed tracks their size and auto tracks the size of their largest child. Whatever width
- * (or height) remains is then shared among weighted tracks in proportion to their weights. When the grid is
- * measured without a size limit, weighted tracks take the smallest size that fits their children while keeping
- * their proportions.</p>
+ * (or height) remains is then shared among weighted tracks in proportion to their weights, each kept within the
+ * size limits of its children as {@link GridPanel} describes. When the grid is measured without a size limit,
+ * weighted tracks take the smallest size that fits their children while keeping their proportions.</p>
  */
 public sealed interface GridLength {
     /**
