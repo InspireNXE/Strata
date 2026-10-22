@@ -387,6 +387,12 @@ public final class TableViewImpl<T> extends ListBackedControl<T, T, TableView<T>
     }
 
     @Override
+    public TableView<T> refresh(final T item) {
+        this.list.refresh(item);
+        return this;
+    }
+
+    @Override
     public TableView<T> setKeyFunction(final Function<? super T, ?> keyFunction) {
         this.list.setKeyFunction(keyFunction);
         return this;

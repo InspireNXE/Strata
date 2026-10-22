@@ -213,6 +213,21 @@ public final class GridViewImpl<T> extends BuiltInComposite<GridView<T>> impleme
     }
 
     @Override
+    public GridView<T> refresh(final T item) {
+        if (item == null) {
+            return this;
+        }
+        final Object key = this.keyFunction.apply(item);
+        for (final Slot<T> slot : this.slots.values()) {
+            final T held = this.items.get(slot.index);
+            if (held != null && Objects.equals(key, this.keyFunction.apply(held))) {
+                slot.fill(held);
+            }
+        }
+        return this;
+    }
+
+    @Override
     public GridView<T> setKeyFunction(final Function<? super T, ?> keyFunction) {
         this.keyFunction = Objects.requireNonNull(keyFunction, "keyFunction");
         return this;

@@ -36,13 +36,16 @@ import org.inspirenxe.strata.core.node.ComponentFactoryImpl;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.function.IntUnaryOperator;
+import java.util.function.Predicate;
 
 /**
  * The core {@link TreeView}. It flattens the shown part of the hierarchy into entries of item, depth and whether the
@@ -64,6 +67,9 @@ public final class TreeViewImpl<T> extends ListBackedControl<T, TreeViewImpl.Ent
     private List<Entry<T>> entries;
     private List<T> shown;
     private Function<? super T, ? extends List<? extends T>> children;
+    // Tells whether an item has children without asking for them, or null to ask; with it, children are kept by key
+    private Predicate<? super T> hasChildren;
+    private final Map<Object, List<? extends T>> kept;
     private Function<? super T, ? extends Component<?>> cellFactory;
     private Function<? super T, ?> keyFunction;
     private float indent;
@@ -85,6 +91,7 @@ public final class TreeViewImpl<T> extends ListBackedControl<T, TreeViewImpl.Ent
         this.entries = List.of();
         this.shown = List.of();
         this.children = item -> List.of();
+        this.kept = new HashMap<>();
         this.cellFactory = Objects.requireNonNull(cellFactory, "cellFactory");
         this.keyFunction = Function.identity();
         this.indent = DEFAULT_INDENT;
@@ -107,6 +114,7 @@ public final class TreeViewImpl<T> extends ListBackedControl<T, TreeViewImpl.Ent
     public TreeView<T> setItems(final List<? extends T> items) {
         final List<T> previous = this.roots;
         this.roots = Items.copyOf(items);
+        this.kept.clear();
         try {
             this.rebuild();
         } catch (final RuntimeException | Error e) {
@@ -121,6 +129,7 @@ public final class TreeViewImpl<T> extends ListBackedControl<T, TreeViewImpl.Ent
     public TreeView<T> setChildren(final Function<? super T, ? extends List<? extends T>> children) {
         final Function<? super T, ? extends List<? extends T>> previous = this.children;
         this.children = Objects.requireNonNull(children, "children");
+        this.kept.clear();
         try {
             this.rebuild();
         } catch (final RuntimeException | Error e) {
@@ -150,9 +159,33 @@ public final class TreeViewImpl<T> extends ListBackedControl<T, TreeViewImpl.Ent
     }
 
     @Override
+    public TreeView<T> setHasChildren(final Predicate<? super T> hasChildren) {
+        final Predicate<? super T> previous = this.hasChildren;
+        this.hasChildren = hasChildren;
+        this.kept.clear();
+        try {
+            this.rebuild();
+        } catch (final RuntimeException | Error e) {
+            this.hasChildren = previous;
+            throw e;
+        }
+        return this;
+    }
+
+    @Override
     public TreeView<T> refresh() {
+        this.kept.clear();
         this.rebuild();
         this.list.refresh();
+        return this;
+    }
+
+    @Override
+    public TreeView<T> refresh(final T item) {
+        final Object key = this.key(item);
+        this.kept.remove(key);
+        // Working the rows out again builds the rows in view again too
+        this.rebuild();
         return this;
     }
 
@@ -173,9 +206,35 @@ public final class TreeViewImpl<T> extends ListBackedControl<T, TreeViewImpl.Ent
         return !this.quiet;
     }
 
+    /**
+     * Returns an item's children: asked of the children function each time, or, with a test for children, asked once
+     * and kept by key until a refresh or new items.
+     */
     private List<? extends T> childrenOf(final T item) {
+        if (this.hasChildren != null) {
+            final Object key = this.key(item);
+            final List<? extends T> kept = this.kept.get(key);
+            if (kept != null) {
+                return kept;
+            }
+            final List<? extends T> found = this.ask(item);
+            this.kept.put(key, found);
+            return found;
+        }
+        return this.ask(item);
+    }
+
+    private List<? extends T> ask(final T item) {
         final List<? extends T> found = this.children.apply(item);
         return found == null ? List.of() : found;
+    }
+
+    /**
+     * Returns whether an item may have children without asking for them: the test's answer when one is set, else
+     * true, so the caller asks the children function.
+     */
+    private boolean mayHaveChildren(final T item) {
+        return this.hasChildren == null || this.hasChildren.test(item);
     }
 
     /**
@@ -258,9 +317,18 @@ public final class TreeViewImpl<T> extends ListBackedControl<T, TreeViewImpl.Ent
             into.add(new Entry<>(item, depth, false));
             return;
         }
-        final List<? extends T> kids = this.childrenOf(item);
-        into.add(new Entry<>(item, depth, !kids.isEmpty()));
-        if (!kids.isEmpty() && this.expanded.contains(key)) {
+        // With a test for children, an item's children are asked for only once it is expanded; null until then
+        final boolean open = this.expanded.contains(key);
+        final List<? extends T> kids;
+        if (this.hasChildren == null) {
+            kids = this.childrenOf(item);
+        } else if (!this.hasChildren.test(item)) {
+            kids = List.of();
+        } else {
+            kids = open ? this.childrenOf(item) : null;
+        }
+        into.add(new Entry<>(item, depth, kids == null || !kids.isEmpty()));
+        if (open && kids != null && !kids.isEmpty()) {
             path.add(key);
             for (final T child : kids) {
                 this.flatten(child, depth + 1, into, path);
@@ -320,7 +388,7 @@ public final class TreeViewImpl<T> extends ListBackedControl<T, TreeViewImpl.Ent
         final Set<Object> seen = new HashSet<>();
         while (!pending.isEmpty()) {
             final T item = pending.removeLast();
-            final List<? extends T> kids = this.childrenOf(item);
+            final List<? extends T> kids = this.mayHaveChildren(item) ? this.childrenOf(item) : List.of();
             if (!kids.isEmpty() && seen.add(this.key(item))) {
                 if (this.expanded.add(this.key(item)) && opened != null) {
                     opened.add(item);
@@ -371,7 +439,9 @@ public final class TreeViewImpl<T> extends ListBackedControl<T, TreeViewImpl.Ent
             if (this.expanded.contains(key)) {
                 into.add(item);
             }
-            this.collectExpanded(this.childrenOf(item), seen, into);
+            if (this.hasChildren == null || this.expanded.contains(key) && this.hasChildren.test(item)) {
+                this.collectExpanded(this.childrenOf(item), seen, into);
+            }
         }
     }
 
@@ -495,7 +565,8 @@ public final class TreeViewImpl<T> extends ListBackedControl<T, TreeViewImpl.Ent
             if (Objects.equals(candidateKey, key)) {
                 return true;
             }
-            if (seen.add(candidateKey) && this.findPath(this.childrenOf(candidate), key, path, seen)) {
+            if (seen.add(candidateKey) && this.mayHaveChildren(candidate)
+                    && this.findPath(this.childrenOf(candidate), key, path, seen)) {
                 return true;
             }
             path.removeLast();

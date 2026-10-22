@@ -290,6 +290,25 @@ public final class ListViewImpl<T> extends BuiltInComposite<ListView<T>> impleme
     }
 
     @Override
+    public ListView<T> refresh(final T item) {
+        final Object key = this.keyFunction.apply(item);
+        boolean dropped = false;
+        for (final Iterator<Map.Entry<Integer, Component<?>>> it = this.rows.entrySet().iterator(); it.hasNext(); ) {
+            final Map.Entry<Integer, Component<?>> entry = it.next();
+            if (Objects.equals(key, this.keyFunction.apply(this.items.get(entry.getKey())))) {
+                it.remove();
+                this.removeChild(entry.getValue());
+                dropped = true;
+            }
+        }
+        if (dropped) {
+            // The next arrange builds the dropped rows again, as rows scrolled into view
+            this.invalidateLayout();
+        }
+        return this;
+    }
+
+    @Override
     public ListView<T> setCellFactory(final Function<? super T, ? extends Component<?>> cellFactory) {
         this.cellFactory = Objects.requireNonNull(cellFactory, "cellFactory");
         return this.refresh();

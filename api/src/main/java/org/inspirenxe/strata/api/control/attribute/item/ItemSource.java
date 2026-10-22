@@ -88,6 +88,24 @@ public interface ItemSource<T, S extends ItemSource<T, S>> {
     S refresh();
 
     /**
+     * Shows one item again, for when it changed inside, and leaves the other cells as they are. The control finds
+     * the items with the same {@linkplain #setKeyFunction key} and builds the cells of those it shows again, from
+     * the items it holds; it does not take the given item in their place, so call {@link #setItems} for a new value.
+     * A list of thousands of rows whose prices change can refresh the changed ones without building every cell in
+     * view again. An item the control does not hold changes nothing.
+     *
+     * <p>The default does what {@link #refresh()} does. The list, the table, the grid and the combo box build only
+     * that item's cells. A tree asks for that item's children again and works its rows out again, as its
+     * {@code refresh(item)} describes.</p>
+     *
+     * @param item the item to show again, found by its key
+     * @return this control
+     */
+    default S refresh(final T item) {
+        return this.refresh();
+    }
+
+    /**
      * Sets how items are told apart when {@link #setItems} keeps the selection, and when
      * {@link Selection#selectItem} finds an item. By default an item is its own key, compared with
      * {@code equals}.

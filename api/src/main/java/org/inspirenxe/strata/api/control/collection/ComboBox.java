@@ -23,6 +23,7 @@ import org.inspirenxe.strata.api.control.attribute.item.ItemSource;
 import org.inspirenxe.strata.api.control.attribute.item.SingleSelection;
 import org.inspirenxe.strata.api.control.attribute.popup.Closable;
 import org.inspirenxe.strata.api.control.attribute.popup.Openable;
+import org.inspirenxe.strata.api.text.Text;
 
 import java.util.List;
 import java.util.Optional;
@@ -49,7 +50,8 @@ import java.util.function.Function;
  * option with the selected option's {@linkplain #setKeyFunction key}, or clears if no option has it, as
  * {@link ItemSource} describes. A box that has never had a selection selects its first option when it gets options;
  * once an option was selected, or code called {@link #select} or {@link #clearSelection()}, new options never select
- * one by themselves. With nothing selected the box shows no text.</p>
+ * one by themselves. With nothing selected the box shows its {@linkplain #setPlaceholder placeholder}, or no
+ * text.</p>
  *
  * <p>The selection events carry option indexes, so read the option from the box:
  * {@code box.items().get(e.value())}. The open list is private to the box and fires no events of its own. The box
@@ -90,6 +92,8 @@ import java.util.function.Function;
  *     to the default style.</li>
  *     <li>{@value #STYLE_TEXT_DISABLED} (text style, optional): the selected option when disabled. Falls back to
  *     {@value #STYLE_TEXT}.</li>
+ *     <li>{@value org.inspirenxe.strata.api.control.field.TextBox#STYLE_PLACEHOLDER} (text style, optional): the
+ *     {@linkplain #setPlaceholder placeholder}. Falls back to {@value #STYLE_TEXT}.</li>
  *     <li>The row keys of {@link ListView} and the scroll bar keys of
  *     {@link org.inspirenxe.strata.api.layout.ScrollPanel}, for the open list.</li>
  *     <li>{@value #STYLE_PADDING} (insets, optional): the space between the box's edges and its shown value on the
@@ -173,6 +177,34 @@ public interface ComboBox<T> extends Component<ComboBox<T>>, Focusable<ComboBox<
      * @return this box
      */
     ComboBox<T> setLabelFunction(Function<? super T, ?> labelFunction);
+
+    /**
+     * Returns the placeholder.
+     *
+     * @return the hint shown while nothing is selected; empty for none, which is the default
+     */
+    Text placeholder();
+
+    /**
+     * Sets the hint the box shows while nothing is selected, such as "Pick a country", drawn in the
+     * {@value org.inspirenxe.strata.api.control.field.TextBox#STYLE_PLACEHOLDER} style. The box asks for room for
+     * it as for an option. A box that should start with nothing selected and show it calls {@link #clearSelection()}
+     * before its options arrive, since a box that never had a selection selects its first option.
+     *
+     * @param placeholder the hint, or {@code null} or empty for none
+     * @return this box
+     */
+    ComboBox<T> setPlaceholder(Text placeholder);
+
+    /**
+     * Does the same as {@link #setPlaceholder(Text)} with literal text.
+     *
+     * @param placeholder the hint, or {@code null} or empty for none
+     * @return this box
+     */
+    default ComboBox<T> setPlaceholder(final String placeholder) {
+        return this.setPlaceholder(placeholder == null ? null : Text.of(placeholder));
+    }
 
     /**
      * Sets the names that type-ahead matches while the box has focus, or turns it off. It works as

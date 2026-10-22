@@ -34,12 +34,13 @@ import org.inspirenxe.strata.api.text.Text;
 import java.util.List;
 import java.util.Optional;
 import java.util.function.Function;
+import java.util.function.Predicate;
 
 /**
  * Items in a hierarchy, each row indented under its parent, with an arrow to show or hide an item's children.
  *
  * <p>The tree asks a children function for an item's children when it needs them, so a large hierarchy costs only
- * what is expanded. The rows shown are the roots and, under each expanded item, its children, depth first. They live
+ * what is expanded. With {@link #setHasChildren} it asks only when an item opens, and keeps what it got. The rows shown are the roots and, under each expanded item, its children, depth first. They live
  * in a {@link ListView}, which builds only the rows in view and scrolls, selects and activates the same way.</p>
  *
  * <p>Each row starts {@linkplain #setIndent indented} by its depth, then shows a 12-unit arrow column, then the cell.
@@ -161,6 +162,33 @@ public interface TreeView<T> extends Component<TreeView<T>>, Focusable<TreeView<
      * @return this tree
      */
     TreeView<T> setChildren(Function<? super T, ? extends List<? extends T>> children);
+
+    /**
+     * Sets how the tree tells whether an item has children without asking for them, for a hierarchy that is loaded
+     * as it opens, such as folders. Without it the tree asks {@linkplain #setChildren the children function} for
+     * every shown item each time it works out the rows, to know whether to draw its arrow. With it the tree asks this
+     * test for the arrow, asks for an item's children only when the item is expanded, and keeps them until
+     * {@link #refresh(Object)} for that item, {@link #refresh()}, {@link #setItems}, {@link #setChildren} or this
+     * method. An item the test passes whose children turn out empty shows no arrow once expanded. A search by
+     * {@link #selectItem} or {@link #selectItems} looks only under items the test passes, and {@link #expandAll()}
+     * asks for the children of every one of them.
+     *
+     * @param hasChildren returns whether an item has children, or {@code null} to ask the children function as
+     *     before, which is the default
+     * @return this tree
+     */
+    TreeView<T> setHasChildren(Predicate<? super T> hasChildren);
+
+    /**
+     * Asks for an item's children again, for when its children or its content changed, and works out and builds
+     * the rows in view again. With {@linkplain #setHasChildren a test for children} the other items keep the
+     * children the tree has; without one, the tree asks every shown item again, as {@link #refresh()} does.
+     *
+     * @param item the item, found by its key
+     * @return this tree
+     */
+    @Override
+    TreeView<T> refresh(T item);
 
     /**
      * Replaces the cell factory. Every row is built again.

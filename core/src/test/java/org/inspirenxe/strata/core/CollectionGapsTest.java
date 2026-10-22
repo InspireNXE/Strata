@@ -18,16 +18,22 @@ package org.inspirenxe.strata.core;
 import org.inspirenxe.strata.api.ComponentFactory;
 import org.inspirenxe.strata.api.control.attribute.item.MultiSelection;
 import org.inspirenxe.strata.api.control.attribute.item.SelectionMode;
+import org.inspirenxe.strata.api.control.collection.ComboBox;
 import org.inspirenxe.strata.api.control.collection.GridView;
+import org.inspirenxe.strata.api.control.collection.ListView;
+import org.inspirenxe.strata.api.control.collection.TableView;
+import org.inspirenxe.strata.api.control.collection.TreeView;
 import org.inspirenxe.strata.api.input.Modifier;
 import org.inspirenxe.strata.api.input.Modifiers;
 import org.inspirenxe.strata.api.input.MouseButton;
 import org.inspirenxe.strata.api.input.ScrollKind;
 import org.inspirenxe.strata.api.layout.AbsolutePanel;
+import org.inspirenxe.strata.api.layout.GridLength;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.stream.IntStream;
 
@@ -47,6 +53,143 @@ class CollectionGapsTest {
 
     private static List<Integer> numbers(final int count) {
         return IntStream.range(0, count).boxed().toList();
+    }
+
+    @Nested
+    class RefreshingOneItem {
+        private final List<String> built = new ArrayList<>();
+
+        @Test
+        void aListBuildsOnlyTheRowsOfThatItemAgain() {
+            final ListView<String> list = CollectionGapsTest.this.ui.<String>listView(name -> {
+                this.built.add(name);
+                return CollectionGapsTest.this.ui.label(name);
+            }).setItems(List.of("Ana", "Ben", "Cleo"));
+            list.setSize(100, 100);
+            CollectionGapsTest.this.test.show(CollectionGapsTest.this.panel.add(list, 0, 0));
+            this.built.clear();
+            list.refresh("Ben");
+            CollectionGapsTest.this.test.host().layout();
+            assertEquals(List.of("Ben"), this.built);
+            list.refresh("Dev");
+            CollectionGapsTest.this.test.host().layout();
+            assertEquals(List.of("Ben"), this.built);
+        }
+
+        @Test
+        void aTableAndAGridFindTheItemByKey() {
+            final ComponentFactory ui = CollectionGapsTest.this.ui;
+            final TableView<String> table = ui.<String>tableView()
+                    .addColumn("Name", GridLength.weighted(1f), name -> {
+                        this.built.add("row " + name);
+                        return ui.label(name);
+                    })
+                    .setKeyFunction(name -> name.charAt(0))
+                    .setItems(List.of("Ana", "Ben"));
+            table.setSize(100, 100);
+            final GridView<String> grid = ui.<String>gridView(name -> {
+                this.built.add("cell " + name);
+                return ui.label(name);
+            }).setKeyFunction(name -> name.charAt(0)).setItems(Arrays.asList("Ana", null, "Ben"));
+            CollectionGapsTest.this.test.show(CollectionGapsTest.this.panel.add(table, 0, 0).add(grid, 0, 150));
+            this.built.clear();
+            table.refresh("Bea");
+            grid.refresh("Bea");
+            CollectionGapsTest.this.test.host().layout();
+            assertEquals(List.of("cell Ben", "row Ben"), this.built.stream().sorted().toList());
+        }
+
+        @Test
+        void aComboBoxShowsItsSelectedOptionAgain() {
+            final StringBuilder name = new StringBuilder("Ana");
+            final ComboBox<StringBuilder> combo = CollectionGapsTest.this.ui.<StringBuilder>comboBox()
+                    .setItems(List.of(name));
+            CollectionGapsTest.this.test.show(CollectionGapsTest.this.panel.add(combo, 0, 0));
+            final float before = combo.bounds().width();
+            name.append("stasia");
+            combo.refresh(name);
+            CollectionGapsTest.this.test.host().layout();
+            assertTrue(combo.bounds().width() > before);
+        }
+    }
+
+    @Nested
+    class LazyTrees {
+        private final List<String> asked = new ArrayList<>();
+
+        private TreeView<String> tree() {
+            return CollectionGapsTest.this.ui.<String>treeView()
+                    .setChildren(name -> {
+                        this.asked.add(name);
+                        return name.length() < 3 ? List.of(name + "a", name + "b") : List.of();
+                    })
+                    .setHasChildren(name -> name.length() < 3)
+                    .setItems(List.of("A", "B"));
+        }
+
+        @Test
+        void childrenAreAskedForOnlyWhenAnItemOpensAndKept() {
+            final TreeView<String> tree = this.tree();
+            assertEquals(List.of(), this.asked);
+            tree.setExpanded("A", true);
+            assertEquals(List.of("A"), this.asked);
+            assertEquals(List.of("A", "Aa", "Ab", "B"), tree.shownItems());
+            tree.setExpanded("B", true);
+            tree.setExpanded("A", false);
+            tree.setExpanded("A", true);
+            assertEquals(List.of("A", "B"), this.asked);
+        }
+
+        @Test
+        void refreshingAnItemAsksForItsChildrenAgain() {
+            final TreeView<String> tree = this.tree();
+            tree.setExpanded("A", true).setExpanded("B", true);
+            this.asked.clear();
+            tree.refresh("A");
+            assertEquals(List.of("A"), this.asked);
+            tree.refresh();
+            assertEquals(List.of("A", "A", "B"), this.asked);
+        }
+
+        @Test
+        void anItemWhoseChildrenTurnOutEmptyLosesItsArrowOnceOpen() {
+            final TreeView<String> tree = CollectionGapsTest.this.ui.<String>treeView()
+                    .setChildren(name -> List.of())
+                    .setHasChildren(name -> true)
+                    .setItems(List.of("Ana"));
+            tree.setExpanded("Ana", true);
+            assertEquals(List.of("Ana"), tree.shownItems());
+            assertTrue(tree.isExpanded("Ana"));
+        }
+
+        @Test
+        void selectingAnItemSearchesOnlyUnderItemsThatHaveChildren() {
+            final TreeView<String> tree = this.tree();
+            tree.selectItem("Bb");
+            assertEquals(java.util.Optional.of("Bb"), tree.selected());
+            // The leaves Aaa and the rest are never asked for, since the test says they have no children
+            assertEquals(List.of("A", "Aa", "Ab", "B", "Ba"), this.asked);
+        }
+    }
+
+    @Nested
+    class ComboBoxPlaceholders {
+        @Test
+        void aBoxWithNothingSelectedShowsItsPlaceholder() {
+            final ComboBox<String> combo = CollectionGapsTest.this.ui.<String>comboBox()
+                    .setPlaceholder("Pick a country")
+                    .clearSelection()
+                    .setItems(List.of("Ana"));
+            CollectionGapsTest.this.test.show(CollectionGapsTest.this.panel.add(combo, 0, 0));
+            assertEquals(-1, combo.selectedIndex());
+            final DrawLog canvas = new DrawLog();
+            CollectionGapsTest.this.test.host().render(canvas);
+            assertTrue(canvas.lines().stream().anyMatch(line -> line.contains("Pick a country")), canvas.lines().toString());
+            combo.select(0);
+            final DrawLog after = new DrawLog();
+            CollectionGapsTest.this.test.host().render(after);
+            assertTrue(after.lines().stream().noneMatch(line -> line.contains("Pick a country")));
+        }
     }
 
     @Nested

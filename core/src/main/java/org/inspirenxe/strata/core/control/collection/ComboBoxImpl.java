@@ -18,6 +18,7 @@ package org.inspirenxe.strata.core.control.collection;
 import org.inspirenxe.strata.api.component.CursorKind;
 import org.inspirenxe.strata.api.control.collection.ComboBox;
 import org.inspirenxe.strata.api.control.collection.ListView;
+import org.inspirenxe.strata.api.control.field.TextBox;
 import org.inspirenxe.strata.api.control.display.Label;
 import org.inspirenxe.strata.api.event.input.CharEvent;
 import org.inspirenxe.strata.api.event.input.FocusEvent;
@@ -92,6 +93,7 @@ public final class ComboBoxImpl<T> extends BuiltInComponent<ComboBox<T>> impleme
     // Set once an option was selected or code set the selection; until then new options select the first one
     private boolean settled;
     private int maxVisible;
+    private Text placeholder;
     private Overlay popup;
     private ListViewImpl<T> list;
 
@@ -102,6 +104,7 @@ public final class ComboBoxImpl<T> extends BuiltInComponent<ComboBox<T>> impleme
     private Paint popupPaint;
     private TextStyle textStyle;
     private TextStyle disabledTextStyle;
+    private TextStyle placeholderStyle;
 
     // Computed during measure
     private float lineHeight;
@@ -140,6 +143,8 @@ public final class ComboBoxImpl<T> extends BuiltInComponent<ComboBox<T>> impleme
         this.popupPaint = Paint.NONE;
         this.textStyle = TextStyle.DEFAULT;
         this.disabledTextStyle = TextStyle.DEFAULT;
+        this.placeholderStyle = TextStyle.DEFAULT;
+        this.placeholder = Text.empty();
         this.shownIndex = -2;
         this.shownForWidth = Float.NaN;
         this.shown = TextLine.EMPTY;
@@ -187,6 +192,36 @@ public final class ComboBoxImpl<T> extends BuiltInComponent<ComboBox<T>> impleme
         if (this.list != null) {
             this.list.refresh();
         }
+        return this;
+    }
+
+    @Override
+    public ComboBox<T> refresh(final T item) {
+        final Object key = this.keyFunction.apply(item);
+        boolean held = false;
+        for (final T option : this.options) {
+            held |= Objects.equals(key, this.keyFunction.apply(option));
+        }
+        if (held) {
+            this.shownIndex = -2;
+            this.invalidateLayout();
+            if (this.list != null) {
+                this.list.refresh(item);
+            }
+        }
+        return this;
+    }
+
+    @Override
+    public Text placeholder() {
+        return this.placeholder;
+    }
+
+    @Override
+    public ComboBox<T> setPlaceholder(final Text placeholder) {
+        this.placeholder = placeholder == null ? Text.empty() : placeholder;
+        this.shownIndex = -2;
+        this.invalidateLayout();
         return this;
     }
 
@@ -382,6 +417,7 @@ public final class ComboBoxImpl<T> extends BuiltInComponent<ComboBox<T>> impleme
         this.popupPaint = theme.paintOr(STYLE_POPUP, Paint.NONE);
         this.textStyle = theme.textStyleOr(STYLE_TEXT, TextStyle.DEFAULT);
         this.disabledTextStyle = theme.textStyleOr(STYLE_TEXT_DISABLED, this.textStyle);
+        this.placeholderStyle = theme.textStyleOr(TextBox.STYLE_PLACEHOLDER, this.textStyle);
         this.shownIndex = -2;
         this.typeAhead.applyTheme(theme);
     }
@@ -392,6 +428,9 @@ public final class ComboBoxImpl<T> extends BuiltInComponent<ComboBox<T>> impleme
         float widest = 0f;
         for (int i = 0; i < this.options.size(); i++) {
             widest = Math.max(widest, TextLine.of(this.label(i), this.textStyle, metrics).width());
+        }
+        if (!this.placeholder.isEmpty()) {
+            widest = Math.max(widest, TextLine.of(this.placeholder, this.placeholderStyle, metrics).width());
         }
         this.lineHeight = this.lineHeight(metrics);
         this.shownIndex = -2;
@@ -406,6 +445,9 @@ public final class ComboBoxImpl<T> extends BuiltInComponent<ComboBox<T>> impleme
      */
     private float lineHeight(final TextMetrics metrics) {
         float height = Math.max(metrics.lineHeight(this.textStyle), metrics.lineHeight(this.disabledTextStyle));
+        if (!this.placeholder.isEmpty()) {
+            height = Math.max(height, TextLine.of(this.placeholder, this.placeholderStyle, metrics).height());
+        }
         for (int i = 0; i < this.options.size(); i++) {
             height = Math.max(height, TextLine.of(this.label(i), this.textStyle, metrics).height());
         }
@@ -436,10 +478,13 @@ public final class ComboBoxImpl<T> extends BuiltInComponent<ComboBox<T>> impleme
         final float textWidth = bounds.width() - padding.horizontal() - ARROW_GAP - ARROW_WIDTH;
         if (this.selectedIndex != this.shownIndex || textWidth != this.shownForWidth) {
             final TextMetrics metrics = this.environment().text();
-            final Text text = this.label(this.selectedIndex);
-            this.shown = TextLine.of(text, this.textStyle, metrics).ellipsize(textWidth, this.textStyle, metrics);
-            this.shownDisabled = TextLine.of(text, this.disabledTextStyle, metrics)
-                    .ellipsize(textWidth, this.disabledTextStyle, metrics);
+            // With nothing selected the placeholder shows, in its own style whether or not the box is enabled
+            final boolean hint = this.selectedIndex < 0;
+            final Text text = hint ? this.placeholder : this.label(this.selectedIndex);
+            final TextStyle style = hint ? this.placeholderStyle : this.textStyle;
+            final TextStyle disabledStyle = hint ? this.placeholderStyle : this.disabledTextStyle;
+            this.shown = TextLine.of(text, style, metrics).ellipsize(textWidth, style, metrics);
+            this.shownDisabled = TextLine.of(text, disabledStyle, metrics).ellipsize(textWidth, disabledStyle, metrics);
             this.shownIndex = this.selectedIndex;
             this.shownForWidth = textWidth;
         }
