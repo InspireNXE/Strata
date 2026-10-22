@@ -16,6 +16,8 @@
 package org.inspirenxe.strata.core.node;
 
 import org.inspirenxe.strata.api.ComponentFactory;
+import org.inspirenxe.strata.api.UiThread;
+import org.inspirenxe.strata.core.frame.UiThreadImpl;
 import org.inspirenxe.strata.api.event.cause.CauseStack;
 import org.inspirenxe.strata.core.event.CauseStackImpl;
 import org.inspirenxe.strata.api.appearance.Appearances;
@@ -177,6 +179,7 @@ public final class ComponentFactoryImpl implements ComponentFactory {
     private final Environment environment;
     private final Platform platform;
     private final CauseStack platformCauses;
+    private final UiThreadImpl uiThread;
     private Root root;
 
     /**
@@ -191,6 +194,17 @@ public final class ComponentFactoryImpl implements ComponentFactory {
         this.environment = new EnvironmentImpl(platform, this);
         this.platform = platform;
         this.platformCauses = platform.causes().orElse(null);
+        this.uiThread = UiThreadImpl.of(platform);
+    }
+
+    /**
+     * Returns the UI thread of the host's platform, shared by every host made with that platform.
+     *
+     * @return the UI thread
+     */
+    @Override
+    public UiThreadImpl uiThread() {
+        return this.uiThread;
     }
 
     /**

@@ -20,6 +20,8 @@ import org.inspirenxe.strata.api.event.cause.Origin;
 import org.inspirenxe.strata.api.text.TextMetrics;
 
 import java.util.Optional;
+import java.util.concurrent.Executor;
+import java.util.function.BooleanSupplier;
 
 /**
  * Everything a host needs from the engine besides drawing. An adapter passes one to
@@ -30,7 +32,8 @@ import java.util.Optional;
  * <ul>
  *     <li>Return the same objects, or objects that behave the same, every time: hosts may keep what they get.</li>
  *     <li>{@link #capabilities()} must not change during the platform's life.</li>
- *     <li>Calls come from the UI thread only.</li>
+ *     <li>Calls come from the UI thread only, except {@link #uiExecutor()} and {@link #uiThreadCheck()}, which core
+ *     reads once, on whichever thread first makes a host for the platform.</li>
  * </ul>
  * <p>Each method's return type lists its own requirements.</p>
  */
@@ -108,6 +111,40 @@ public interface Platform {
      * @return the identity, or empty if the engine does not name its user; the default
      */
     default Optional<Object> user() {
+        return Optional.empty();
+    }
+
+    /**
+     * Returns the engine's executor for its UI thread, the thread that dispatches input to the platform's hosts and
+     * renders them, such as Swing's {@code SwingUtilities::invokeLater} or an engine's main thread executor. Core
+     * hands every task given to {@code UiThread.execute} and {@code submit} to it, wrapped so that a task that throws
+     * is logged.
+     *
+     * <p>The executor must accept tasks from any thread, run them on the UI thread in the order given, and run a task
+     * given on the UI thread after the current call into Strata returns, never inside it. Core reads this once per
+     * platform.</p>
+     *
+     * @return the executor, or empty to have core queue tasks and run them at the start of the next
+     *     {@code flush}, {@code layout} or {@code render} of any host of the platform; the default. Every adapter that
+     *     renders runs them that way, so an adapter needs one only to run tasks while nothing renders
+     */
+    default Optional<Executor> uiExecutor() {
+        return Optional.empty();
+    }
+
+    /**
+     * Returns a test that answers whether the calling thread is the engine's UI thread, such as Swing's
+     * {@code SwingUtilities::isEventDispatchThread}. Core calls it from {@code UiThread.isCurrent} and
+     * {@code checkCurrent}, which run on every change to an attached component, so it must be cheap, must answer
+     * from any thread, and must not block.
+     *
+     * <p>Without one, core takes the UI thread to be the thread that first dispatches input to, flushes, lays out or
+     * renders a host of the platform, and until then treats every thread as passing {@code checkCurrent} and none as
+     * current. Core reads this once per platform.</p>
+     *
+     * @return the test, or empty to let core record the thread; the default
+     */
+    default Optional<BooleanSupplier> uiThreadCheck() {
         return Optional.empty();
     }
 }

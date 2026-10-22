@@ -101,8 +101,8 @@ import java.util.function.Function;
  * is deliberately no static way to get a factory: plugin systems layer class loaders, and passing the factory along
  * keeps every tree tied to the host that shows it.</p>
  *
- * <p>Each call returns a new component, detached and with default settings. Call factories on the UI thread
- * only.</p>
+ * <p>Each call returns a new component, detached and with default settings. A tree may be built on any thread
+ * and added on the {@linkplain #uiThread() UI thread}; once attached, its components are the UI thread's.</p>
  *
  * <p>What the named methods make ({@link #button()}, {@link #listView()} and the rest) is Strata's own and is never
  * an instance of {@link org.inspirenxe.strata.api.extension.CustomComponent}; a component that is one was written
@@ -144,6 +144,14 @@ public interface ComponentFactory {
      * @return the cause stack
      */
     CauseStack causes();
+
+    /**
+     * Returns the UI thread of the host this factory belongs to, which every host of its platform shares. Hand work
+     * from another thread to it before touching an attached component.
+     *
+     * @return the host's UI thread
+     */
+    UiThread uiThread();
 
     /**
      * Makes an {@link AnchorPanel}.

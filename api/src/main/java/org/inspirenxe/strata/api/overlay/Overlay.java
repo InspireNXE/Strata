@@ -40,6 +40,9 @@ import org.inspirenxe.strata.api.event.control.ControlEvent;
  * popup.onEvent(Closable.CLOSED, event -> button.setText("More"));
  * }</pre>
  *
+ * <p>Use an overlay on the {@linkplain org.inspirenxe.strata.api.UiThread UI thread}. Closing it or registering a
+ * handler on it from another thread while it is open throws {@link IllegalStateException}.</p>
+ *
  * <p>Strata provides this object. Do not implement this interface.</p>
  */
 public interface Overlay extends Closable<Overlay> {

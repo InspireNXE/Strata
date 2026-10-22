@@ -80,7 +80,12 @@ import java.util.function.Supplier;
  * has them, such as {@link #ENABLED} here.</p>
  *
  * <h2>Threading</h2>
- * <p>Call components only from the engine's UI thread.</p>
+ * <p>Call components only from the {@linkplain org.inspirenxe.strata.api.UiThread UI thread}. While a component is
+ * attached to a host, adding, moving or removing children, any setter that lays it out, {@link #onEvent},
+ * {@link #subscribe} and {@link #bind} throw {@link IllegalStateException} on another thread. A tree may be built on
+ * another thread and added on the UI thread. Hand work from other threads over with
+ * {@link org.inspirenxe.strata.api.UiThread#execute}, or set a {@link State} the component is bound to, which any
+ * thread may do.</p>
  *
  * @param <T> the type callers see the component as, so setters can return it for chaining
  */

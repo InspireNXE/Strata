@@ -30,6 +30,7 @@ import org.inspirenxe.strata.api.text.Text;
 import org.inspirenxe.strata.api.theme.Theme;
 import org.inspirenxe.strata.api.theme.ThemeException;
 import org.inspirenxe.strata.api.theme.ThemeRef;
+import org.inspirenxe.strata.core.frame.UiThreadImpl;
 import org.inspirenxe.strata.core.node.ComponentFactoryImpl;
 import org.inspirenxe.strata.core.node.Node;
 import org.inspirenxe.strata.core.node.Root;
@@ -56,6 +57,10 @@ import java.util.Optional;
  * themes and overrides added in code ({@link ThemeRegistryImpl#version()}) at the start of every layout and render,
  * and resolves the ref again when either changed. If that fails, or the new theme lacks keys the open tree needs,
  * the host logs a warning and keeps its theme until the next change.</p>
+ *
+ * <p>Every input, {@link #flush}, {@link #layout} and {@link #render} first lets the platform's
+ * {@link UiThreadImpl} note the calling thread as the UI thread, if it has none yet and the platform names none.
+ * {@link #flush} then runs the tasks waiting in that UI thread's queue, before anything else of the frame.</p>
  */
 public final class ScreenHostImpl implements ScreenHost {
     private static final System.Logger LOGGER = System.getLogger(ScreenHostImpl.class.getName());
@@ -63,6 +68,7 @@ public final class ScreenHostImpl implements ScreenHost {
     private final ComponentFactoryImpl ui;
     private final Root root;
     private final Runnable closeRequested;
+    private final UiThreadImpl uiThread;
     private final ThemeSource themes;
     private final ThemeResolver resolver;
     private Theme theme;
@@ -91,6 +97,7 @@ public final class ScreenHostImpl implements ScreenHost {
         this.resolver = new ThemeResolver(this.themes);
         this.ui = new ComponentFactoryImpl(() -> this.theme, platform);
         this.root = new Root(platform, theme, this.ui);
+        this.uiThread = this.ui.uiThread();
         this.closeRequested = closeRequested == null ? this::close : closeRequested;
     }
 
@@ -329,8 +336,20 @@ public final class ScreenHostImpl implements ScreenHost {
         this.root.setTooltipDelay(millis);
     }
 
+    /**
+     * Returns the UI thread of the host's platform.
+     *
+     * @return the UI thread
+     */
+    public UiThreadImpl uiThread() {
+        return this.uiThread;
+    }
+
     @Override
     public void flush() {
+        this.uiThread.record();
+        // Before step 1 of the frame (design 4.42): tasks handed to the UI thread while no executor runs them
+        this.uiThread.runQueued();
         this.rebuildIfNeeded();
         // Step 2 of the frame, firing recorded continuous requests, goes here once coalescing is built (design 4.14)
         this.root.flushBindings();
@@ -338,6 +357,7 @@ public final class ScreenHostImpl implements ScreenHost {
 
     @Override
     public void layout() {
+        this.uiThread.record();
         this.refreshTheme();
         this.refreshText();
         this.flush();
@@ -346,6 +366,7 @@ public final class ScreenHostImpl implements ScreenHost {
 
     @Override
     public void render(final Canvas canvas) {
+        this.uiThread.record();
         this.refreshTheme();
         this.refreshText();
         this.flush();
@@ -371,33 +392,39 @@ public final class ScreenHostImpl implements ScreenHost {
 
     @Override
     public boolean pointerMoved(final float x, final float y, final Modifiers modifiers) {
+        this.uiThread.record();
         return this.root.pointerMoved(x, y, modifiers);
     }
 
     @Override
     public boolean pointerButton(final float x, final float y, final MouseButton button, final boolean pressed,
                                  final Modifiers modifiers) {
+        this.uiThread.record();
         return this.root.pointerButton(x, y, button, pressed, modifiers);
     }
 
     @Override
     public boolean scroll(final float x, final float y, final float scrollX, final float scrollY, final ScrollKind kind,
                           final Modifiers modifiers) {
+        this.uiThread.record();
         return this.root.scroll(x, y, scrollX, scrollY, kind, modifiers);
     }
 
     @Override
     public void pointerLeft() {
+        this.uiThread.record();
         this.root.pointerLeft();
     }
 
     @Override
     public boolean key(final Key key, final KeyAction action, final Modifiers modifiers) {
+        this.uiThread.record();
         return this.root.key(key, action, modifiers);
     }
 
     @Override
     public boolean charTyped(final int codePoint, final Modifiers modifiers) {
+        this.uiThread.record();
         return this.root.charTyped(codePoint, modifiers);
     }
 

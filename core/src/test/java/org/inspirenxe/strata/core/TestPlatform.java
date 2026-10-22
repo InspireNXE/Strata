@@ -32,6 +32,8 @@ import org.inspirenxe.strata.spi.ThemeSource;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.Optional;
+import java.util.concurrent.Executor;
+import java.util.function.BooleanSupplier;
 
 /**
  * A platform with monospaced text (6 units per code point, 9 units per line, the baseline 7 below a line's top), a
@@ -56,6 +58,8 @@ public final class TestPlatform implements Platform {
     private Conventions conventions = Conventions.DEFAULT;
     private CauseStack causes;
     private Object user;
+    private Executor uiExecutor;
+    private BooleanSupplier uiThreadCheck;
     private java.time.Clock wall = java.time.Clock.fixed(TODAY.toInstant(ZoneOffset.UTC), ZoneOffset.UTC);
 
     public TestPlatform() {
@@ -221,5 +225,24 @@ public final class TestPlatform implements Platform {
     @Override
     public Optional<Object> user() {
         return Optional.ofNullable(this.user);
+    }
+
+    // Set before the first host is made: core reads both once per platform
+    public void setUiExecutor(final Executor uiExecutor) {
+        this.uiExecutor = uiExecutor;
+    }
+
+    @Override
+    public Optional<Executor> uiExecutor() {
+        return Optional.ofNullable(this.uiExecutor);
+    }
+
+    public void setUiThreadCheck(final BooleanSupplier uiThreadCheck) {
+        this.uiThreadCheck = uiThreadCheck;
+    }
+
+    @Override
+    public Optional<BooleanSupplier> uiThreadCheck() {
+        return Optional.ofNullable(this.uiThreadCheck);
     }
 }

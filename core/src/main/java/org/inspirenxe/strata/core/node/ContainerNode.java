@@ -135,6 +135,7 @@ public final class ContainerNode extends Node implements ContainerPeer {
     }
 
     private void insert(final int index, final Component<?> child, final boolean content) {
+        this.checkThread();
         Objects.checkIndex(index, this.childNodes.size() + 1);
         final Node node = this.factory().nodeOf(child);
         if (node.parentNode() != null) {
@@ -189,6 +190,7 @@ public final class ContainerNode extends Node implements ContainerPeer {
 
     @Override
     public void move(final Component<?> child, final int index) {
+        this.checkThread();
         final int from = this.requireChild(child);
         Objects.checkIndex(index, this.childNodes.size());
         if (from == index) {
@@ -264,6 +266,7 @@ public final class ContainerNode extends Node implements ContainerPeer {
         if (index < 0) {
             return;
         }
+        this.checkThread();
         final Node node = this.childNodes.remove(index);
         this.children.remove(index);
         this.paintOrderValid = false;

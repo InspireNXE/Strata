@@ -63,10 +63,31 @@ public final class StrataCore {
      * {@code ThemeRef.platform()}.
      *
      * @param controller the controller, or {@code null} to remove it, after which {@code Strata.screens()} throws
-     *     {@link IllegalStateException}
+     *     {@link IllegalStateException}; {@link #clearScreenController()} says so more plainly
      */
     public static void setScreenController(final ScreenController controller) {
         PlatformScreens.set(controller);
+    }
+
+    /**
+     * Removes the platform's screen controller and its platform, after which {@code Strata.screens()} and
+     * {@code Strata.uiThread()} throw {@link IllegalStateException}.
+     */
+    public static void clearScreenController() {
+        PlatformScreens.set(null);
+    }
+
+    /**
+     * Sets the platform's screen controller for the whole process, as {@link #setScreenController(ScreenController)}
+     * does, and names the platform it opens screens on, whose UI thread {@code Strata.uiThread()} then returns.
+     * Adapters whose controller is not a stack or host from this class call this form; for a {@link ScreenStack}
+     * made here, the one-argument form finds the platform itself.
+     *
+     * @param controller the controller; remove it with {@link #clearScreenController()}
+     * @param platform the platform the controller's screens are shown with
+     */
+    public static void setScreenController(final ScreenController controller, final Platform platform) {
+        PlatformScreens.set(controller, platform);
     }
 
     /**

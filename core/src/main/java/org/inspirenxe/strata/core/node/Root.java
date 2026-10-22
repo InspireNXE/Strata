@@ -54,6 +54,8 @@ import org.inspirenxe.strata.core.event.ModifiersEventImpl;
 import org.inspirenxe.strata.core.event.PointerButtonEventImpl;
 import org.inspirenxe.strata.core.event.PointerEventImpl;
 import org.inspirenxe.strata.core.event.ScrollEventImpl;
+import org.inspirenxe.strata.core.frame.FrameRequests;
+import org.inspirenxe.strata.core.frame.UiThreadImpl;
 import org.inspirenxe.strata.core.input.ClickCounter;
 import org.inspirenxe.strata.core.input.KeyRepeater;
 import org.inspirenxe.strata.core.paint.CanvasPainter;
@@ -126,7 +128,8 @@ import java.util.function.Consumer;
  * {@linkplain #tooltipDelay tooltip delay}, or at once when the pointer moves to it from another tooltip's owner. It
  * follows the pointer and hides while a drag is in progress.</p>
  *
- * <p>Every method must be called on the UI thread.</p>
+ * <p>Every method must be called on the UI thread. Opening and closing overlays and registering their handlers check
+ * it through {@link UiThreadImpl#checkCurrent()}, as nodes do for their changes while attached.</p>
  */
 public final class Root {
     /**
@@ -156,6 +159,8 @@ public final class Root {
     // Bindings of nodes attached since attachTree last evaluated them
     private final List<Binding<?>> attachedBindings;
     private final Origin.User user;
+    private final UiThreadImpl uiThread;
+    private final FrameRequests frames;
     private Screen screen;
 
     private Theme theme;
@@ -214,11 +219,42 @@ public final class Root {
         this.overlays = new OverlaysImpl();
         this.bindingQueue = new BindingQueue();
         this.user = new Origin.User(platform.user().orElse(null));
+        this.uiThread = ui.uiThread();
+        this.frames = new FrameRequests();
+        this.uiThread.register(this.frames);
         this.attachedBindings = new ArrayList<>();
         this.modifiers = Modifiers.NONE;
         this.layoutRequested = true;
         this.tooltipDelay = -1L;
         ui.bindRoot(this);
+    }
+
+    /**
+     * Returns the UI thread of the host's platform.
+     *
+     * @return the UI thread
+     */
+    public UiThreadImpl uiThread() {
+        return this.uiThread;
+    }
+
+    /**
+     * Returns whether the host needs a frame and the deadlines of its timed changes.
+     *
+     * @return the frame requests
+     */
+    public FrameRequests frames() {
+        return this.frames;
+    }
+
+    /**
+     * Throws unless the calling thread is the UI thread, as {@link UiThreadImpl#checkCurrent()} decides. Nodes call
+     * this before they change while attached.
+     *
+     * @throws IllegalStateException off the UI thread
+     */
+    void checkThread() {
+        this.uiThread.checkCurrent();
     }
 
     /**
@@ -1819,6 +1855,7 @@ public final class Root {
 
     private Layer open(final Component<?> content, final Rect anchor, final boolean modal, final boolean toast,
                        final long expiresAt) {
+        this.checkThread();
         final Node node = this.ui.nodeOf(content);
         if (node.parentNode() != null || node.root() != null) {
             throw new IllegalArgumentException(content + " is already part of a tree");
@@ -1970,6 +2007,7 @@ public final class Root {
             if (!this.open) {
                 return this;
             }
+            Root.this.checkThread();
             this.open = false;
             Root.this.layers.remove(this);
             try {
@@ -2003,6 +2041,7 @@ public final class Root {
         @Override
         public <E extends Event> Subscription subscribe(final EventType<E> type, final int priority,
                                                         final EventHandler<? super E> handler) {
+            Root.this.checkThread();
             return this.handlers.subscribe(type, priority, handler);
         }
     }

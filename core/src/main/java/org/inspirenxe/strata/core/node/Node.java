@@ -83,7 +83,8 @@ import java.util.function.Function;
  * nothing inside it changed since, keeps its bounds without arranging its children. {@link #invalidateLayout()}
  * marks the node and every ancestor as changed.</p>
  *
- * <p>Every method must be called on the UI thread.</p>
+ * <p>Every method must be called on the UI thread. While the node is attached, its changes check that through
+ * {@link #checkThread()}.</p>
  */
 public class Node implements ComponentPeer {
     /**
@@ -426,8 +427,24 @@ public class Node implements ComponentPeer {
         }
     }
 
+    /**
+     * Throws if this node is attached and the calling thread is not the UI thread. Every change that would corrupt a
+     * shown tree from another thread calls this first: layout invalidation, and so every setter that lays out,
+     * handler registration, binding, and adding, moving and removing children. A detached node is not checked, so a
+     * tree can be built on another thread and added on the UI thread.
+     *
+     * @throws IllegalStateException if attached and called off the UI thread
+     */
+    protected final void checkThread() {
+        final Root current = this.root;
+        if (current != null) {
+            current.checkThread();
+        }
+    }
+
     @Override
     public final void invalidateLayout() {
+        this.checkThread();
         for (Node node = this; node != null; node = node.parent) {
             node.measureDirty = true;
             node.minimumDirty = true;
@@ -440,6 +457,7 @@ public class Node implements ComponentPeer {
 
     @Override
     public final void invalidateArrangement() {
+        this.checkThread();
         if (this.root != null) {
             this.root.requestArrangement(this);
         }
@@ -576,6 +594,7 @@ public class Node implements ComponentPeer {
     @Override
     public final <E extends Event> Subscription subscribe(final EventType<E> type, final int priority,
                                                           final EventHandler<? super E> handler) {
+        this.checkThread();
         if (this.dispatcher == null) {
             this.dispatcher = new EventDispatcher();
         }
@@ -600,6 +619,7 @@ public class Node implements ComponentPeer {
      */
     @Override
     public final <V> void bind(final PropertyKey<?, V> key, final Source<V> source) {
+        this.checkThread();
         final Binding<V> binding = new Binding<>(this.facade, key, source, this.ui::causes);
         if (this.bindings == null) {
             this.bindings = new LinkedHashMap<>();

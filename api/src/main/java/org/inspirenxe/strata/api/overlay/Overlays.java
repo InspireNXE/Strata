@@ -46,7 +46,9 @@ import java.util.Optional;
  * <p>Opening a dialog moves focus to the first tabbable component in it, and closing it puts focus back where it
  * was if that component can still take it. Closing the screen closes every overlay.</p>
  *
- * <p>Strata provides this object. Do not implement this interface. Call it on the UI thread only.</p>
+ * <p>Strata provides this object. Do not implement this interface. Call it on the
+ * {@linkplain org.inspirenxe.strata.api.UiThread UI thread} only: opening an overlay from another thread throws
+ * {@link IllegalStateException}.</p>
  */
 public interface Overlays {
     /**

@@ -28,6 +28,7 @@ import org.inspirenxe.strata.api.text.Text;
 import org.inspirenxe.strata.api.theme.Theme;
 import org.inspirenxe.strata.api.theme.ThemeRef;
 import org.inspirenxe.strata.core.node.Root;
+import org.inspirenxe.strata.core.frame.UiThreadImpl;
 import org.inspirenxe.strata.core.theme.ThemeResolver;
 import org.inspirenxe.strata.spi.Canvas;
 import org.inspirenxe.strata.spi.Platform;
@@ -73,6 +74,15 @@ public final class ScreenStackImpl implements ScreenStack {
         this.platform = Objects.requireNonNull(platform, "platform");
         this.theme = Objects.requireNonNull(theme, "theme");
         this.entries = new ArrayList<>();
+    }
+
+    /**
+     * Returns the UI thread of the stack's platform, which every screen's host shares.
+     *
+     * @return the UI thread
+     */
+    public UiThreadImpl uiThread() {
+        return UiThreadImpl.of(this.platform);
     }
 
     /**

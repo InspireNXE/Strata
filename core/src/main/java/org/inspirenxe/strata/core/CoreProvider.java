@@ -16,6 +16,7 @@
 package org.inspirenxe.strata.core;
 
 import org.inspirenxe.strata.api.Strata;
+import org.inspirenxe.strata.api.UiThread;
 import org.inspirenxe.strata.api.appearance.Appearances;
 import org.inspirenxe.strata.api.component.registry.ComponentRegistry;
 import org.inspirenxe.strata.api.screen.ScreenController;
@@ -76,5 +77,18 @@ public final class CoreProvider implements Strata.Provider {
     @Override
     public ScreenController screens() {
         return PlatformScreens.get();
+    }
+
+    /**
+     * Returns the UI thread of the platform whose controller the adapter set with
+     * {@link StrataCore#setScreenController}.
+     *
+     * @return the UI thread
+     * @throws IllegalStateException if no controller is set or its platform is not known, with a message that says
+     *     how an adapter names it
+     */
+    @Override
+    public UiThread uiThread() {
+        return PlatformScreens.uiThread();
     }
 }

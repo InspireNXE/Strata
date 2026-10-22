@@ -123,7 +123,8 @@ import java.util.function.Supplier;
  *     <li>Event hooks run only while the component is attached, and a disabled or hidden component gets no new
  *     pointer or keyboard input, nor does one inside it. Consume the events you act on, so ancestors and the engine
  *     do not act on them too.</li>
- *     <li>Hooks run on the UI thread. Exceptions thrown from them propagate to the engine's call into Strata.</li>
+ *     <li>Hooks run on the {@linkplain org.inspirenxe.strata.api.UiThread UI thread}. Exceptions thrown from them
+ *     propagate to the engine's call into Strata.</li>
  * </ul>
  *
  * @param <T> the type callers see the component as: the subclass itself, or an interface it implements

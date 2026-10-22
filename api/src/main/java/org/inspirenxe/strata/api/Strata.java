@@ -27,7 +27,7 @@ import java.util.ServiceLoader;
 
 /**
  * Services that work before any screen exists, such as making {@link org.inspirenxe.strata.api.text.Text} in a static
- * field, registering appearances, themes and components, making states, and opening screens. They come from Strata's core, a
+ * field, registering appearances, themes and components, making states, opening screens and reaching the UI thread. They come from Strata's core, a
  * {@link Provider} found on the class path with {@link ServiceLoader} the first time one is asked for. Every method
  * may be called from any thread; what the returned objects allow is documented on each of them.
  */
@@ -102,6 +102,19 @@ public final class Strata {
     }
 
     /**
+     * Returns the UI thread of the platform that {@link #screens()} opens screens on, for handing work to it from
+     * another thread. Code that holds a {@link ComponentFactory} can use {@link ComponentFactory#uiThread()} instead,
+     * which is its host's.
+     *
+     * @return the UI thread
+     * @throws IllegalStateException if Strata's core is not on the class path, more than one provider is, or no
+     *     adapter has handed over a controller whose platform core knows
+     */
+    public static UiThread uiThread() {
+        return Strata.provider().uiThread();
+    }
+
+    /**
      * What Strata's core provides, listed in its {@code META-INF/services}. {@link Strata} loads it with
      * {@link ServiceLoader} through the class loader that loaded {@code Strata}, the first time any of its methods is
      * called, and keeps it for the life of the process. Exactly one provider must be found; with none or several,
@@ -150,6 +163,15 @@ public final class Strata {
          * @throws IllegalStateException if no adapter has handed one over, with a message saying what to do
          */
         ScreenController screens();
+
+        /**
+         * Returns the UI thread of the platform whose controller the engine adapter handed over.
+         *
+         * @return the UI thread
+         * @throws IllegalStateException if no adapter has handed over a controller whose platform is known, with a
+         *     message saying what to do
+         */
+        UiThread uiThread();
     }
 
     private static Provider provider() {
