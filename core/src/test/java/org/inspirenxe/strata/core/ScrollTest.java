@@ -19,6 +19,7 @@ import org.inspirenxe.strata.api.ComponentFactory;
 import org.inspirenxe.strata.api.control.attribute.item.Activatable;
 import org.inspirenxe.strata.api.control.attribute.item.SingleSelection;
 import org.inspirenxe.strata.api.control.collection.ListView;
+import org.inspirenxe.strata.api.control.display.Label;
 import org.inspirenxe.strata.api.control.field.TextBox;
 import org.inspirenxe.strata.api.extension.CustomComponent;
 import org.inspirenxe.strata.api.extension.MeasureContext;
@@ -30,9 +31,11 @@ import org.inspirenxe.strata.api.input.Modifiers;
 import org.inspirenxe.strata.api.input.MouseButton;
 import org.inspirenxe.strata.api.input.ScrollKind;
 import org.inspirenxe.strata.api.layout.AbsolutePanel;
+import org.inspirenxe.strata.api.layout.Anchor;
 import org.inspirenxe.strata.api.layout.Orientation;
 import org.inspirenxe.strata.api.layout.ScrollPanel;
 import org.inspirenxe.strata.api.layout.StackPanel;
+import org.inspirenxe.strata.core.layout.ScrollTrack;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
@@ -179,6 +182,54 @@ class ScrollTest {
             assertSame(this.panel, ScrollTest.this.test.host().hovered().orElseThrow());
             ScrollTest.this.test.host().pointerMoved(30, 50, Modifiers.NONE);
             assertSame(this.content, ScrollTest.this.test.host().hovered().orElseThrow());
+        }
+
+        @Test
+        void aBarThatArrangingAddsWrapsTheContentAgain() {
+            final Label label = ScrollTest.this.ui.label("hello world again").setWrap(true);
+            this.panel = ScrollTest.this.ui.scrollPanel().add(label);
+            this.panel.setAnchor(Anchor.FILL);
+            // Measured with unlimited height the text fits on one line at 108 and needs no bar; the slot is 5 tall
+            ScrollTest.this.test.show(new Squeeze(ScrollTest.this.ui, 108, 5).add(this.panel));
+
+            // The bar takes 8 of the width, so the text wraps at 100 after "hello world"
+            assertEquals(new Rect(0, 0, 100, 5), this.panel.viewport());
+            assertEquals(2 * TestPlatform.LINE_HEIGHT, label.desiredHeight());
+            assertEquals(2 * TestPlatform.LINE_HEIGHT - 5, this.panel.maxScrollY());
+        }
+    }
+
+    @Nested
+    class Tracks {
+        @Test
+        void aTrackShorterThanTheMinimumThumbStillLeavesRoomToTravel() {
+            final ScrollTrack track = new ScrollTrack(true);
+            track.update(new Rect(0, 0, 6, 20), 20, 300);
+
+            // The minimum of 32 is cut to half the track
+            assertEquals(new Rect(0, 0, 6, 10), track.thumb(0, 280));
+            assertEquals(new Rect(0, 10, 6, 10), track.thumb(280, 280));
+            assertEquals(140f, track.offsetForThumbAt(5, 280));
+        }
+
+        @Test
+        void aLongTrackKeepsTheMinimumThumb() {
+            final ScrollTrack track = new ScrollTrack(true);
+            track.update(new Rect(0, 0, 6, 100), 100, 10_000);
+
+            assertEquals(new Rect(0, 0, 6, ScrollPanel.MIN_THUMB_LENGTH), track.thumb(0, 9_900));
+        }
+
+        @Test
+        void theThumbIsWorkedOutOnlyWhenSomethingChanged() {
+            final ScrollTrack track = new ScrollTrack(false);
+            track.update(new Rect(0, 0, 100, 6), 100, 300);
+            final Rect thumb = track.thumb(50, 200);
+
+            assertSame(thumb, track.thumb(50, 200));
+            assertNotSame(thumb, track.thumb(60, 200));
+            track.update(new Rect(0, 10, 100, 6), 100, 300);
+            assertEquals(10, track.thumb(60, 200).y());
         }
     }
 

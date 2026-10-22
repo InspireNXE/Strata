@@ -39,7 +39,9 @@ import org.inspirenxe.strata.api.geometry.Rect;
  * <h2>Scrolling</h2>
  * <ul>
  *     <li>The offset is in UI units, positive when scrolled down or right, and clamped to
- *     {@code [0, maxScroll]} on every change and after every layout. Children are moved by the offset rounded to
+ *     {@code [0, maxScroll]} on every change and after every layout. Before the first layout there is no range yet,
+ *     so an offset set then is only kept from going below 0, and the first layout clamps it. Children are moved by
+ *     the offset rounded to
  *     whole units, so whole-pixel engines do not shimmer; the stored offset keeps its fraction.</li>
  *     <li>A wheel notch scrolls {@linkplain #setScrollRate the scroll rate}, 10 units by default; precise scrolls
  *     are multiplied by the same rate. A panel that scrolls only sideways takes vertical wheel input too. The panel
@@ -55,7 +57,8 @@ import org.inspirenxe.strata.api.geometry.Rect;
  * <h2>Drawing</h2>
  * <p>Children are clipped to the viewport and can only be hit inside it. Scroll bars draw over the children: the
  * track along the gutter and a thumb whose length is the visible fraction of the track, at least
- * {@link #MIN_THUMB_LENGTH} units and at most the track minus 8.</p>
+ * {@link #MIN_THUMB_LENGTH} units and at most the track minus 8. On a track shorter than twice the minimum, the
+ * thumb is at least half the track instead, so it can still move.</p>
  *
  * <h2>Theme keys</h2>
  * <ul>

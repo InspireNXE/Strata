@@ -40,7 +40,9 @@ import java.util.Set;
 /**
  * The core {@link ScrollPanel}. An {@link ScrollPolicy#AUTO} axis measures its children once without its scroll
  * bar and again with it only if the first pass overflowed; arranging checks again against the real bounds and shows
- * the bar if the content overflows them. Offsets set before the first layout are kept and clamped by it.
+ * the bar if the content overflows them. A bar that arranging adds measures the children again when its gutter
+ * narrows an axis that does not scroll, so text wraps at the viewport; that can show the other bar too. Offsets set
+ * before the first layout are only kept from going below 0, and the first layout clamps them.
  */
 public final class ScrollPanelImpl extends BuiltInContainer<ScrollPanel> implements ScrollPanel {
     private static final Set<String> REQUIRED = Set.of(STYLE_THUMB);
@@ -247,14 +249,14 @@ public final class ScrollPanelImpl extends BuiltInContainer<ScrollPanel> impleme
         boolean vertical = this.verticalPolicy == ScrollPolicy.ALWAYS;
         boolean horizontal = this.horizontalPolicy == ScrollPolicy.ALWAYS;
 
-        this.measureChildren(context, innerWidth, innerHeight, vertical, horizontal);
+        this.measureChildren(context::measure, innerWidth, innerHeight, vertical, horizontal);
         if (this.verticalPolicy == ScrollPolicy.AUTO && this.contentHeight > innerHeight - (horizontal ? GUTTER : 0f)) {
             vertical = true;
-            this.measureChildren(context, innerWidth, innerHeight, vertical, horizontal);
+            this.measureChildren(context::measure, innerWidth, innerHeight, vertical, horizontal);
         }
         if (this.horizontalPolicy == ScrollPolicy.AUTO && this.contentWidth > innerWidth - (vertical ? GUTTER : 0f)) {
             horizontal = true;
-            this.measureChildren(context, innerWidth, innerHeight, vertical, horizontal);
+            this.measureChildren(context::measure, innerWidth, innerHeight, vertical, horizontal);
         }
         this.verticalShown = vertical;
         this.horizontalShown = horizontal;
@@ -270,7 +272,7 @@ public final class ScrollPanelImpl extends BuiltInContainer<ScrollPanel> impleme
         return new Size(width, height);
     }
 
-    private void measureChildren(final MeasureContext context, final float innerWidth, final float innerHeight,
+    private void measureChildren(final Measurer context, final float innerWidth, final float innerHeight,
                                  final boolean vertical, final boolean horizontal) {
         final float childWidth = this.horizontalPolicy == ScrollPolicy.NEVER
                 ? innerWidth - (vertical ? GUTTER : 0f) : Float.POSITIVE_INFINITY;
@@ -292,13 +294,26 @@ public final class ScrollPanelImpl extends BuiltInContainer<ScrollPanel> impleme
         final Rect content = this.contentBox();
         boolean vertical = this.verticalShown;
         boolean horizontal = this.horizontalShown;
-        if (this.verticalPolicy == ScrollPolicy.AUTO && !vertical
-                && this.contentHeight > content.height() - (horizontal ? GUTTER : 0f)) {
-            vertical = true;
-        }
-        if (this.horizontalPolicy == ScrollPolicy.AUTO && !horizontal
-                && this.contentWidth > content.width() - (vertical ? GUTTER : 0f)) {
-            horizontal = true;
+        // A bar that takes room from an axis that does not scroll measures the children again, so text rewraps
+        boolean added = true;
+        while (added) {
+            added = false;
+            if (this.verticalPolicy == ScrollPolicy.AUTO && !vertical
+                    && this.contentHeight > content.height() - (horizontal ? GUTTER : 0f)) {
+                vertical = true;
+                added = true;
+                if (this.horizontalPolicy == ScrollPolicy.NEVER) {
+                    this.measureChildren(context::measure, content.width(), content.height(), vertical, horizontal);
+                }
+            }
+            if (this.horizontalPolicy == ScrollPolicy.AUTO && !horizontal
+                    && this.contentWidth > content.width() - (vertical ? GUTTER : 0f)) {
+                horizontal = true;
+                added = true;
+                if (this.verticalPolicy == ScrollPolicy.NEVER) {
+                    this.measureChildren(context::measure, content.width(), content.height(), vertical, horizontal);
+                }
+            }
         }
         this.verticalShown = vertical;
         this.horizontalShown = horizontal;
@@ -471,5 +486,13 @@ public final class ScrollPanelImpl extends BuiltInContainer<ScrollPanel> impleme
 
     private static float clamp(final float value, final float max) {
         return Math.max(0f, Math.min(value, max));
+    }
+
+    /**
+     * Measures a child, from a {@link MeasureContext} during measure or an {@link ArrangeContext} during arrange.
+     */
+    @FunctionalInterface
+    private interface Measurer {
+        Size measure(Component<?> child, float availableWidth, float availableHeight);
     }
 }

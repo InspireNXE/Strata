@@ -26,7 +26,11 @@ import org.inspirenxe.strata.api.theme.Paint;
  * and by the scroll bar control, so all of them measure alike.
  *
  * <p>The thumb is the track's length times the visible fraction, at least the minimum length and at most the track
- * less 8 units, but never longer than the track. When the whole content shows, the thumb fills the track.</p>
+ * less 8 units, but never longer than the track. On a track shorter than twice the minimum, the minimum is half the
+ * track, so the thumb always has room to travel. When the whole content shows, the thumb fills the track.</p>
+ *
+ * <p>The last thumb is kept and made again only when the track, the fractions or the offset change, so painting an
+ * unchanged bar allocates nothing.</p>
  */
 public final class ScrollTrack {
     private final boolean vertical;
@@ -34,6 +38,10 @@ public final class ScrollTrack {
     private Rect track;
     private float visible;
     private float extent;
+    // The last thumb and the offsets it was made for; null after an update
+    private Rect thumb;
+    private float thumbOffset;
+    private float thumbMaxOffset;
 
     /**
      * Creates a bar with an empty track and a thumb at least {@link ScrollPanel#MIN_THUMB_LENGTH} long.
@@ -64,9 +72,12 @@ public final class ScrollTrack {
      * @param extent the length of the content along the bar
      */
     public void update(final Rect track, final float visible, final float extent) {
-        this.track = track;
-        this.visible = visible;
-        this.extent = extent;
+        if (!track.equals(this.track) || visible != this.visible || extent != this.extent) {
+            this.track = track;
+            this.visible = visible;
+            this.extent = extent;
+            this.thumb = null;
+        }
     }
 
     /**
@@ -87,26 +98,34 @@ public final class ScrollTrack {
         if (this.extent <= 0f || this.visible >= this.extent) {
             return track;
         }
+        final float least = Math.min(this.minThumbLength, track * 0.5f);
         float length = track * this.visible / this.extent;
-        length = Math.max(length, this.minThumbLength);
-        length = Math.min(length, Math.max(this.minThumbLength, track - 8f));
+        length = Math.max(length, least);
+        length = Math.min(length, Math.max(least, track - 8f));
         return Math.min(length, track);
     }
 
     /**
-     * Returns the thumb for an offset.
+     * Returns the thumb for an offset. The same rectangle comes back until the track, the fractions or the offsets
+     * change.
      *
      * @param offset the offset along the bar
      * @param maxOffset the largest offset
      * @return the thumb, in the host's coordinates
      */
     public Rect thumb(final float offset, final float maxOffset) {
+        if (this.thumb != null && offset == this.thumbOffset && maxOffset == this.thumbMaxOffset) {
+            return this.thumb;
+        }
         final float length = this.thumbLength();
         final float travel = this.trackLength() - length;
         final float along = maxOffset <= 0f ? 0f : travel * Math.max(0f, Math.min(1f, offset / maxOffset));
-        return this.vertical
+        this.thumb = this.vertical
                 ? new Rect(this.track.x(), this.track.y() + along, this.track.width(), length)
                 : new Rect(this.track.x() + along, this.track.y(), length, this.track.height());
+        this.thumbOffset = offset;
+        this.thumbMaxOffset = maxOffset;
+        return this.thumb;
     }
 
     /**
