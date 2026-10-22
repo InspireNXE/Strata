@@ -227,8 +227,9 @@ public final class TreeViewImpl<T> extends BuiltInComposite<TreeView<T>> impleme
      */
     private void flattenShown() {
         final List<Entry<T>> flat = new ArrayList<>();
+        final Set<Object> path = new HashSet<>();
         for (final T root : this.roots) {
-            this.flatten(root, 0, flat);
+            this.flatten(root, 0, flat, path);
         }
         final List<Entry<T>> entries = List.copyOf(flat);
         final List<T> items = new ArrayList<>(flat.size());
@@ -241,13 +242,24 @@ public final class TreeViewImpl<T> extends BuiltInComposite<TreeView<T>> impleme
         this.list.replaceItems(entries, moves);
     }
 
-    private void flatten(final T item, final int depth, final List<Entry<T>> into) {
+    /**
+     * Adds an item and, if it is expanded, its shown descendants. An item whose key is already on the path from the
+     * root, the keys of its ancestors, is added as a leaf, so children that lead back to an ancestor end there.
+     */
+    private void flatten(final T item, final int depth, final List<Entry<T>> into, final Set<Object> path) {
+        final Object key = this.key(item);
+        if (path.contains(key)) {
+            into.add(new Entry<>(item, depth, false));
+            return;
+        }
         final List<? extends T> kids = this.childrenOf(item);
         into.add(new Entry<>(item, depth, !kids.isEmpty()));
-        if (!kids.isEmpty() && this.expanded.contains(this.key(item))) {
+        if (!kids.isEmpty() && this.expanded.contains(key)) {
+            path.add(key);
             for (final T child : kids) {
-                this.flatten(child, depth + 1, into);
+                this.flatten(child, depth + 1, into, path);
             }
+            path.remove(key);
         }
     }
 

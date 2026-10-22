@@ -149,7 +149,8 @@ public interface TreeView<T> extends Component<TreeView<T>>, HasCursor<TreeView<
      * Sets how the tree finds an item's children. The rows are worked out again.
      *
      * @param children returns an item's children, in order; an empty list for a leaf. By default every item is a
-     *     leaf.
+     *     leaf. An item that would show under itself, because the children lead back to one of its ancestors, shows
+     *     there as a leaf.
      * @return this tree
      */
     TreeView<T> setChildren(Function<? super T, ? extends List<? extends T>> children);

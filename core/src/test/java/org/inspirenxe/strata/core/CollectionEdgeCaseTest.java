@@ -16,11 +16,13 @@
 package org.inspirenxe.strata.core;
 
 import org.inspirenxe.strata.api.ComponentFactory;
+import org.inspirenxe.strata.api.control.attribute.item.Activatable;
 import org.inspirenxe.strata.api.control.attribute.item.MultiSelection;
 import org.inspirenxe.strata.api.control.attribute.item.Selection;
 import org.inspirenxe.strata.api.control.attribute.item.SelectionMode;
 import org.inspirenxe.strata.api.control.attribute.popup.Closable;
 import org.inspirenxe.strata.api.control.collection.ComboBox;
+import org.inspirenxe.strata.api.control.collection.GridView;
 import org.inspirenxe.strata.api.control.collection.ListView;
 import org.inspirenxe.strata.api.control.collection.TableColumn;
 import org.inspirenxe.strata.api.control.collection.TableView;
@@ -45,6 +47,7 @@ import java.util.Optional;
 import java.util.stream.IntStream;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -324,6 +327,38 @@ class CollectionEdgeCaseTest {
             assertEquals(List.of("Ana", "Ben"), tree.items());
             assertEquals(List.of("Ana", "Ben"), tree.shownItems());
             assertEquals(Optional.of("Ben"), tree.selected());
+        }
+    }
+
+    @Nested
+    class ChangesDuringInput {
+        @Test
+        void aGridWhoseSelectHandlerShrinksTheItemsDropsTheClick() {
+            final ComponentFactory ui = CollectionEdgeCaseTest.this.ui;
+            final GridView<String> grid = ui.<String>gridView(ui::label).setColumns(3)
+                    .setItems(List.of("a", "b", "c")).setSelectable(true).setActivateOnClick(true);
+            final List<String> heard = new ArrayList<>();
+            grid.onEvent(Selection.SELECT, e -> grid.setItems(List.of("x")));
+            grid.onEvent(GridView.CLICK, e -> heard.add("click " + e.value().index()));
+            grid.onEvent(Activatable.ACTIVATE, e -> heard.add("activate " + e.value()));
+            CollectionEdgeCaseTest.this.test.show(CollectionEdgeCaseTest.this.panel.add(grid, 0, 0));
+            assertDoesNotThrow(() -> CollectionEdgeCaseTest.this.test.click(41, 5));
+            assertEquals(List.of(), heard);
+            assertEquals(-1, grid.selectedIndex());
+        }
+    }
+
+    @Nested
+    class CyclicTrees {
+        @Test
+        void anItemThatIsItsOwnAncestorShowsOnceMoreAsALeaf() {
+            final TreeView<String> tree = CollectionEdgeCaseTest.this.ui.<String>treeView()
+                    .setChildren(name -> name.equals("Ana") ? List.of("Ben") : List.of("Ana"))
+                    .setItems(List.of("Ana"));
+            assertDoesNotThrow(tree::expandAll);
+            assertEquals(List.of("Ana", "Ben", "Ana"), tree.shownItems());
+            assertDoesNotThrow(() -> tree.selectItem("Ben"));
+            assertEquals(1, tree.selectedIndex());
         }
     }
 }

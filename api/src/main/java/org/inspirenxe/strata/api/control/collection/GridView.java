@@ -132,7 +132,8 @@ public interface GridView<T> extends Component<GridView<T>>, HasCursor<GridView<
      * selection it fires after {@link SingleSelection#SELECT}, whether or not that request was canceled. The value
      * is the cell, its item, the button and the modifiers. A handler may rewrite it; the grid reports the final click
      * with {@link #CLICKED} as given, unless its index is not a cell's, which is ignored. Canceling it skips
-     * {@link #CLICKED}. Fires only for the user's actions.
+     * {@link #CLICKED}. If a {@link SingleSelection#SELECT} handler replaced the items so that the clicked cell is
+     * gone, neither this nor {@link Activatable#ACTIVATE} fires for the click. Fires only for the user's actions.
      */
     EventType<ValueRequestEvent<GridView<?>, Click<?>>> CLICK = EventType.valueRequest("grid_view.click");
     /**

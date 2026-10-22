@@ -283,12 +283,16 @@ public final class GridViewImpl<T> extends BuiltInComposite<GridView<T>> impleme
     /**
      * Handles a click on a cell: a left click asks to select it when the grid is selectable, then the click itself
      * is asked for and reported, then a left double click, or a single one with activate on click, asks to activate
-     * the cell.
+     * the cell. If a {@code SELECT} handler replaced the items so that the cell is gone, the click stops there.
      */
     private void clicked(final int index, final PointerButtonEvent event) {
         final boolean left = event.button() == MouseButton.LEFT;
         if (this.selectable && left && index != this.selectedIndex) {
             this.request(SELECT, index, this::applySelect);
+        }
+        if (index >= this.items.size()) {
+            // A SELECT handler replaced the items and the cell went, so the rest of the click goes with it
+            return;
         }
         this.request(CLICK, new Click<>(index, this.items.get(index), event.button(), event.modifiers()),
                 this::applyClick);
