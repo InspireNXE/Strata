@@ -38,7 +38,8 @@ import java.util.Optional;
  * The core {@link RadioGroup}. It holds its buttons and their values side by side and tracks the selected button;
  * the buttons ask it whether they are selected. Its handlers live in a dispatcher of its own, created on the first
  * registration, and the group's {@code SELECTED} reaches only them. After each new button and each change of the
- * selection it sets which buttons are tabbable: the selected one, or the first while none is selected.
+ * selection it sets which buttons are tabbable: the selected one, or the first while none is selected. A button
+ * taken out with {@link #remove} is no longer in its lists, so {@link #choose} ignores it.
  *
  * @param <T> the type of the values the buttons stand for
  */
@@ -71,6 +72,48 @@ public final class RadioGroupImpl<T> implements RadioGroup<T> {
         this.values.add(value);
         this.updateTabStops();
         return button;
+    }
+
+    /**
+     * Takes a button out. The selected button is deselected first, through {@link #choose}, so it reports
+     * {@code TOGGLED} and the group {@code SELECTED} with -1. A button before the selected one moves the selected
+     * index down, which the group reports with the selected button as the target.
+     */
+    @Override
+    public RadioGroup<T> remove(final RadioButton button) {
+        if (!(button instanceof final RadioButtonImpl impl) || !this.buttons.contains(impl)) {
+            return this;
+        }
+        if (impl == this.selected) {
+            this.choose(null);
+        }
+        final int before = this.buttons.indexOf(this.selected);
+        final int index = this.buttons.indexOf(impl);
+        this.buttons.remove(index);
+        this.values.remove(index);
+        this.updateTabStops();
+        if (this.selected != null && index < before) {
+            this.fireSelected(this.selected, before - 1, before);
+        }
+        return this;
+    }
+
+    /**
+     * Takes every button out: the selected one is deselected first, through {@link #choose}, and then the lists are
+     * emptied.
+     */
+    @Override
+    public RadioGroup<T> clear() {
+        if (this.selected != null) {
+            this.choose(null);
+        }
+        this.buttons.clear();
+        this.values.clear();
+        return this;
+    }
+
+    boolean contains(final RadioButtonImpl button) {
+        return this.buttons.contains(button);
     }
 
     /**
@@ -158,7 +201,7 @@ public final class RadioGroupImpl<T> implements RadioGroup<T> {
      */
     void choose(final RadioButtonImpl button) {
         final RadioButtonImpl previous = this.selected;
-        if (previous == button) {
+        if (previous == button || button != null && !this.buttons.contains(button)) {
             return;
         }
         // A button selected by a choice that has not reported yet has no deselect to report
@@ -182,10 +225,16 @@ public final class RadioGroupImpl<T> implements RadioGroup<T> {
                 return;
             }
         }
+        this.fireSelected(button != null ? button : told != null ? told : previous, this.buttons.indexOf(button),
+                this.buttons.indexOf(told));
+    }
+
+    /**
+     * Fires {@code SELECTED} to the group's own handlers, if it has any.
+     */
+    private void fireSelected(final RadioButtonImpl target, final int index, final int previous) {
         if (this.dispatcher != null && this.dispatcher.hasHandlers(SELECTED)) {
-            final ValueEventImpl<Selection<?, ?>, Integer> event = new ValueEventImpl<>(
-                    button != null ? button : told != null ? told : previous, this, this.buttons.indexOf(button),
-                    this.buttons.indexOf(told));
+            final ValueEventImpl<Selection<?, ?>, Integer> event = new ValueEventImpl<>(target, this, index, previous);
             event.setCauses(this.ui.causes());
             this.dispatcher.fire(SELECTED, event);
         }
@@ -201,6 +250,9 @@ public final class RadioGroupImpl<T> implements RadioGroup<T> {
     boolean moveFrom(final RadioButtonImpl from, final int direction) {
         final int count = this.buttons.size();
         final int start = this.buttons.indexOf(from);
+        if (start < 0) {
+            return false;
+        }
         for (int step = 1; step < count; step++) {
             final RadioButtonImpl next = this.buttons.get(Math.floorMod(start + step * direction, count));
             if (next.isAttached() && next.isVisible() && next.isEnabled()) {

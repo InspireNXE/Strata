@@ -171,11 +171,14 @@ public final class RadioButtonImpl extends BuiltInComponent<RadioButton> impleme
     /**
      * Selects this button for the user through {@link org.inspirenxe.strata.api.control.attribute.value.Toggle#TOGGLE}
      * with true, and selects it if the final value is true. A button that is already selected skips the request and
-     * is only focused if asked.
+     * is only focused if asked. A button removed from its group does nothing.
      *
      * @param focus whether to focus the button once it is selected
      */
     void userSelect(final boolean focus) {
+        if (!this.group.contains(this)) {
+            return;
+        }
         if (this.isSelected()) {
             this.applySelect(focus);
             return;

@@ -131,7 +131,8 @@ public interface RadioButton extends Component<RadioButton>, Focusable<RadioButt
     RadioButton setText(Text text);
 
     /**
-     * Returns the group this button belongs to.
+     * Returns the group that made this button. A button {@linkplain RadioGroup#remove removed} from it still returns
+     * it, is no longer in its {@linkplain RadioGroup#buttons() buttons}, and can no longer be selected.
      *
      * @return the group that made it
      */
