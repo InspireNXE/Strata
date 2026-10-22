@@ -191,7 +191,7 @@ public interface ComboBox<T> extends Component<ComboBox<T>>, Focusable<ComboBox<
      * it as for an option. A box that should start with nothing selected and show it calls {@link #clearSelection()}
      * before its options arrive, since a box that never had a selection selects its first option.
      *
-     * @param placeholder the hint, or {@code null} or empty for none
+     * @param placeholder the hint, or empty for none
      * @return this box
      */
     ComboBox<T> setPlaceholder(Text placeholder);
@@ -199,11 +199,11 @@ public interface ComboBox<T> extends Component<ComboBox<T>>, Focusable<ComboBox<
     /**
      * Does the same as {@link #setPlaceholder(Text)} with literal text.
      *
-     * @param placeholder the hint, or {@code null} or empty for none
+     * @param placeholder the hint, or empty for none
      * @return this box
      */
     default ComboBox<T> setPlaceholder(final String placeholder) {
-        return this.setPlaceholder(placeholder == null ? null : Text.of(placeholder));
+        return this.setPlaceholder(Text.of(placeholder));
     }
 
     /**

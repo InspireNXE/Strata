@@ -219,7 +219,7 @@ public final class ComboBoxImpl<T> extends BuiltInComponent<ComboBox<T>> impleme
 
     @Override
     public ComboBox<T> setPlaceholder(final Text placeholder) {
-        this.placeholder = placeholder == null ? Text.empty() : placeholder;
+        this.placeholder = Objects.requireNonNull(placeholder, "placeholder");
         this.shownIndex = -2;
         this.invalidateLayout();
         return this;
