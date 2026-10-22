@@ -42,9 +42,10 @@ import org.inspirenxe.strata.api.state.PropertyKey;
  *     magenta back to red at the bottom.</li>
  *     <li>A press or drag on the alpha strip, while it {@linkplain #setAlphaShown shows}, sets the alpha, opaque at the
  *     top and clear at the bottom.</li>
- *     <li>The hex field takes {@code RRGGBB} or {@code AARRGGBB}, with or without a leading {@code #}, on Enter or
- *     when it loses focus. Six digits keep the current alpha. Anything else puts the current color back. It shows
- *     {@code #RRGGBB}, or {@code #AARRGGBB} while the alpha strip shows.</li>
+ *     <li>The hex field takes {@code RRGGBB}, or {@code AARRGGBB} while the alpha strip shows, with or without a
+ *     leading {@code #}, on Enter or when it loses focus. Six digits keep the current alpha, and while the strip is
+ *     hidden the field takes no more than six, so the user never sets an alpha they cannot see. Anything else puts the
+ *     current color back. It shows {@code #RRGGBB}, or {@code #AARRGGBB} while the alpha strip shows.</li>
  * </ul>
  * <p>The picker is not focusable itself; keyboard users type into the hex field, which is focusable and tabbable. A
  * disabled picker ignores input and draws {@value #STYLE_DISABLED} over its square and strips.</p>

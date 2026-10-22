@@ -17,10 +17,12 @@ package org.inspirenxe.strata.core;
 
 import org.inspirenxe.strata.api.ComponentFactory;
 import org.inspirenxe.strata.api.control.attribute.value.Ranged;
+import org.inspirenxe.strata.api.control.field.ColorPicker;
 import org.inspirenxe.strata.api.control.field.Slider;
 import org.inspirenxe.strata.api.control.field.Spinner;
 import org.inspirenxe.strata.api.input.Key;
 import org.inspirenxe.strata.api.input.KeyAction;
+import org.inspirenxe.strata.api.input.Modifier;
 import org.inspirenxe.strata.api.input.Modifiers;
 import org.inspirenxe.strata.api.layout.Anchor;
 import org.junit.jupiter.api.Nested;
@@ -125,6 +127,42 @@ class NumericFieldsTest {
             NumericFieldsTest.this.key(Key.RIGHT);
 
             assertEquals(0.3, slider.value());
+        }
+    }
+
+    @Nested
+    class ColorPickerHex {
+        private ColorPicker picker;
+
+        private void show(final boolean alphaShown) {
+            this.picker = NumericFieldsTest.this.ui.colorPicker().setAlphaShown(alphaShown);
+            this.picker.setAnchor(Anchor.TOP_LEFT);
+            NumericFieldsTest.this.test.show(this.picker);
+            NumericFieldsTest.this.key(Key.TAB);
+            NumericFieldsTest.this.test.host().key(Key.A, KeyAction.PRESS, Modifiers.of(Modifier.CONTROL));
+        }
+
+        private void typeAndEnter(final String text) {
+            text.codePoints().forEach(code -> NumericFieldsTest.this.test.host().charTyped(code, Modifiers.NONE));
+            NumericFieldsTest.this.key(Key.ENTER);
+        }
+
+        @Test
+        void eightDigitsCannotSetTheAlphaWhileItsStripIsHidden() {
+            this.show(false);
+
+            this.typeAndEnter("80FF0000");
+
+            assertEquals(0xFF, this.picker.color() >>> 24, "the alpha the user cannot see stays as it was");
+        }
+
+        @Test
+        void eightDigitsSetTheAlphaWhileItsStripShows() {
+            this.show(true);
+
+            this.typeAndEnter("80FF0000");
+
+            assertEquals(0x80FF0000, this.picker.color());
         }
     }
 }

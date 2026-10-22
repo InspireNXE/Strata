@@ -341,8 +341,13 @@ class InputControlsTest {
             field.selectAll();
             InputControlsTest.this.type("#8000ff00");
             InputControlsTest.this.key(Key.ENTER);
-            assertEquals(0x8000FF00, this.picker.color());
+            assertEquals(0xFF8000FF, this.picker.color(), "while the alpha strip is hidden the last two digits are refused");
+
             this.picker.setAlphaShown(true);
+            field.selectAll();
+            InputControlsTest.this.type("#8000ff00");
+            InputControlsTest.this.key(Key.ENTER);
+            assertEquals(0x8000FF00, this.picker.color());
             assertEquals("#8000FF00", field.text());
         }
 

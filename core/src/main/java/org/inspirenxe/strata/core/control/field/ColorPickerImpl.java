@@ -37,11 +37,12 @@ import org.inspirenxe.strata.core.node.ComponentFactoryImpl;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.regex.Pattern;
 
 /**
  * The core {@link ColorPicker}: the square and strips are painted, and the hex field is a private
- * {@link TextBoxImpl} whose internal filter admits only an optional {@code #} and up to eight hex digits. The field's
- * {@link TextBox} events stop at the picker.
+ * {@link TextBoxImpl} whose internal filter admits only an optional {@code #} and up to six hex digits, or eight
+ * while the alpha strip shows. The field's {@link TextBox} events stop at the picker.
  *
  * <p>The square is drawn as one column per unit of its width, each a vertical gradient from the column's saturation
  * at full brightness down to black, which is exact because brightness scales the color linearly. The hue strip is
@@ -59,6 +60,8 @@ public final class ColorPickerImpl extends BuiltInComposite<ColorPicker> impleme
     private static final int[] HUES = {0xFFFF0000, 0xFFFFFF00, 0xFF00FF00, 0xFF00FFFF, 0xFF0000FF, 0xFFFF00FF, 0xFFFF0000};
     private static final Paint DEFAULT_MARKER = Paint.solid(0xFFFFFFFF);
     private static final Paint DEFAULT_MARKER_OUTLINE = Paint.solid(0xFF000000);
+    private static final Pattern RGB = Pattern.compile("#?[0-9a-fA-F]{0,6}");
+    private static final Pattern ARGB = Pattern.compile("#?[0-9a-fA-F]{0,8}");
 
     private final TextBoxImpl field;
     private int color;
@@ -124,7 +127,8 @@ public final class ColorPickerImpl extends BuiltInComposite<ColorPicker> impleme
         this.field = new TextBoxImpl(ui);
         this.field.setMaxLength(9);
         this.field.setAnchor(Anchor.FILL);
-        this.field.setInternalFilter(text -> text.matches("#?[0-9a-fA-F]{0,8}") ? text : null);
+        // The alpha can be typed only while its strip shows, so the user never sets one they cannot see
+        this.field.setInternalFilter(text -> (this.alphaShown ? ARGB : RGB).matcher(text).matches() ? text : null);
         this.field.onEvent(TextBox.SUBMITTED, event -> this.commitHex());
         this.field.onEvent(Focusable.FOCUS_LOST, event -> this.commitHex());
         this.addChild(this.field);
@@ -260,14 +264,15 @@ public final class ColorPickerImpl extends BuiltInComposite<ColorPicker> impleme
     }
 
     /**
-     * Takes the hex code typed into the field, or puts the current color back when it is not six or eight digits.
+     * Takes the hex code typed into the field, or puts the current color back when it is not six digits, or eight
+     * while the alpha strip shows.
      */
     private void commitHex() {
         final String text = this.field.text().startsWith("#") ? this.field.text().substring(1) : this.field.text();
         final int parsed;
         if (text.length() == 6) {
             parsed = (this.color & 0xFF000000) | Integer.parseInt(text, 16);
-        } else if (text.length() == 8) {
+        } else if (text.length() == 8 && this.alphaShown) {
             parsed = Integer.parseUnsignedInt(text, 16);
         } else {
             this.showHex();
