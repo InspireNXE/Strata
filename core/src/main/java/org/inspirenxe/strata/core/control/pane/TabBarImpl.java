@@ -259,15 +259,16 @@ public final class TabBarImpl extends BuiltInComposite<TabBar> implements TabBar
 
     @Override
     protected Size measure(final MeasureContext context, final float availableWidth, final float availableHeight) {
-        float width = 0f;
+        // Tabs share the width equally, so every tab needs room for the widest caption
+        float widest = 0f;
         float height = 0f;
         for (final TabView view : this.views) {
             final Size outer = context.measure(view, Float.POSITIVE_INFINITY, availableHeight);
-            width += outer.width();
+            widest = Math.max(widest, outer.width());
             height = Math.max(height, outer.height());
         }
-        width += this.spacing * Math.max(0, this.views.size() - 1);
-        return new Size(width, height);
+        final int count = this.views.size();
+        return new Size(widest * count + this.spacing * Math.max(0, count - 1), height);
     }
 
     @Override
