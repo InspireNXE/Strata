@@ -16,13 +16,22 @@
 package org.inspirenxe.strata.core;
 
 import org.inspirenxe.strata.api.ComponentFactory;
+import org.inspirenxe.strata.api.control.attribute.item.MultiSelection;
+import org.inspirenxe.strata.api.control.attribute.item.Selection;
+import org.inspirenxe.strata.api.control.attribute.item.SelectionMode;
 import org.inspirenxe.strata.api.control.collection.ListView;
 import org.inspirenxe.strata.api.control.collection.TableView;
+import org.inspirenxe.strata.api.control.collection.TreeView;
+import org.inspirenxe.strata.api.input.Key;
+import org.inspirenxe.strata.api.input.KeyAction;
+import org.inspirenxe.strata.api.input.Modifier;
+import org.inspirenxe.strata.api.input.Modifiers;
 import org.inspirenxe.strata.api.layout.AbsolutePanel;
 import org.inspirenxe.strata.api.layout.GridLength;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.IntStream;
 
@@ -88,6 +97,49 @@ class CollectionEdgeCaseTest {
             table.setScrollY(240);
             CollectionEdgeCaseTest.this.test.show(CollectionEdgeCaseTest.this.panel.add(table, 0, 0));
             assertEquals(240f, table.scrollY());
+        }
+    }
+
+    @Nested
+    class TreeKeys {
+        private final List<String> asked = new ArrayList<>();
+        private TreeView<String> tree;
+
+        private void show() {
+            final ComponentFactory ui = CollectionEdgeCaseTest.this.ui;
+            this.tree = ui.<String>treeView()
+                    .setChildren(name -> name.equals("Ana") ? List.of("Ana's notes", "Ana's mail") : List.of())
+                    .setItems(List.of("Ana", "Ben"))
+                    .setSelectionMode(SelectionMode.MULTIPLE)
+                    .onEvent(Selection.SELECT, e -> this.asked.add("select " + e.value()))
+                    .onEvent(MultiSelection.SELECT_MANY, e -> this.asked.add("many " + e.value()));
+            this.tree.setSize(200, 200);
+            this.tree.setExpanded("Ana", true);
+            CollectionEdgeCaseTest.this.test.show(CollectionEdgeCaseTest.this.panel.add(this.tree, 0, 0));
+            CollectionEdgeCaseTest.this.test.click(50, 10);
+            this.asked.clear();
+        }
+
+        private void key(final Key key, final Modifiers modifiers) {
+            CollectionEdgeCaseTest.this.test.host().key(key, KeyAction.PRESS, modifiers);
+        }
+
+        @Test
+        void rightAndLeftAskForTheSetInMultipleMode() {
+            this.show();
+            this.key(Key.RIGHT, Modifiers.NONE);
+            assertEquals(List.of(1), this.tree.selectedIndexes());
+            this.key(Key.LEFT, Modifiers.NONE);
+            assertEquals(List.of(0), this.tree.selectedIndexes());
+            assertEquals(List.of("many [1]", "many [0]"), this.asked);
+        }
+
+        @Test
+        void shiftWithRightExtendsTheSetLikeShiftWithDown() {
+            this.show();
+            this.key(Key.RIGHT, Modifiers.of(Modifier.SHIFT));
+            assertEquals(List.of(0, 1), this.tree.selectedIndexes());
+            assertEquals(1, this.tree.selectedIndex());
         }
     }
 }

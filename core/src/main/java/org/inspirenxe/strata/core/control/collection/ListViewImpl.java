@@ -633,6 +633,22 @@ public final class ListViewImpl<T> extends BuiltInComposite<ListView<T>> impleme
     }
 
     /**
+     * Moves the selection to a row for a key the user pressed, as Up and Down do: in {@link SelectionMode#MULTIPLE}
+     * mode the row alone, or the range from the anchor with Shift, through {@link ListView#SELECT_MANY}; otherwise
+     * through {@link ListView#SELECT} if the selection changes.
+     *
+     * @param index the row
+     * @param shift whether Shift is held
+     */
+    void keyMove(final int index, final boolean shift) {
+        if (this.mode == SelectionMode.MULTIPLE) {
+            this.userPick(index, false, shift, false);
+        } else {
+            this.keySelect(index);
+        }
+    }
+
+    /**
      * Moves to an offset, at least 0. Once the list has been laid out it is also clamped to the rows, measured from
      * the current items and the last viewport, so an offset set right after {@link #setItems} is not clamped to the
      * old items. The next arrange clamps it again.
@@ -1018,11 +1034,8 @@ public final class ListViewImpl<T> extends BuiltInComposite<ListView<T>> impleme
             case END -> last;
             default -> -2;
         };
-        if (next >= 0 && this.mode == SelectionMode.MULTIPLE) {
-            this.userPick(next, false, event.modifiers().shift(), false);
-            event.consume();
-        } else if (next >= 0) {
-            this.keySelect(next);
+        if (next >= 0) {
+            this.keyMove(next, event.modifiers().shift());
             event.consume();
         } else if (event.key().isEnter() && event.action() == KeyAction.PRESS && current >= 0) {
             this.userActivate(current);

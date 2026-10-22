@@ -600,7 +600,8 @@ public final class TreeViewImpl<T> extends BuiltInComposite<TreeView<T>> impleme
     }
 
     /**
-     * Asks to select a row for the user. The list routes its own selections here.
+     * Asks to select a row for the user. The list routes its own selections here, and Left and Right move through
+     * the list as Up and Down do.
      */
     private void userSelect(final int index) {
         this.request(SELECT, index, this.list::applySelect);
@@ -659,7 +660,7 @@ public final class TreeViewImpl<T> extends BuiltInComposite<TreeView<T>> impleme
                 if (!this.isExpanded(entry.item)) {
                     this.userExpand(entry.item, true);
                 } else if (index + 1 < this.entries.size()) {
-                    this.userSelect(index + 1);
+                    this.list.keyMove(index + 1, event.modifiers().shift());
                 }
             }
             case LEFT -> {
@@ -668,7 +669,7 @@ public final class TreeViewImpl<T> extends BuiltInComposite<TreeView<T>> impleme
                 } else {
                     for (int i = index - 1; i >= 0; i--) {
                         if (this.entries.get(i).depth < entry.depth) {
-                            this.userSelect(i);
+                            this.list.keyMove(i, event.modifiers().shift());
                             break;
                         }
                     }

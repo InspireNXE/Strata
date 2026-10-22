@@ -44,8 +44,9 @@ import java.util.function.Function;
  * <p>Each row starts {@linkplain #setIndent indented} by its depth, then shows a 12-unit arrow column, then the cell.
  * The arrow points right for a collapsed item and down for an expanded one, and is missing for an item with no
  * children. Clicking the arrow flips the item. Right expands the selected item or, if it is expanded, selects its
- * first child; Left collapses it or, if it is collapsed, selects its parent. Up, Down, Page Up, Page Down, Home, End
- * and Enter work as in a list.</p>
+ * first child; Left collapses it or, if it is collapsed, selects its parent. Those moves select as Up and Down do, so
+ * in {@link SelectionMode#MULTIPLE} mode they ask {@link MultiSelection#SELECT_MANY} and Shift extends the range.
+ * Up, Down, Page Up, Page Down, Home, End and Enter work as in a list.</p>
  *
  * <p>Items are told apart by their key, the item itself unless {@linkplain #setKeyFunction set} otherwise, and the
  * tree remembers which keys are expanded across {@link #setItems} calls.</p>
