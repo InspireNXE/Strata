@@ -16,6 +16,7 @@
 package org.inspirenxe.strata.core.control.button;
 
 import org.inspirenxe.strata.api.control.button.Button;
+import org.inspirenxe.strata.api.control.button.IconPlacement;
 import org.inspirenxe.strata.api.extension.Painter;
 import org.inspirenxe.strata.api.geometry.Insets;
 import org.inspirenxe.strata.api.geometry.Rect;
@@ -44,7 +45,8 @@ import java.util.Set;
  * <p>The caption is resolved during measure in three styles, normal, hovered and disabled, and the widest of the
  * three counts, so hovering, enabling or disabling needs no new layout. The caption's mnemonic marker is taken out,
  * and each of the three is also kept with the mnemonic underlined, for drawing while mnemonics show. An icon is drawn {@link ButtonImpl#ICON_GAP}
- * units before the caption, and the two are centered together in the area they are given. The padding is the one set
+ * units before the caption, or after, above or below it as its {@link IconPlacement} says, and the two are centered
+ * together in the area they are given. The padding is the one set
  * with {@link #setTextPadding}, or else none for a link, the theme's {@value Button#STYLE_PADDING_ICON} for an icon
  * with no caption, and the theme's {@value Button#STYLE_PADDING} otherwise.</p>
  */
@@ -65,8 +67,10 @@ final class ButtonContent {
     private Visual iconVisual;
     private float iconWidth;
     private float iconHeight;
+    private IconPlacement placement = IconPlacement.START;
     private final Caption captionDrawer = new Caption();
     private final RectCache iconRect = new RectCache();
+    private final RectCache captionArea = new RectCache();
     private final Rings.Ring ring = new Rings.Ring();
 
     // Theme
@@ -211,6 +215,14 @@ final class ButtonContent {
         this.iconHeight = height;
     }
 
+    IconPlacement placement() {
+        return this.placement;
+    }
+
+    void setPlacement(final IconPlacement placement) {
+        this.placement = Objects.requireNonNull(placement, "placement");
+    }
+
     boolean hasIcon() {
         return this.iconSprite != null || this.iconVisual != null;
     }
@@ -284,6 +296,9 @@ final class ButtonContent {
     float contentWidth() {
         final boolean icon = this.hasIcon();
         final boolean hasText = !this.caption.isEmpty();
+        if (icon && hasText && this.placement.isVertical()) {
+            return Math.max(this.iconWidth, this.captionWidth);
+        }
         return (icon ? this.iconWidth : 0f) + (icon && hasText ? ButtonImpl.ICON_GAP : 0f)
                 + (hasText ? this.captionWidth : 0f);
     }
@@ -297,7 +312,17 @@ final class ButtonContent {
         if (icon && this.caption.isEmpty()) {
             return this.iconHeight;
         }
+        if (icon && this.placement.isVertical()) {
+            return this.iconHeight + ButtonImpl.ICON_GAP + this.captionHeight;
+        }
         return Math.max(this.captionHeight, icon ? this.iconHeight : 0f);
+    }
+
+    /**
+     * Returns the caption's top below the content's top, which is 0 unless the icon is stacked above it.
+     */
+    private float captionOffset() {
+        return this.hasIcon() && this.placement == IconPlacement.TOP ? this.iconHeight + ButtonImpl.ICON_GAP : 0f;
     }
 
     /**
@@ -310,6 +335,10 @@ final class ButtonContent {
     float baseline(final float height, final Insets padding) {
         if (this.caption.isEmpty()) {
             return Float.NaN;
+        }
+        if (this.hasIcon() && this.placement.isVertical()) {
+            return padding.top() + (height - padding.vertical() - this.contentHeight()) * 0.5f + this.captionOffset()
+                    + this.caption.baseline();
         }
         return padding.top() + (height - padding.vertical() - this.captionHeight) * 0.5f + this.caption.baseline();
     }
@@ -367,21 +396,54 @@ final class ButtonContent {
             return hasText && this.captionDrawer.draw(painter, shown, bounds, padding,
                     top + (height - this.captionHeight) * 0.5f, millis);
         }
-        final float contentWidth = this.contentWidth();
-        final float start = hasText ? this.captionDrawer.start(bounds, padding, contentWidth)
-                : Caption.center(left, width, this.iconWidth);
-        // Right to left the icon goes where the left-to-right one would be, mirrored inside the bounds
-        final float x = rightToLeft ? bounds.x() + bounds.right() - start - this.iconWidth : start;
-        final Rect iconRect = this.iconRect.at(x, top + (height - this.iconHeight) * 0.5f, this.iconWidth,
-                this.iconHeight);
         final int tint = enabled ? 0xFFFFFFFF : DISABLED_ICON_TINT;
+        if (!hasText) {
+            this.paintIcon(painter, Caption.center(left, width, this.iconWidth),
+                    top + (height - this.iconHeight) * 0.5f, tint);
+            return false;
+        }
+        // Right to left, an icon before the caption sits at its right end, and one after it at its left
+        IconPlacement placement = this.placement;
+        if (rightToLeft && placement == IconPlacement.START) {
+            placement = IconPlacement.END;
+        } else if (rightToLeft && placement == IconPlacement.END) {
+            placement = IconPlacement.START;
+        }
+        switch (placement) {
+            case TOP, BOTTOM -> {
+                final float blockTop = top + (height - this.contentHeight()) * 0.5f;
+                final boolean above = placement == IconPlacement.TOP;
+                this.paintIcon(painter, Caption.center(left, width, this.iconWidth),
+                        above ? blockTop : blockTop + this.captionHeight + ButtonImpl.ICON_GAP, tint);
+                return this.captionDrawer.draw(painter, shown, bounds, padding, blockTop + this.captionOffset(), millis);
+            }
+            case END -> {
+                // The caption centers and is cut in the bounds less the icon and its gap, and the icon follows it
+                final float lead = this.iconWidth + ButtonImpl.ICON_GAP;
+                final Rect area = this.captionArea.at(bounds.x(), bounds.y(), Math.max(0f, bounds.width() - lead),
+                        bounds.height());
+                final float start = this.captionDrawer.start(area, padding, this.captionWidth);
+                final float end = Math.min(start + this.captionWidth, this.captionDrawer.clipRight(area, padding));
+                this.paintIcon(painter, end + ButtonImpl.ICON_GAP, top + (height - this.iconHeight) * 0.5f, tint);
+                return this.captionDrawer.draw(painter, shown, area, padding, top + (height - this.captionHeight) * 0.5f,
+                        millis);
+            }
+            default -> {
+                final float contentWidth = this.contentWidth();
+                this.paintIcon(painter, this.captionDrawer.start(bounds, padding, contentWidth),
+                        top + (height - this.iconHeight) * 0.5f, tint);
+                return this.captionDrawer.draw(painter, shown, bounds, padding, this.iconWidth + ButtonImpl.ICON_GAP,
+                        contentWidth, top + (height - this.captionHeight) * 0.5f, millis);
+            }
+        }
+    }
+
+    private void paintIcon(final Painter painter, final float x, final float y, final int tint) {
+        final Rect iconRect = this.iconRect.at(x, y, this.iconWidth, this.iconHeight);
         if (this.iconVisual != null) {
             painter.visual(this.iconVisual, iconRect, tint);
         } else {
             painter.sprite(this.iconSprite, iconRect, tint);
         }
-        final float beside = this.iconWidth + ButtonImpl.ICON_GAP;
-        return hasText && this.captionDrawer.draw(painter, shown, bounds, padding, rightToLeft ? 0f : beside,
-                rightToLeft ? beside : 0f, contentWidth, top + (height - this.captionHeight) * 0.5f, millis);
     }
 }

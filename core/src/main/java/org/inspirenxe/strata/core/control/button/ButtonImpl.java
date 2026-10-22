@@ -18,6 +18,7 @@ package org.inspirenxe.strata.core.control.button;
 import org.inspirenxe.strata.api.command.Command;
 import org.inspirenxe.strata.api.component.CursorKind;
 import org.inspirenxe.strata.api.control.button.Button;
+import org.inspirenxe.strata.api.control.button.IconPlacement;
 import org.inspirenxe.strata.api.event.input.KeyEvent;
 import org.inspirenxe.strata.api.event.input.PointerButtonEvent;
 import org.inspirenxe.strata.api.extension.MeasureContext;
@@ -184,6 +185,18 @@ public final class ButtonImpl extends BuiltInComponent<Button> implements Button
     @Override
     public Button setIconSize(final float width, final float height) {
         this.content.setIconSize(width, height);
+        this.invalidateLayout();
+        return this;
+    }
+
+    @Override
+    public IconPlacement iconPlacement() {
+        return this.content.placement();
+    }
+
+    @Override
+    public Button setIconPlacement(final IconPlacement placement) {
+        this.content.setPlacement(placement);
         this.invalidateLayout();
         return this;
     }

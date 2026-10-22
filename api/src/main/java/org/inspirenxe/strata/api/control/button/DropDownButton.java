@@ -164,6 +164,21 @@ public interface DropDownButton extends Component<DropDownButton>, Focusable<Dro
     }
 
     /**
+     * Returns where the icon sits beside the caption.
+     *
+     * @return the placement; {@link IconPlacement#START} for a new button
+     */
+    IconPlacement iconPlacement();
+
+    /**
+     * Sets where the icon sits beside the caption: before it, after it, above it or below it. A new layout runs.
+     *
+     * @param placement the placement
+     * @return this button
+     */
+    DropDownButton setIconPlacement(IconPlacement placement);
+
+    /**
      * Returns the popup the button opens.
      *
      * @return the popup, or empty until one is set

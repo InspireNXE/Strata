@@ -165,6 +165,17 @@ public final class Caption {
     }
 
     /**
+     * Returns the right edge of the clip area, where a caption too wide for the control is cut.
+     *
+     * @param bounds the control's bounds
+     * @param padding the control's padding, which is the clip area without a clip key
+     * @return the clip area's right edge
+     */
+    public float clipRight(final Rect bounds, final Insets padding) {
+        return bounds.right() - (this.clip != null ? this.clip.right() : padding.right());
+    }
+
+    /**
      * Returns where a piece of a given width starts: centered across the control less its padding and moved inside
      * the clip area when it fits there, or else at the clip area's left edge.
      *

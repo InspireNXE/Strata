@@ -19,7 +19,8 @@
  * {@link org.inspirenxe.strata.api.control.button.CycleButton},
  * {@link org.inspirenxe.strata.api.control.button.CheckBox},
  * {@link org.inspirenxe.strata.api.control.button.RadioButton},
- * {@link org.inspirenxe.strata.api.control.button.RadioGroup} and
+ * {@link org.inspirenxe.strata.api.control.button.RadioGroup},
+ * {@link org.inspirenxe.strata.api.control.button.ToggleButton} and
  * {@link org.inspirenxe.strata.api.control.button.ToggleSwitch}.
  *
  * <p>Make them with a {@link org.inspirenxe.strata.api.ComponentFactory}. Each control lists the theme style

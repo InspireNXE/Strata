@@ -19,6 +19,7 @@ import org.inspirenxe.strata.api.ComponentFactory;
 import org.inspirenxe.strata.api.component.Component;
 import org.inspirenxe.strata.api.component.CursorKind;
 import org.inspirenxe.strata.api.component.Focusable;
+import org.inspirenxe.strata.api.control.button.IconPlacement;
 import org.inspirenxe.strata.api.control.button.RadioGroup;
 import org.inspirenxe.strata.api.geometry.Insets;
 import org.inspirenxe.strata.api.geometry.Rect;
@@ -77,6 +78,17 @@ class PaintReuseTest {
     @Test
     void aToggleSwitchThatIsOn() {
         this.assertReused(this.ui.toggleSwitch("Sound").setSelected(true));
+    }
+
+    @Test
+    void aToggleButtonThatIsOn() {
+        this.assertReused(this.ui.toggleButton("Bold").setSelected(true));
+    }
+
+    @Test
+    void aButtonWithItsIconAfterACaptionTooWide() {
+        this.assertReused(this.ui.button("A long caption").setIcon(SpriteId.of("test", "icon"))
+                .setIconPlacement(IconPlacement.END).setWidth(60));
     }
 
     @Test

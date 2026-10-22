@@ -19,6 +19,7 @@ import org.inspirenxe.strata.api.component.Tooltip;
 import org.inspirenxe.strata.api.control.button.Button;
 import org.inspirenxe.strata.api.control.button.CheckBox;
 import org.inspirenxe.strata.api.control.button.RadioButton;
+import org.inspirenxe.strata.api.control.button.ToggleButton;
 import org.inspirenxe.strata.api.control.button.ToggleSwitch;
 import org.inspirenxe.strata.api.control.collection.ComboBox;
 import org.inspirenxe.strata.api.control.collection.ListView;
@@ -82,6 +83,9 @@ public final class Themes {
                 .paint(Button.STYLE_PRESSED, Paint.solid(0xFF2B2D31))
                 .paint(Button.STYLE_DISABLED, Paint.solid(0xFF2A2A2A))
                 .paint(Button.STYLE_FOCUS, Paint.solid(0xFF6A9FFF))
+                .paint(ToggleButton.STYLE_SELECTED, Paint.solid(0xFF3A4D6E))
+                .paint(ToggleButton.STYLE_SELECTED_HOVERED, Paint.solid(0xFF4A5F84))
+                .paint(ToggleButton.STYLE_SELECTED_DISABLED, Paint.solid(0xFF2E333B))
                 .textStyle(Button.STYLE_TEXT, TextStyle.DEFAULT.withColor(0xFFF0F0F0))
                 .textStyle(Button.STYLE_TEXT_DISABLED, TextStyle.DEFAULT.withColor(0xFF808080))
                 .textStyle(Button.STYLE_LINK_TEXT, TextStyle.DEFAULT.withColor(0xFF6AA8FF))

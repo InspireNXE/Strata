@@ -47,7 +47,8 @@ import java.util.Objects;
  * smaller height set on it applies. The caption is centered in whatever size the button ends up.</p>
  *
  * <p>An {@linkplain #setIcon(SpriteId) icon} is drawn before the caption, 4 units from it, and the two are centered
- * together. A button with an icon and no caption is meant to be square, so it pads by 2 units on every side and a
+ * together; {@link #setIconPlacement} puts it after the caption, above it or below it instead. Stacked, the button
+ * is as wide as the wider of the two and as tall as both and the gap. A button with an icon and no caption is meant to be square, so it pads by 2 units on every side and a
  * 16 by 16 icon gives 20 by 20. A disabled button draws its icon in half-bright gray.</p>
  *
  * <p>{@linkplain #setLink A link} has no frame: it draws only its caption, which underlines while hovered or
@@ -241,6 +242,21 @@ public interface Button extends Component<Button>, Focusable<Button>, HasCursor<
     default Button setTextPadding(final float left, final float top, final float right, final float bottom) {
         return this.setTextPadding(new Insets(left, top, right, bottom));
     }
+
+    /**
+     * Returns where the icon sits beside the caption.
+     *
+     * @return the placement; {@link IconPlacement#START} for a new button
+     */
+    IconPlacement iconPlacement();
+
+    /**
+     * Sets where the icon sits beside the caption: before it, after it, above it or below it. A new layout runs.
+     *
+     * @param placement the placement
+     * @return this button
+     */
+    Button setIconPlacement(IconPlacement placement);
 
     /**
      * Returns whether the button is a link.

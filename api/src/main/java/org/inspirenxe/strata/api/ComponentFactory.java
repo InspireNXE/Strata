@@ -26,6 +26,7 @@ import org.inspirenxe.strata.api.control.button.CheckBox;
 import org.inspirenxe.strata.api.control.button.CycleButton;
 import org.inspirenxe.strata.api.control.button.DropDownButton;
 import org.inspirenxe.strata.api.control.button.RadioGroup;
+import org.inspirenxe.strata.api.control.button.ToggleButton;
 import org.inspirenxe.strata.api.control.button.ToggleSwitch;
 import org.inspirenxe.strata.api.control.collection.ComboBox;
 import org.inspirenxe.strata.api.control.collection.GridView;
@@ -851,6 +852,33 @@ public interface ComponentFactory {
      * @return a new group
      */
     <T> RadioGroup<T> radioGroup();
+
+    /**
+     * Makes a {@link ToggleButton}, off, with no caption, as {@code toggleButton("")} does.
+     *
+     * @return a new toggle button
+     */
+    default ToggleButton toggleButton() {
+        return this.toggleButton("");
+    }
+
+    /**
+     * Makes a {@link ToggleButton} that is off.
+     *
+     * @param text the caption
+     * @return a new toggle button
+     */
+    ToggleButton toggleButton(Text text);
+
+    /**
+     * Does the same as {@link #toggleButton(Text)} with literal text.
+     *
+     * @param text the caption
+     * @return a new toggle button
+     */
+    default ToggleButton toggleButton(final String text) {
+        return this.toggleButton(Text.of(text));
+    }
 
     /**
      * Makes a {@link ToggleSwitch}, off, with no caption, as {@code toggleSwitch("")} does.

@@ -17,7 +17,9 @@ package org.inspirenxe.strata.core.node;
 
 import org.inspirenxe.strata.api.ComponentFactory;
 import org.inspirenxe.strata.api.UiThread;
+import org.inspirenxe.strata.api.control.button.ToggleButton;
 import org.inspirenxe.strata.core.animation.AnimatorImpl;
+import org.inspirenxe.strata.core.control.button.ToggleButtonImpl;
 import org.inspirenxe.strata.core.file.FileDialogsImpl;
 import org.inspirenxe.strata.core.frame.UiThreadImpl;
 import org.inspirenxe.strata.api.event.Subscription;
@@ -531,6 +533,11 @@ public final class ComponentFactoryImpl implements ComponentFactory {
     @Override
     public <T> RadioGroup<T> radioGroup() {
         return new RadioGroupImpl<>(this);
+    }
+
+    @Override
+    public ToggleButton toggleButton(final Text text) {
+        return new ToggleButtonImpl(this, text);
     }
 
     @Override

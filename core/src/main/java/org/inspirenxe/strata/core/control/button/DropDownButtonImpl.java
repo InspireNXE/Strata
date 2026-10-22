@@ -19,6 +19,7 @@ import org.inspirenxe.strata.api.component.Component;
 import org.inspirenxe.strata.api.component.CursorKind;
 import org.inspirenxe.strata.api.control.attribute.popup.Popup;
 import org.inspirenxe.strata.api.control.button.DropDownButton;
+import org.inspirenxe.strata.api.control.button.IconPlacement;
 import org.inspirenxe.strata.api.event.input.KeyEvent;
 import org.inspirenxe.strata.api.event.input.PointerButtonEvent;
 import org.inspirenxe.strata.api.extension.MeasureContext;
@@ -162,6 +163,18 @@ public final class DropDownButtonImpl extends BuiltInComponent<DropDownButton> i
     @Override
     public DropDownButton setIconSize(final float width, final float height) {
         this.content.setIconSize(width, height);
+        this.invalidateLayout();
+        return this;
+    }
+
+    @Override
+    public IconPlacement iconPlacement() {
+        return this.content.placement();
+    }
+
+    @Override
+    public DropDownButton setIconPlacement(final IconPlacement placement) {
+        this.content.setPlacement(placement);
         this.invalidateLayout();
         return this;
     }

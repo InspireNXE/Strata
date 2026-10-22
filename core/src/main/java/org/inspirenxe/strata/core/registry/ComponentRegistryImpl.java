@@ -25,6 +25,7 @@ import org.inspirenxe.strata.api.control.button.Button;
 import org.inspirenxe.strata.api.control.button.CheckBox;
 import org.inspirenxe.strata.api.control.button.CycleButton;
 import org.inspirenxe.strata.api.control.button.DropDownButton;
+import org.inspirenxe.strata.api.control.button.ToggleButton;
 import org.inspirenxe.strata.api.control.button.ToggleSwitch;
 import org.inspirenxe.strata.api.control.collection.ComboBox;
 import org.inspirenxe.strata.api.control.collection.GridView;
@@ -144,6 +145,7 @@ public final class ComponentRegistryImpl implements ComponentRegistry {
         this.builtIn("drop_down_button", DropDownButton.class, ComponentFactory::dropDownButton);
         this.builtIn("cycle_button", CycleButton.class, ComponentFactory::cycleButton);
         this.builtIn("check_box", CheckBox.class, ComponentFactory::checkBox);
+        this.builtIn("toggle_button", ToggleButton.class, ComponentFactory::toggleButton);
         this.builtIn("toggle_switch", ToggleSwitch.class, ComponentFactory::toggleSwitch);
         this.builtIn("text_box", TextBox.class, ComponentFactory::textBox);
         this.builtIn("password_text_box", PasswordTextBox.class, ComponentFactory::passwordTextBox);

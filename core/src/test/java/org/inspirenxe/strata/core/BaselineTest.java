@@ -17,6 +17,7 @@ package org.inspirenxe.strata.core;
 
 import org.inspirenxe.strata.api.ComponentFactory;
 import org.inspirenxe.strata.api.component.Component;
+import org.inspirenxe.strata.api.control.button.IconPlacement;
 import org.inspirenxe.strata.api.control.display.Label;
 import org.inspirenxe.strata.api.extension.ArrangeContext;
 import org.inspirenxe.strata.api.extension.CustomComponent;
@@ -34,6 +35,7 @@ import org.inspirenxe.strata.api.layout.VerticalAlignment;
 import org.inspirenxe.strata.api.text.TextMetrics;
 import org.inspirenxe.strata.api.text.TextSpan;
 import org.inspirenxe.strata.api.text.TextStyle;
+import org.inspirenxe.strata.api.theme.SpriteId;
 import org.junit.jupiter.api.Test;
 
 import java.time.LocalDate;
@@ -268,6 +270,9 @@ class BaselineTest {
         this.reportsWhereItDrawsText("cycle button", ui -> ui.<String>cycleButton("Name").setItems(List.of("Ana")));
         this.reportsWhereItDrawsText("check box", ui -> ui.checkBox("Ana"));
         this.reportsWhereItDrawsText("toggle switch", ui -> ui.toggleSwitch("Ana"));
+        this.reportsWhereItDrawsText("toggle button", ui -> ui.toggleButton("Ana"));
+        this.reportsWhereItDrawsText("button with its icon above", ui -> ui.button("Ana")
+                .setIcon(SpriteId.of("test", "icon")).setIconPlacement(IconPlacement.TOP));
         this.reportsWhereItDrawsText("text box", ui -> ui.textBox().setText("Ana"));
         this.reportsWhereItDrawsText("password box", ui -> ui.passwordTextBox().setPassword("Ana".toCharArray()));
         this.reportsWhereItDrawsText("combo box", ui -> ui.<String>comboBox().setItems(List.of("Ana")).select(0));
