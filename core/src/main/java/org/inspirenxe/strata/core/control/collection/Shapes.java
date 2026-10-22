@@ -77,6 +77,18 @@ final class Shapes {
     }
 
     /**
+     * The lines of an arrow 4 wide and 7 tall pointing left, its top-left corner at a point, as {@link Rings#left}
+     * draws it.
+     */
+    static Rect[] left(final float x, final float y) {
+        final Rect[] lines = new Rect[4];
+        for (int i = 0; i < 4; i++) {
+            lines[i] = new Rect(x + 3f - i, y + i, 1f, Rings.ARROW_LONG - i * 2f);
+        }
+        return lines;
+    }
+
+    /**
      * Paints each rectangle with a paint.
      */
     static void paint(final Painter painter, final Paint paint, final Rect[] rects) {

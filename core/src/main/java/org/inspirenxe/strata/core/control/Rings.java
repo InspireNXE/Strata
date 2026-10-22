@@ -240,6 +240,20 @@ public final class Rings {
         }
 
         /**
+         * Fills the arrow 4 wide and 7 tall pointing left, its top-left corner at a point.
+         *
+         * @param painter what to draw with
+         * @param color the fill color, as ARGB
+         * @param x the left edge
+         * @param y the top edge
+         */
+        public void left(final Painter painter, final int color, final float x, final float y) {
+            for (int i = 0; i < 4; i++) {
+                painter.fill(this.line(i, x + 3f - i, y + i, 1f, ARROW_LONG - i * 2f), color);
+            }
+        }
+
+        /**
          * Fills the arrow 4 wide and 7 tall pointing right, its top-left corner at a point.
          *
          * @param painter what to draw with

@@ -511,7 +511,9 @@ public final class WindowImpl extends BuiltInContainer<Window> implements Window
             return;
         }
         this.titleBarArea = new Rect(bounds.x(), bounds.y(), bounds.width(), this.titleHeight);
-        this.closeArea = new Rect(bounds.right() - CLOSE_WIDTH - 1f, bounds.y(), CLOSE_WIDTH, this.titleHeight);
+        // Right to left the close button sits at the left of the title bar
+        this.closeArea = this.flow(new Rect(bounds.right() - CLOSE_WIDTH - 1f, bounds.y(), CLOSE_WIDTH,
+                this.titleHeight));
         this.contentArea = new Rect(bounds.x(), bounds.y() + this.titleHeight, bounds.width(),
                 Math.max(0f, bounds.height() - this.titleHeight));
         final Rect area = this.contentArea.shrink(this.padding());

@@ -3277,7 +3277,10 @@ public final class Root {
             }
             final float popupWidth = this.node.outerWidth();
             final float popupHeight = this.node.outerHeight();
-            final float x = Math.max(0f, Math.min(this.anchor.x(), area.width() - popupWidth));
+            // Right to left the popup's right edge meets the anchor's
+            final float wanted = this.node.flowDirection() == FlowDirection.RIGHT_TO_LEFT
+                    ? this.anchor.right() - popupWidth : this.anchor.x();
+            final float x = Math.max(0f, Math.min(wanted, area.width() - popupWidth));
             final float below = area.height() - this.anchor.bottom();
             final float above = this.anchor.y();
             final float y;
@@ -3302,7 +3305,8 @@ public final class Root {
         }
 
         /**
-         * Places a toast at its desired size against the right edge, with its top at {@code y}.
+         * Places a toast at its desired size against the right edge, or the left edge right to left, with its top at
+         * {@code y}.
          *
          * @return where the next toast's top goes
          */
@@ -3311,7 +3315,9 @@ public final class Root {
             this.node.measure(pass, area.width(), area.height());
             final float toastWidth = this.node.outerWidth();
             final float toastHeight = this.node.outerHeight();
-            final float x = Math.max(0f, area.width() - margin - toastWidth);
+            // Right to left toasts stack against the left edge
+            final float x = this.node.flowDirection() == FlowDirection.RIGHT_TO_LEFT ? Math.min(margin,
+                    Math.max(0f, area.width() - toastWidth)) : Math.max(0f, area.width() - margin - toastWidth);
             this.node.arrange(pass, new Rect(x, y, toastWidth, toastHeight));
             return y + toastHeight + margin;
         }

@@ -15,6 +15,7 @@
  */
 package org.inspirenxe.strata.core.control.menu;
 
+import org.inspirenxe.strata.core.layout.Flow;
 import org.inspirenxe.strata.api.command.Command;
 import org.inspirenxe.strata.api.control.menu.Menu;
 import org.inspirenxe.strata.api.control.menu.MenuBar;
@@ -278,7 +279,7 @@ public final class MenuBarImpl extends BuiltInComponent<MenuBar> implements Menu
         }
         final Rect bounds = this.bounds();
         final MenuImpl menu = this.menuAt(index);
-        menu.open(new Rect(bounds.x() + this.titleX[index], bounds.y(), this.titleWidth[index], bounds.height()));
+        menu.open(new Rect(this.titleLeft(bounds, index), bounds.y(), this.titleWidth[index], bounds.height()));
         if (menu.isOpen()) {
             this.openIndex = index;
             if (fromKeyboard) {
@@ -339,13 +340,23 @@ public final class MenuBarImpl extends BuiltInComponent<MenuBar> implements Menu
     }
 
     private int titleAt(final float x) {
-        final float local = x - this.bounds().x();
+        final Rect bounds = this.bounds();
         for (int i = 0; i < this.titleX.length; i++) {
-            if (local >= this.titleX[i] && local < this.titleX[i] + this.titleWidth[i]) {
+            final float left = this.titleLeft(bounds, i);
+            if (x >= left && x < left + this.titleWidth[i]) {
                 return i;
             }
         }
         return -1;
+    }
+
+    /**
+     * Returns the left edge of a title in the bounds: its place from the left, or from the right while the bar runs
+     * right to left, so the first title sits at the start.
+     */
+    private float titleLeft(final Rect bounds, final int index) {
+        return this.isRightToLeft() ? bounds.right() - this.titleX[index] - this.titleWidth[index]
+                : bounds.x() + this.titleX[index];
     }
 
     @Override
@@ -357,11 +368,12 @@ public final class MenuBarImpl extends BuiltInComponent<MenuBar> implements Menu
         final Insets padding = this.titlePadding;
         final float textY = bounds.y() + padding.top() + (bounds.height() - padding.vertical() - this.lineHeight) * 0.5f;
         for (int i = 0; i < this.spans.length; i++) {
+            final float left = this.titleLeft(bounds, i);
             if (i == hover || i == this.openIndex) {
-                this.hovered.paint(painter, this.hoverRect.at(bounds.x() + this.titleX[i], bounds.y(),
-                        this.titleWidth[i], bounds.height()));
+                this.hovered.paint(painter, this.hoverRect.at(left, bounds.y(), this.titleWidth[i],
+                        bounds.height()));
             }
-            this.spans[i].line(marked).draw(painter, bounds.x() + this.titleX[i] + padding.left(), textY);
+            this.spans[i].line(marked).draw(painter, left + padding.left(), textY);
         }
     }
 
@@ -438,7 +450,8 @@ public final class MenuBarImpl extends BuiltInComponent<MenuBar> implements Menu
         final boolean press = event.action() == KeyAction.PRESS;
         final int mnemonic = Mnemonics.of(key);
         if (key == Key.LEFT || key == Key.RIGHT) {
-            this.stepHighlight(key == Key.LEFT ? -1 : 1);
+            // Right to left the next title is the one to the left
+            this.stepHighlight(Flow.key(key, this.isRightToLeft()) == Key.LEFT ? -1 : 1);
         } else if (key == Key.DOWN || key.isEnter() || key == Key.SPACE) {
             if (press) {
                 final int index = this.keyboardIndex;

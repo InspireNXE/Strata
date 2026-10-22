@@ -15,6 +15,7 @@
  */
 package org.inspirenxe.strata.core.control.menu;
 
+import org.inspirenxe.strata.core.layout.Flow;
 import org.inspirenxe.strata.api.command.Command;
 import org.inspirenxe.strata.api.component.Component;
 import org.inspirenxe.strata.api.control.display.Separator;
@@ -57,7 +58,9 @@ import java.util.function.Consumer;
 
 /**
  * The core {@link Menu}. It draws its entries itself, with no component per entry, and opens as a popup of its host's
- * overlays. A submenu opens with its top-left corner at the right edge of its item.
+ * overlays. A submenu opens with its top-left corner at the right edge of its item. A menu that runs right to left
+ * is mirrored: its text, check marks, shortcut hints and arrows are drawn at the other side, its submenus open with
+ * their top-right corner at its left edge, and Left and Right swap.
  *
  * <p>Opening a menu lays out its host's overlays at once, so its bounds and items are known before the next frame.
  * The first menu of a chain remembers what had focus when it opened and gives focus back when it closes, if that
@@ -477,7 +480,9 @@ public final class MenuImpl extends BuiltInComponent<Menu> implements Menu, Core
             return;
         }
         final Rect bounds = this.bounds();
-        submenu.open(new Rect(bounds.right(), bounds.y() + this.itemTop[index] - this.padding.top(), 0f, 0f));
+        // Right to left the popup's right edge meets the anchor, so the submenu opens to the left
+        submenu.open(new Rect(this.isRightToLeft() ? bounds.x() : bounds.right(),
+                bounds.y() + this.itemTop[index] - this.padding.top(), 0f, 0f));
         this.openSubmenu = submenu;
         if (fromKeyboard) {
             submenu.highlightFirst();
@@ -617,6 +622,9 @@ public final class MenuImpl extends BuiltInComponent<Menu> implements Menu, Core
         final boolean marked = this.fromKeyboard || this.hostRoot() != null && this.hostRoot().showsMnemonics();
         final float left = bounds.x() + this.padding.left();
         final float width = bounds.width() - this.padding.horizontal();
+        // Right to left each part is drawn mirrored inside the bounds: the x is where its right edge would be
+        final boolean mirrored = this.isRightToLeft();
+        final float mirror = bounds.x() + bounds.right();
         for (int i = 0; i < this.items.size(); i++) {
             final MenuEntryImpl item = this.items.get(i);
             final float top = bounds.y() + this.itemTop[i];
@@ -632,18 +640,26 @@ public final class MenuImpl extends BuiltInComponent<Menu> implements Menu, Core
             final float textY = top + padding.top() + (this.itemHeight - padding.vertical() - this.lineHeight) * 0.5f;
             final TextLine text = item.usable() ? marked ? item.markedSpan : item.span
                     : marked ? item.markedDisabledSpan : item.disabledSpan;
-            text.draw(painter, left + padding.left(), textY);
+            final float textX = left + padding.left();
+            text.draw(painter, mirrored ? mirror - textX - text.width() : textX, textY);
             final int color = (item.usable() ? this.textStyle : this.disabledTextStyle).color();
             if (item.checked()) {
-                painter.fill(item.markRect.at(left + (padding.left() - CHECK_SIZE) * 0.5f,
+                final float markX = left + (padding.left() - CHECK_SIZE) * 0.5f;
+                painter.fill(item.markRect.at(mirrored ? mirror - markX - CHECK_SIZE : markX,
                         top + (this.itemHeight - CHECK_SIZE) * 0.5f, CHECK_SIZE, CHECK_SIZE), color);
             }
             if (!item.shortcutSpan.isEmpty()) {
-                item.shortcutSpan.draw(painter, left + width - padding.right() - item.shortcutWidth, textY);
+                final float hintX = left + width - padding.right() - item.shortcutWidth;
+                item.shortcutSpan.draw(painter, mirrored ? mirror - hintX - item.shortcutWidth : hintX, textY);
             }
             if (item instanceof SubmenuItemImpl) {
-                item.arrow.right(painter, color, left + width - (padding.right() + Rings.ARROW_SHORT) * 0.5f,
-                        top + (this.itemHeight - Rings.ARROW_LONG) * 0.5f);
+                final float arrowX = left + width - (padding.right() + Rings.ARROW_SHORT) * 0.5f;
+                final float arrowY = top + (this.itemHeight - Rings.ARROW_LONG) * 0.5f;
+                if (mirrored) {
+                    item.arrow.left(painter, color, mirror - arrowX - Rings.ARROW_SHORT, arrowY);
+                } else {
+                    item.arrow.right(painter, color, arrowX, arrowY);
+                }
             }
         }
     }
@@ -693,7 +709,8 @@ public final class MenuImpl extends BuiltInComponent<Menu> implements Menu, Core
         if (!event.action().isDown()) {
             return;
         }
-        final Key key = event.key();
+        // Right to left, Left opens a submenu and Right goes back
+        final Key key = Flow.key(event.key(), this.isRightToLeft());
         final boolean press = event.action() == KeyAction.PRESS;
         this.fromKeyboard = true;
         switch (key) {

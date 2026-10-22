@@ -15,6 +15,7 @@
  */
 package org.inspirenxe.strata.core.control.pane;
 
+import org.inspirenxe.strata.core.layout.Flow;
 import org.inspirenxe.strata.api.component.CursorKind;
 import org.inspirenxe.strata.api.component.HasCursor;
 import org.inspirenxe.strata.api.component.HasTooltip;
@@ -305,7 +306,8 @@ public final class TabBarImpl extends BuiltInComposite<TabBar> implements TabBar
             return;
         }
         this.keyboardFocus = true;
-        final int direction = switch (event.key()) {
+        // Right to left the tabs run from the right, so Left goes to the next one
+        final int direction = switch (Flow.key(event.key(), this.isRightToLeft())) {
             case LEFT -> -1;
             case RIGHT -> 1;
             default -> 0;

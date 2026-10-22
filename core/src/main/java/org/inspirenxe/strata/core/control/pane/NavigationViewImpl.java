@@ -15,6 +15,7 @@
  */
 package org.inspirenxe.strata.core.control.pane;
 
+import org.inspirenxe.strata.core.layout.Flow;
 import org.inspirenxe.strata.api.ComponentFactory;
 import org.inspirenxe.strata.api.component.Component;
 import org.inspirenxe.strata.api.component.CursorKind;
@@ -766,7 +767,7 @@ public final class NavigationViewImpl extends BuiltInComposite<NavigationView> i
         this.fill(built, item);
         this.menu = built;
         // Beside the column, level with the item
-        built.openAt(this.pane.bounds().right(), row.bounds().y());
+        built.openAt(this.isRightToLeft() ? this.pane.bounds().x() : this.pane.bounds().right(), row.bounds().y());
     }
 
     private void fill(final Menu target, final NavigationItemImpl parent) {
@@ -897,7 +898,8 @@ public final class NavigationViewImpl extends BuiltInComposite<NavigationView> i
         this.overlay.onEvent(Overlay.CLOSED, event -> this.paneClosed());
         if (this.animationMillis > 0L && area.width() > 0f) {
             root.setPopupClipped(this.overlay, true);
-            this.paneSlide.move(this.motionAnimator(), this.animationMillis, -area.width(), 0f);
+            this.paneSlide.move(this.motionAnimator(), this.animationMillis,
+                    this.isRightToLeft() ? area.width() : -area.width(), 0f);
         }
         // Lay the pane out now, so the cursor and clicks find its rows before the next frame
         root.layout();
@@ -931,7 +933,8 @@ public final class NavigationViewImpl extends BuiltInComposite<NavigationView> i
 
     private Rect overlayArea() {
         final Rect bounds = this.bounds();
-        return new Rect(bounds.x(), bounds.y(), Math.min(this.paneWidth, bounds.width()), bounds.height());
+        // Right to left the pane opens over the content from the right
+        return this.flow(new Rect(bounds.x(), bounds.y(), Math.min(this.paneWidth, bounds.width()), bounds.height()));
     }
 
     /**
@@ -1171,7 +1174,8 @@ public final class NavigationViewImpl extends BuiltInComposite<NavigationView> i
     protected void paint(final Painter painter, final Rect bounds) {
         if (this.shownMode == DisplayMode.MINIMAL) {
             this.panePaint.paint(painter, this.barRect);
-            this.barTitle.draw(painter, this.barTitleX, this.barTitleY);
+            this.barTitle.draw(painter, this.isRightToLeft() ? Flow.mirrorX(this.barTitleX, bounds)
+                    - this.barTitle.width() : this.barTitleX, this.barTitleY);
         }
     }
 
@@ -1200,7 +1204,8 @@ public final class NavigationViewImpl extends BuiltInComposite<NavigationView> i
         if (event.target() != this || !event.action().isDown()) {
             return;
         }
-        final Key key = event.key();
+        // Right to left, Left expands and Right collapses
+        final Key key = Flow.key(event.key(), this.isRightToLeft());
         final boolean press = event.action() == KeyAction.PRESS;
         switch (key) {
             case UP, DOWN, HOME, END -> {
@@ -1282,7 +1287,9 @@ public final class NavigationViewImpl extends BuiltInComposite<NavigationView> i
         // The keyboard ring follows the pointer, so Tab or an arrow key carries on from the clicked item
         this.cursor = item;
         final float arrowZone = row.bounds().right() - this.itemPadding.right() - Rings.ARROW_LONG - GAP;
-        if (!this.compactLook() && !item.children().isEmpty() && event.x() >= arrowZone) {
+        // Right to left the arrow is at the left of the row
+        final float pressed = this.isRightToLeft() ? Flow.mirrorX(event.x(), row.bounds()) : event.x();
+        if (!this.compactLook() && !item.children().isEmpty() && pressed >= arrowZone) {
             this.userExpand(item, !item.isExpanded());
         } else if (this.activateOnClick) {
             this.pick(item);
@@ -1448,7 +1455,8 @@ public final class NavigationViewImpl extends BuiltInComposite<NavigationView> i
         protected void paint(final Painter painter, final Rect bounds) {
             final NavigationViewImpl view = NavigationViewImpl.this;
             (view.paneOpen ? view.paneOverlayPaint : view.panePaint).paint(painter, bounds);
-            this.titleLine.draw(painter, this.titleX, this.titleY);
+            this.titleLine.draw(painter, this.isRightToLeft() ? Flow.mirrorX(this.titleX, bounds)
+                    - this.titleLine.width() : this.titleX, this.titleY);
         }
     }
 
@@ -1517,6 +1525,7 @@ public final class NavigationViewImpl extends BuiltInComposite<NavigationView> i
         // Worked out for the last bounds painted
         private Rect placedFor;
         private boolean placedCompact;
+        private boolean placedRightToLeft;
         private TextLine shownNormal;
         private TextLine shownSelected;
         private TextLine shownDisabled;
@@ -1607,7 +1616,9 @@ public final class NavigationViewImpl extends BuiltInComposite<NavigationView> i
         }
 
         /**
-         * Works out where the parts go in the bounds, and cuts the text short to fit.
+         * Works out where the parts go in the bounds, and cuts the text short to fit. Right to left each part is
+         * worked out as for left to right and mirrored inside the bounds; the text's x stays as for left to right,
+         * since each shown line is mirrored by its own width when it is drawn.
          */
         private void place(final Rect bounds, final boolean compact) {
             final NavigationViewImpl view = NavigationViewImpl.this;
@@ -1615,11 +1626,12 @@ public final class NavigationViewImpl extends BuiltInComposite<NavigationView> i
             final float line = view.lineHeight;
             this.placedFor = bounds;
             this.placedCompact = compact;
-            this.indicatorRect = new Rect(bounds.x(), bounds.y(), INDICATOR_WIDTH, bounds.height());
+            this.placedRightToLeft = this.isRightToLeft();
+            this.indicatorRect = this.flow(new Rect(bounds.x(), bounds.y(), INDICATOR_WIDTH, bounds.height()));
             if (this.entry instanceof NavigationSeparatorImpl) {
                 final float inset = compact ? 2f : padding.left();
-                this.lineRect = new Rect(bounds.x() + inset, bounds.y() + SEPARATOR_SPACE,
-                        Math.max(0f, bounds.width() - inset * 2f), 1f);
+                this.lineRect = this.flow(new Rect(bounds.x() + inset, bounds.y() + SEPARATOR_SPACE,
+                        Math.max(0f, bounds.width() - inset * 2f), 1f));
                 return;
             }
             final TextMetrics metrics = this.environment().text();
@@ -1632,13 +1644,13 @@ public final class NavigationViewImpl extends BuiltInComposite<NavigationView> i
             }
             final NavigationItemImpl item = (NavigationItemImpl) this.entry;
             if (compact) {
-                this.iconRect = fitIcon(item, bounds.x() + (bounds.width() - line) * 0.5f,
-                        bounds.y() + (bounds.height() - line) * 0.5f, line);
-                this.badgeRect = this.badge.cornerAt(bounds.right(), bounds.bottom());
+                this.iconRect = this.flow(fitIcon(item, bounds.x() + (bounds.width() - line) * 0.5f,
+                        bounds.y() + (bounds.height() - line) * 0.5f, line));
+                this.badgeRect = this.flow(this.badge.cornerAt(bounds.right(), bounds.bottom()));
                 return;
             }
             final float left = bounds.x() + padding.left() + this.depth * (line + GAP);
-            this.iconRect = fitIcon(item, left, bounds.y() + (bounds.height() - line) * 0.5f, line);
+            this.iconRect = this.flow(fitIcon(item, left, bounds.y() + (bounds.height() - line) * 0.5f, line));
             float right = bounds.right() - padding.right();
             if (!item.children().isEmpty()) {
                 this.arrowX = right - Rings.ARROW_LONG;
@@ -1648,10 +1660,14 @@ public final class NavigationViewImpl extends BuiltInComposite<NavigationView> i
                 this.arrowX = bounds.right();
             }
             if (this.badge.isShown()) {
-                this.badgeRect = new Rect(right - this.badge.width(),
+                final Rect badgeRect = new Rect(right - this.badge.width(),
                         bounds.y() + (bounds.height() - this.badge.height()) * 0.5f, this.badge.width(),
                         this.badge.height());
-                right = this.badgeRect.x() - GAP;
+                this.badgeRect = this.flow(badgeRect);
+                right = badgeRect.x() - GAP;
+            }
+            if (this.placedRightToLeft && !item.children().isEmpty()) {
+                this.arrowX = Flow.mirrorX(this.arrowX, bounds) - Rings.ARROW_LONG;
             }
             this.textX = left + line + GAP;
             this.textY = bounds.y() + (bounds.height() - this.normal.height()) * 0.5f;
@@ -1679,7 +1695,8 @@ public final class NavigationViewImpl extends BuiltInComposite<NavigationView> i
         protected void paint(final Painter painter, final Rect bounds) {
             final NavigationViewImpl view = NavigationViewImpl.this;
             final boolean compact = view.compactLook();
-            if (!bounds.equals(this.placedFor) || compact != this.placedCompact) {
+            if (!bounds.equals(this.placedFor) || compact != this.placedCompact
+                    || this.isRightToLeft() != this.placedRightToLeft) {
                 this.place(bounds, compact);
             }
             if (this.entry instanceof NavigationSeparatorImpl) {
@@ -1687,7 +1704,7 @@ public final class NavigationViewImpl extends BuiltInComposite<NavigationView> i
                 return;
             }
             if (this.entry instanceof NavigationHeaderImpl) {
-                this.shownNormal.draw(painter, this.textX, this.textY);
+                this.shownNormal.draw(painter, this.textAt(this.shownNormal, bounds), this.textY);
                 return;
             }
             final NavigationItemImpl item = (NavigationItemImpl) this.entry;
@@ -1706,8 +1723,9 @@ public final class NavigationViewImpl extends BuiltInComposite<NavigationView> i
                 painter.sprite(item.sprite(), this.iconRect, tint);
             }
             if (!compact) {
-                (isSelected && enabled ? this.shownSelected : enabled ? this.shownNormal : this.shownDisabled)
-                        .draw(painter, this.textX, this.textY);
+                final TextLine text = isSelected && enabled ? this.shownSelected
+                        : enabled ? this.shownNormal : this.shownDisabled;
+                text.draw(painter, this.textAt(text, bounds), this.textY);
                 if (!item.children().isEmpty()) {
                     final int color = (enabled ? view.itemText : view.itemTextDisabled).color();
                     if (item.isExpanded()) {
@@ -1721,6 +1739,13 @@ public final class NavigationViewImpl extends BuiltInComposite<NavigationView> i
             if (view.isFocused() && view.cursor == item) {
                 this.ring.paint(painter, view.focusRing, bounds);
             }
+        }
+
+        /**
+         * Returns where a shown line starts: at the text's x, or mirrored by the line's width right to left.
+         */
+        private float textAt(final TextLine text, final Rect bounds) {
+            return this.placedRightToLeft ? Flow.mirrorX(this.textX, bounds) - text.width() : this.textX;
         }
 
         @Override

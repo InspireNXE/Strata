@@ -15,6 +15,7 @@
  */
 package org.inspirenxe.strata.core.control.collection;
 
+import org.inspirenxe.strata.core.layout.Flow;
 import org.inspirenxe.strata.api.component.Component;
 import org.inspirenxe.strata.api.control.attribute.item.CellEditor;
 import org.inspirenxe.strata.api.control.attribute.item.SelectionMode;
@@ -658,7 +659,8 @@ public final class TreeViewImpl<T> extends ListBackedControl<T, TreeViewImpl.Ent
             return;
         }
         final Entry<T> entry = this.entries.get(index);
-        switch (event.key()) {
+        // Right to left the tree indents from the right, so Left expands and Right collapses
+        switch (Flow.key(event.key(), this.isRightToLeft())) {
             case RIGHT -> {
                 if (!entry.parent) {
                     return;
@@ -709,6 +711,7 @@ public final class TreeViewImpl<T> extends ListBackedControl<T, TreeViewImpl.Ent
         private Rect[] arrowLines;
         private Rect arrowBounds;
         private boolean arrowOpen;
+        private boolean arrowRightToLeft;
 
         @SuppressWarnings("this-escape")
         Row(final ComponentFactoryImpl ui, final TreeViewImpl<T> tree, final Entry<T> entry) {
@@ -720,8 +723,20 @@ public final class TreeViewImpl<T> extends ListBackedControl<T, TreeViewImpl.Ent
             this.setAnchor(Anchor.FILL);
         }
 
+        /**
+         * Where the arrow column starts as for left to right; the cell is mirrored by its node and the arrow by
+         * {@link #arrowLeft}.
+         */
         private float arrowX(final Rect bounds) {
             return bounds.x() + this.entry.depth * this.tree.indent;
+        }
+
+        /**
+         * Where the arrow column starts as drawn: after the indent from the left, or from the right right to left.
+         */
+        private float arrowLeft(final Rect bounds) {
+            final float x = this.arrowX(bounds);
+            return this.isRightToLeft() ? Flow.mirrorX(x, bounds) - ARROW_WIDTH : x;
         }
 
         @Override
@@ -755,15 +770,19 @@ public final class TreeViewImpl<T> extends ListBackedControl<T, TreeViewImpl.Ent
                 return;
             }
             final boolean open = this.tree.isExpanded(this.entry.item);
-            if (this.arrowLines == null || this.arrowBounds != bounds || this.arrowOpen != open) {
-                final float x = this.arrowX(bounds);
+            final boolean rightToLeft = this.isRightToLeft();
+            if (this.arrowLines == null || this.arrowBounds != bounds || this.arrowOpen != open
+                    || this.arrowRightToLeft != rightToLeft) {
+                final float x = this.arrowLeft(bounds);
+                final float closedX = x + (ARROW_WIDTH - Rings.ARROW_SHORT) * 0.5f;
+                final float closedY = bounds.y() + (bounds.height() - Rings.ARROW_LONG) * 0.5f;
                 this.arrowLines = open
                         ? Shapes.down(x + (ARROW_WIDTH - Rings.ARROW_LONG) * 0.5f,
                                 bounds.y() + (bounds.height() - Rings.ARROW_SHORT) * 0.5f)
-                        : Shapes.right(x + (ARROW_WIDTH - Rings.ARROW_SHORT) * 0.5f,
-                                bounds.y() + (bounds.height() - Rings.ARROW_LONG) * 0.5f);
+                        : rightToLeft ? Shapes.left(closedX, closedY) : Shapes.right(closedX, closedY);
                 this.arrowBounds = bounds;
                 this.arrowOpen = open;
+                this.arrowRightToLeft = rightToLeft;
             }
             Shapes.paint(painter, this.tree.arrow, this.arrowLines);
         }
@@ -773,7 +792,7 @@ public final class TreeViewImpl<T> extends ListBackedControl<T, TreeViewImpl.Ent
             if (event.button() != MouseButton.LEFT || !this.entry.parent) {
                 return;
             }
-            final float x = this.arrowX(this.bounds());
+            final float x = this.arrowLeft(this.bounds());
             if (event.x() >= x && event.x() < x + ARROW_WIDTH) {
                 this.tree.toggle(this.entry);
                 event.consume();
