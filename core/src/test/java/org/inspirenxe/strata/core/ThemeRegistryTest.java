@@ -88,6 +88,21 @@ class ThemeRegistryTest {
     }
 
     @Test
+    void overridesMergeKeyByKeyAndARefHoldsThem() {
+        final ThemeOverrides merged = ThemeOverrides.of()
+                .with("a", Paint.solid(0xFF000001))
+                .with("m", 2f)
+                .with(ThemeOverrides.of().with("a", Paint.solid(0xFF000002)).with("b", Paint.solid(0xFF000003)));
+        assertEquals(Map.of("a", Paint.solid(0xFF000002), "b", Paint.solid(0xFF000003)), merged.paints());
+        assertEquals(Map.of("m", 2f), merged.metrics());
+
+        final ThemeRef ref = new ThemeRef(MOD, merged);
+        assertSame(merged, ref.overrides());
+        assertEquals(ref, ThemeRef.of(MOD).override(merged));
+        assertEquals(new ThemeRef(MOD, merged.paints(), Map.of(), Map.of(), merged.metrics()), ref);
+    }
+
+    @Test
     void overridesApplyAboveFilesInTheOrderTheyWereAdded() {
         final ThemeResolverTest.MapSource source = new ThemeResolverTest.MapSource()
                 .file(MOD, "pack", FLAT_FILE);

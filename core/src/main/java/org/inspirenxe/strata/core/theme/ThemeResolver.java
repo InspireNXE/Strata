@@ -148,7 +148,7 @@ public final class ThemeResolver {
      */
     public Theme resolve(final ThemeRef ref) {
         final Keys keys = this.resolve(ref.id(), new LinkedHashSet<>());
-        keys.set(new ThemeOverrides(ref.paints(), ref.textStyles(), ref.insets(), ref.metrics()), REF_LAYER);
+        keys.set(ref.overrides(), REF_LAYER);
         final Theme.Builder builder = Theme.builder(ref.id().toString());
         keys.paints.forEach(builder::paint);
         keys.text.forEach(builder::textStyle);

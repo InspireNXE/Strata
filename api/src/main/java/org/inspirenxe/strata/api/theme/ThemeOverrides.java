@@ -137,4 +137,23 @@ public record ThemeOverrides(Map<String, Paint> paints, Map<String, TextStyle> t
         all.put(Objects.requireNonNull(key, "key"), value);
         return new ThemeOverrides(this.paints, this.textStyles, this.insets, all);
     }
+
+    /**
+     * Returns a copy of these overrides that also sets every key of others, replacing what these set for the same
+     * key and kind of value.
+     *
+     * @param others the keys to add
+     * @return the new overrides
+     */
+    public ThemeOverrides with(final ThemeOverrides others) {
+        final Map<String, Paint> paints = new HashMap<>(this.paints);
+        paints.putAll(others.paints);
+        final Map<String, TextStyle> styles = new HashMap<>(this.textStyles);
+        styles.putAll(others.textStyles);
+        final Map<String, Insets> insets = new HashMap<>(this.insets);
+        insets.putAll(others.insets);
+        final Map<String, Float> metrics = new HashMap<>(this.metrics);
+        metrics.putAll(others.metrics);
+        return new ThemeOverrides(paints, styles, insets, metrics);
+    }
 }
