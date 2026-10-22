@@ -26,7 +26,7 @@ import org.inspirenxe.strata.api.input.ScrollKind;
  * it. Do not implement this interface.
  *
  * <p>Each method returns true when Strata consumed the input: a component acted on it, or the pointer is over
- * Strata's UI. Pass input that returns false on to the engine's own UI or game controls.</p>
+ * Strata's UI. Pass input that returns false on to the engine's own UI or controls.</p>
  *
  * <h2>Requirements for callers (adapters)</h2>
  * <ul>

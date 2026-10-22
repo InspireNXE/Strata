@@ -16,7 +16,7 @@
 package org.inspirenxe.strata.spi;
 
 /**
- * How the engine's own controls behave, so Strata's behave the same way and players meet one set of habits. Looks
+ * How the engine's own controls behave, so Strata's behave the same way and users meet one set of habits. Looks
  * belong in the theme; these are the behaviors a theme does not reach.
  *
  * @param activateOnPress true when a button acts as soon as the pointer's left button goes down on it, as some

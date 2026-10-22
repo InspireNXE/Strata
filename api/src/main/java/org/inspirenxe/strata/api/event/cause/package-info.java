@@ -24,7 +24,7 @@
  *
  * <p>Causes come from a {@link org.inspirenxe.strata.api.event.cause.CauseStack} of open frames. Hosts open one for
  * each input they dispatch, a control acting on another pushes itself, such as a radio group deselecting a button,
- * and code that applies a change for someone else opens its own. The shape follows Sponge's causes, and on Sponge
- * the stack is Sponge's.</p>
+ * and code that applies a change for someone else opens its own. On an engine with a cause stack of its own, the
+ * adapter can back Strata's stack with the engine's.</p>
  */
 package org.inspirenxe.strata.api.event.cause;

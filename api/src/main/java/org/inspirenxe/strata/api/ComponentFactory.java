@@ -97,7 +97,7 @@ import java.util.function.Function;
  * {@link org.inspirenxe.strata.api.screen.Screen#build}, and custom components take it in their constructor.
  *
  * <p>A component belongs to the factory that made it and can only join trees shown by that factory's host. There
- * is deliberately no static way to get a factory: mod loaders layer class loaders, and passing the factory along
+ * is deliberately no static way to get a factory: plugin systems layer class loaders, and passing the factory along
  * keeps every tree tied to the host that shows it.</p>
  *
  * <p>Each call returns a new component, detached and with default settings. Call factories on the UI thread
@@ -137,8 +137,8 @@ public interface ComponentFactory {
 
     /**
      * Returns the cause stack of the UI thread, for opening a frame around a change made for someone else, such as
-     * an update another player made through the server. On an engine with its own cause stack, such as Sponge, it is
-     * backed by that stack.
+     * an update another user made through a server. On an engine with its own cause stack, it is backed by that
+     * stack.
      *
      * @return the cause stack
      */

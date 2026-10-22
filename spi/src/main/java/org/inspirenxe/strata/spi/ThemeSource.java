@@ -29,8 +29,8 @@ import java.util.Optional;
  *
  * <p>Core builds a theme from layers, lowest first: the base, the documents in the order {@link #documents}
  * returns them, the overrides added in code with {@link org.inspirenxe.strata.api.theme.ThemeRegistry}, and the
- * ref's own overrides. The order of the documents is the adapter's to choose, so it decides where the player's
- * packs and mods' files fall.</p>
+ * ref's own overrides. The order of the documents is the adapter's to choose, so it decides where the user's packs
+ * and the files that other libraries ship fall.</p>
  *
  * <h2>Requirements for implementors</h2>
  * <ul>

@@ -42,7 +42,7 @@ public sealed interface Origin {
     /**
      * The person at this screen, acting through input. Hosts put it for every input they dispatch.
      *
-     * @param identity the adapter's object for the person, such as the local player's profile, or null if the
+     * @param identity the adapter's object for the person, such as the signed-in user's account, or null if the
      *                 platform does not name its user; opaque to Strata
      */
     record User(Object identity) implements Origin {

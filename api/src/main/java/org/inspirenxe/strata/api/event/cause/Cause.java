@@ -20,12 +20,12 @@ import java.util.Optional;
 
 /**
  * What led to an event: a chain of objects and a context of keyed values. The chain holds what the change passed
- * through, such as a radio group that deselected a button or a packet a mod applied, with the most recently pushed
- * object first. The context says who did it and how, such as the {@linkplain CauseKeys#ORIGIN origin}, the input
- * device and the button.
+ * through, such as a radio group that deselected a button or a network message the application applied, with the
+ * most recently pushed object first. The context says who did it and how, such as the
+ * {@linkplain CauseKeys#ORIGIN origin}, the input device and the button.
  *
- * <p>The shape follows Sponge's {@code Cause}, so that an adapter on Sponge can answer from Sponge's own stack. A cause
- * does not change once it is made.</p>
+ * <p>The shape is the one engines with a cause stack of their own commonly use, so that an adapter for such an engine
+ * can answer from the engine's cause stack. A cause does not change once it is made.</p>
  *
  * <p>Strata and adapters implement this interface. Developers get causes from {@code Event.cause()} and
  * {@link CauseStack#current()}.</p>
@@ -36,7 +36,7 @@ public interface Cause {
      * Returns the object pushed most recently, the direct cause.
      *
      * @return the first object of the chain, or empty if nothing was pushed; on an engine whose stack always holds
-     *     something, such as Sponge's, never empty
+     *     something, never empty
      */
     Optional<Object> root();
 
@@ -61,7 +61,7 @@ public interface Cause {
     /**
      * Returns the whole chain, most recently pushed first.
      *
-     * @return an unmodifiable list; may hold objects of the engine's, such as Sponge's game
+     * @return an unmodifiable list; may hold the engine's own objects
      */
     List<Object> all();
 

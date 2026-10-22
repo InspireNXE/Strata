@@ -18,8 +18,8 @@ package org.inspirenxe.strata.api.event.cause;
 import java.util.Objects;
 
 /**
- * A typed key for a value in a cause's context. Strata's own keys are in {@link CauseKeys}; a mod or application can
- * make its own. Keys are compared by identity, so keep each in a constant.
+ * A typed key for a value in a cause's context. Strata's own keys are in {@link CauseKeys}; a library or application
+ * can make its own. Keys are compared by identity, so keep each in a constant.
  *
  * @param <V> the type of the value
  */

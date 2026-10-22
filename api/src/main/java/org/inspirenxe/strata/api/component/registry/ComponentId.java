@@ -26,7 +26,7 @@ import java.util.Objects;
  * method is named for in snake case: {@code strata:button}, {@code strata:list_view},
  * {@code strata:anchor_panel}.</p>
  *
- * @param namespace the owner, usually a library or mod id; not empty
+ * @param namespace the owner, usually a library or application id; not empty
  * @param path the component's name within the namespace; not empty
  */
 public record ComponentId(String namespace, String path) {

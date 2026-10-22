@@ -16,8 +16,8 @@
 /**
  * Engine-drawn content.
  *
- * <p>A {@link org.inspirenxe.strata.api.visual.Visual} wraps an object only the engine can draw, such as a
- * game item, so the API can carry it without naming any engine type. An image control shows one, a painter draws
+ * <p>A {@link org.inspirenxe.strata.api.visual.Visual} wraps an object only the engine can draw, such as a model
+ * the engine renders, so the API can carry it without naming any engine type. An image control shows one, a painter draws
  * one, {@link org.inspirenxe.strata.api.text.Text#visual} puts one in a line of text, and an
  * {@link org.inspirenxe.strata.api.appearance.Appearance} gives values one as their icon.</p>
  */

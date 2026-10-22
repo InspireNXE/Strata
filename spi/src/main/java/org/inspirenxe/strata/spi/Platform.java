@@ -88,8 +88,8 @@ public interface Platform {
     ThemeSource themes();
 
     /**
-     * Returns the engine's own cause stack, when it has one Strata's causes should follow, such as Sponge's. Hosts
-     * then push their input frames on it and hand it to developers through {@code ComponentFactory.causes()}.
+     * Returns the engine's own cause stack, when it has one Strata's causes should follow. Hosts then push their
+     * input frames on it and hand it to developers through {@code ComponentFactory.causes()}.
      *
      * <p>A stack returned here must keep frames for the UI thread, close them in the order {@code CauseFrame}
      * states, and answer {@code current()} and {@code context} from the frames open at the time of the call. Strata
@@ -103,7 +103,7 @@ public interface Platform {
 
     /**
      * Returns the engine's object for the person at the screen, which hosts put in every {@link Origin.User} origin
-     * so handlers can tell who acted, such as the local player's profile. Strata never reads it.
+     * so handlers can tell who acted, such as the signed-in user's account. Strata never reads it.
      *
      * @return the identity, or empty if the engine does not name its user; the default
      */
