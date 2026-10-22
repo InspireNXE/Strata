@@ -156,4 +156,47 @@ class TextEditingTest {
             assertEquals(List.of("ab > X", "X > abc"), seen);
         }
     }
+
+    @Nested
+    class GoalColumn {
+
+        @Test
+        void selectingFromCodeForgetsTheColumnUpAndDownKept() {
+            final TextArea area = TextEditingTest.this.showArea("abcdef\nab\nabcdef");
+            area.select(5, 5);
+            TextEditingTest.this.press(Key.DOWN, Modifiers.NONE);
+            assertEquals(9, area.caret(), "the short row stops the caret at its end");
+
+            area.select(1, 1);
+            TextEditingTest.this.press(Key.DOWN, Modifiers.NONE);
+
+            assertEquals(8, area.caret(), "Down starts again from where code put the caret");
+        }
+
+        @Test
+        void settingTheTextForgetsTheColumnUpAndDownKept() {
+            final TextArea area = TextEditingTest.this.showArea("abcdef\nab\nabcdef");
+            area.select(5, 5);
+            TextEditingTest.this.press(Key.DOWN, Modifiers.NONE);
+
+            area.setText("abcdef\nabcdef");
+            TextEditingTest.this.press(Key.UP, Modifiers.NONE);
+
+            assertEquals(6, area.caret(), "Up starts again from the end of the new text");
+        }
+
+        @Test
+        void selectingAllForgetsTheColumnUpAndDownKept() {
+            final TextArea area = TextEditingTest.this.showArea("abcdef\nab\nabcdefgh");
+            area.select(5, 5);
+            TextEditingTest.this.press(Key.DOWN, Modifiers.NONE);
+
+            area.selectAll();
+            TextEditingTest.this.press(Key.UP, Modifiers.NONE);
+
+            assertEquals(9, area.caret(), "Up starts again from the end of the text, past the short row");
+            TextEditingTest.this.press(Key.UP, Modifiers.NONE);
+            assertEquals(6, area.caret(), "and keeps that column, not the one from before");
+        }
+    }
 }

@@ -93,26 +93,34 @@ final class TextEditor {
     }
 
     /**
-     * Selects a range for code, clamped to the text and snapped to code points.
+     * Selects a range for code, clamped to the text and snapped to code points. Up and Down then start from the new
+     * caret.
      */
     void select(final int anchor, final int caret) {
         this.anchor = this.boundaries.snap(anchor);
         this.caret = this.boundaries.snap(caret);
-        this.moved();
-    }
-
-    void selectAll() {
-        this.anchor = 0;
-        this.caret = this.buffer.length();
+        this.goal = Float.NaN;
         this.moved();
     }
 
     /**
-     * Puts the caret at an index with nothing selected, after the host changed the text.
+     * Selects everything with the caret at the end. Up and Down then start from there.
+     */
+    void selectAll() {
+        this.anchor = 0;
+        this.caret = this.buffer.length();
+        this.goal = Float.NaN;
+        this.moved();
+    }
+
+    /**
+     * Puts the caret at an index with nothing selected, after the host changed the text. Up and Down then start from
+     * there.
      */
     void place(final int index) {
         this.caret = index;
         this.anchor = index;
+        this.goal = Float.NaN;
     }
 
     /**
