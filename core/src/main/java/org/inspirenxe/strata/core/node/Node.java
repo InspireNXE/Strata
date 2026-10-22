@@ -1376,6 +1376,24 @@ public class Node implements ComponentPeer {
     }
 
     /**
+     * Returns the fixed width set with {@code setWidth}.
+     *
+     * @return the width, or NaN for none
+     */
+    public final float fixedWidth() {
+        return this.explicitWidth;
+    }
+
+    /**
+     * Returns the fixed height set with {@code setHeight}.
+     *
+     * @return the height, or NaN for none
+     */
+    public final float fixedHeight() {
+        return this.explicitHeight;
+    }
+
+    /**
      * Checks a fixed width or height: NaN, which means none, or a finite length that is not negative.
      */
     private static float fixedLength(final float length, final String name) {

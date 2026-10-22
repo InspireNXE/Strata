@@ -140,6 +140,7 @@ public final class Themes {
                 .textStyle(ComboBox.STYLE_TEXT_DISABLED, TextStyle.DEFAULT.withColor(0xFF707070))
                 .paint(Window.STYLE_BACKGROUND, Paint.solid(0xF0141518))
                 .paint(Window.STYLE_TITLE_BAR, Paint.solid(0xFF2B2D31))
+                .paint(Window.STYLE_TITLE_INACTIVE, Paint.solid(0xFF1F2023))
                 .textStyle(Window.STYLE_TITLE_TEXT, TextStyle.DEFAULT.withColor(0xFFFFFFFF))
                 .textStyle(Window.STYLE_CLOSE, TextStyle.DEFAULT.withColor(0xFFA0A0A0))
                 .textStyle(Window.STYLE_CLOSE_HOVERED, TextStyle.DEFAULT.withColor(0xFFFFFFFF))

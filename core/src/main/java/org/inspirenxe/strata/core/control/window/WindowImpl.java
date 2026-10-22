@@ -32,6 +32,8 @@ import org.inspirenxe.strata.api.input.Key;
 import org.inspirenxe.strata.api.input.KeyAction;
 import org.inspirenxe.strata.api.input.MouseButton;
 import org.inspirenxe.strata.api.layout.Anchor;
+import org.inspirenxe.strata.api.layout.HorizontalAlignment;
+import org.inspirenxe.strata.api.layout.VerticalAlignment;
 import org.inspirenxe.strata.api.overlay.Overlay;
 import org.inspirenxe.strata.api.text.Text;
 import org.inspirenxe.strata.api.text.TextMetrics;
@@ -39,13 +41,19 @@ import org.inspirenxe.strata.api.text.TextSpan;
 import org.inspirenxe.strata.api.text.TextStyle;
 import org.inspirenxe.strata.api.theme.Paint;
 import org.inspirenxe.strata.api.theme.Theme;
+import org.inspirenxe.strata.core.control.RectCache;
+import org.inspirenxe.strata.core.control.Rings;
 import org.inspirenxe.strata.core.node.BuiltInContainer;
 import org.inspirenxe.strata.core.node.ComponentFactoryImpl;
 import org.inspirenxe.strata.core.node.ContainerNode;
+import org.inspirenxe.strata.core.node.Node;
 import org.inspirenxe.strata.core.text.TextLine;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Objects;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * The core {@link Window}. The close button is an {@code x} at the right end of the title bar, {@link #CLOSE_WIDTH}
@@ -133,6 +141,36 @@ public final class WindowImpl extends BuiltInContainer<Window> implements Window
      * this window privately, or {@code null} to close at once.
      */
     private Runnable closeHook;
+
+    // Active, maximized and collapsed
+    private static final AtomicLong PRESSES = new AtomicLong();
+    private long pressedAt;
+    private boolean maximizable;
+    private boolean maximized;
+    private boolean collapsible;
+    private boolean collapsed;
+    // What a maximized window goes back to: alignment, fixed size, offset and whether the user placed it
+    private HorizontalAlignment restoreHorizontal;
+    private VerticalAlignment restoreVertical;
+    private float restoreWidth;
+    private float restoreHeight;
+    private float restoreX;
+    private float restoreY;
+    private boolean restoreUserPlaced;
+    // The fixed height a collapse set aside
+    private float collapsedHeight = Float.NaN;
+    // The children a collapse hid, to show again when it expands
+    private final List<Component<?>> hiddenByCollapse = new ArrayList<>();
+    private Paint inactiveTitleBar = Paint.NONE;
+    private Paint buttonPaint = Paint.NONE;
+    private Paint buttonHoveredPaint = Paint.NONE;
+    private Rect maximizeArea = Rect.ZERO;
+    private Rect collapseArea = Rect.ZERO;
+    private int pressedButton;
+    private int hoveredButton;
+    private final Rings.Arrow buttonArrow = new Rings.Arrow();
+    private final Rings.Ring maximizeRing = new Rings.Ring();
+    private final RectCache maximizeBox = new RectCache();
 
     /**
      * Creates an empty, centered window with 3 units of padding.
@@ -260,10 +298,182 @@ public final class WindowImpl extends BuiltInContainer<Window> implements Window
      */
     @Override
     protected void onPressWithin(final Component<?> target) {
+        this.pressedAt = PRESSES.incrementAndGet();
         final ContainerNode parent = this.node().parentNode();
         if (this.raiseOnPress && parent != null) {
             parent.raise(this);
         }
+    }
+
+    /**
+     * Works out whether the window is active from focus, the order of presses among its sibling windows, and, when
+     * none was pressed, which of them is drawn in front: the last in its parent's children.
+     */
+    @Override
+    public boolean isActive() {
+        if (this.isFocusWithin()) {
+            return true;
+        }
+        final ContainerNode parent = this.node().parentNode();
+        if (parent == null) {
+            return true;
+        }
+        WindowImpl latest = null;
+        WindowImpl front = null;
+        for (final Node child : parent.childNodes()) {
+            if (!((Object) child.facade() instanceof final WindowImpl window) || !child.isVisible()) {
+                continue;
+            }
+            if (window != this && window.isFocusWithin()) {
+                return false;
+            }
+            if (window.pressedAt > 0L && (latest == null || window.pressedAt > latest.pressedAt)) {
+                latest = window;
+            }
+            front = window;
+        }
+        return (latest != null ? latest : front) == this;
+    }
+
+    @Override
+    public boolean isMaximizable() {
+        return this.maximizable;
+    }
+
+    @Override
+    public Window setMaximizable(final boolean maximizable) {
+        this.maximizable = maximizable;
+        this.invalidateLayout();
+        return this;
+    }
+
+    @Override
+    public boolean isMaximized() {
+        return this.maximized;
+    }
+
+    /**
+     * Fills the slot by stretching with no fixed size and no offset, keeping what it had to restore.
+     */
+    @Override
+    public Window setMaximized(final boolean maximized) {
+        if (maximized == this.maximized) {
+            return this;
+        }
+        this.endResize();
+        this.dragging = false;
+        if (maximized) {
+            this.restoreHorizontal = this.horizontalAlignment();
+            this.restoreVertical = this.verticalAlignment();
+            this.restoreWidth = this.node().fixedWidth();
+            // A collapsed window keeps its fixed height aside, so that is the one to restore
+            this.restoreHeight = this.collapsed ? this.collapsedHeight : this.node().fixedHeight();
+            this.collapsedHeight = Float.NaN;
+            this.restoreX = this.offsetX();
+            this.restoreY = this.offsetY();
+            this.restoreUserPlaced = this.userPlaced;
+            this.maximized = true;
+            this.userPlaced = false;
+            this.setAlignment(HorizontalAlignment.STRETCH, VerticalAlignment.STRETCH);
+            this.setSize(Float.NaN, Float.NaN);
+            super.setOffset(0f, 0f);
+        } else {
+            this.maximized = false;
+            this.setAlignment(this.restoreHorizontal, this.restoreVertical);
+            if (this.collapsed) {
+                this.collapsedHeight = this.restoreHeight;
+                this.setSize(this.restoreWidth, Float.NaN);
+            } else {
+                this.setSize(this.restoreWidth, this.restoreHeight);
+            }
+            super.setOffset(this.restoreX, this.restoreY);
+            this.userPlaced = this.restoreUserPlaced;
+        }
+        this.invalidateLayout();
+        this.report(MAXIMIZED, maximized, !maximized);
+        return this;
+    }
+
+    @Override
+    public boolean isCollapsible() {
+        return this.collapsible;
+    }
+
+    @Override
+    public Window setCollapsible(final boolean collapsible) {
+        this.collapsible = collapsible;
+        this.invalidateLayout();
+        return this;
+    }
+
+    @Override
+    public boolean isCollapsed() {
+        return this.collapsed;
+    }
+
+    /**
+     * Hides the visible children, remembering them, or shows the ones it hid. A collapsed window measures as tall as
+     * its title bar, so its fixed height is kept aside while it is collapsed.
+     */
+    @Override
+    public Window setCollapsed(final boolean collapsed) {
+        if (collapsed == this.collapsed) {
+            return this;
+        }
+        this.endResize();
+        this.collapsed = collapsed;
+        if (collapsed) {
+            for (final Component<?> child : this.children()) {
+                if (child.isVisible()) {
+                    this.hiddenByCollapse.add(child);
+                    child.setVisible(false);
+                }
+            }
+            this.collapsedHeight = this.node().fixedHeight();
+            this.setHeight(Float.NaN);
+        } else {
+            for (final Component<?> child : this.hiddenByCollapse) {
+                child.setVisible(true);
+            }
+            this.hiddenByCollapse.clear();
+            this.setHeight(this.collapsedHeight);
+        }
+        this.invalidateLayout();
+        this.report(COLLAPSED, collapsed, !collapsed);
+        return this;
+    }
+
+    private void userMaximize() {
+        this.request(MAXIMIZE, !this.maximized, state -> {
+            if (state != null) {
+                this.setMaximized(state);
+            }
+        });
+    }
+
+    private void userCollapse() {
+        this.request(COLLAPSE, !this.collapsed, state -> {
+            if (state != null) {
+                this.setCollapsed(state);
+            }
+        });
+    }
+
+    /**
+     * Returns the title bar button at a point: 1 for close, 2 for maximize, 3 for collapse, 0 for none.
+     */
+    private int buttonAt(final float x, final float y) {
+        if (this.hasCloseButton() && this.closeArea.contains(x, y)) {
+            return 1;
+        }
+        if (this.maximizable && this.maximizeArea.contains(x, y)) {
+            return 2;
+        }
+        return this.collapsible && this.collapseArea.contains(x, y) ? 3 : 0;
+    }
+
+    private int buttonCount() {
+        return (this.hasCloseButton() ? 1 : 0) + (this.maximizable ? 1 : 0) + (this.collapsible ? 1 : 0);
     }
 
     @Override
@@ -308,7 +518,7 @@ public final class WindowImpl extends BuiltInContainer<Window> implements Window
      */
     private int edgesAt(final float x, final float y) {
         final Rect bounds = this.bounds();
-        if (!this.resizable || !bounds.contains(x, y)) {
+        if (!this.resizable || this.maximized || this.collapsed || !bounds.contains(x, y)) {
             return 0;
         }
         if (x >= bounds.right() - GRIP_SIZE && y >= bounds.bottom() - GRIP_SIZE) {
@@ -471,6 +681,11 @@ public final class WindowImpl extends BuiltInContainer<Window> implements Window
     protected void onApplyTheme(final Theme theme) {
         this.background = theme.paintOr(STYLE_BACKGROUND, Paint.NONE);
         this.titleBar = theme.paintOr(STYLE_TITLE_BAR, Paint.NONE);
+        this.inactiveTitleBar = theme.paintOr(STYLE_TITLE_INACTIVE, this.titleBar);
+        this.buttonPaint = Paint.solid(theme.textStyleOr(STYLE_CLOSE, theme.textStyleOr(STYLE_TITLE_TEXT,
+                TextStyle.DEFAULT)).color());
+        this.buttonHoveredPaint = Paint.solid(theme.textStyleOr(STYLE_CLOSE_HOVERED, theme.textStyleOr(STYLE_CLOSE,
+                theme.textStyleOr(STYLE_TITLE_TEXT, TextStyle.DEFAULT))).color());
         this.titleStyle = theme.textStyleOr(STYLE_TITLE_TEXT, TextStyle.DEFAULT);
         this.titlePadding = theme.insetsOr(STYLE_TITLE_PADDING, Insets.of(TITLE_PADDING));
         this.node().setDefaultPadding(theme.insetsOr(STYLE_PADDING, DEFAULT_PADDING));
@@ -500,7 +715,10 @@ public final class WindowImpl extends BuiltInContainer<Window> implements Window
             width = Math.max(width, outer.width());
             height = Math.max(height, outer.height());
         }
-        this.titleRoom = this.titleWidth + (this.hasCloseButton() ? (CLOSE_WIDTH + 1f) * 2f : 0f) + 8f;
+        this.titleRoom = this.titleWidth + (CLOSE_WIDTH + 1f) * 2f * this.buttonCount() + 8f;
+        if (this.collapsed) {
+            return new Size(Math.max(width + padding.horizontal(), this.titleRoom), this.titleHeight);
+        }
         return new Size(Math.max(width + padding.horizontal(), this.titleRoom), height + padding.vertical() + this.titleHeight);
     }
 
@@ -511,9 +729,16 @@ public final class WindowImpl extends BuiltInContainer<Window> implements Window
             return;
         }
         this.titleBarArea = new Rect(bounds.x(), bounds.y(), bounds.width(), this.titleHeight);
-        // Right to left the close button sits at the left of the title bar
+        // Right to left the buttons sit at the left of the title bar, the close button outermost
         this.closeArea = this.flow(new Rect(bounds.right() - CLOSE_WIDTH - 1f, bounds.y(), CLOSE_WIDTH,
                 this.titleHeight));
+        // The other buttons sit inside the close button, each one button and a unit further in
+        float right = bounds.right() - (this.hasCloseButton() ? CLOSE_WIDTH + 1f : 0f);
+        this.maximizeArea = this.maximizable
+                ? this.flow(new Rect(right - CLOSE_WIDTH - 1f, bounds.y(), CLOSE_WIDTH, this.titleHeight)) : Rect.ZERO;
+        right -= this.maximizable ? CLOSE_WIDTH + 1f : 0f;
+        this.collapseArea = this.collapsible
+                ? this.flow(new Rect(right - CLOSE_WIDTH - 1f, bounds.y(), CLOSE_WIDTH, this.titleHeight)) : Rect.ZERO;
         this.contentArea = new Rect(bounds.x(), bounds.y() + this.titleHeight, bounds.width(),
                 Math.max(0f, bounds.height() - this.titleHeight));
         final Rect area = this.contentArea.shrink(this.padding());
@@ -571,7 +796,7 @@ public final class WindowImpl extends BuiltInContainer<Window> implements Window
     @Override
     protected void paint(final Painter painter, final Rect bounds) {
         this.background.paint(painter, bounds);
-        this.titleBar.paint(painter, this.titleBarArea);
+        (this.isActive() ? this.titleBar : this.inactiveTitleBar).paint(painter, this.titleBarArea);
         final Insets padding = this.titlePadding;
         final float textY = bounds.y() + padding.top();
         this.titleSpan.draw(painter, bounds.x() + padding.left()
@@ -580,6 +805,25 @@ public final class WindowImpl extends BuiltInContainer<Window> implements Window
             final Rect close = this.closeArea;
             painter.text(this.closeHovered ? this.closeHoveredSpan : this.closeSpan,
                     close.x() + (close.width() - this.closeWidth) * 0.5f, textY);
+        }
+        if (this.maximizable) {
+            // A square outline
+            final Rect area = this.maximizeArea;
+            final float size = Rings.ARROW_LONG;
+            final Rect box = this.maximizeBox.at(area.x() + (float) Math.floor((area.width() - size) * 0.5f),
+                    area.y() + (float) Math.floor((area.height() - size) * 0.5f), size, size);
+            this.maximizeRing.paint(painter, this.hoveredButton == 2 ? this.buttonHoveredPaint : this.buttonPaint, box);
+        }
+        if (this.collapsible) {
+            final Rect area = this.collapseArea;
+            final int color = (this.hoveredButton == 3 ? this.closeHoveredStyle : this.closeStyle).color();
+            final float x = area.x() + (float) Math.floor((area.width() - Rings.ARROW_LONG) * 0.5f);
+            final float y = area.y() + (float) Math.floor((area.height() - Rings.ARROW_SHORT) * 0.5f);
+            if (this.collapsed) {
+                this.buttonArrow.down(painter, color, x, y);
+            } else {
+                this.buttonArrow.up(painter, color, x, y);
+            }
         }
     }
 
@@ -609,9 +853,14 @@ public final class WindowImpl extends BuiltInContainer<Window> implements Window
         if (!this.titleBarArea.contains(event.x(), event.y())) {
             return;
         }
+        this.pressedButton = this.buttonAt(event.x(), event.y());
         if (onClose) {
             this.closePressed = true;
-        } else if (this.movable) {
+        } else if (this.pressedButton != 0) {
+            // A press on a title bar button waits for its click
+            event.consume();
+            return;
+        } else if (this.movable && !this.maximized) {
             this.dragging = true;
             this.dragOffsetX = this.offsetX();
             this.dragOffsetY = this.offsetY();
@@ -625,6 +874,23 @@ public final class WindowImpl extends BuiltInContainer<Window> implements Window
             this.closePressed = false;
             event.consume();
             this.userClose();
+            return;
+        }
+        final int button = this.buttonAt(event.x(), event.y());
+        if (button != 0 && button == this.pressedButton && event.button() == MouseButton.LEFT) {
+            this.pressedButton = 0;
+            event.consume();
+            if (button == 2) {
+                this.userMaximize();
+            } else if (button == 3) {
+                this.userCollapse();
+            }
+            return;
+        }
+        if (this.maximizable && event.button() == MouseButton.LEFT && event.clicks() == 2 && button == 0
+                && !event.isHandled() && this.titleBarArea.contains(event.x(), event.y())) {
+            event.consume();
+            this.userMaximize();
         }
     }
 
@@ -676,6 +942,7 @@ public final class WindowImpl extends BuiltInContainer<Window> implements Window
     protected void onPointerMove(final PointerEvent event) {
         this.closeHovered = event.target() == this && this.hasCloseButton()
                 && this.closeArea.contains(event.x(), event.y());
+        this.hoveredButton = event.target() == this ? this.buttonAt(event.x(), event.y()) : 0;
         if (this.resizable || this.resizeCursor) {
             this.hoverEdges(this.closeHovered ? 0 : this.edgesAt(event.x(), event.y()));
         }
@@ -684,6 +951,7 @@ public final class WindowImpl extends BuiltInContainer<Window> implements Window
     @Override
     protected void onPointerExit(final PointerEvent event) {
         this.closeHovered = false;
+        this.hoveredButton = 0;
         if (this.resizeStart == null) {
             this.hoverEdges(0);
         }
