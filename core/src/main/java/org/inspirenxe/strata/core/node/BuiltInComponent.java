@@ -50,6 +50,7 @@ import org.inspirenxe.strata.api.layout.VerticalAlignment;
 import org.inspirenxe.strata.api.state.PropertyKey;
 import org.inspirenxe.strata.api.state.Source;
 import org.inspirenxe.strata.api.theme.Border;
+import org.inspirenxe.strata.api.text.TextStyle;
 import org.inspirenxe.strata.api.theme.Paint;
 import org.inspirenxe.strata.api.theme.Theme;
 
@@ -871,6 +872,40 @@ public abstract class BuiltInComponent<T extends Component<T>> implements Compon
      */
     protected final Theme theme() {
         return this.node.theme();
+    }
+
+    /**
+     * Turns one of this component's own style states on or off, as {@code CustomComponent.setStyleState} does.
+     *
+     * @param state the state's name; any name but {@code disabled}, {@code pressed}, {@code hovered} and
+     *              {@code focused}, which the node sets
+     * @param on whether the state is on
+     * @throws IllegalArgumentException if the name is empty or one the node sets
+     */
+    protected final void setStyleState(final String state, final boolean on) {
+        this.node.setStyleState(state, on);
+    }
+
+    /**
+     * Looks up a paint for this component's style states, as {@code CustomComponent.stylePaint} does.
+     *
+     * @param key the style key
+     * @param fallback returned when the theme has none of the keys tried, or the component was never attached
+     * @return the paint
+     */
+    protected final Paint stylePaint(final String key, final Paint fallback) {
+        return this.node.stylePaint(key, fallback);
+    }
+
+    /**
+     * Looks up a text style for this component's style states, as {@code CustomComponent.styleText} does.
+     *
+     * @param key the style key
+     * @param fallback returned when the theme has none of the keys tried, or the component was never attached
+     * @return the text style
+     */
+    protected final TextStyle styleText(final String key, final TextStyle fallback) {
+        return this.node.styleText(key, fallback);
     }
 
     /**

@@ -29,6 +29,7 @@ import org.inspirenxe.strata.api.layout.HorizontalAlignment;
 import org.inspirenxe.strata.api.layout.VerticalAlignment;
 import org.inspirenxe.strata.api.state.PropertyKey;
 import org.inspirenxe.strata.api.state.Source;
+import org.inspirenxe.strata.api.text.TextStyle;
 import org.inspirenxe.strata.api.theme.Border;
 import org.inspirenxe.strata.api.theme.Paint;
 import org.inspirenxe.strata.api.theme.Theme;
@@ -478,4 +479,31 @@ public interface ComponentPeer {
      * @return true if firing the type would reach a handler
      */
     boolean isHandled(EventType<?> type);
+
+    /**
+     * Turns one of the component's own style states on or off. See {@code CustomComponent.setStyleState}.
+     *
+     * @param state the state's name
+     * @param on whether the state is on
+     * @throws IllegalArgumentException if the name is empty or one Strata sets
+     */
+    void setStyleState(String state, boolean on);
+
+    /**
+     * Looks up a paint by key for the component's style states. See {@code CustomComponent.stylePaint}.
+     *
+     * @param key the style key
+     * @param fallback returned when the theme has none of the keys tried, or the component has no theme yet
+     * @return the paint
+     */
+    Paint stylePaint(String key, Paint fallback);
+
+    /**
+     * Looks up a text style by key for the component's style states. See {@code CustomComponent.styleText}.
+     *
+     * @param key the style key
+     * @param fallback returned when the theme has none of the keys tried, or the component has no theme yet
+     * @return the text style
+     */
+    TextStyle styleText(String key, TextStyle fallback);
 }

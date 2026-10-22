@@ -42,6 +42,7 @@ import org.inspirenxe.strata.api.layout.HorizontalAlignment;
 import org.inspirenxe.strata.api.layout.VerticalAlignment;
 import org.inspirenxe.strata.api.state.PropertyKey;
 import org.inspirenxe.strata.api.state.Source;
+import org.inspirenxe.strata.api.text.TextStyle;
 import org.inspirenxe.strata.api.theme.Border;
 import org.inspirenxe.strata.api.theme.Paint;
 import org.inspirenxe.strata.api.theme.Theme;
@@ -101,6 +102,8 @@ public class Node implements ComponentPeer {
     private boolean content;
     private MeasureEventImpl measureEvent;
     private Theme theme;
+    // Made on the first style state set or looked up
+    private StyleStates styleStates;
 
     private boolean visible;
     private boolean enabled;
@@ -766,6 +769,70 @@ public class Node implements ComponentPeer {
     @Override
     public final Theme theme() {
         return this.theme;
+    }
+
+    /**
+     * Turns one of the component's own style states on or off. The node sets {@code disabled}, {@code pressed},
+     * {@code hovered} and {@code focused} itself, from its own state. A change marks nothing for layout.
+     *
+     * @param state the state's name
+     * @param on whether the state is on
+     * @throws IllegalArgumentException if the name is empty or one of the four the node sets, or the component
+     *     already has 60 states of its own
+     */
+    @Override
+    public final void setStyleState(final String state, final boolean on) {
+        this.styleStates().set(state, on);
+    }
+
+    /**
+     * Looks up a paint for the component's style states, as {@link StyleStates} describes: {@code key.disabled}
+     * while the component is disabled, itself or through an ancestor, then {@code key.<state>} for each of its own
+     * states that is on, in the order they were first set, then {@code key.pressed}, {@code key.hovered} and
+     * {@code key.focused}, and last the key. The result of each combination is kept until the theme changes.
+     *
+     * @param key the style key
+     * @param fallback returned when the theme has none of the keys tried, or the node has no theme yet
+     * @return the paint
+     */
+    @Override
+    public final Paint stylePaint(final String key, final Paint fallback) {
+        Objects.requireNonNull(key, "key");
+        final Theme theme = this.theme;
+        if (theme == null) {
+            return fallback;
+        }
+        final StyleStates states = this.styleStates();
+        return states.paint(theme, key, fallback, this.styleCombination(states));
+    }
+
+    /**
+     * Looks up a text style for the component's style states, in the same order as {@link #stylePaint}.
+     *
+     * @param key the style key
+     * @param fallback returned when the theme has none of the keys tried, or the node has no theme yet
+     * @return the text style
+     */
+    @Override
+    public final TextStyle styleText(final String key, final TextStyle fallback) {
+        Objects.requireNonNull(key, "key");
+        final Theme theme = this.theme;
+        if (theme == null) {
+            return fallback;
+        }
+        final StyleStates states = this.styleStates();
+        return states.text(theme, key, fallback, this.styleCombination(states));
+    }
+
+    private StyleStates styleStates() {
+        if (this.styleStates == null) {
+            this.styleStates = new StyleStates();
+        }
+        return this.styleStates;
+    }
+
+    private long styleCombination(final StyleStates states) {
+        return states.combination(!this.facade.isEffectivelyEnabled(), this.pressed, this.hovered, this.focused);
     }
 
     // ------------------------------------------------------------------

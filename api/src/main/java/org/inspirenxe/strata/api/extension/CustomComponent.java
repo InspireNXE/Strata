@@ -50,6 +50,7 @@ import org.inspirenxe.strata.api.layout.HorizontalAlignment;
 import org.inspirenxe.strata.api.layout.VerticalAlignment;
 import org.inspirenxe.strata.api.state.PropertyKey;
 import org.inspirenxe.strata.api.state.Source;
+import org.inspirenxe.strata.api.text.TextStyle;
 import org.inspirenxe.strata.api.theme.Border;
 import org.inspirenxe.strata.api.theme.Paint;
 import org.inspirenxe.strata.api.theme.Theme;
@@ -871,6 +872,53 @@ public abstract class CustomComponent<T extends Component<T>> implements Compone
      */
     protected final Theme theme() {
         return this.peer.theme();
+    }
+
+    /**
+     * Turns one of this component's own style states on or off, such as {@code "selected"} or {@code "warning"}, so
+     * {@link #stylePaint} and {@link #styleText} pick the theme's look for it: with {@code "warning"} on, a lookup of
+     * {@code fancy.card} finds {@code fancy.card.warning} when the theme has it. Strata sets {@code disabled},
+     * {@code pressed}, {@code hovered} and {@code focused} on every component itself, so those names cannot be set
+     * here. A state's place in a lookup is the order in which it was first set. Changing a state marks nothing for
+     * layout; call {@link #invalidateLayout()} if the styles it picks change the component's size.
+     *
+     * @param state the state's name; any name but the four Strata sets
+     * @param on whether the state is on
+     * @throws IllegalArgumentException if the name is empty or one Strata sets, or the component already has 60
+     *     states of its own
+     */
+    protected final void setStyleState(final String state, final boolean on) {
+        this.peer.setStyleState(state, on);
+    }
+
+    /**
+     * Looks up a paint from the theme for this component's style states. The lookup tries {@code key.disabled}
+     * while the component is disabled, itself or through an ancestor, then {@code key.<state>} for each of the
+     * component's own states that is on, in the order they were first set, then {@code key.pressed},
+     * {@code key.hovered} and {@code key.focused} for those that are on, and last the key itself. The first key
+     * the theme has wins, so with {@code "warning"} on, {@code fancy.card.warning} wins over {@code fancy.card},
+     * and a disabled card shows {@code fancy.card.disabled}. The result for each combination of states is kept
+     * until the theme changes, so calling this from {@link #paint} allocates nothing once each combination was
+     * looked up.
+     *
+     * @param key the style key, such as {@code fancy.card}
+     * @param fallback returned when the theme has none of the keys tried, or the component was never attached
+     * @return the paint
+     */
+    protected final Paint stylePaint(final String key, final Paint fallback) {
+        return this.peer.stylePaint(key, fallback);
+    }
+
+    /**
+     * Looks up a text style from the theme for this component's style states, trying the keys in the order
+     * {@link #stylePaint} does.
+     *
+     * @param key the style key, such as {@code fancy.card.text}
+     * @param fallback returned when the theme has none of the keys tried, or the component was never attached
+     * @return the text style
+     */
+    protected final TextStyle styleText(final String key, final TextStyle fallback) {
+        return this.peer.styleText(key, fallback);
     }
 
     /**
