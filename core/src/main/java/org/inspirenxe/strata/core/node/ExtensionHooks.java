@@ -33,7 +33,8 @@ import java.util.Set;
 /**
  * The hooks of a developer's {@code CustomComponent}, as a node calls them. Each call forwards to the public
  * {@link ComponentHooks} the component gave its peer, except {@link #enabledChanged()}, {@link #disabled()},
- * {@link #released()} and {@link #pressedWithin}, which only Strata's own controls answer and which do nothing here.
+ * {@link #released()}, {@link #pressedWithin} and {@link #edgeScroll}, which only Strata's own controls answer and
+ * which do nothing here.
  */
 final class ExtensionHooks implements NodeHooks {
     private final ComponentHooks hooks;
@@ -141,5 +142,10 @@ final class ExtensionHooks implements NodeHooks {
 
     @Override
     public void pressedWithin(final Component<?> target) {
+    }
+
+    @Override
+    public boolean edgeScroll(final float x, final float y) {
+        return false;
     }
 }

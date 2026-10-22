@@ -59,6 +59,7 @@ public final class ScrollPanelImpl extends BuiltInContainer<ScrollPanel> impleme
     private ScrollPolicy horizontalPolicy;
     private ScrollPolicy verticalPolicy;
     private float rate;
+    private boolean dragScroll = true;
     private float scrollX;
     private float scrollY;
     private float maxScrollX;
@@ -268,6 +269,35 @@ public final class ScrollPanelImpl extends BuiltInContainer<ScrollPanel> impleme
     @Override
     public Rect viewport() {
         return this.viewport;
+    }
+
+    @Override
+    public boolean isDragScroll() {
+        return this.dragScroll;
+    }
+
+    @Override
+    public ScrollPanel setDragScroll(final boolean dragScroll) {
+        this.dragScroll = dragScroll;
+        return this;
+    }
+
+    @Override
+    protected boolean onEdgeScroll(final float x, final float y) {
+        if (!this.dragScroll || !this.arranged) {
+            return false;
+        }
+        final Rect view = this.viewport;
+        final float dx = this.horizontalPolicy == ScrollPolicy.NEVER ? 0f
+                : EdgeScroll.step(x, view.x(), view.right(), this.rate, this.scrollX, this.maxScrollX);
+        final float dy = this.verticalPolicy == ScrollPolicy.NEVER || !(x >= view.x() && x < view.right()) ? 0f
+                : EdgeScroll.step(y, view.y(), view.bottom(), this.rate, this.scrollY, this.maxScrollY);
+        final float dxInside = y >= view.y() && y < view.bottom() ? dx : 0f;
+        if (dxInside == 0f && dy == 0f) {
+            return false;
+        }
+        this.glide.stop();
+        return this.scrollTo(this.scrollX + dxInside, this.scrollY + dy);
     }
 
     private State state() {

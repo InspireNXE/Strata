@@ -203,6 +203,17 @@ abstract class ListBackedControl<T, E, S extends Component<S> & RowView<S> & Mul
     }
 
     @Override
+    public boolean isDragScroll() {
+        return this.list.isDragScroll();
+    }
+
+    @Override
+    public S setDragScroll(final boolean dragScroll) {
+        this.list.setDragScroll(dragScroll);
+        return this.self();
+    }
+
+    @Override
     public boolean isDeselectable() {
         return this.list.isDeselectable();
     }

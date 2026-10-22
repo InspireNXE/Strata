@@ -33,8 +33,8 @@ import java.util.Set;
  * that calls its protected hooks. A developer's {@code CustomComponent} hands its peer the public
  * {@link org.inspirenxe.strata.api.extension.peer.ComponentHooks}, which {@link ExtensionHooks} adapts to this
  * interface. Calls that only Strata's own controls answer, {@link #enabledChanged()}, {@link #disabled()},
- * {@link #released()} and {@link #pressedWithin}, do nothing for a developer's component, so they never widen the
- * public extension API.
+ * {@link #released()}, {@link #pressedWithin} and {@link #edgeScroll}, do nothing for a developer's component, so
+ * they never widen the public extension API.
  */
 interface NodeHooks {
 
@@ -184,4 +184,14 @@ interface NodeHooks {
      * @param target the component the press is aimed at
      */
     void pressedWithin(Component<?> target);
+
+    /**
+     * Scrolls one frame's step toward an edge of the component's viewport the pointer is near, while a drag that
+     * carries a transfer holds it there.
+     *
+     * @param x the pointer's x, in the host's coordinates
+     * @param y the pointer's y, in the host's coordinates
+     * @return true if the component scrolled
+     */
+    boolean edgeScroll(float x, float y);
 }

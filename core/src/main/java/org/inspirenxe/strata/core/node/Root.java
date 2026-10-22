@@ -134,7 +134,8 @@ import java.util.function.Consumer;
  * started here or in another application. While a drag started here carries one, the canvas is asked for the cursor
  * of the accepted effect, and the drag image is laid out {@link #DRAG_IMAGE_OFFSET} units right of and below the
  * pointer, kept inside the host, and drawn on top of everything, the tooltip included. A source that leaves the tree
- * ends its drag with no events.</p>
+ * ends its drag with no events. Each frame of such a drag, the node under the pointer or its nearest ancestor that
+ * scrolls may scroll a step toward the edge the pointer is near (see {@link NodeHooks#edgeScroll}).</p>
  *
  * <p>Keyboard rules: key events go to the focused node, or else to the top dialog, or else to the content. An unhandled
  * press or repeat runs the first enabled command whose shortcut matches it, as {@link Shortcuts} describes. Where the
@@ -1094,6 +1095,9 @@ public final class Root {
         this.pumpKeyRepeat();
         this.expireToasts();
         this.showPendingTooltip();
+        if (this.transferDrag != null) {
+            this.edgeScroll(this.transferDrag);
+        }
         this.layout();
         if (this.hoverStale && this.pointerInside) {
             this.updateHover(this.pointerX, this.pointerY, this.modifiers);
@@ -1151,6 +1155,24 @@ public final class Root {
             image.paint(frame);
         }
         this.requestHoverCursor(canvas);
+    }
+
+    /**
+     * Lets the node under a drag that carries a transfer, or its nearest ancestor that can, scroll one step toward
+     * the edge the pointer is near. After a step it asks for a frame {@link FrameRequests#CONTINUOUS_MILLIS} later,
+     * and tells the drag to move again, since other content is now under the pointer.
+     */
+    private void edgeScroll(final TransferDrag drag) {
+        this.layout();
+        for (Node node = this.hitTest(drag.x(), drag.y()); node != null; node = node.parentNode()) {
+            if (node.hooks().edgeScroll(drag.x(), drag.y())) {
+                this.frames.at(this.platform.clock().nanoTime() + FrameRequests.CONTINUOUS_MILLIS * 1_000_000L);
+                try (CauseFrame _ = this.inputFrame(Device.MOUSE, this.modifiers)) {
+                    drag.moved(drag.x(), drag.y(), this.modifiers);
+                }
+                return;
+            }
+        }
     }
 
     private void expireToasts() {

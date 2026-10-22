@@ -118,6 +118,24 @@ public interface RowView<S extends RowView<S>> {
     S scrollToIndex(int index);
 
     /**
+     * Returns whether a drag that carries a transfer scrolls the rows while it holds the pointer near the top or
+     * bottom of the control's viewport, as a {@code ScrollPanel} does: within
+     * {@value org.inspirenxe.strata.api.layout.ScrollPanel#DRAG_SCROLL_ZONE} units of the edge, faster the nearer
+     * the pointer, up to a row a frame.
+     *
+     * @return true by default
+     */
+    boolean isDragScroll();
+
+    /**
+     * Sets whether a drag that carries a transfer scrolls the rows near the top and bottom of the viewport.
+     *
+     * @param dragScroll false to leave the rows still during drags
+     * @return this control
+     */
+    S setDragScroll(boolean dragScroll);
+
+    /**
      * Returns whether a press on the selected row deselects it.
      *
      * @return false by default

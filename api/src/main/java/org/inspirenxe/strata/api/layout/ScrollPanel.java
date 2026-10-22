@@ -55,6 +55,10 @@ import org.inspirenxe.strata.api.geometry.Rect;
  *     <li>A left press on a scroll bar's thumb grabs it and dragging moves it; a left press on the track pages
  *     toward the pointer.</li>
  *     <li>When a descendant gains focus, the panel scrolls the least distance that shows it.</li>
+ *     <li>While a drag that carries a transfer holds the pointer within {@value #DRAG_SCROLL_ZONE} units of an edge
+ *     of the viewport, the panel scrolls toward that edge each frame, faster the nearer the pointer, up to the
+ *     scroll rate a frame, and keeps scrolling while the pointer stays still. The innermost panel under the pointer
+ *     that can still scroll that way does. {@link #setDragScroll} turns it off.</li>
  * </ul>
  *
  * <h2>Drawing</h2>
@@ -117,6 +121,10 @@ public interface ScrollPanel extends Container<ScrollPanel>, Focusable<ScrollPan
      * How far one wheel notch scrolls by default, in UI units.
      */
     float DEFAULT_SCROLL_RATE = 10f;
+    /**
+     * How near an edge of the viewport, in UI units, a drag that carries a transfer starts scrolling.
+     */
+    float DRAG_SCROLL_ZONE = 16f;
 
     /**
      * Fired after the offset changed, by input or by a setter. The value is the panel's state after the change and
@@ -229,6 +237,21 @@ public interface ScrollPanel extends Container<ScrollPanel>, Focusable<ScrollPan
      * @throws IllegalArgumentException if the rate is not greater than 0 or not finite
      */
     ScrollPanel setScrollRate(float unitsPerNotch);
+
+    /**
+     * Returns whether a drag that carries a transfer scrolls the panel near the edges of its viewport.
+     *
+     * @return true by default
+     */
+    boolean isDragScroll();
+
+    /**
+     * Sets whether a drag that carries a transfer scrolls the panel near the edges of its viewport.
+     *
+     * @param dragScroll false to leave the panel still during drags
+     * @return this panel
+     */
+    ScrollPanel setDragScroll(boolean dragScroll);
 
     /**
      * Returns the viewport, as of the last layout.

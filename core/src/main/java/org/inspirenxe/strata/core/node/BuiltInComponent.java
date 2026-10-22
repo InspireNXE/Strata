@@ -327,6 +327,21 @@ public abstract class BuiltInComponent<T extends Component<T>> implements Compon
     }
 
     /**
+     * Called once a frame while a drag that carries a transfer holds the pointer over this component or a component
+     * inside it, from the deepest component under the pointer up until one returns true. A control that scrolls
+     * moves one step toward the edge of its viewport the pointer is near, as {@code EdgeScroll} works it out, and
+     * returns true; the root then asks for the next frame, so scrolling goes on while the pointer stays still. The
+     * default does nothing and returns false.
+     *
+     * @param x the pointer's x, in the host's coordinates
+     * @param y the pointer's y, in the host's coordinates
+     * @return true if the component scrolled
+     */
+    protected boolean onEdgeScroll(final float x, final float y) {
+        return false;
+    }
+
+    /**
      * Default behavior for {@link InputEvents#POINTER_ENTER}. The default does nothing.
      *
      * @param event the event
@@ -667,6 +682,11 @@ public abstract class BuiltInComponent<T extends Component<T>> implements Compon
         @Override
         public void pressedWithin(final Component<?> target) {
             BuiltInComponent.this.onPressWithin(target);
+        }
+
+        @Override
+        public boolean edgeScroll(final float x, final float y) {
+            return BuiltInComponent.this.onEdgeScroll(x, y);
         }
     }
 

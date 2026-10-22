@@ -44,6 +44,7 @@ import org.inspirenxe.strata.api.theme.Paint;
 import org.inspirenxe.strata.api.theme.Theme;
 import org.inspirenxe.strata.core.control.Caption;
 import org.inspirenxe.strata.core.control.Motion;
+import org.inspirenxe.strata.core.layout.EdgeScroll;
 import org.inspirenxe.strata.core.layout.ScrollTrack;
 import org.inspirenxe.strata.core.layout.ThumbDrag;
 import org.inspirenxe.strata.core.node.BuiltInComposite;
@@ -116,6 +117,7 @@ public final class ListViewImpl<T> extends BuiltInComposite<ListView<T>> impleme
     private TextLine placeholderLine = TextLine.EMPTY;
     private boolean rowsStale;
     private int reveal;
+    private boolean dragScroll = true;
 
     // Layout results
     private float scrollY;
@@ -792,6 +794,31 @@ public final class ListViewImpl<T> extends BuiltInComposite<ListView<T>> impleme
         this.glide.stop();
         this.scrollTo(scrollY);
         return this;
+    }
+
+    @Override
+    public boolean isDragScroll() {
+        return this.dragScroll;
+    }
+
+    @Override
+    public ListView<T> setDragScroll(final boolean dragScroll) {
+        this.dragScroll = dragScroll;
+        return this;
+    }
+
+    @Override
+    protected boolean onEdgeScroll(final float x, final float y) {
+        if (!this.dragScroll || !this.arranged || !(x >= this.viewport.x() && x < this.viewport.right())) {
+            return false;
+        }
+        final float step = EdgeScroll.step(y, this.viewport.y(), this.viewport.bottom(), this.step(), this.scrollY,
+                this.maxScrollY);
+        if (step == 0f) {
+            return false;
+        }
+        this.glide.stop();
+        return this.scrollTo(this.scrollY + step);
     }
 
     @Override
