@@ -289,6 +289,13 @@ public final class ListViewImpl<T> extends BuiltInComposite<ListView<T>> impleme
         return this;
     }
 
+    /**
+     * Returns the components built for the rows in view, for an owner that lays them out again or measures them.
+     */
+    Collection<Component<?>> builtRows() {
+        return this.rows.values();
+    }
+
     @Override
     public ListView<T> refresh(final T item) {
         final Object key = this.keyFunction.apply(item);

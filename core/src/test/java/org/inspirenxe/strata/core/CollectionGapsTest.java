@@ -21,6 +21,7 @@ import org.inspirenxe.strata.api.control.attribute.item.SelectionMode;
 import org.inspirenxe.strata.api.control.collection.ComboBox;
 import org.inspirenxe.strata.api.control.collection.GridView;
 import org.inspirenxe.strata.api.control.collection.ListView;
+import org.inspirenxe.strata.api.control.collection.TableColumn;
 import org.inspirenxe.strata.api.control.collection.TableView;
 import org.inspirenxe.strata.api.control.collection.TreeView;
 import org.inspirenxe.strata.api.input.Modifier;
@@ -29,15 +30,20 @@ import org.inspirenxe.strata.api.input.MouseButton;
 import org.inspirenxe.strata.api.input.ScrollKind;
 import org.inspirenxe.strata.api.layout.AbsolutePanel;
 import org.inspirenxe.strata.api.layout.GridLength;
+import org.inspirenxe.strata.api.layout.ScrollPanel;
+import org.inspirenxe.strata.api.theme.Themes;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Comparator;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.IntStream;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -53,6 +59,184 @@ class CollectionGapsTest {
 
     private static List<Integer> numbers(final int count) {
         return IntStream.range(0, count).boxed().toList();
+    }
+
+    @Nested
+    class Tables {
+        private static final List<String> PEOPLE = List.of("Cleo", "Ana", "Ben", "Ada");
+
+        private TableView<String> table;
+        private TableColumn<String> name;
+        private TableColumn<String> size;
+
+        private void show(final ScrollPanel.ScrollPolicy policy) {
+            final ComponentFactory ui = CollectionGapsTest.this.ui;
+            this.name = ui.<String>tableColumn("Name").setWidth(GridLength.fixed(60)).setCellText(n -> n);
+            this.size = ui.<String>tableColumn("Size").setWidth(GridLength.fixed(60)).setCellText(n -> n.length())
+                    .setComparator(Comparator.comparingInt(String::length));
+            this.table = ui.<String>tableView().addColumn(this.name).addColumn(this.size).setItems(PEOPLE)
+                    .setHorizontalPolicy(policy)
+                    .onEvent(TableView.SORT, e -> CollectionGapsTest.this.heard.add("sort " + this.describe(e.value())))
+                    .onEvent(TableView.SORTED_MANY, e -> CollectionGapsTest.this.heard.add("many " + e.value().size()))
+                    .onEvent(TableView.COLUMN_RESIZED, e -> CollectionGapsTest.this.heard.add("resized " + e.value().width()))
+                    .onEvent(TableView.COLUMN_MOVED, e -> CollectionGapsTest.this.heard.add("moved " + e.value().index()));
+            this.table.setSize(100, 120);
+            CollectionGapsTest.this.test.show(CollectionGapsTest.this.panel.add(this.table, 0, 0));
+        }
+
+        private String describe(final TableView.Sort sort) {
+            return sort.column() == null ? "none" : sort.column().title().plain() + (sort.ascending() ? " up" : " down");
+        }
+
+        private void press(final float x, final float y, final Modifiers modifiers) {
+            CollectionGapsTest.this.test.host().pointerButton(x, y, MouseButton.LEFT, true, modifiers);
+        }
+
+        private void release(final float x, final float y) {
+            CollectionGapsTest.this.test.host().pointerButton(x, y, MouseButton.LEFT, false, Modifiers.NONE);
+        }
+
+        private void drag(final float fromX, final float toX) {
+            this.press(fromX, 10, Modifiers.NONE);
+            CollectionGapsTest.this.test.host().pointerMoved((fromX + toX) / 2f, 10, Modifiers.NONE);
+            CollectionGapsTest.this.test.host().pointerMoved(toX, 10, Modifiers.NONE);
+            this.release(toX, 10);
+            CollectionGapsTest.this.test.host().layout();
+        }
+
+        private void click(final float x, final Modifiers modifiers) {
+            this.press(x, 10, modifiers);
+            CollectionGapsTest.this.test.host().pointerButton(x, 10, MouseButton.LEFT, false, modifiers);
+            CollectionGapsTest.this.test.platform().advanceMillis(1000);
+        }
+
+        @Test
+        void aTitleClickGoesUpThenDownThenBackToTheSetOrder() {
+            this.show(ScrollPanel.ScrollPolicy.NEVER);
+            this.click(80, Modifiers.NONE);
+            assertEquals(List.of("Ana", "Ben", "Ada", "Cleo"), this.table.shownItems());
+            this.click(80, Modifiers.NONE);
+            assertEquals("Cleo", this.table.shownItems().getFirst());
+            this.click(80, Modifiers.NONE);
+            assertEquals(PEOPLE, this.table.shownItems());
+            assertEquals(List.of("sort Size up", "many 1", "sort Size down", "many 1", "sort none", "many 0"),
+                    CollectionGapsTest.this.heard);
+        }
+
+        @Test
+        void shiftAddsAColumnToTheSortOrder() {
+            this.show(ScrollPanel.ScrollPolicy.NEVER);
+            this.name.setComparator(Comparator.naturalOrder());
+            this.click(80, Modifiers.NONE);
+            CollectionGapsTest.this.heard.clear();
+            this.click(10, Modifiers.of(Modifier.SHIFT));
+            assertEquals(List.of("Ada", "Ana", "Ben", "Cleo"), this.table.shownItems());
+            assertEquals(List.of(new TableView.Sort(this.size, true), new TableView.Sort(this.name, true)),
+                    this.table.sortOrder());
+            assertEquals(Optional.of(this.size), this.table.sortColumn());
+            assertEquals(List.of("many 2"), CollectionGapsTest.this.heard);
+        }
+
+        @Test
+        void aSortOrderNamesEachColumnOnce() {
+            this.show(ScrollPanel.ScrollPolicy.NEVER);
+            this.name.setComparator(Comparator.naturalOrder());
+            assertThrows(IllegalArgumentException.class, () -> this.table.sortBy(
+                    List.of(new TableView.Sort(this.name, true), new TableView.Sort(this.name, false))));
+            this.table.sortBy(List.of(new TableView.Sort(this.size, false), new TableView.Sort(this.name, true)));
+            assertEquals(List.of("Cleo", "Ada", "Ana", "Ben"), this.table.shownItems());
+            this.table.removeColumn(this.size);
+            assertEquals(List.of(new TableView.Sort(this.name, true)), this.table.sortOrder());
+        }
+
+        @Test
+        void draggingATitlesEdgeResizesItWithinItsLimits() {
+            this.show(ScrollPanel.ScrollPolicy.NEVER);
+            this.name.setWidthLimits(20, 80);
+            this.drag(60, 70);
+            assertEquals(GridLength.fixed(70), this.name.width());
+            this.drag(70, 200);
+            assertEquals(GridLength.fixed(80), this.name.width());
+            assertEquals("resized 80.0", CollectionGapsTest.this.heard.getLast());
+            this.name.setResizable(false);
+            this.drag(80, 40);
+            assertEquals(GridLength.fixed(80), this.name.width());
+        }
+
+        @Test
+        void aDoubleClickOnTheEdgeFitsTheColumn() {
+            this.show(ScrollPanel.ScrollPolicy.NEVER);
+            this.press(60, 10, Modifiers.NONE);
+            this.release(60, 10);
+            this.press(60, 10, Modifiers.NONE);
+            this.release(60, 10);
+            final float fitted = ((GridLength.Fixed) this.name.width()).size();
+            assertTrue(fitted < 60f && fitted >= "Name".length() * TestPlatform.CHAR_WIDTH, "fitted " + fitted);
+        }
+
+        @Test
+        void draggingATitleMovesItsColumn() {
+            this.show(ScrollPanel.ScrollPolicy.NEVER);
+            this.drag(20, 99);
+            assertEquals(List.of(this.size, this.name), this.table.columns());
+            assertEquals(List.of("moved 1"), CollectionGapsTest.this.heard);
+            this.name.setMovable(false);
+            this.drag(80, 5);
+            assertEquals(List.of(this.size, this.name), this.table.columns());
+        }
+
+        @Test
+        void aHiddenColumnTakesNoRoomAndARightClickOffersItBack() {
+            this.show(ScrollPanel.ScrollPolicy.NEVER);
+            this.name.setShown(false);
+            CollectionGapsTest.this.test.host().layout();
+            final DrawLog canvas = new DrawLog();
+            CollectionGapsTest.this.test.host().render(canvas);
+            assertTrue(canvas.lines().stream().noneMatch(line -> line.contains("Cleo")));
+            CollectionGapsTest.this.test.host().pointerButton(20, 10, MouseButton.RIGHT, true, Modifiers.NONE);
+            CollectionGapsTest.this.test.host().pointerButton(20, 10, MouseButton.RIGHT, false, Modifiers.NONE);
+            assertEquals(1, CollectionGapsTest.this.ui.overlays().open().size());
+        }
+
+        @Test
+        void columnsWiderThanTheTableScrollSidewaysWhenAsked() {
+            this.show(ScrollPanel.ScrollPolicy.AUTO);
+            this.size.setWidth(GridLength.fixed(120));
+            CollectionGapsTest.this.test.host().layout();
+            assertEquals(0f, this.table.scrollX());
+            CollectionGapsTest.this.test.host().scroll(50, 50, -2, 0, ScrollKind.WHEEL, Modifiers.NONE);
+            CollectionGapsTest.this.test.host().layout();
+            assertEquals(20f, this.table.scrollX());
+            final DrawLog canvas = new DrawLog();
+            CollectionGapsTest.this.test.host().render(canvas);
+            assertTrue(canvas.lines().stream().anyMatch(line -> line.startsWith("text Cleo -16,")), canvas.lines().toString());
+        }
+
+        @Test
+        void theHeaderHeightIsAThemeMetric() {
+            final TestHost host = new TestHost(new TestPlatform(), Themes.flat().toBuilder()
+                    .metric(TableView.STYLE_HEADER_HEIGHT, 30f).build(), 300, 300);
+            final TableView<String> table = host.factory().<String>tableView()
+                    .addTextColumn("Name", GridLength.weighted(1f), n -> n).setItems(PEOPLE);
+            table.setSize(100, 120);
+            host.show(host.factory().absolutePanel().add(table, 0, 0));
+            host.host().pointerButton(50, 35, MouseButton.LEFT, true, Modifiers.NONE);
+            assertEquals(0, table.selectedIndex());
+        }
+
+        @Test
+        void anAutoColumnFitsItsCellsInView() {
+            final ComponentFactory ui = CollectionGapsTest.this.ui;
+            final TableColumn<String> auto = ui.<String>tableColumn("N").setWidth(GridLength.auto()).setCellText(n -> n + n);
+            final TableView<String> table = ui.<String>tableView().addColumn(auto).setItems(PEOPLE);
+            table.setSize(200, 120);
+            CollectionGapsTest.this.test.show(CollectionGapsTest.this.panel.add(table, 0, 0));
+            CollectionGapsTest.this.test.host().layout();
+            final DrawLog canvas = new DrawLog();
+            CollectionGapsTest.this.test.host().render(canvas);
+            assertTrue(canvas.lines().stream().anyMatch(line -> line.contains("CleoCleo")), canvas.lines().toString());
+            assertTrue(canvas.lines().stream().noneMatch(line -> line.contains("...")), canvas.lines().toString());
+        }
     }
 
     @Nested

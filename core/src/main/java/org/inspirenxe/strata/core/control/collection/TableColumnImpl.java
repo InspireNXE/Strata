@@ -41,6 +41,11 @@ public final class TableColumnImpl<T> implements TableColumn<T> {
     // What the cells show while they are text, or null once a cell factory replaced them
     private Function<? super T, ?> cellText;
     private Comparator<? super T> comparator;
+    private float minWidth;
+    private float maxWidth;
+    private boolean resizable;
+    private boolean movable;
+    private boolean shown;
     private TableViewImpl<T> table;
 
     /**
@@ -53,6 +58,10 @@ public final class TableColumnImpl<T> implements TableColumn<T> {
         this.ui = Objects.requireNonNull(ui, "ui");
         this.title = Objects.requireNonNull(title, "title");
         this.width = GridLength.weighted(1f);
+        this.maxWidth = Float.POSITIVE_INFINITY;
+        this.resizable = true;
+        this.movable = true;
+        this.shown = true;
         this.cellFactory = this.textCells(Function.identity());
         this.cellText = Function.identity();
     }
@@ -78,6 +87,75 @@ public final class TableColumnImpl<T> implements TableColumn<T> {
     public TableColumn<T> setWidth(final GridLength width) {
         this.width = Objects.requireNonNull(width, "width");
         this.layoutChanged();
+        return this;
+    }
+
+    @Override
+    public float minWidth() {
+        return this.minWidth;
+    }
+
+    @Override
+    public float maxWidth() {
+        return this.maxWidth;
+    }
+
+    @Override
+    public TableColumn<T> setWidthLimits(final float min, final float max) {
+        if (!(min >= 0f) || Float.isInfinite(min)) {
+            throw new IllegalArgumentException("A minimum width must be finite and not negative: " + min);
+        }
+        if (!(max >= min)) {
+            throw new IllegalArgumentException("A maximum width must be at least the minimum " + min + ": " + max);
+        }
+        this.minWidth = min;
+        this.maxWidth = max;
+        this.layoutChanged();
+        return this;
+    }
+
+    /**
+     * Returns a width kept within this column's limits.
+     */
+    float clamp(final float width) {
+        return Math.max(this.minWidth, Math.min(width, this.maxWidth));
+    }
+
+    @Override
+    public boolean isResizable() {
+        return this.resizable;
+    }
+
+    @Override
+    public TableColumn<T> setResizable(final boolean resizable) {
+        this.resizable = resizable;
+        return this;
+    }
+
+    @Override
+    public boolean isMovable() {
+        return this.movable;
+    }
+
+    @Override
+    public TableColumn<T> setMovable(final boolean movable) {
+        this.movable = movable;
+        return this;
+    }
+
+    @Override
+    public boolean isShown() {
+        return this.shown;
+    }
+
+    @Override
+    public TableColumn<T> setShown(final boolean shown) {
+        if (this.shown != shown) {
+            this.shown = shown;
+            if (this.table != null) {
+                this.table.shownChanged();
+            }
+        }
         return this;
     }
 
