@@ -247,6 +247,47 @@ final class TextBoundaries implements LineBreaks.Characters {
     }
 
     /**
+     * The character boundary from {@code start} to {@code limit} nearest to an x, for a press: by binary search, so a
+     * press on long text measures O(log n) prefixes. On a tie the later boundary wins.
+     *
+     * @param start a boundary, whose x is 0
+     * @param limit a boundary after it, the furthest the press may land
+     * @param x the press, from the x of {@code start}
+     * @param offsets the x of a boundary, from the x of {@code start}; it never falls as the index grows
+     */
+    int nearest(final int start, final int limit, final float x, final Offsets offsets) {
+        if (x <= 0f || limit <= start) {
+            return start;
+        }
+        int high = limit;
+        float highX = offsets.x(limit);
+        if (highX <= x) {
+            return limit;
+        }
+        // The press lies between the two: x(low) <= x < x(high)
+        int low = start;
+        float lowX = 0f;
+        while (true) {
+            int mid = this.previous(this.next(low + (high - low) / 2));
+            if (mid <= low) {
+                mid = this.next(low);
+            }
+            if (mid >= high) {
+                break;
+            }
+            final float midX = offsets.x(mid);
+            if (midX <= x) {
+                low = mid;
+                lowX = midX;
+            } else {
+                high = mid;
+                highX = midX;
+            }
+        }
+        return x - lowX < highX - x ? low : high;
+    }
+
+    /**
      * The word boundary before an index, which is above 0.
      */
     private int wordBefore(final int index) {
@@ -280,5 +321,17 @@ final class TextBoundaries implements LineBreaks.Characters {
             }
         }
         return OTHER;
+    }
+
+    /**
+     * Where the boundaries of some text are drawn, for {@link #nearest}.
+     */
+    @FunctionalInterface
+    interface Offsets {
+
+        /**
+         * Returns the x of a boundary, from the x of the first.
+         */
+        float x(int index);
     }
 }

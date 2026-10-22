@@ -435,4 +435,42 @@ class TextEditingTest {
             assertEquals("...", box.selectedText());
         }
     }
+
+    @Nested
+    class Presses {
+        private static final String LONG = "abcdefghijklmnopqrstuvwxyz0123456789ABCDEFGHIJ";
+
+        private void pressAt(final float x, final float y) {
+            TextEditingTest.this.test.platform().advanceMillis(1000);
+            TextEditingTest.this.test.host().pointerButton(x, y, MouseButton.LEFT, true, Modifiers.NONE);
+            TextEditingTest.this.test.host().pointerButton(x, y, MouseButton.LEFT, false, Modifiers.NONE);
+        }
+
+        @Test
+        void aPressOnLongTextLandsOnTheNearestBoundary() {
+            final TextBox box = TextEditingTest.this.ui.textBox().setAnchor(Anchor.TOP_LEFT).setWidth(300);
+            TextEditingTest.this.test.show(box);
+            box.setText(LONG);
+
+            this.pressAt(4f + 6f * 23f + 2f, 10f);
+            assertEquals(23, box.caret());
+            this.pressAt(4f + 6f * 23f + 3f, 10f);
+            assertEquals(24, box.caret(), "halfway goes to the later boundary");
+            this.pressAt(4f + 6f * 45f + 1f, 10f);
+            assertEquals(45, box.caret());
+            this.pressAt(290f, 10f);
+            assertEquals(LONG.length(), box.caret());
+        }
+
+        @Test
+        void aPressOnATextAreaRowLandsOnTheNearestBoundary() {
+            final TextArea area = TextEditingTest.this.ui.textArea().setAnchor(Anchor.TOP_LEFT).setWidth(300);
+            TextEditingTest.this.test.show(area);
+            area.setText("one\n" + LONG);
+
+            this.pressAt(4f + 6f * 30f + 2f, 4f + 9f + 4f);
+
+            assertEquals(4 + 30, area.caret());
+        }
+    }
 }

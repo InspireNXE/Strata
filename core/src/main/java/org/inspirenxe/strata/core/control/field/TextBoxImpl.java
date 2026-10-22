@@ -795,19 +795,7 @@ public final class TextBoxImpl extends BuiltInComponent<TextBox> implements Text
         @Override
         public int indexForX(final TextMetrics metrics, final float x) {
             final TextBoxImpl box = TextBoxImpl.this;
-            int previous = 0;
-            float previousX = 0f;
-            int index = 0;
-            while (index < box.buffer.length()) {
-                index = box.boundaries.next(index);
-                final float indexX = this.xForIndex(metrics, index);
-                if (indexX >= x) {
-                    return x - previousX < indexX - x ? previous : index;
-                }
-                previous = index;
-                previousX = indexX;
-            }
-            return box.buffer.length();
+            return box.boundaries.nearest(0, box.buffer.length(), x, index -> this.xForIndex(metrics, index));
         }
 
         @Override

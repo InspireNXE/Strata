@@ -558,27 +558,10 @@ public final class TextAreaImpl extends BuiltInComponent<TextArea> implements Te
     }
 
     /**
-     * The code point boundary on a row nearest to {@code x}, measured from the row's start.
+     * The character boundary on a row nearest to {@code x}, measured from the row's start.
      */
     private int indexOnRow(final int row, final float x) {
-        final int start = this.rowStart[row];
-        final int limit = this.rowLimit(row);
-        if (x <= 0f) {
-            return start;
-        }
-        int previous = start;
-        float previousX = 0f;
-        int index = start;
-        while (index < limit) {
-            index = Math.min(limit, this.boundaries.next(index));
-            final float indexX = this.xOnRow(row, index);
-            if (indexX >= x) {
-                return x - previousX < indexX - x ? previous : index;
-            }
-            previous = index;
-            previousX = indexX;
-        }
-        return limit;
+        return this.boundaries.nearest(this.rowStart[row], this.rowLimit(row), x, index -> this.xOnRow(row, index));
     }
 
     /**
