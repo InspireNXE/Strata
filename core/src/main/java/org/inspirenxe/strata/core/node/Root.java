@@ -976,7 +976,16 @@ public final class Root {
                     if (layer.modal) {
                         backdrop.paint(frame, area);
                     }
-                    layer.node.paint(frame);
+                    if (layer.clipped && layer.area != null) {
+                        canvas.pushClip(layer.area.intersect(area));
+                        try {
+                            layer.node.paint(frame);
+                        } finally {
+                            canvas.popClip();
+                        }
+                    } else {
+                        layer.node.paint(frame);
+                    }
                 }
             } finally {
                 painting.clear();
@@ -1920,6 +1929,24 @@ public final class Root {
     }
 
     /**
+     * Changes whether an open popup laid out in an area is drawn cut to that area, as a pane that slides in from
+     * outside it is. The cut is the area less what lies outside the host.
+     *
+     * @param overlay a popup this root opened in an area
+     * @param clipped true to cut its drawing to the area
+     * @throws IllegalArgumentException if this root did not open the overlay in an area
+     */
+    public void setPopupClipped(final Overlay overlay, final boolean clipped) {
+        if (!(overlay instanceof final Layer layer) || layer.root() != this || layer.area == null) {
+            throw new IllegalArgumentException(overlay + " is not a popup this root opened in an area");
+        }
+        if (layer.clipped != clipped) {
+            layer.clipped = clipped;
+            this.frames.request();
+        }
+    }
+
+    /**
      * Changes whether a press outside an open popup closes it.
      *
      * @param overlay a popup this root opened
@@ -1982,6 +2009,8 @@ public final class Root {
         boolean lightDismiss;
         // The area a popup opened in an area is laid out in, or null
         Rect area;
+        // Whether the layer is drawn cut to its area
+        boolean clipped;
 
         Layer(final Node node, final Rect anchor, final boolean modal, final boolean toast, final long expiresAt) {
             this.node = node;

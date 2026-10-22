@@ -15,6 +15,7 @@
  */
 package org.inspirenxe.strata.core.control.pane;
 
+import org.inspirenxe.strata.api.animation.Animator;
 import org.inspirenxe.strata.api.component.Component;
 import org.inspirenxe.strata.api.component.CursorKind;
 import org.inspirenxe.strata.api.control.pane.Expander;
@@ -36,6 +37,7 @@ import org.inspirenxe.strata.api.text.TextStyle;
 import org.inspirenxe.strata.api.theme.Paint;
 import org.inspirenxe.strata.api.theme.Theme;
 import org.inspirenxe.strata.core.control.Adoption;
+import org.inspirenxe.strata.core.control.Motion;
 import org.inspirenxe.strata.core.control.RectCache;
 import org.inspirenxe.strata.core.control.Rings;
 import org.inspirenxe.strata.core.node.BuiltInComposite;
@@ -46,8 +48,13 @@ import java.util.Objects;
 import java.util.Optional;
 
 /**
- * The core {@link Expander}. The content is a child only while expanded. The expander shows the hand cursor while
- * the pointer is over the header, and no cursor of its own elsewhere.
+ * The core {@link Expander}. The content is a child while expanded, and while it shrinks away after collapsing. The
+ * expander shows the hand cursor while the pointer is over the header, and no cursor of its own elsewhere.
+ *
+ * <p>Over the theme's {@value Expander#STYLE_ANIMATION} metric a {@link Motion} moves how much of the content shows,
+ * from 0 to 1, and the expander measures the header plus that share of the content's height. The content is arranged
+ * at its full height below the header and, while the share moves, clipped to the expander's bounds below the
+ * header. With the metric at 0, or while detached, the share jumps and the content comes and goes at once.</p>
  */
 public final class ExpanderImpl extends BuiltInComposite<Expander> implements Expander {
     /**
@@ -65,6 +72,15 @@ public final class ExpanderImpl extends BuiltInComposite<Expander> implements Ex
     private Text title;
     private Component<?> content;
     private boolean expanded;
+    // Whether the content is a child: while expanded, and while it shrinks away
+    private boolean shown;
+    // How much of the content's height shows, from 0 to 1
+    private float reveal;
+    private long animationMillis;
+    private final Motion revealMotion = new Motion(this::revealed);
+    // The content's outer height, as last measured
+    private float contentHeight;
+    private final RectCache clipRect = new RectCache();
     private float headerHeight;
     // Kept between frames
     private final RectCache headRect = new RectCache();
@@ -126,11 +142,12 @@ public final class ExpanderImpl extends BuiltInComposite<Expander> implements Ex
         if (content != null) {
             Adoption.require(this.node(), this.nodeOf(content));
         }
-        if (this.content != null && this.expanded) {
+        if (this.content != null && this.shown) {
             this.removeChild(this.content);
         }
         this.content = content;
-        if (content != null && this.expanded) {
+        this.shown = content != null && this.expanded;
+        if (this.shown) {
             this.addContent(content);
         }
         this.invalidateLayout();
@@ -148,16 +165,37 @@ public final class ExpanderImpl extends BuiltInComposite<Expander> implements Ex
             return this;
         }
         this.expanded = expanded;
-        if (this.content != null) {
-            if (expanded) {
-                this.addContent(this.content);
-            } else {
+        if (expanded && this.content != null && !this.shown) {
+            this.shown = true;
+            this.addContent(this.content);
+        }
+        final float to = expanded ? 1f : 0f;
+        final Animator animator = this.content != null ? this.motionAnimator() : null;
+        if (animator != null && this.animationMillis > 0L && this.reveal != to) {
+            this.setChildClipping(true);
+        }
+        this.revealMotion.move(animator, this.animationMillis, this.reveal, to);
+        this.invalidateLayout();
+        this.report(EXPANDED, expanded, !expanded);
+        return this;
+    }
+
+    /**
+     * Applies one step of the content's growth: lays out again, and once the content has shrunk away after
+     * collapsing, takes it out of the children. Clipping stops when the share comes to rest.
+     */
+    private void revealed(final float share) {
+        this.reveal = share;
+        if (!this.revealMotion.isMoving() && (share == 0f || share == 1f)) {
+            this.setChildClipping(false);
+        }
+        if (share == 0f && !this.expanded && this.shown) {
+            this.shown = false;
+            if (this.content != null) {
                 this.removeChild(this.content);
             }
         }
         this.invalidateLayout();
-        this.report(EXPANDED, expanded, !expanded);
-        return this;
     }
 
     @Override
@@ -189,6 +227,7 @@ public final class ExpanderImpl extends BuiltInComposite<Expander> implements Ex
         this.textStyle = theme.textStyleOr(STYLE_TEXT, TextStyle.DEFAULT);
         this.disabledTextStyle = theme.textStyleOr(STYLE_TEXT_DISABLED, this.textStyle);
         this.headerPadding = theme.insetsOr(STYLE_HEADER_PADDING, DEFAULT_HEADER_PADDING);
+        this.animationMillis = Motion.millis(theme, STYLE_ANIMATION);
     }
 
     @Override
@@ -200,20 +239,31 @@ public final class ExpanderImpl extends BuiltInComposite<Expander> implements Ex
         this.headerHeight = this.lineHeight + this.headerPadding.vertical();
         final float headerWidth = this.headerPadding.left() + Rings.ARROW_LONG + ARROW_GAP
                 + Math.max(this.span.width(), this.disabledSpan.width()) + this.headerPadding.right();
-        if (!this.expanded || this.content == null) {
+        if (!this.shown || this.content == null) {
             return new Size(headerWidth, this.headerHeight);
         }
         final float below = Float.isInfinite(availableHeight) ? availableHeight : Math.max(0f, availableHeight - this.headerHeight);
         final Size inner = context.measure(this.content, availableWidth, below);
-        return new Size(Math.max(headerWidth, inner.width()), this.headerHeight + inner.height());
+        this.contentHeight = inner.height();
+        final float share = this.reveal >= 1f ? inner.height() : inner.height() * this.reveal;
+        return new Size(Math.max(headerWidth, inner.width()), this.headerHeight + share);
     }
 
     @Override
     protected void arrange(final ArrangeContext context, final Rect bounds) {
-        if (this.expanded && this.content != null) {
+        if (this.shown && this.content != null) {
+            final float room = Math.max(0f, bounds.height() - this.headerHeight);
+            // While it grows or shrinks the content keeps its full height and is cut at the bottom
             context.arrange(this.content, new Rect(bounds.x(), bounds.y() + this.headerHeight, bounds.width(),
-                    Math.max(0f, bounds.height() - this.headerHeight)));
+                    this.reveal >= 1f ? room : Math.max(room, this.contentHeight)));
         }
+    }
+
+    @Override
+    protected Rect childClip() {
+        final Rect bounds = this.bounds();
+        return this.clipRect.at(bounds.x(), bounds.y() + this.headerHeight, bounds.width(),
+                Math.max(0f, bounds.height() - this.headerHeight));
     }
 
     @Override

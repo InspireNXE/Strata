@@ -40,6 +40,7 @@ import org.inspirenxe.strata.api.text.TextSpan;
 import org.inspirenxe.strata.api.text.TextStyle;
 import org.inspirenxe.strata.api.theme.Paint;
 import org.inspirenxe.strata.api.theme.Theme;
+import org.inspirenxe.strata.core.control.Motion;
 import org.inspirenxe.strata.core.layout.ScrollTrack;
 import org.inspirenxe.strata.core.node.BuiltInComponent;
 import org.inspirenxe.strata.core.node.ComponentFactoryImpl;
@@ -66,7 +67,9 @@ import java.util.function.UnaryOperator;
  * caret cannot sit after its last character: that position is the start of the next row. A caret in that whitespace
  * is drawn at the edge. The view scrolls to keep the caret in sight after the caret moves, but not on other frames,
  * so the wheel can scroll it away. Each wheel notch scrolls three lines, and selecting a whole line past its
- * end shows a 3-unit stub for the line break.</p>
+ * end shows a 3-unit stub for the line break. A vertical notch glides over the theme's
+ * {@value org.inspirenxe.strata.api.layout.ScrollPanel#STYLE_SMOOTH} time through a {@link Motion}, adding to where a
+ * glide under way is headed; keeping the caret in sight moves at once and stops a glide, so typing never waits.</p>
  *
  * <p>A vertical scroll bar shows when the rows are taller than the area. An area that does not wrap also shows a
  * horizontal one along the bottom when its widest row does not fit; a horizontal wheel turn scrolls it by three
@@ -120,6 +123,12 @@ public final class TextAreaImpl extends BuiltInComponent<TextArea> implements Te
 
     private float scrollX;
     private float scrollY;
+    private long smoothMillis;
+    private final Motion glide = new Motion(offset -> {
+        if (this.scrollTo(offset)) {
+            this.repaint();
+        }
+    });
     private boolean revealPending;
     private boolean draggingBar;
     private boolean draggingHorizontalBar;
@@ -425,6 +434,7 @@ public final class TextAreaImpl extends BuiltInComponent<TextArea> implements Te
 
     @Override
     protected void onApplyTheme(final Theme theme) {
+        this.smoothMillis = Motion.millis(theme, ScrollPanel.STYLE_SMOOTH);
         this.themePadding = themePadding(theme);
         if (this.setPadding == null) {
             this.textPadding = this.themePadding;
@@ -652,12 +662,17 @@ public final class TextAreaImpl extends BuiltInComponent<TextArea> implements Te
      */
     private void revealCaret() {
         final float top = this.caretRow * this.lineHeight;
+        final float before = this.scrollY;
         if (top < this.scrollY) {
             this.scrollY = top;
         } else if (top + this.lineHeight > this.scrollY + this.viewport.height()) {
             this.scrollY = top + this.lineHeight - this.viewport.height();
         }
         this.scrollY = Math.max(0f, Math.min(this.scrollY, this.maxScrollY));
+        if (this.scrollY != before) {
+            // The caret wins over a glide of the wheel, so typing never waits
+            this.glide.stop();
+        }
         final float view = this.viewport.width();
         if (this.caretX - this.scrollX > view - 1f) {
             this.scrollX = this.caretX - view + 1f;
@@ -847,6 +862,7 @@ public final class TextAreaImpl extends BuiltInComponent<TextArea> implements Te
                 this.barGrab = event.y() - thumbRect.y();
             } else {
                 final float page = Math.max(this.lineHeight, this.viewport.height() - this.lineHeight);
+                this.glide.stop();
                 this.scrollBy(event.y() < thumbRect.y() ? -page : page);
             }
             event.consume();
@@ -866,6 +882,7 @@ public final class TextAreaImpl extends BuiltInComponent<TextArea> implements Te
             return;
         }
         if (this.draggingBar) {
+            this.glide.stop();
             this.scrollTo(this.bar.offsetForThumbAt(event.y() - this.barGrab, this.maxScrollY));
             event.consume();
             return;
@@ -890,7 +907,12 @@ public final class TextAreaImpl extends BuiltInComponent<TextArea> implements Te
     @Override
     protected void onScroll(final ScrollEvent event) {
         this.ensureRows();
-        final boolean vertical = this.scrollBy(-event.scrollY() * this.lineHeight * WHEEL_LINES);
+        final float aim = this.glide.destination(this.scrollY);
+        final float next = Math.max(0f, Math.min(aim - event.scrollY() * this.lineHeight * WHEEL_LINES, this.maxScrollY));
+        final boolean vertical = next != aim;
+        if (vertical) {
+            this.glide.move(this.motionAnimator(), this.smoothMillis, this.scrollY, next);
+        }
         final boolean horizontal = this.scrollXTo(this.scrollX - event.scrollX() * this.lineHeight * WHEEL_LINES);
         if (vertical || horizontal) {
             event.consume();

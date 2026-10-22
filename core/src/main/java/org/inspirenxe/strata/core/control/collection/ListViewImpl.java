@@ -15,6 +15,7 @@
  */
 package org.inspirenxe.strata.core.control.collection;
 
+import org.inspirenxe.strata.api.animation.Animator;
 import org.inspirenxe.strata.api.component.Component;
 import org.inspirenxe.strata.api.control.attribute.item.SelectionMode;
 import org.inspirenxe.strata.api.control.collection.ListView;
@@ -38,6 +39,7 @@ import org.inspirenxe.strata.api.text.TextStyle;
 import org.inspirenxe.strata.api.theme.Paint;
 import org.inspirenxe.strata.api.theme.Theme;
 import org.inspirenxe.strata.core.control.Caption;
+import org.inspirenxe.strata.core.control.Motion;
 import org.inspirenxe.strata.core.layout.ScrollTrack;
 import org.inspirenxe.strata.core.layout.ThumbDrag;
 import org.inspirenxe.strata.core.node.BuiltInComposite;
@@ -65,6 +67,11 @@ import java.util.function.IntUnaryOperator;
  * removed, rows that scrolled in are built, measured and placed, and the change schedules one more layout. Rows sit
  * inside the list's border widths. A wheel notch scrolls one row and its spacing. Arrange also makes the rectangles
  * painting reads, the rows', the edges' and the thumb's, so a frame with nothing new to draw allocates nothing.
+ *
+ * <p>A wheel notch and {@link #scrollToIndex}, which the arrow keys use, glide to their offset over the theme's
+ * {@value ScrollPanel#STYLE_SMOOTH} time through a {@link Motion}; a further notch adds to where the list is headed.
+ * {@link #setScrollY} and the thumb move at once, as everything does when the time is 0, the list is detached, or it
+ * has not been laid out yet.</p>
  *
  * @param <T> the type of the items
  */
@@ -99,6 +106,8 @@ public final class ListViewImpl<T> extends BuiltInComposite<ListView<T>> impleme
 
     // Layout results
     private float scrollY;
+    private long smoothMillis;
+    private final Motion glide = new Motion(offset -> this.scrollTo(offset));
     private float maxScrollY;
     private boolean arranged;
     private boolean barShown;
@@ -564,6 +573,7 @@ public final class ListViewImpl<T> extends BuiltInComposite<ListView<T>> impleme
         if (Float.isNaN(scrollY)) {
             throw new IllegalArgumentException("A scroll offset must not be NaN");
         }
+        this.glide.stop();
         this.scrollTo(scrollY);
         return this;
     }
@@ -716,6 +726,21 @@ public final class ListViewImpl<T> extends BuiltInComposite<ListView<T>> impleme
         return true;
     }
 
+    /**
+     * Glides to an offset, clamped as {@link #scrollTo} clamps, over the theme's smooth scrolling time.
+     *
+     * @return true if where the list is headed changed
+     */
+    private boolean glideTo(final float scrollY) {
+        final float max = this.arranged ? Math.max(0f, this.totalHeight() - this.viewport.height()) : Float.MAX_VALUE;
+        final float next = Math.max(0f, Math.min(scrollY, max));
+        if (next == this.glide.destination(this.scrollY)) {
+            return false;
+        }
+        this.glide.move(this.motionAnimator(), this.smoothMillis, this.scrollY, next);
+        return true;
+    }
+
     private float step() {
         return this.rowHeight + this.rowSpacing;
     }
@@ -831,6 +856,7 @@ public final class ListViewImpl<T> extends BuiltInComposite<ListView<T>> impleme
         this.thumb = theme.paintOr(ScrollPanel.STYLE_THUMB, Paint.NONE);
         this.thumbHovered = theme.paintOr(ScrollPanel.STYLE_THUMB_HOVERED, this.thumb);
         this.track = theme.paintOr(ScrollPanel.STYLE_TRACK, Paint.NONE);
+        this.smoothMillis = Motion.millis(theme, ScrollPanel.STYLE_SMOOTH);
         this.placeholderStyle = theme.textStyleOr(STYLE_PLACEHOLDER, TextStyle.DEFAULT);
     }
 
@@ -864,11 +890,21 @@ public final class ListViewImpl<T> extends BuiltInComposite<ListView<T>> impleme
                 Math.max(0f, inner.width() - (this.barShown && !column ? GUTTER : 0f)), inner.height());
         this.maxScrollY = Math.max(0f, total - this.viewport.height());
         if (this.reveal >= 0 && this.reveal < this.items.size()) {
+            final float aim = this.glide.destination(this.scrollY);
             final float top = this.padding.top() + this.reveal * this.step();
-            if (top < this.scrollY) {
-                this.scrollY = top;
-            } else if (top + this.rowHeight > this.scrollY + this.viewport.height()) {
-                this.scrollY = top + this.rowHeight - this.viewport.height();
+            float target = aim;
+            if (top < aim) {
+                target = top;
+            } else if (top + this.rowHeight > aim + this.viewport.height()) {
+                target = top + this.rowHeight - this.viewport.height();
+            }
+            target = Math.max(0f, Math.min(target, this.maxScrollY));
+            final Animator animator = this.motionAnimator();
+            if (target != aim && this.arranged && animator != null && this.smoothMillis > 0L) {
+                this.glide.move(animator, this.smoothMillis, this.scrollY, target);
+            } else if (target != aim) {
+                this.glide.stop();
+                this.scrollY = target;
             }
         }
         this.reveal = -1;
@@ -1019,6 +1055,7 @@ public final class ListViewImpl<T> extends BuiltInComposite<ListView<T>> impleme
             final float page = Math.max(this.step(), this.viewport.height() - this.step());
             final float next = this.thumbDrag.press(event.x(), event.y(), this.scrollY, this.maxScrollY, page);
             if (!Float.isNaN(next)) {
+                this.glide.stop();
                 this.scrollTo(next);
                 event.consume();
                 return;
@@ -1060,6 +1097,7 @@ public final class ListViewImpl<T> extends BuiltInComposite<ListView<T>> impleme
     @Override
     protected void onDrag(final DragEvent event) {
         if (this.thumbDrag.isDragging()) {
+            this.glide.stop();
             this.scrollTo(this.thumbDrag.drag(event.x(), event.y(), this.maxScrollY));
             event.consume();
         }
@@ -1080,7 +1118,7 @@ public final class ListViewImpl<T> extends BuiltInComposite<ListView<T>> impleme
 
     @Override
     protected void onScroll(final ScrollEvent event) {
-        if (this.scrollTo(this.scrollY - event.scrollY() * this.step() * this.scrollRows)) {
+        if (this.glideTo(this.glide.destination(this.scrollY) - event.scrollY() * this.step() * this.scrollRows)) {
             event.consume();
         }
     }

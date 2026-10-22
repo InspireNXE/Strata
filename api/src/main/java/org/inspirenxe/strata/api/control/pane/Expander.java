@@ -86,6 +86,13 @@ public interface Expander extends Component<Expander>, Focusable<Expander>, HasC
      * to 4 at the sides and 3 at the top and bottom.
      */
     String STYLE_HEADER_PADDING = "expander.header.padding";
+    /**
+     * Style key for how long the content takes to grow into view or shrink away, in milliseconds (metric,
+     * optional). While it moves, the expander's height follows it and the content keeps its full size, cut at the
+     * expander's bottom, and a collapsing content stays a child until it has shrunk away. The arrow and
+     * {@link #isExpanded()} change at once. Defaults to 0: the content appears and goes at once.
+     */
+    String STYLE_ANIMATION = "expander.animation";
 
     /**
      * Fired when the user flips the expander by click or key, before it changes. The value is the state it is about

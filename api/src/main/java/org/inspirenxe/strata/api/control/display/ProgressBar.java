@@ -82,6 +82,12 @@ public interface ProgressBar extends Component<ProgressBar>, HasCursor<ProgressB
      */
     String STYLE_PADDING = "progress.padding";
     /**
+     * Style key for how long the fill takes to ease to a new value, in milliseconds (metric, optional). Only the
+     * drawing moves: {@link #value()} and {@link org.inspirenxe.strata.api.control.attribute.value.Ranged#CHANGED}
+     * change at once. Defaults to 0: the fill jumps.
+     */
+    String STYLE_ANIMATION = "progress.animation";
+    /**
      * Whether the bar shows a moving segment instead of its value, as {@link #isIndeterminate()} and
      * {@link #setIndeterminate} say. Binds one way.
      */

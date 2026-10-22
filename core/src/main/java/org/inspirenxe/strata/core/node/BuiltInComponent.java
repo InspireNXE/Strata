@@ -15,6 +15,7 @@
  */
 package org.inspirenxe.strata.core.node;
 
+import org.inspirenxe.strata.api.animation.Animator;
 import org.inspirenxe.strata.api.component.Component;
 import org.inspirenxe.strata.api.component.CursorKind;
 import org.inspirenxe.strata.api.component.Focusable;
@@ -137,6 +138,16 @@ public abstract class BuiltInComponent<T extends Component<T>> implements Compon
      */
     protected final Root hostRoot() {
         return this.node.factory().root();
+    }
+
+    /**
+     * Returns the host's animator while this component is attached, for a control's own motion (design 4.51).
+     *
+     * @return the animator, or {@code null} while detached, so motion then jumps to its end
+     */
+    protected final Animator motionAnimator() {
+        final Root root = this.node.root();
+        return root == null ? null : root.animator();
     }
 
     /**

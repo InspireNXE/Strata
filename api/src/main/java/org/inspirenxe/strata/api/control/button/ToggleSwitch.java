@@ -118,6 +118,11 @@ public interface ToggleSwitch extends Component<ToggleSwitch>, Focusable<ToggleS
      * this right in from its right end when on. Defaults to 2 on every side.
      */
     String STYLE_KNOB_PADDING = "toggle.knob.padding";
+    /**
+     * Style key for how long the knob takes to slide to its other end, in milliseconds (metric, optional). The
+     * track's color changes at once. Defaults to 0: the knob jumps.
+     */
+    String STYLE_ANIMATION = "toggle.animation";
 
     /**
      * Returns the caption.

@@ -25,6 +25,7 @@ import org.inspirenxe.strata.api.text.Text;
 import org.inspirenxe.strata.api.text.TextStyle;
 import org.inspirenxe.strata.api.theme.Paint;
 import org.inspirenxe.strata.api.theme.Theme;
+import org.inspirenxe.strata.core.control.Motion;
 import org.inspirenxe.strata.core.control.RectCache;
 import org.inspirenxe.strata.core.node.BuiltInComponent;
 import org.inspirenxe.strata.core.node.ComponentFactoryImpl;
@@ -36,6 +37,10 @@ import java.util.Set;
 /**
  * The core {@link ProgressBar}. The fill covers the value's share of the range, as a share of the bounds' width from
  * the left edge, over the whole height.
+ *
+ * <p>The fill eases to a new value over the theme's {@value ProgressBar#STYLE_ANIMATION} metric through a
+ * {@link Motion} of the drawn fraction, and jumps when the metric is 0 or the bar is detached; the value itself
+ * changes at once.</p>
  *
  * <p>While indeterminate, the segment's left edge steps one unit at a time from a segment's length before the left
  * edge to the right edge, over {@link #SEGMENT_PERIOD} milliseconds of the environment's clock. Every position's
@@ -83,6 +88,13 @@ public final class ProgressBarImpl extends BuiltInComponent<ProgressBar> impleme
     private Rect[] segments;
     private Rect segmentBounds;
     private final RectCache fillRect = new RectCache();
+    // The fraction the fill is drawn at, which eases toward the value's
+    private float shownFraction;
+    private long animationMillis;
+    private final Motion fillMotion = new Motion(fraction -> {
+        this.shownFraction = fraction;
+        this.repaint();
+    });
 
     /**
      * Creates an empty bar with no caption.
@@ -145,6 +157,12 @@ public final class ProgressBarImpl extends BuiltInComponent<ProgressBar> impleme
         final double previous = this.value;
         if (clamped != previous) {
             this.value = clamped;
+        }
+        final float fraction = (float) ((clamped - this.min) / (this.max - this.min));
+        if (fraction != this.fillMotion.destination(this.shownFraction)) {
+            this.fillMotion.move(this.motionAnimator(), this.animationMillis, this.shownFraction, fraction);
+        }
+        if (clamped != previous) {
             this.report(CHANGED, clamped, previous);
         }
     }
@@ -156,7 +174,10 @@ public final class ProgressBarImpl extends BuiltInComponent<ProgressBar> impleme
 
     @Override
     public ProgressBar setIndeterminate(final boolean indeterminate) {
-        this.indeterminate = indeterminate;
+        if (this.indeterminate != indeterminate) {
+            this.indeterminate = indeterminate;
+            this.repaint();
+        }
         return this;
     }
 
@@ -184,6 +205,7 @@ public final class ProgressBarImpl extends BuiltInComponent<ProgressBar> impleme
         this.segmentPaint = theme.paintOr(STYLE_SEGMENT, this.fillPaint);
         this.textStyle = theme.textStyleOr(STYLE_TEXT, TextStyle.DEFAULT);
         this.padding = theme.insetsOr(STYLE_PADDING, DEFAULT_PADDING);
+        this.animationMillis = Motion.millis(theme, STYLE_ANIMATION);
     }
 
     @Override
@@ -212,7 +234,7 @@ public final class ProgressBarImpl extends BuiltInComponent<ProgressBar> impleme
                 }
             }
         } else {
-            final float fraction = (float) ((this.value - this.min) / (this.max - this.min));
+            final float fraction = this.shownFraction;
             if (fraction > 0f) {
                 this.fillPaint.paint(painter, this.fillRect.at(bounds.x(), bounds.y(), bounds.width() * fraction,
                         bounds.height()));

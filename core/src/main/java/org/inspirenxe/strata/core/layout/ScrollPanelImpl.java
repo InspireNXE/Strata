@@ -31,6 +31,7 @@ import org.inspirenxe.strata.api.input.MouseButton;
 import org.inspirenxe.strata.api.layout.ScrollPanel;
 import org.inspirenxe.strata.api.theme.Paint;
 import org.inspirenxe.strata.api.theme.Theme;
+import org.inspirenxe.strata.core.control.Motion;
 import org.inspirenxe.strata.core.node.BuiltInContainer;
 import org.inspirenxe.strata.core.node.ComponentFactoryImpl;
 
@@ -43,6 +44,11 @@ import java.util.Set;
  * the bar if the content overflows them. A bar that arranging adds measures the children again when its gutter
  * narrows an axis that does not scroll, so text wraps at the viewport; that can show the other bar too. Offsets set
  * before the first layout are only kept from going below 0, and the first layout clamps them.
+ *
+ * <p>Wheel steps, the scrolling keys and {@link #scrollToVisible(Rect)}, which focus moving inside the panel uses,
+ * glide over the theme's {@value ScrollPanel#STYLE_SMOOTH} time through a {@link Motion}, and a further step adds to
+ * where a glide under way is headed. {@link #setScroll}, {@link #scrollBy}, the thumb and the track move at once and
+ * stop a glide, as everything does when the time is 0 or the panel is detached.</p>
  */
 public final class ScrollPanelImpl extends BuiltInContainer<ScrollPanel> implements ScrollPanel {
     private static final Set<String> REQUIRED = Set.of(STYLE_THUMB);
@@ -58,6 +64,16 @@ public final class ScrollPanelImpl extends BuiltInContainer<ScrollPanel> impleme
     private float maxScrollX;
     private float maxScrollY;
     private boolean arranged;
+
+    // Smooth scrolling: a glide from one offset to another, driven by the progress of a motion from 0 to 1
+    private long smoothMillis;
+    private float glideFromX;
+    private float glideFromY;
+    private float glideToX;
+    private float glideToY;
+    private final Motion glide = new Motion(progress -> this.scrollTo(
+            progress >= 1f ? this.glideToX : this.glideFromX + (this.glideToX - this.glideFromX) * progress,
+            progress >= 1f ? this.glideToY : this.glideFromY + (this.glideToY - this.glideFromY) * progress));
 
     // Layout results
     private float contentWidth;
@@ -125,6 +141,7 @@ public final class ScrollPanelImpl extends BuiltInContainer<ScrollPanel> impleme
         if (Float.isNaN(x) || Float.isNaN(y)) {
             throw new IllegalArgumentException("A scroll offset must not be NaN: " + x + ", " + y);
         }
+        this.glide.stop();
         this.scrollTo(x, y);
         return this;
     }
@@ -134,6 +151,7 @@ public final class ScrollPanelImpl extends BuiltInContainer<ScrollPanel> impleme
         if (Float.isNaN(dx) || Float.isNaN(dy)) {
             throw new IllegalArgumentException("A scroll distance must not be NaN: " + dx + ", " + dy);
         }
+        this.glide.stop();
         this.scrollTo(this.scrollX + dx, this.scrollY + dy);
         return this;
     }
@@ -160,6 +178,37 @@ public final class ScrollPanelImpl extends BuiltInContainer<ScrollPanel> impleme
         return true;
     }
 
+    /**
+     * Glides to an offset over the theme's {@link ScrollPanel#STYLE_SMOOTH} time, or moves there at once when that is
+     * 0 or the panel is detached. The target is clamped as {@link #scrollTo} clamps.
+     *
+     * @return true if where the panel is headed changed
+     */
+    private boolean glideTo(final float x, final float y) {
+        final float toX = this.arranged ? clamp(x, this.maxScrollX) : Math.max(0f, x);
+        final float toY = this.arranged ? clamp(y, this.maxScrollY) : Math.max(0f, y);
+        if (toX == this.aimX() && toY == this.aimY()) {
+            return false;
+        }
+        this.glideFromX = this.scrollX;
+        this.glideFromY = this.scrollY;
+        this.glideToX = toX;
+        this.glideToY = toY;
+        this.glide.move(this.motionAnimator(), this.smoothMillis, 0f, 1f);
+        return true;
+    }
+
+    /**
+     * Returns where the panel is headed on the horizontal axis: the end of a glide under way, or the offset.
+     */
+    private float aimX() {
+        return this.glide.isMoving() ? this.glideToX : this.scrollX;
+    }
+
+    private float aimY() {
+        return this.glide.isMoving() ? this.glideToY : this.scrollY;
+    }
+
     @Override
     public ScrollPanel scrollToVisible(final Rect area) {
         final Rect view = this.viewport;
@@ -175,7 +224,7 @@ public final class ScrollPanelImpl extends BuiltInContainer<ScrollPanel> impleme
         } else if (area.right() > view.right()) {
             x += Math.min(area.right() - view.right(), area.x() - view.x());
         }
-        this.scrollTo(x, y);
+        this.glideTo(x, y);
         return this;
     }
 
@@ -239,6 +288,7 @@ public final class ScrollPanelImpl extends BuiltInContainer<ScrollPanel> impleme
         this.thumb = theme.paintOr(STYLE_THUMB, Paint.NONE);
         this.thumbHoveredPaint = theme.paintOr(STYLE_THUMB_HOVERED, this.thumb);
         this.track = theme.paintOr(STYLE_TRACK, Paint.NONE);
+        this.smoothMillis = Motion.millis(theme, STYLE_SMOOTH);
     }
 
     @Override
@@ -377,7 +427,7 @@ public final class ScrollPanelImpl extends BuiltInContainer<ScrollPanel> impleme
         if (this.horizontalPolicy == ScrollPolicy.NEVER) {
             dx = 0f;
         }
-        if (this.scrollTo(this.scrollX + dx, this.scrollY + dy)) {
+        if (this.glideTo(this.aimX() + dx, this.aimY() + dy)) {
             event.consume();
         }
     }
@@ -390,12 +440,12 @@ public final class ScrollPanelImpl extends BuiltInContainer<ScrollPanel> impleme
         }
         final float page = Math.max(this.rate, this.viewport.height() - this.rate);
         final boolean moved = switch (event.key()) {
-            case UP -> this.scrollTo(this.scrollX, this.scrollY - this.rate);
-            case DOWN -> this.scrollTo(this.scrollX, this.scrollY + this.rate);
-            case PAGE_UP -> this.scrollTo(this.scrollX, this.scrollY - page);
-            case PAGE_DOWN -> this.scrollTo(this.scrollX, this.scrollY + page);
-            case HOME -> this.scrollTo(this.scrollX, 0f);
-            case END -> this.scrollTo(this.scrollX, this.maxScrollY);
+            case UP -> this.glideTo(this.aimX(), this.aimY() - this.rate);
+            case DOWN -> this.glideTo(this.aimX(), this.aimY() + this.rate);
+            case PAGE_UP -> this.glideTo(this.aimX(), this.aimY() - page);
+            case PAGE_DOWN -> this.glideTo(this.aimX(), this.aimY() + page);
+            case HOME -> this.glideTo(this.aimX(), 0f);
+            case END -> this.glideTo(this.aimX(), this.maxScrollY);
             default -> false;
         };
         if (moved) {
@@ -409,6 +459,8 @@ public final class ScrollPanelImpl extends BuiltInContainer<ScrollPanel> impleme
         if (event.button() != MouseButton.LEFT) {
             return;
         }
+        // The thumb and the track move the offset at once
+        this.glide.stop();
         final float x = event.x();
         final float y = event.y();
         if (this.verticalShown && this.verticalBar.track().contains(x, y)) {

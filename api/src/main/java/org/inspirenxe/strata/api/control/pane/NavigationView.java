@@ -237,6 +237,12 @@ public interface NavigationView extends Component<NavigationView>, Focusable<Nav
      */
     String STYLE_PANE_PADDING = "nav.pane.padding";
     /**
+     * Style key for how long the pane takes to slide in over the content from the view's left edge, in milliseconds
+     * (metric, optional). The pane is cut to its area while it slides and takes the pointer where it is drawn; it
+     * closes at once. Defaults to 0: the pane appears at once.
+     */
+    String STYLE_ANIMATION = "nav.animation";
+    /**
      * The pane's width unless {@link #setPaneWidth} says otherwise, in UI units.
      */
     float DEFAULT_PANE_WIDTH = 120f;

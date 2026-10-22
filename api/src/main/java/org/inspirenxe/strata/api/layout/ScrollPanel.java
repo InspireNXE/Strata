@@ -92,6 +92,13 @@ public interface ScrollPanel extends Container<ScrollPanel>, Focusable<ScrollPan
      */
     String STYLE_TRACK = "scroll.track";
     /**
+     * Style key for how long a scroll by the wheel, a key or {@link #scrollToVisible(Rect)} takes to glide to its
+     * new offset, in milliseconds (metric, optional). A further step while one glides adds to where it is headed.
+     * {@link #setScroll}, {@link #scrollBy} and dragging the thumb move at once. Lists, tables, trees and text areas
+     * read the same key. Defaults to 0: every scroll moves at once.
+     */
+    String STYLE_SMOOTH = "scroll.smooth";
+    /**
      * How wide a scroll bar is, in UI units.
      */
     float BAR_WIDTH = 6f;

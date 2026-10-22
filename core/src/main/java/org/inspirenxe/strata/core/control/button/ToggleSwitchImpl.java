@@ -30,6 +30,7 @@ import org.inspirenxe.strata.api.theme.Paint;
 import org.inspirenxe.strata.api.theme.Theme;
 import org.inspirenxe.strata.core.control.Activation;
 import org.inspirenxe.strata.core.control.BoxCaption;
+import org.inspirenxe.strata.core.control.Motion;
 import org.inspirenxe.strata.core.control.RectCache;
 import org.inspirenxe.strata.core.control.Rings;
 import org.inspirenxe.strata.core.node.BuiltInComponent;
@@ -40,9 +41,10 @@ import java.util.Set;
 
 /**
  * The core {@link ToggleSwitch}. The track sits at the left edge, vertically centered, and the caption
- * {@link #GAP} units to its right. The knob jumps between its two ends; there is no animation. The track, the knob
- * and the focus ring are kept from one frame to the next while they stay in place, so painting allocates nothing
- * then.
+ * {@link #GAP} units to its right. The knob slides between its two ends over the theme's
+ * {@value ToggleSwitch#STYLE_ANIMATION} metric, through a {@link Motion} of its place from 0 (off) to 1 (on), and
+ * jumps when the metric is 0 or the switch is detached. The track, the knob and the focus ring are kept from one
+ * frame to the next while they stay in place, so painting allocates nothing then.
  */
 public final class ToggleSwitchImpl extends BuiltInComponent<ToggleSwitch> implements ToggleSwitch {
     /**
@@ -63,6 +65,13 @@ public final class ToggleSwitchImpl extends BuiltInComponent<ToggleSwitch> imple
 
     private Text text;
     private boolean on;
+    // Where the knob is drawn, from 0 at the left end to 1 at the right
+    private float knobPlace;
+    private long animationMillis;
+    private final Motion knobMotion = new Motion(place -> {
+        this.knobPlace = place;
+        this.repaint();
+    });
 
     private Paint track;
     private Paint trackOn;
@@ -130,6 +139,7 @@ public final class ToggleSwitchImpl extends BuiltInComponent<ToggleSwitch> imple
     public ToggleSwitch setSelected(final boolean on) {
         if (this.on != on) {
             this.on = on;
+            this.knobMotion.move(this.motionAnimator(), this.animationMillis, this.knobPlace, on ? 1f : 0f);
             this.report(TOGGLED, on, !on);
         }
         return this;
@@ -175,6 +185,7 @@ public final class ToggleSwitchImpl extends BuiltInComponent<ToggleSwitch> imple
         this.disabledTextStyle = theme.textStyleOr(STYLE_TEXT_DISABLED, this.textStyle);
         this.trackPadding = theme.insetsOr(STYLE_TRACK_PADDING, DEFAULT_TRACK_PADDING);
         this.knobPadding = theme.insetsOr(STYLE_KNOB_PADDING, DEFAULT_KNOB_PADDING);
+        this.animationMillis = Motion.millis(theme, STYLE_ANIMATION);
     }
 
     @Override
@@ -205,7 +216,8 @@ public final class ToggleSwitchImpl extends BuiltInComponent<ToggleSwitch> imple
 
         final Insets inset = this.knobPadding;
         final float knobSize = Math.max(0f, this.trackHeight - inset.vertical());
-        final float knobX = this.on ? bar.right() - inset.right() - knobSize : bar.x() + inset.left();
+        final float left = bar.x() + inset.left();
+        final float knobX = left + (bar.right() - inset.right() - knobSize - left) * this.knobPlace;
         final Paint face;
         if (!enabled) {
             face = this.knobDisabled;

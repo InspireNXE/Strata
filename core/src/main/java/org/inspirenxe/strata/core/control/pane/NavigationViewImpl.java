@@ -56,6 +56,7 @@ import org.inspirenxe.strata.api.text.TextStyle;
 import org.inspirenxe.strata.api.theme.Paint;
 import org.inspirenxe.strata.api.theme.Theme;
 import org.inspirenxe.strata.core.control.Badge;
+import org.inspirenxe.strata.core.control.Motion;
 import org.inspirenxe.strata.core.control.Rings;
 import org.inspirenxe.strata.core.node.BuiltInComponent;
 import org.inspirenxe.strata.core.node.BuiltInComposite;
@@ -97,6 +98,10 @@ import java.util.function.Function;
  * {@link Root#popupIn}, and its area follows the view's bounds through {@link Root#setPopupArea}. While it is open,
  * the pane is out of the view's children and put back first when it closes, so the tab order stays the view, the pane
  * header and footer, then the content.</p>
+ *
+ * <p>Over the theme's {@value NavigationView#STYLE_ANIMATION} metric the pane over the content slides in from the
+ * view's left edge: a {@link Motion} moves the pane's offset from minus its area's width to 0, and the popup is drawn
+ * cut to its area until the pane comes to rest. It closes at once.</p>
  */
 public final class NavigationViewImpl extends BuiltInComposite<NavigationView> implements NavigationView {
     /**
@@ -144,6 +149,8 @@ public final class NavigationViewImpl extends BuiltInComposite<NavigationView> i
     private Overlay overlay;
     private Menu menu;
     private final Pane pane;
+    private long animationMillis;
+    private final Motion paneSlide = new Motion(this::slid);
     private final Toggle barToggle;
 
     // Theme
@@ -885,8 +892,13 @@ public final class NavigationViewImpl extends BuiltInComposite<NavigationView> i
         this.removeChild(this.pane);
         this.paneOpen = true;
         this.syncLook();
-        this.overlay = root.popupIn(this.pane, this.overlayArea(), true);
+        final Rect area = this.overlayArea();
+        this.overlay = root.popupIn(this.pane, area, true);
         this.overlay.onEvent(Overlay.CLOSED, event -> this.paneClosed());
+        if (this.animationMillis > 0L && area.width() > 0f) {
+            root.setPopupClipped(this.overlay, true);
+            this.paneSlide.move(this.motionAnimator(), this.animationMillis, -area.width(), 0f);
+        }
         // Lay the pane out now, so the cursor and clicks find its rows before the next frame
         root.layout();
         this.report(EXPANDED, true, false);
@@ -896,11 +908,25 @@ public final class NavigationViewImpl extends BuiltInComposite<NavigationView> i
      * Runs once the pane over the content closed, however it closed: puts the pane back first among the children.
      */
     private void paneClosed() {
+        this.paneSlide.stop();
+        this.pane.slideTo(0f);
         this.overlay = null;
         this.paneOpen = false;
         this.insertChild(0, this.pane);
         this.syncLook();
         this.report(EXPANDED, false, true);
+    }
+
+    /**
+     * Applies one step of the pane's slide, and stops cutting the popup once the pane comes to rest.
+     */
+    private void slid(final float offset) {
+        this.pane.slideTo(offset);
+        final Overlay open = this.overlay;
+        final Root root = this.hostRoot();
+        if (offset == 0f && !this.paneSlide.isMoving() && open != null && open.isOpen() && root != null) {
+            root.setPopupClipped(open, false);
+        }
     }
 
     private Rect overlayArea() {
@@ -1047,6 +1073,7 @@ public final class NavigationViewImpl extends BuiltInComposite<NavigationView> i
         this.titleText = theme.textStyleOr(STYLE_TITLE_TEXT, TextStyle.DEFAULT);
         this.itemPadding = theme.insetsOr(STYLE_ITEM_PADDING, DEFAULT_ITEM_PADDING);
         this.panePadding = theme.insetsOr(STYLE_PANE_PADDING, DEFAULT_PANE_PADDING);
+        this.animationMillis = Motion.millis(theme, STYLE_ANIMATION);
     }
 
     /**
@@ -1289,6 +1316,13 @@ public final class NavigationViewImpl extends BuiltInComposite<NavigationView> i
      * pane footer. It fills the slot or the area of the popup it is laid out in.
      */
     private final class Pane extends BuiltInComposite<Pane> {
+        /**
+         * Moves the pane sideways from where it is laid out, for its slide.
+         */
+        void slideTo(final float offset) {
+            this.setOffset(offset, 0f);
+        }
+
         private final Toggle toggle;
         private final ScrollPanel scroll;
         private final StackPanel items;
