@@ -47,6 +47,7 @@ public final class TestPlatform implements Platform {
     public static final LocalDateTime TODAY = LocalDateTime.of(2026, 10, 20, 12, 0);
 
     private final boolean sendsKeyRepeat;
+    private boolean drawsShapes;
     private long nanos;
     private String clipboard;
     private Rect textInputArea;
@@ -172,7 +173,14 @@ public final class TestPlatform implements Platform {
 
     @Override
     public Capabilities capabilities() {
-        return new Capabilities(this.sendsKeyRepeat, false);
+        return new Capabilities(this.sendsKeyRepeat, false, false, this.drawsShapes);
+    }
+
+    /**
+     * Sets whether the platform's capabilities say its canvas draws shapes. False until set.
+     */
+    public void setDrawsShapes(final boolean drawsShapes) {
+        this.drawsShapes = drawsShapes;
     }
 
     /**

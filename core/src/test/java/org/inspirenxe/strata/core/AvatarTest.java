@@ -282,6 +282,34 @@ class AvatarTest {
         }
 
         @Test
+        void aRadiusClipsEverythingButTheBadgeToARoundedSquare() {
+            final TestPlatform platform = new TestPlatform();
+            platform.setDrawsShapes(true);
+            final TestHost round = new TestHost(platform, Themes.flat().toBuilder()
+                    .metric(Avatar.STYLE_RADIUS, 40f).build(), 300, 200);
+            round.show(round.factory().absolutePanel().add(round.factory().avatar().setSprite(FACE).setBadge(3),
+                    10, 10));
+            final DrawLog canvas = new DrawLog();
+            round.host().render(canvas);
+            final List<String> lines = canvas.lines();
+            assertEquals(List.of("roundclip 10,10 24x24 12", "fill 10,10 24x24 #FF3C3F44",
+                    "sprite test:face 10,10 24x24 #FFFFFFFF"), lines.subList(0, 3), "a radius past half the size is "
+                    + "half the size");
+            assertTrue(lines.size() > 3, "the badge draws after the clip: " + lines);
+        }
+
+        @Test
+        void withoutShapesARadiusDrawsTheSquare() {
+            final TestHost round = new TestHost(new TestPlatform(), Themes.flat().toBuilder()
+                    .metric(Avatar.STYLE_RADIUS, 6f).build(), 300, 200);
+            round.show(round.factory().absolutePanel().add(round.factory().avatar().setSprite(FACE), 10, 10));
+            final DrawLog canvas = new DrawLog();
+            round.host().render(canvas);
+            assertEquals(List.of("fill 10,10 24x24 #FF3C3F44", "sprite test:face 10,10 24x24 #FFFFFFFF"),
+                    canvas.lines());
+        }
+
+        @Test
         void requiresItsBackground() {
             final Theme theme = Theme.builder("bare").build();
             final TestHost bare = new TestHost(new TestPlatform(), theme, 100, 100);

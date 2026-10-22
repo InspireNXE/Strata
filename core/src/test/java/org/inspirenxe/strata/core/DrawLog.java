@@ -116,6 +116,11 @@ public final class DrawLog implements Canvas {
     }
 
     @Override
+    public void pushRoundClip(final Rect rect, final float radius) {
+        this.lines.add("roundclip " + DrawLog.rect(rect) + " " + DrawLog.number(radius));
+    }
+
+    @Override
     public void popClip() {
     }
 

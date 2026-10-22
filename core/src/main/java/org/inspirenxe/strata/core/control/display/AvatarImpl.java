@@ -74,6 +74,7 @@ public final class AvatarImpl extends BuiltInComponent<Avatar> implements Avatar
     private Paint placeholder;
     private Paint groupPlaceholder;
     private TextStyle initialsStyle;
+    private float radius;
 
     // Computed during measure
     private TextLine initialsLine;
@@ -88,7 +89,8 @@ public final class AvatarImpl extends BuiltInComponent<Avatar> implements Avatar
     private float initialsX;
     private float initialsY;
 
-    // Set only while paint runs, for drawInitials
+    // Set only while paint runs, for drawSquare and drawInitials
+    private final Runnable drawSquare;
     private final Runnable drawInitials;
     private Painter painter;
 
@@ -109,6 +111,7 @@ public final class AvatarImpl extends BuiltInComponent<Avatar> implements Avatar
         this.initialsStyle = TextStyle.DEFAULT;
         this.initialsLine = TextLine.EMPTY;
         this.scale = 1f;
+        this.drawSquare = this::drawSquare;
         this.drawInitials = this::drawInitials;
     }
 
@@ -329,6 +332,7 @@ public final class AvatarImpl extends BuiltInComponent<Avatar> implements Avatar
         this.placeholder = theme.paintOr(STYLE_PLACEHOLDER, Paint.NONE);
         this.groupPlaceholder = theme.paintOr(STYLE_PLACEHOLDER_GROUP, this.placeholder);
         this.initialsStyle = theme.textStyleOr(STYLE_INITIALS, TextStyle.DEFAULT);
+        this.radius = theme.metricOr(STYLE_RADIUS, 0f);
         this.badge.applyTheme(theme);
     }
 
@@ -365,6 +369,29 @@ public final class AvatarImpl extends BuiltInComponent<Avatar> implements Avatar
         if (!bounds.equals(this.placedFor)) {
             this.place(bounds);
         }
+        this.painter = painter;
+        try {
+            if (this.radius > 0f) {
+                painter.clippedRound(this.square, this.radius, this.drawSquare);
+            } else {
+                this.drawSquare();
+            }
+        } finally {
+            this.painter = null;
+        }
+        if (this.badgeVisual != null) {
+            painter.visual(this.badgeVisual, this.badgeVisualRect, WHITE);
+        } else {
+            this.badge.paint(painter, this.badgeRect);
+        }
+    }
+
+    /**
+     * Draws everything but the badge, inside the rounded clip during {@link #paint} when the theme gives a radius; a
+     * field-held method reference, so painting allocates no lambda per frame.
+     */
+    private void drawSquare() {
+        final Painter painter = this.painter;
         final Rect box = this.square;
         this.background.paint(painter, box);
         if (this.visual != null) {
@@ -377,22 +404,12 @@ public final class AvatarImpl extends BuiltInComponent<Avatar> implements Avatar
             if (this.scale == 1f) {
                 this.initialsLine.draw(painter, this.initialsX, this.initialsY);
             } else {
-                this.painter = painter;
-                try {
-                    painter.scaled(this.scale, this.drawInitials);
-                } finally {
-                    this.painter = null;
-                }
+                painter.scaled(this.scale, this.drawInitials);
             }
         } else {
             (this.group ? this.groupPlaceholder : this.placeholder).paint(painter, box);
         }
         this.frame.paint(painter, box);
-        if (this.badgeVisual != null) {
-            painter.visual(this.badgeVisual, this.badgeVisualRect, WHITE);
-        } else {
-            this.badge.paint(painter, this.badgeRect);
-        }
     }
 
     /**

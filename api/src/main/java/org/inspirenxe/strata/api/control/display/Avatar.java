@@ -46,8 +46,10 @@ import java.util.Optional;
  *
  * <p>The square is {@link #avatarSize()} on a side, which is also the desired size. In bounds of another shape, the
  * avatar draws the largest square that fits, centered. {@value #STYLE_BACKGROUND} draws behind everything and
- * {@value #STYLE_FRAME} over the picture, so a theme can round the corners with a frame sprite whose corners are the
- * color of what is behind. The badge sits at the square's bottom-right corner: a number a line tall with
+ * {@value #STYLE_FRAME} over the picture. A theme rounds the square with {@value #STYLE_RADIUS}, which clips the
+ * background, the picture, the initials, the placeholder and the frame to a rounded square, so a radius of half the
+ * size makes a round avatar; on an engine that draws only rectangles the clip stays square, and a frame sprite whose
+ * corners are the color of what is behind rounds it there. The badge sits at the square's bottom-right corner: a number a line tall with
  * {@value #STYLE_BADGE_PADDING} around it, or a {@linkplain #setBadgeVisual badge visual} in a square a third of
  * the size.</p>
  *
@@ -67,6 +69,8 @@ import java.util.Optional;
  *     is drawn if it is missing.</li>
  *     <li>{@value #STYLE_PLACEHOLDER_GROUP} (paint, optional): the same for a group. Falls back to
  *     {@value #STYLE_PLACEHOLDER}.</li>
+ *     <li>{@value #STYLE_RADIUS} (metric, optional): the radius of the square's corners in UI units, limited to
+ *     half the size. Defaults to 0, square corners. The badge is not clipped.</li>
  *     <li>{@value #STYLE_BADGE} (paint, optional): behind the badge's number. Falls back to a red fill.</li>
  *     <li>{@value #STYLE_BADGE_TEXT} (text style, optional): the badge's number. Falls back to the default text
  *     style.</li>
@@ -95,6 +99,10 @@ public interface Avatar extends Component<Avatar>, HasCursor<Avatar>, HasTooltip
      * Style key for over the picture, the initials or the placeholder (paint, optional).
      */
     String STYLE_FRAME = "avatar.frame";
+    /**
+     * Style key for the radius of the square's corners, in UI units (metric, optional).
+     */
+    String STYLE_RADIUS = "avatar.radius";
     /**
      * Style key for the initials (text style, optional).
      */
