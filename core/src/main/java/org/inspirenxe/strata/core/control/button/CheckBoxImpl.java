@@ -15,6 +15,7 @@
  */
 package org.inspirenxe.strata.core.control.button;
 
+import org.inspirenxe.strata.api.command.Command;
 import org.inspirenxe.strata.api.component.CursorKind;
 import org.inspirenxe.strata.api.control.button.CheckBox;
 import org.inspirenxe.strata.api.control.button.CheckState;
@@ -30,6 +31,7 @@ import org.inspirenxe.strata.api.theme.Paint;
 import org.inspirenxe.strata.api.theme.Theme;
 import org.inspirenxe.strata.core.control.Activation;
 import org.inspirenxe.strata.core.control.BoxCaption;
+import org.inspirenxe.strata.core.control.Commands;
 import org.inspirenxe.strata.core.control.RectCache;
 import org.inspirenxe.strata.core.control.Rings;
 import org.inspirenxe.strata.core.node.BuiltInComponent;
@@ -38,6 +40,7 @@ import org.inspirenxe.strata.core.node.ComponentFactoryImpl;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import org.inspirenxe.strata.api.component.Validation;
 import org.inspirenxe.strata.core.control.Validity;
@@ -97,6 +100,7 @@ public final class CheckBoxImpl extends BuiltInComponent<CheckBox> implements Ch
     private Rect checkArea;
     private final Rings.Ring ring = new Rings.Ring();
     private final Activation activation;
+    private Command.Toggle command;
 
     /**
      * Creates a checkbox.
@@ -411,5 +415,21 @@ public final class CheckBoxImpl extends BuiltInComponent<CheckBox> implements Ch
     @Override
     protected Object snapshotState() {
         return new CheckBox.State(this.state, this.text);
+    }
+
+    @Override
+    public Optional<Command.Toggle> command() {
+        return Optional.ofNullable(this.command);
+    }
+
+    /**
+     * Shows a toggle: takes its text, binds {@link #ENABLED} to its enabled source and {@link #SELECTED} to its state
+     * both ways, or takes the bindings off again for null.
+     */
+    @Override
+    public CheckBox setCommand(final Command.Toggle command) {
+        this.command = command;
+        Commands.follow(this.node(), command);
+        return this;
     }
 }

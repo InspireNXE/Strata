@@ -15,20 +15,26 @@
  */
 package org.inspirenxe.strata.core.control.menu;
 
+import org.inspirenxe.strata.api.command.Command;
 import org.inspirenxe.strata.api.control.menu.MenuEntry;
 import org.inspirenxe.strata.api.control.menu.MenuItem;
 import org.inspirenxe.strata.api.text.Text;
+import org.inspirenxe.strata.core.control.Commands;
 
 import java.util.Objects;
+import java.util.Optional;
 
 /**
- * The core {@link MenuItem}: enabled, with no shortcut and an action that does nothing until set.
+ * The core {@link MenuItem}: enabled, with no shortcut and an action that does nothing until set. With a command it
+ * is usable while its own flag is set and the command's enabled source gives true, read each time it is asked, so
+ * it follows the command while its menu is shown.
  */
 public final class MenuItemImpl extends MenuEntryImpl implements MenuItem {
     private Text text;
     private Text shortcut;
     private boolean enabled;
     private Runnable action;
+    private Command.Action command;
 
     /**
      * Creates an item.
@@ -58,8 +64,13 @@ public final class MenuItemImpl extends MenuEntryImpl implements MenuItem {
     }
 
     @Override
+    Command shownCommand() {
+        return this.command;
+    }
+
+    @Override
     boolean usable() {
-        return this.enabled;
+        return this.enabled && (this.command == null || Commands.isEnabled(this.command));
     }
 
     @Override
@@ -88,7 +99,7 @@ public final class MenuItemImpl extends MenuEntryImpl implements MenuItem {
 
     @Override
     public boolean isEnabled() {
-        return this.enabled;
+        return this.usable();
     }
 
     @Override
@@ -106,6 +117,24 @@ public final class MenuItemImpl extends MenuEntryImpl implements MenuItem {
     @Override
     public MenuItem setAction(final Runnable action) {
         this.action = Objects.requireNonNull(action, "action");
+        return this;
+    }
+
+    @Override
+    public Optional<Command.Action> command() {
+        return Optional.ofNullable(this.command);
+    }
+
+    /**
+     * Shows a command and takes its text, or clears it and keeps the text.
+     */
+    @Override
+    public MenuItem setCommand(final Command.Action command) {
+        this.command = command;
+        if (command != null) {
+            this.text = command.text();
+        }
+        this.changed();
         return this;
     }
 

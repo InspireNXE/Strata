@@ -15,6 +15,7 @@
  */
 package org.inspirenxe.strata.core.control.menu;
 
+import org.inspirenxe.strata.api.command.Command;
 import org.inspirenxe.strata.api.component.Component;
 import org.inspirenxe.strata.api.control.display.Separator;
 import org.inspirenxe.strata.api.control.menu.Menu;
@@ -29,12 +30,14 @@ import org.inspirenxe.strata.api.geometry.Rect;
 import org.inspirenxe.strata.api.geometry.Size;
 import org.inspirenxe.strata.api.input.Key;
 import org.inspirenxe.strata.api.input.KeyAction;
+import org.inspirenxe.strata.api.input.KeyStroke;
 import org.inspirenxe.strata.api.input.MouseButton;
 import org.inspirenxe.strata.api.text.Text;
 import org.inspirenxe.strata.api.text.TextMetrics;
 import org.inspirenxe.strata.api.text.TextStyle;
 import org.inspirenxe.strata.api.theme.Paint;
 import org.inspirenxe.strata.api.theme.Theme;
+import org.inspirenxe.strata.core.control.Commands;
 import org.inspirenxe.strata.core.control.CorePopup;
 import org.inspirenxe.strata.core.control.PopupSession;
 import org.inspirenxe.strata.core.control.Rings;
@@ -493,9 +496,10 @@ public final class MenuImpl extends BuiltInComponent<Menu> implements Menu, Core
     }
 
     /**
-     * Closes the chain, flips a check item, runs the entry's action and reports {@link #CHOSEN}: what an accepted
-     * {@link #CHOOSE} request does. Ignores an entry that is not this menu's, is disabled, or is a separator or a
-     * submenu item, as a handler may have rewritten it.
+     * Closes the chain, flips a check item, runs the entry's action, reports {@link #CHOSEN} and then runs an item's
+     * command: what an accepted {@link #CHOOSE} request does. A check item's toggle command is flipped with the
+     * item, not run again. Ignores an entry that is not this menu's, is disabled, or is a separator or a submenu
+     * item, as a handler may have rewritten it.
      */
     private void run(final MenuEntry chosen) {
         if (!(chosen instanceof MenuEntryImpl entry) || entry.owner() != this || !entry.usable()) {
@@ -516,6 +520,29 @@ public final class MenuImpl extends BuiltInComponent<Menu> implements Menu, Core
             }
         }
         this.report(CHOSEN, chosen, chosen);
+        if (chosen instanceof MenuItemImpl item) {
+            Commands.run(this.node().causes(), item.shownCommand());
+        }
+    }
+
+    /**
+     * Adds the commands of this menu's usable entries and of the menus its usable submenu items open, in order, for
+     * a menu bar's shortcuts.
+     *
+     * @param out the list to add to
+     */
+    void collectCommands(final List<Command> out) {
+        for (final MenuEntryImpl entry : this.items) {
+            if (!entry.usable()) {
+                continue;
+            }
+            if (entry.shownCommand() != null) {
+                out.add(entry.shownCommand());
+            }
+            if (entry.submenu() != null) {
+                entry.submenu().collectCommands(out);
+            }
+        }
     }
 
     // ------------------------------------------------------------------
@@ -559,7 +586,9 @@ public final class MenuImpl extends BuiltInComponent<Menu> implements Menu, Core
             }
             item.span = TextLine.of(item.label(), this.textStyle, metrics);
             item.disabledSpan = TextLine.of(item.label(), this.disabledTextStyle, metrics);
-            item.shortcutSpan = TextLine.of(item.hint(), this.shortcutStyle, metrics);
+            final KeyStroke stroke = item.stroke();
+            item.shortcutSpan = TextLine.of(stroke != null ? this.ui.keyText(stroke) : item.hint(), this.shortcutStyle,
+                    metrics);
             textWidth = Math.max(textWidth, Math.max(item.span.width(), item.disabledSpan.width()));
             item.shortcutWidth = item.shortcutSpan.width();
             shortcutWidth = Math.max(shortcutWidth, item.shortcutWidth);

@@ -15,7 +15,9 @@
  */
 package org.inspirenxe.strata.core.control.menu;
 
+import org.inspirenxe.strata.api.command.Command;
 import org.inspirenxe.strata.api.control.menu.MenuEntry;
+import org.inspirenxe.strata.api.input.KeyStroke;
 import org.inspirenxe.strata.api.text.Text;
 import org.inspirenxe.strata.core.control.RectCache;
 import org.inspirenxe.strata.core.control.Rings;
@@ -62,6 +64,21 @@ public abstract class MenuEntryImpl {
      */
     Text hint() {
         return Text.empty();
+    }
+
+    /**
+     * Returns the stroke drawn as the hint when {@link #hint()} is empty: the shortcut of the entry's command.
+     */
+    KeyStroke stroke() {
+        final Command command = this.shownCommand();
+        return command == null || !this.hint().isEmpty() ? null : command.shortcut();
+    }
+
+    /**
+     * Returns the command the entry shows, or null.
+     */
+    Command shownCommand() {
+        return null;
     }
 
     /**

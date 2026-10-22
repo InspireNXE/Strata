@@ -15,7 +15,9 @@
  */
 package org.inspirenxe.strata.api.control.menu;
 
+import org.inspirenxe.strata.api.command.Command;
 import org.inspirenxe.strata.api.component.Enableable;
+import org.inspirenxe.strata.api.control.attribute.command.HasCommand;
 import org.inspirenxe.strata.api.control.attribute.text.HasText;
 
 import java.util.function.Consumer;
@@ -28,6 +30,10 @@ import java.util.function.Consumer;
  * {@link MenuItem}, it can show a {@linkplain #setShortcut(org.inspirenxe.strata.api.text.Text) shortcut hint} at its
  * right.</p>
  *
+ * <p>With a {@linkplain #setCommand toggle command} the item takes the command's text, its check mark is the
+ * command's state, so choosing it flips that state, and it is enabled while the command is and its own flag is
+ * set. A menu bar flips it from the command's shortcut.</p>
+ *
  * <pre>{@code
  * menu.addItem(factory.checkMenuItem("Show prices")
  *         .setSelected(settings.prices())
@@ -38,17 +44,18 @@ import java.util.function.Consumer;
  * {@link Menu#addCheckItem}. Do not implement this interface.</p>
  */
 public non-sealed interface CheckMenuItem extends MenuEntry, HasText<CheckMenuItem>, HasShortcut<CheckMenuItem>,
-        Enableable<CheckMenuItem> {
+        Enableable<CheckMenuItem>, HasCommand<Command.Toggle, CheckMenuItem> {
 
     /**
-     * Returns whether the item is checked.
+     * Returns whether the item is checked: its command's state while it has a command.
      *
      * @return true if checked; false by default
      */
     boolean isSelected();
 
     /**
-     * Checks or unchecks the item without running its action.
+     * Checks or unchecks the item without running its action. While the item has a command, this sets the command's
+     * state.
      *
      * @param selected true to check it
      * @return this item
@@ -56,7 +63,8 @@ public non-sealed interface CheckMenuItem extends MenuEntry, HasText<CheckMenuIt
     CheckMenuItem setSelected(boolean selected);
 
     /**
-     * Returns whether the item can be chosen.
+     * Returns whether the item can be chosen: it was not disabled with {@link #setEnabled}, and its command, if it has
+     * one, is enabled now.
      *
      * @return true by default
      */

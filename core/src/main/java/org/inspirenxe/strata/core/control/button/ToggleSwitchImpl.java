@@ -15,6 +15,7 @@
  */
 package org.inspirenxe.strata.core.control.button;
 
+import org.inspirenxe.strata.api.command.Command;
 import org.inspirenxe.strata.api.component.CursorKind;
 import org.inspirenxe.strata.api.control.button.ToggleSwitch;
 import org.inspirenxe.strata.api.event.input.KeyEvent;
@@ -30,6 +31,7 @@ import org.inspirenxe.strata.api.theme.Paint;
 import org.inspirenxe.strata.api.theme.Theme;
 import org.inspirenxe.strata.core.control.Activation;
 import org.inspirenxe.strata.core.control.BoxCaption;
+import org.inspirenxe.strata.core.control.Commands;
 import org.inspirenxe.strata.core.control.Motion;
 import org.inspirenxe.strata.core.control.RectCache;
 import org.inspirenxe.strata.core.control.Rings;
@@ -37,6 +39,7 @@ import org.inspirenxe.strata.core.node.BuiltInComponent;
 import org.inspirenxe.strata.core.node.ComponentFactoryImpl;
 
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 
 /**
@@ -94,6 +97,7 @@ public final class ToggleSwitchImpl extends BuiltInComponent<ToggleSwitch> imple
     private final RectCache knobRect = new RectCache();
     private final Rings.Ring ring = new Rings.Ring();
     private final Activation activation;
+    private Command.Toggle command;
 
     /**
      * Creates a switch that is off.
@@ -250,5 +254,21 @@ public final class ToggleSwitchImpl extends BuiltInComponent<ToggleSwitch> imple
     @Override
     protected Object snapshotState() {
         return new ToggleSwitch.State(this.on, this.text);
+    }
+
+    @Override
+    public Optional<Command.Toggle> command() {
+        return Optional.ofNullable(this.command);
+    }
+
+    /**
+     * Shows a toggle: takes its text, binds {@link #ENABLED} to its enabled source and {@link #SELECTED} to its state
+     * both ways, or takes the bindings off again for null.
+     */
+    @Override
+    public ToggleSwitch setCommand(final Command.Toggle command) {
+        this.command = command;
+        Commands.follow(this.node(), command);
+        return this;
     }
 }

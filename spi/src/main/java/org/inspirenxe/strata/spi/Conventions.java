@@ -15,6 +15,10 @@
  */
 package org.inspirenxe.strata.spi;
 
+import org.inspirenxe.strata.api.input.Modifier;
+
+import java.util.Objects;
+
 /**
  * How the engine's own controls behave, so Strata's behave the same way and users meet one set of habits. Looks
  * belong in the theme; these are the behaviors a theme does not reach.
@@ -23,10 +27,39 @@ package org.inspirenxe.strata.spi;
  *                        engines' buttons do. This covers buttons, cycle buttons, checkboxes, radio buttons, toggle
  *                        switches and tabs. When false, they act when the button comes back up still over them,
  *                        and moving off first cancels.
+ * @param shortcutModifier the modifier that {@code KeyStroke.shortcut} strokes hold: {@link Modifier#CONTROL} on
+ *                         most platforms, {@link Modifier#SUPER} where the platform's shortcuts use Command. An
+ *                         adapter that cannot tell reports Control.
+ * @param mnemonics true when holding Alt underlines the marked letters of captions, Alt with a letter acts on the
+ *                  control whose caption has it, and Alt or F10 alone moves to a menu bar. An engine that binds Alt
+ *                  for its own use reports false: captions then show their text with the markers taken out, and
+ *                  Alt does nothing.
  */
-public record Conventions(boolean activateOnPress) {
+public record Conventions(boolean activateOnPress, Modifier shortcutModifier, boolean mnemonics) {
     /**
-     * The conventions a platform has unless it says otherwise: buttons act on release.
+     * The conventions a platform has unless it says otherwise: buttons act on release, shortcuts use Control and
+     * mnemonics are on.
      */
-    public static final Conventions DEFAULT = new Conventions(false);
+    public static final Conventions DEFAULT = new Conventions(false, Modifier.CONTROL, true);
+
+    /**
+     * Checks the components.
+     *
+     * @param activateOnPress true when buttons act on press
+     * @param shortcutModifier the platform's shortcut modifier
+     * @param mnemonics true when Alt shows and uses mnemonics
+     */
+    public Conventions {
+        Objects.requireNonNull(shortcutModifier, "shortcutModifier");
+    }
+
+    /**
+     * Creates conventions that differ from {@link #DEFAULT} only in when buttons act, with Control as the shortcut
+     * modifier and mnemonics on.
+     *
+     * @param activateOnPress true when buttons act on press
+     */
+    public Conventions(final boolean activateOnPress) {
+        this(activateOnPress, Modifier.CONTROL, true);
+    }
 }

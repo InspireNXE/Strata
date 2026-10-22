@@ -17,6 +17,8 @@ package org.inspirenxe.strata.core.node;
 
 import org.inspirenxe.strata.api.animation.Easing;
 import org.inspirenxe.strata.api.animation.Interpolator;
+import org.inspirenxe.strata.api.command.Command;
+import org.inspirenxe.strata.api.command.Shortcuts;
 import org.inspirenxe.strata.api.component.Component;
 import org.inspirenxe.strata.api.component.CursorKind;
 import org.inspirenxe.strata.api.component.Focusable;
@@ -48,6 +50,7 @@ import org.inspirenxe.strata.api.theme.Paint;
 import org.inspirenxe.strata.api.theme.Theme;
 import org.inspirenxe.strata.api.theme.ThemeException;
 import org.inspirenxe.strata.core.animation.AnimatorImpl;
+import org.inspirenxe.strata.core.control.Commands;
 import org.inspirenxe.strata.core.event.CharEventImpl;
 import org.inspirenxe.strata.core.event.ControlEventImpl;
 import org.inspirenxe.strata.core.event.DragEventImpl;
@@ -114,7 +117,8 @@ import java.util.function.Consumer;
  * a node disabled or enabled under a still pointer loses or gains its hover then.</p>
  *
  * <p>Keyboard rules: key events go to the focused node, or else to the top dialog, or else to the content. An
- * unhandled Escape press closes the top overlay that is not a toast. An unhandled Tab press or repeat without Ctrl
+ * unhandled press or repeat runs the first enabled command whose shortcut matches it, as {@link Shortcuts}
+ * describes. An unhandled Escape press closes the top overlay that is not a toast. An unhandled Tab press or repeat without Ctrl
  * or Alt moves focus, backwards with Shift, among the nodes of the top dialog or, with no dialog, of the content.
  * Typed characters go only to the focused node. When the platform does not send key repeats, the root makes them
  * with a {@link KeyRepeater}; each repeat goes to whatever has focus when it fires.</p>
@@ -172,6 +176,11 @@ public final class Root {
     private final UiThreadImpl uiThread;
     private final FrameRequests frames;
     private final AnimatorImpl animator;
+    private final ShortcutsImpl shortcuts;
+    // The visible command sources of the top layer that has keys, worked out when a shortcut is first looked for
+    private List<Node> commandSources;
+    private Node commandSourceScope;
+    private final List<Command> commandScratch;
     private Screen screen;
 
     private Theme theme;
@@ -236,6 +245,8 @@ public final class Root {
         this.animator = new AnimatorImpl(platform::clock, ui::causes, this.frames, this.uiThread);
         this.attachedBindings = new ArrayList<>();
         this.watches = new ArrayList<>();
+        this.shortcuts = new ShortcutsImpl(ui);
+        this.commandScratch = new ArrayList<>();
         this.modifiers = Modifiers.NONE;
         this.layoutRequested = true;
         this.tooltipDelay = -1L;
@@ -699,6 +710,7 @@ public final class Root {
     void treeChanged() {
         this.frames.request();
         this.tabOrder = null;
+        this.commandSources = null;
         // What is under the pointer may have changed though the pointer did not move
         this.hoverStale = true;
         if (this.focused != null && !this.canFocus(this.focused)) {
@@ -1648,7 +1660,11 @@ public final class Root {
         if (target == null) {
             return false;
         }
-        if (target.fire(InputEvents.KEY, new KeyEventImpl(target.facade(), key, action, modifiers)).isHandled()) {
+        if (target.fire(InputEvents.KEY, new KeyEventImpl(target.facade(), key, action, modifiers,
+                this.shortcutModifier())).isHandled()) {
+            return true;
+        }
+        if (action.isDown() && this.runShortcut(target, key, modifiers)) {
             return true;
         }
         if (key == Key.ESCAPE && action == KeyAction.PRESS) {
@@ -1663,6 +1679,85 @@ public final class Root {
             return this.moveFocus(modifiers.shift());
         }
         return false;
+    }
+
+    /**
+     * Returns the commands this root runs from their shortcuts.
+     *
+     * @return the shortcuts
+     */
+    public Shortcuts shortcuts() {
+        return this.shortcuts;
+    }
+
+    /**
+     * Returns the platform's shortcut modifier, from its conventions.
+     *
+     * @return the modifier that {@code KeyStroke.shortcut} strokes hold
+     */
+    public Modifier shortcutModifier() {
+        return this.platform.conventions().shortcutModifier();
+    }
+
+    /**
+     * Runs the first enabled command whose stroke matches a key nothing on the focus path consumed: those scoped to
+     * the key's target or an ancestor, innermost first, then the host's own while no dialog is open, then those of
+     * the visible command sources in the top dialog, or in the content while no dialog is open.
+     */
+    private boolean runShortcut(final Node target, final Key key, final Modifiers modifiers) {
+        if (key.isModifier()) {
+            return false;
+        }
+        final Modifier shortcutModifier = this.shortcutModifier();
+        final Layer dialog = this.topDialog();
+        Command command = this.shortcuts.matchScoped(target, key, modifiers, shortcutModifier);
+        if (command == null && dialog == null) {
+            command = this.shortcuts.matchHost(key, modifiers, shortcutModifier);
+        }
+        if (command == null) {
+            command = this.matchCommandSources(dialog != null ? dialog.node : this.content, key, modifiers,
+                    shortcutModifier);
+        }
+        if (command == null) {
+            return false;
+        }
+        Commands.run(this.ui.causes(), command);
+        return true;
+    }
+
+    private Command matchCommandSources(final Node scope, final Key key, final Modifiers modifiers,
+                                        final Modifier shortcutModifier) {
+        if (scope == null) {
+            return null;
+        }
+        if (this.commandSources == null || this.commandSourceScope != scope) {
+            final List<Node> sources = new ArrayList<>();
+            visit(scope, node -> {
+                if (node.facade() instanceof CommandSource) {
+                    sources.add(node);
+                }
+            });
+            this.commandSources = sources;
+            this.commandSourceScope = scope;
+        }
+        for (final Node source : this.commandSources) {
+            if (!isUsable(source)) {
+                continue;
+            }
+            final List<Command> commands = this.commandScratch;
+            commands.clear();
+            try {
+                ((CommandSource) source.facade()).collectCommands(commands);
+                for (final Command command : commands) {
+                    if (ShortcutsImpl.matches(command, key, modifiers, shortcutModifier)) {
+                        return command;
+                    }
+                }
+            } finally {
+                commands.clear();
+            }
+        }
+        return null;
     }
 
     /**

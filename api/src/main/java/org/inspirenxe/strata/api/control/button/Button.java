@@ -15,10 +15,12 @@
  */
 package org.inspirenxe.strata.api.control.button;
 
+import org.inspirenxe.strata.api.command.Command;
 import org.inspirenxe.strata.api.component.Component;
 import org.inspirenxe.strata.api.component.Focusable;
 import org.inspirenxe.strata.api.component.HasCursor;
 import org.inspirenxe.strata.api.component.HasTooltip;
+import org.inspirenxe.strata.api.control.attribute.command.HasCommand;
 import org.inspirenxe.strata.api.control.attribute.text.HasIcon;
 import org.inspirenxe.strata.api.control.attribute.text.HasText;
 import org.inspirenxe.strata.api.event.EventType;
@@ -36,7 +38,8 @@ import java.util.Objects;
  * <p>The button is pressed when it is left-clicked, or when it has focus and Enter or Space is pressed (not
  * repeated). On a platform whose conventions say buttons act on the press, the left press presses it instead of the
  * click. It consumes those inputs. Each press fires {@link #PRESS}, then {@link #PRESSED} unless a handler
- * canceled the request. A disabled button does neither and draws its disabled look.</p>
+ * canceled the request, and then runs the button's {@linkplain #setCommand command} if it has one. A disabled button
+ * does none of it and draws its disabled look.</p>
  *
  * <p>It is focusable and tabbable, shows the hand cursor, and has a minimum width of 20. Its desired size is the
  * caption plus the text padding (8 units left and right, 5 top and bottom by default), and at least 20 tall; a
@@ -79,7 +82,7 @@ import java.util.Objects;
  * interface.</p>
  */
 public interface Button extends Component<Button>, Focusable<Button>, HasCursor<Button>, HasTooltip<Button>,
-        HasText<Button>, HasIcon<Button> {
+        HasText<Button>, HasIcon<Button>, HasCommand<Command.Action, Button> {
     /**
      * Style key for the idle face (paint, required).
      */
@@ -245,8 +248,9 @@ public interface Button extends Component<Button>, Focusable<Button>, HasCursor<
     Button setLink(boolean link);
 
     /**
-     * Presses the button as if it had been clicked, firing {@link #PRESSED} but not {@link #PRESS}. Does nothing
-     * while the button is disabled.
+     * Presses the button as if it had been clicked, firing {@link #PRESSED} but not {@link #PRESS}, then running its
+     * {@linkplain #command() command} if it has one and the command is enabled. Does nothing while the button is
+     * disabled.
      */
     void press();
 

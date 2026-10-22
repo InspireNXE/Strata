@@ -15,6 +15,7 @@
  */
 package org.inspirenxe.strata.core.control.button;
 
+import org.inspirenxe.strata.api.command.Command;
 import org.inspirenxe.strata.api.component.CursorKind;
 import org.inspirenxe.strata.api.control.button.Button;
 import org.inspirenxe.strata.api.event.input.KeyEvent;
@@ -29,6 +30,7 @@ import org.inspirenxe.strata.api.theme.SpriteId;
 import org.inspirenxe.strata.api.theme.Theme;
 import org.inspirenxe.strata.api.visual.Visual;
 import org.inspirenxe.strata.core.control.Activation;
+import org.inspirenxe.strata.core.control.Commands;
 import org.inspirenxe.strata.core.frame.FrameRequests;
 import org.inspirenxe.strata.core.node.BuiltInComponent;
 import org.inspirenxe.strata.core.node.ComponentFactoryImpl;
@@ -89,6 +91,7 @@ public final class ButtonImpl extends BuiltInComponent<Button> implements Button
     private final ButtonContent content;
     private final Activation activation;
     private boolean link;
+    private Command.Action command;
 
     /**
      * Creates a button.
@@ -203,17 +206,39 @@ public final class ButtonImpl extends BuiltInComponent<Button> implements Button
     public void press() {
         if (this.isEnabled()) {
             this.report(PRESSED);
+            this.runCommand();
         }
     }
 
     /**
-     * Presses the button for the user: fires {@link Button#PRESS}, then {@link Button#PRESSED} unless a handler
-     * canceled the request. Does nothing while disabled.
+     * Presses the button for the user: fires {@link Button#PRESS}, then {@link Button#PRESSED} and runs the command
+     * unless a handler canceled the request. Does nothing while disabled.
      */
     private void userPress() {
         if (this.isEnabled() && this.request(PRESS)) {
             this.report(PRESSED);
+            this.runCommand();
         }
+    }
+
+    private void runCommand() {
+        Commands.run(this.node().causes(), this.command);
+    }
+
+    @Override
+    public Optional<Command.Action> command() {
+        return Optional.ofNullable(this.command);
+    }
+
+    /**
+     * Shows a command: takes its text and binds {@link Button#ENABLED} to its enabled source, or takes the binding
+     * off again for null.
+     */
+    @Override
+    public Button setCommand(final Command.Action command) {
+        this.command = command;
+        Commands.follow(this.node(), command);
+        return this;
     }
 
     @Override

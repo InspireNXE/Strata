@@ -15,7 +15,9 @@
  */
 package org.inspirenxe.strata.api.control.menu;
 
+import org.inspirenxe.strata.api.command.Command;
 import org.inspirenxe.strata.api.component.Enableable;
+import org.inspirenxe.strata.api.control.attribute.command.HasCommand;
 import org.inspirenxe.strata.api.control.attribute.text.HasText;
 
 /**
@@ -29,14 +31,20 @@ import org.inspirenxe.strata.api.control.attribute.text.HasText;
  * copy.setEnabled(selection.isPresent());
  * }</pre>
  *
+ * <p>An item can show a {@linkplain #setCommand command} instead: it takes the command's text, is enabled while
+ * the command is and its own flag is set, shows the command's stroke as its hint while no hint text is set, and
+ * runs the command after {@link Menu#CHOSEN} when chosen. A menu bar runs the commands of its menus from their
+ * shortcuts.</p>
+ *
  * <p>Get one from {@link org.inspirenxe.strata.api.ComponentFactory#menuItem(String)} or make one with
  * {@link Menu#addItem(String, Runnable)}. Do not implement this interface.</p>
  */
 public non-sealed interface MenuItem extends MenuEntry, HasText<MenuItem>, HasShortcut<MenuItem>,
-        Enableable<MenuItem> {
+        Enableable<MenuItem>, HasCommand<Command.Action, MenuItem> {
 
     /**
-     * Returns whether the item can be chosen.
+     * Returns whether the item can be chosen: it was not disabled with {@link #setEnabled}, and its command, if it has
+     * one, is enabled now.
      *
      * @return true by default
      */

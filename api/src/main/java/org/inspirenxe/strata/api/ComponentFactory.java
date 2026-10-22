@@ -16,6 +16,7 @@
 package org.inspirenxe.strata.api;
 
 import org.inspirenxe.strata.api.appearance.Appearances;
+import org.inspirenxe.strata.api.command.Shortcuts;
 import org.inspirenxe.strata.api.component.Component;
 import org.inspirenxe.strata.api.component.registry.ComponentId;
 import org.inspirenxe.strata.api.component.registry.ComponentRegistry;
@@ -75,6 +76,7 @@ import org.inspirenxe.strata.api.extension.CustomComponent;
 import org.inspirenxe.strata.api.extension.peer.ComponentHooks;
 import org.inspirenxe.strata.api.extension.peer.ComponentPeer;
 import org.inspirenxe.strata.api.extension.peer.ContainerPeer;
+import org.inspirenxe.strata.api.input.KeyStroke;
 import org.inspirenxe.strata.api.layout.AbsolutePanel;
 import org.inspirenxe.strata.api.layout.AnchorPanel;
 import org.inspirenxe.strata.api.layout.GridPanel;
@@ -192,6 +194,25 @@ public interface ComponentFactory {
      * @throws IllegalStateException if this factory has no host yet
      */
     <T> Subscription watch(Source<T> source, Consumer<? super T> listener);
+
+    /**
+     * Returns the commands the host this factory belongs to runs from their shortcuts.
+     *
+     * @return the host's shortcuts
+     */
+    Shortcuts shortcuts();
+
+    /**
+     * Returns how a key stroke reads on this host's platform, such as "Ctrl+Shift+S", for a shortcut hint. Modifiers
+     * are named through the translation keys {@code strata.modifier.control}, {@code strata.modifier.alt},
+     * {@code strata.modifier.shift} and {@code strata.modifier.super}, in that order, joined by
+     * {@code strata.modifier.separator}, so a translator can give the platform's own symbols. A
+     * {@linkplain KeyStroke#shortcut shortcut} stroke names the platform's shortcut modifier.
+     *
+     * @param stroke the stroke
+     * @return the text, translated when it is resolved
+     */
+    Text keyText(KeyStroke stroke);
 
     /**
      * Makes an {@link AnchorPanel}.

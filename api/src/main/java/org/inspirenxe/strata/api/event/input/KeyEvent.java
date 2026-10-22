@@ -18,6 +18,8 @@ package org.inspirenxe.strata.api.event.input;
 import org.inspirenxe.strata.api.event.SnapshotEvent;
 import org.inspirenxe.strata.api.input.Key;
 import org.inspirenxe.strata.api.input.KeyAction;
+import org.inspirenxe.strata.api.input.KeyStroke;
+import org.inspirenxe.strata.api.input.Modifier;
 import org.inspirenxe.strata.api.input.ModifierPolicy;
 import org.inspirenxe.strata.api.input.Modifiers;
 
@@ -73,4 +75,28 @@ public interface KeyEvent extends SnapshotEvent {
     default boolean is(final Key key, final Modifiers required, final ModifierPolicy policy) {
         return this.action().isDown() && this.key() == key && policy.matches(required, this.modifiers());
     }
+
+    /**
+     * Returns whether this event is a press or repeat of exactly a key stroke on this host's platform, with a
+     * {@linkplain KeyStroke#shortcut shortcut} stroke holding the platform's shortcut modifier.
+     *
+     * <pre>{@code
+     * if (event.is(KeyStroke.shortcut(Key.S))) {
+     *     save();
+     *     event.consume();
+     * }
+     * }</pre>
+     *
+     * @param stroke the stroke
+     * @return true for a press or repeat of the stroke's key with exactly its modifiers held
+     */
+    boolean is(KeyStroke stroke);
+
+    /**
+     * Returns the platform's shortcut modifier, which {@link KeyStroke#shortcut} strokes hold.
+     *
+     * @return {@link Modifier#CONTROL} on most platforms, {@link Modifier#SUPER} where the platform's conventions
+     *     name Command
+     */
+    Modifier shortcutModifier();
 }

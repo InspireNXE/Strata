@@ -75,8 +75,10 @@ public final class InputEvents {
     public static final EventType<ScrollEvent> SCROLL = EventType.bubbling("scroll", ScrollEvent.class);
     /**
      * A key went down, repeated or came up. Fired at the focused component or, when nothing has focus, at the
-     * content of the top dialog, or else at the screen's content. Bubbles. If nothing consumes an Escape press, the
-     * top overlay that is not a toast closes. If nothing consumes a Tab press or repeat without Control or Alt, focus
+     * content of the top dialog, or else at the screen's content. Bubbles. If nothing consumes a press or repeat, the
+     * host runs the first enabled command whose shortcut matches it (see
+     * {@link org.inspirenxe.strata.api.command.Shortcuts}). If nothing consumes an Escape press, the top overlay that
+     * is not a toast closes. If nothing consumes a Tab press or repeat without Control or Alt, focus
      * moves to the next tabbable component (with Shift, the previous). Default behavior: a button presses on Enter or
      * Space; a text box edits and moves its caret.
      */

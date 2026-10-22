@@ -38,6 +38,11 @@ import java.util.Optional;
  * <p>The bar's selection is its open menu: {@link #selectedIndex()} is the index of the title whose menu is open, and
  * {@link #select(int)} opens a menu from code.</p>
  *
+ * <p>While the bar is attached, visible and enabled, the host runs the {@linkplain MenuItem#setCommand commands} of
+ * the enabled items in its menus and their submenus from their shortcuts, as desktop menu bars do, after the
+ * commands of {@link org.inspirenxe.strata.api.ComponentFactory#shortcuts()}. A bar in the content does this only
+ * while no dialog is open. A menu opened any other way adds no shortcuts.</p>
+ *
  * <h2>Events</h2>
  * <ul>
  *     <li>{@link SingleSelection#SELECT}: Requested when the user opens one of the bar's menus: a click on its title,

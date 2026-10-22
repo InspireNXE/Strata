@@ -20,8 +20,11 @@ import org.inspirenxe.strata.api.UiThread;
 import org.inspirenxe.strata.core.animation.AnimatorImpl;
 import org.inspirenxe.strata.core.frame.UiThreadImpl;
 import org.inspirenxe.strata.api.event.Subscription;
+import org.inspirenxe.strata.api.command.Shortcuts;
 import org.inspirenxe.strata.api.event.cause.CauseStack;
+import org.inspirenxe.strata.api.input.KeyStroke;
 import org.inspirenxe.strata.core.event.CauseStackImpl;
+import org.inspirenxe.strata.core.input.KeyNames;
 import org.inspirenxe.strata.api.appearance.Appearances;
 import org.inspirenxe.strata.api.component.Component;
 import org.inspirenxe.strata.api.component.registry.ComponentId;
@@ -291,6 +294,22 @@ public final class ComponentFactoryImpl implements ComponentFactory {
             throw new IllegalStateException("This factory has no host yet");
         }
         return this.root.overlays();
+    }
+
+    @Override
+    public Shortcuts shortcuts() {
+        if (this.root == null) {
+            throw new IllegalStateException("This factory has no host yet");
+        }
+        return this.root.shortcuts();
+    }
+
+    /**
+     * Names a stroke through {@link KeyNames}, with the platform's shortcut modifier.
+     */
+    @Override
+    public Text keyText(final KeyStroke stroke) {
+        return KeyNames.text(Objects.requireNonNull(stroke, "stroke"), this.platform.conventions().shortcutModifier());
     }
 
     @Override
