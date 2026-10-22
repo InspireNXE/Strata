@@ -289,6 +289,11 @@ public abstract class PlatformContract {
     }
 
     @Test
+    void fileDialogsAreOptional() {
+        assertNotNull(assertDoesNotThrow(() -> this.platform().fileDialogs()), "fileDialogs");
+    }
+
+    @Test
     void clipboardTransfersNeverThrow() {
         final Clipboard clipboard = this.platform().clipboard();
         assertDoesNotThrow(() -> {

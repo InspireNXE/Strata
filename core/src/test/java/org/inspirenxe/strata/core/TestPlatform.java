@@ -23,6 +23,7 @@ import org.inspirenxe.strata.api.text.TextSpan;
 import org.inspirenxe.strata.api.text.TextStyle;
 import org.inspirenxe.strata.spi.Capabilities;
 import org.inspirenxe.strata.spi.Clipboard;
+import org.inspirenxe.strata.spi.FileDialogSource;
 import org.inspirenxe.strata.spi.Clock;
 import org.inspirenxe.strata.spi.Conventions;
 import org.inspirenxe.strata.spi.Platform;
@@ -110,6 +111,19 @@ public final class TestPlatform implements Platform {
     }
 
     private Clipboard clipboardOverride;
+    private FileDialogSource fileDialogs;
+
+    /**
+     * Gives the platform file dialogs, or none again for null.
+     */
+    public void setFileDialogs(final FileDialogSource fileDialogs) {
+        this.fileDialogs = fileDialogs;
+    }
+
+    @Override
+    public Optional<FileDialogSource> fileDialogs() {
+        return Optional.ofNullable(this.fileDialogs);
+    }
 
     /**
      * Makes {@link #clipboard()} return a clipboard of the test's own, or the text one again for null.

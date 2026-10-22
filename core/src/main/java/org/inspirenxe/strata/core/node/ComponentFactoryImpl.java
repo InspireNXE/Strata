@@ -18,6 +18,7 @@ package org.inspirenxe.strata.core.node;
 import org.inspirenxe.strata.api.ComponentFactory;
 import org.inspirenxe.strata.api.UiThread;
 import org.inspirenxe.strata.core.animation.AnimatorImpl;
+import org.inspirenxe.strata.core.file.FileDialogsImpl;
 import org.inspirenxe.strata.core.frame.UiThreadImpl;
 import org.inspirenxe.strata.api.event.Subscription;
 import org.inspirenxe.strata.api.command.Shortcuts;
@@ -79,6 +80,7 @@ import org.inspirenxe.strata.api.control.window.Window;
 import org.inspirenxe.strata.api.event.input.InputEvents;
 import org.inspirenxe.strata.api.state.Source;
 import org.inspirenxe.strata.api.extension.CustomComponent;
+import org.inspirenxe.strata.api.file.FileDialogs;
 import org.inspirenxe.strata.api.extension.CustomComposite;
 import org.inspirenxe.strata.api.extension.CustomContainer;
 import org.inspirenxe.strata.api.extension.Environment;
@@ -189,6 +191,8 @@ public final class ComponentFactoryImpl implements ComponentFactory {
     private final CauseStack platformCauses;
     private final UiThreadImpl uiThread;
     private Root root;
+    // Made on first use, so a platform's dialogs are asked for only by code that opens one
+    private FileDialogs fileDialogs;
 
     /**
      * Creates the factory for a host.
@@ -297,6 +301,16 @@ public final class ComponentFactoryImpl implements ComponentFactory {
     @Override
     public void setClipboard(final Transfer transfer) {
         this.environment.setClipboard(transfer);
+    }
+
+    @Override
+    public FileDialogs fileDialogs() {
+        FileDialogs dialogs = this.fileDialogs;
+        if (dialogs == null) {
+            dialogs = new FileDialogsImpl(this.platform.fileDialogs().orElse(null), this.uiThread);
+            this.fileDialogs = dialogs;
+        }
+        return dialogs;
     }
 
     @Override

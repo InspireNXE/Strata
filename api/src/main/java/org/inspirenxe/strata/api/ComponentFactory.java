@@ -73,6 +73,7 @@ import org.inspirenxe.strata.api.animation.Animator;
 import org.inspirenxe.strata.api.event.Subscription;
 import org.inspirenxe.strata.api.event.cause.CauseStack;
 import org.inspirenxe.strata.api.extension.CustomComponent;
+import org.inspirenxe.strata.api.file.FileDialogs;
 import org.inspirenxe.strata.api.extension.peer.ComponentHooks;
 import org.inspirenxe.strata.api.extension.peer.ComponentPeer;
 import org.inspirenxe.strata.api.extension.peer.ContainerPeer;
@@ -201,6 +202,13 @@ public interface ComponentFactory {
      * @throws IllegalStateException off the UI thread once Strata knows which thread that is
      */
     Optional<Component<?>> componentAt(float x, float y);
+
+    /**
+     * Returns the file dialogs of the host's platform, for opening and saving files.
+     *
+     * @return the dialogs, which report themselves as not supported on an engine without them
+     */
+    FileDialogs fileDialogs();
 
     /**
      * Calls a listener when a source's value changes, for screen code that acts on a change, such as saving a setting

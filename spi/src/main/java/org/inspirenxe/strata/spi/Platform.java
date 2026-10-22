@@ -147,4 +147,14 @@ public interface Platform {
     default Optional<BooleanSupplier> uiThreadCheck() {
         return Optional.empty();
     }
+
+    /**
+     * Returns the engine's file dialogs, for {@code ComponentFactory.fileDialogs()}.
+     *
+     * @return the dialogs, or empty for an engine without them, the default; core then reports file dialogs as not
+     *     supported and completes every request empty at once
+     */
+    default Optional<FileDialogSource> fileDialogs() {
+        return Optional.empty();
+    }
 }
