@@ -174,7 +174,9 @@ public final class Binding<V> {
     }
 
     /**
-     * Evaluates the source and sets the property, if the binding is dirty and attached. Call on the UI thread.
+     * Evaluates the source and sets the property, if the binding is dirty and attached. Call on the UI thread. If the
+     * source throws, the binding still follows the states it read before throwing, so a change to one of them
+     * evaluates it again, and the exception goes on to the caller.
      */
     public void evaluate() {
         if (this.queue == null || !this.dirty.compareAndSet(true, false)) {
@@ -182,10 +184,15 @@ public final class Binding<V> {
         }
         final Tracking.Frame frame = Tracking.begin();
         final V value;
+        boolean done = false;
         try {
             value = this.source.get();
+            done = true;
         } finally {
             Tracking.end(frame);
+            if (!done) {
+                this.follow(frame.reads());
+            }
         }
         this.evaluated = true;
         this.follow(frame.reads());
