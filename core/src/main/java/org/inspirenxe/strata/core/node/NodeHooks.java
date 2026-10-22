@@ -48,6 +48,14 @@ interface NodeHooks {
     Size measure(MeasureContext context, float availableWidth, float availableHeight);
 
     /**
+     * Returns the smallest size of the content, for parents that share space.
+     *
+     * @param context the measure context
+     * @return the smallest size of the content
+     */
+    Size measureMinimum(MeasureContext context);
+
+    /**
      * Gives every child its slot; does nothing for a leaf component.
      *
      * @param context the arrange context

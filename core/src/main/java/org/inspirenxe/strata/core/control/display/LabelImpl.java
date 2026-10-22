@@ -177,6 +177,59 @@ public final class LabelImpl extends BuiltInComponent<Label> implements Label {
     }
 
     @Override
+    protected Size measureMinimum(final MeasureContext context) {
+        final TextMetrics metrics = context.text();
+        final List<TextSpan> runs = this.text.resolve(this.style());
+        final InlineMetrics inline = InlineMetrics.of(metrics);
+        if (this.wrap) {
+            return new Size(longestWord(runs, metrics) * this.textScale,
+                    inline.textHeight(runs, this.style()) * this.textScale);
+        }
+        float width = 0f;
+        float height = 0f;
+        final float least = inline.textHeight(runs, this.style());
+        for (final List<TextSpan> line : RichText.wrap(runs, Float.POSITIVE_INFINITY, metrics)) {
+            width = Math.max(width, RichText.width(line, metrics));
+            height += Math.max(least, inline.lineHeight(line, this.style()));
+        }
+        if (this.overflow == TextOverflow.ELLIPSIS) {
+            width = Math.min(width, metrics.width(new TextSpan(RichText.ELLIPSIS, this.style())));
+        }
+        return new Size(width * this.textScale, height * this.textScale);
+    }
+
+    /**
+     * Returns the width of the widest run of text between spaces and line breaks. An inline element counts as part
+     * of the word it touches.
+     */
+    private static float longestWord(final List<TextSpan> runs, final TextMetrics metrics) {
+        float longest = 0f;
+        float word = 0f;
+        for (final TextSpan span : runs) {
+            if (span.isInline()) {
+                word += metrics.width(span);
+                continue;
+            }
+            final String text = span.text();
+            int start = 0;
+            for (int i = 0; i <= text.length(); i++) {
+                final boolean end = i == text.length();
+                if (end || text.charAt(i) == ' ' || text.charAt(i) == '\n') {
+                    if (i > start) {
+                        word += metrics.width(span.withText(text.substring(start, i)));
+                    }
+                    if (!end) {
+                        longest = Math.max(longest, word);
+                        word = 0f;
+                    }
+                    start = i + 1;
+                }
+            }
+        }
+        return Math.max(longest, word);
+    }
+
+    @Override
     protected Size measure(final MeasureContext context, final float availableWidth, final float availableHeight) {
         final TextMetrics metrics = context.text();
         final List<TextSpan> runs = this.text.resolve(this.style());

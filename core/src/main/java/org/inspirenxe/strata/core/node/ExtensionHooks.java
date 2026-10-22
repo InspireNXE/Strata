@@ -48,6 +48,11 @@ final class ExtensionHooks implements NodeHooks {
     }
 
     @Override
+    public Size measureMinimum(final MeasureContext context) {
+        return this.hooks.measureMinimum(context);
+    }
+
+    @Override
     public void arrange(final ArrangeContext context, final Rect bounds) {
         this.hooks.arrange(context, bounds);
     }

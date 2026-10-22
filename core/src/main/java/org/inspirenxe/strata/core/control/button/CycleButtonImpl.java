@@ -307,6 +307,12 @@ public final class CycleButtonImpl<T> extends BuiltInComponent<CycleButton<T>> i
     }
 
     @Override
+    protected Size measureMinimum(final MeasureContext context) {
+        // The caption does not shrink, and measuring does not depend on the space offered
+        return this.measure(context, Float.POSITIVE_INFINITY, Float.POSITIVE_INFINITY);
+    }
+
+    @Override
     protected Size measure(final MeasureContext context, final float availableWidth, final float availableHeight) {
         final TextMetrics metrics = context.text();
         this.textEmpty = this.text.isEmpty();

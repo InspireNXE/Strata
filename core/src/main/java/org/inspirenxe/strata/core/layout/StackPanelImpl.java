@@ -30,6 +30,7 @@ import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.function.Function;
 
 /**
  * The core {@link StackPanel}. Children without a weight are measured with unlimited space along the stacking axis
@@ -42,7 +43,11 @@ import java.util.Objects;
  *
  * <p>Shares respect each weighted child's minimum and maximum size along the axis, margin included: a child whose
  * share would cross a limit gets the limit, and the other weighted children share what is left, as
- * {@link WeightedShares} describes. A child's fixed size does not count as a limit.</p>
+ * {@link WeightedShares} describes. The lower limit is the child's outer minimum
+ * ({@link MeasureContext#minimumSize}), so a content minimum or a fixed size holds a share up too.</p>
+ *
+ * <p>The panel's own content minimum is its children's minimums along the axis plus the gaps, the largest across,
+ * and the padding.</p>
  */
 public final class StackPanelImpl extends BuiltInContainer<StackPanel> implements StackPanel {
     private final Map<Component<?>, Float> weights;
@@ -167,7 +172,7 @@ public final class StackPanelImpl extends BuiltInContainer<StackPanel> implement
         // Weighted children are offered their share of what is left; the panel asks for the smallest unit that fits
         final float space = (vertical ? innerHeight : innerWidth) - along - gaps;
         final boolean bounded = !Float.isInfinite(space) && totalWeight > 0f;
-        this.weighShares(children, vertical);
+        this.weighShares(children, vertical, context::minimumSize);
         if (bounded) {
             this.shares.resolve(space);
         }
@@ -220,7 +225,7 @@ public final class StackPanelImpl extends BuiltInContainer<StackPanel> implement
                 ? Math.max(this.spacing, (length - fixed) / (visible - 1))
                 : this.spacing;
         final List<Component<?>> children = this.children();
-        this.weighShares(children, vertical);
+        this.weighShares(children, vertical, context::minimumSize);
         this.shares.resolve(left);
 
         float offset = vertical ? content.y() : content.x();
@@ -252,11 +257,33 @@ public final class StackPanelImpl extends BuiltInContainer<StackPanel> implement
         }
     }
 
+    @Override
+    protected Size measureMinimum(final MeasureContext context) {
+        final boolean vertical = this.orientation == Orientation.VERTICAL;
+        float along = 0f;
+        float across = 0f;
+        int visible = 0;
+        for (final Component<?> child : this.children()) {
+            if (!child.isVisible()) {
+                continue;
+            }
+            final Size minimum = context.minimumSize(child);
+            along += vertical ? minimum.height() : minimum.width();
+            across = Math.max(across, vertical ? minimum.width() : minimum.height());
+            visible++;
+        }
+        along += visible > 1 ? this.spacing * (visible - 1) : 0f;
+        final Insets padding = this.padding();
+        return new Size((vertical ? across : along) + padding.horizontal(), (vertical ? along : across) + padding.vertical());
+    }
+
     /**
      * Gives the shares one slot per child: each visible weighted child its weight and its outer limits along the
-     * axis, every other child none.
+     * axis, every other child none. The lower limit is the child's outer minimum, which takes in its content
+     * minimum, its minimum size and its fixed size.
      */
-    private void weighShares(final List<Component<?>> children, final boolean vertical) {
+    private void weighShares(final List<Component<?>> children, final boolean vertical,
+                             final Function<Component<?>, Size> minimums) {
         this.shares.reset(children.size());
         for (int i = 0; i < children.size(); i++) {
             final Component<?> child = children.get(i);
@@ -264,7 +291,8 @@ public final class StackPanelImpl extends BuiltInContainer<StackPanel> implement
             if (weight > 0f && child.isVisible()) {
                 final Insets margin = child.margin();
                 final float outside = vertical ? margin.vertical() : margin.horizontal();
-                this.shares.set(i, weight, (vertical ? child.minHeight() : child.minWidth()) + outside,
+                final Size minimum = minimums.apply(child);
+                this.shares.set(i, weight, vertical ? minimum.height() : minimum.width(),
                         (vertical ? child.maxHeight() : child.maxWidth()) + outside);
             }
         }

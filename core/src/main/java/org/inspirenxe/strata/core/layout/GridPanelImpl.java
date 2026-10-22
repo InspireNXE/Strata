@@ -71,6 +71,8 @@ public final class GridPanelImpl extends BuiltInContainer<GridPanel> implements 
 
     // Reused between measures; grows with the children
     private Size[] outers;
+    // Track floors while working out the grid's own minimum
+    private float[] floors;
 
     /**
      * Creates an empty grid with no track definitions and no spacing.
@@ -85,6 +87,7 @@ public final class GridPanelImpl extends BuiltInContainer<GridPanel> implements 
         this.columnAxis = new Axis(this.columns);
         this.rowAxis = new Axis(this.rows);
         this.outers = new Size[0];
+        this.floors = new float[0];
     }
 
     @Override
@@ -182,13 +185,12 @@ public final class GridPanelImpl extends BuiltInContainer<GridPanel> implements 
             }
             final Cell cell = this.cellOf(child);
             final Insets margin = child.margin();
+            final Size minimum = context.minimumSize(child);
             if (columns.span(cell.column(), cell.columnSpan()) == 1) {
-                columns.limit(columns.first(cell.column()), child.minWidth() + margin.horizontal(),
-                        child.maxWidth() + margin.horizontal());
+                columns.limit(columns.first(cell.column()), minimum.width(), child.maxWidth() + margin.horizontal());
             }
             if (rows.span(cell.row(), cell.rowSpan()) == 1) {
-                rows.limit(rows.first(cell.row()), child.minHeight() + margin.vertical(),
-                        child.maxHeight() + margin.vertical());
+                rows.limit(rows.first(cell.row()), minimum.height(), child.maxHeight() + margin.vertical());
             }
         }
 
@@ -248,6 +250,46 @@ public final class GridPanelImpl extends BuiltInContainer<GridPanel> implements 
         final float width = columns.measuredLength(this.columnSpacing);
         final float height = rows.measuredLength(this.rowSpacing);
         return new Size(width + padding.horizontal(), height + padding.vertical());
+    }
+
+    @Override
+    protected Size measureMinimum(final MeasureContext context) {
+        final Insets padding = this.padding();
+        return new Size(this.minimumLength(context, this.columns, true, this.columnSpacing) + padding.horizontal(),
+                this.minimumLength(context, this.rows, false, this.rowSpacing) + padding.vertical());
+    }
+
+    /**
+     * Returns the smallest length of one axis: each fixed track its size, every other track the largest outer
+     * minimum of the visible children that sit only in it, and the spacing between tracks. Children that span
+     * several tracks add nothing.
+     */
+    private float minimumLength(final MeasureContext context, final List<GridLength> tracks, final boolean horizontal,
+                                final float spacing) {
+        final int count = Math.max(1, tracks.size());
+        if (this.floors.length < count) {
+            this.floors = new float[count];
+        }
+        for (int i = 0; i < count; i++) {
+            this.floors[i] = i < tracks.size() && tracks.get(i) instanceof GridLength.Fixed fixed ? fixed.size() : 0f;
+        }
+        for (final Component<?> child : this.children()) {
+            if (!child.isVisible()) {
+                continue;
+            }
+            final Cell cell = this.cellOf(child);
+            final int track = Math.min(horizontal ? cell.column() : cell.row(), count - 1);
+            final int span = Math.min(horizontal ? cell.columnSpan() : cell.rowSpan(), count - track);
+            if (span == 1 && !(track < tracks.size() && tracks.get(track) instanceof GridLength.Fixed)) {
+                final Size minimum = context.minimumSize(child);
+                this.floors[track] = Math.max(this.floors[track], horizontal ? minimum.width() : minimum.height());
+            }
+        }
+        float length = spacing * (count - 1);
+        for (int i = 0; i < count; i++) {
+            length += this.floors[i];
+        }
+        return length;
     }
 
     @Override

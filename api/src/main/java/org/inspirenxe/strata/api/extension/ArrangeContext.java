@@ -43,6 +43,19 @@ public interface ArrangeContext {
     Size outerSize(Component<?> child);
 
     /**
+     * Returns the smallest space a child can work in, for sharing space among children. It is the child's content
+     * minimum ({@link CustomComponent#measureMinimum}), raised to its minimum size and capped by its maximum size, or
+     * its fixed size on an axis that has one, plus its margin. Strata works it out when first asked after the child's
+     * layout was invalidated and keeps it until the next time, so it may be read before or after the child is
+     * measured.
+     *
+     * @param child a child of the component being arranged
+     * @return the child's outer minimum, or zero if it is hidden
+     * @throws IllegalArgumentException if {@code child} was made by another factory or has no Strata implementation
+     */
+    Size minimumSize(Component<?> child);
+
+    /**
      * Measures a child, for one added during arrange, such as a row that scrolled into view. Measure such a child
      * before giving it a slot.
      *

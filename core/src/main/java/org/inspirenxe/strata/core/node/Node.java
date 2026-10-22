@@ -143,6 +143,10 @@ public class Node implements ComponentPeer {
     private float desiredHeight;
     private Rect bounds;
     private boolean measureDirty;
+    // The content minimum from the hook, kept until the layout is invalidated
+    private float contentMinWidth;
+    private float contentMinHeight;
+    private boolean minimumDirty;
     private boolean arrangeDirty;
     private float lastAvailableWidth;
     private float lastAvailableHeight;
@@ -175,6 +179,7 @@ public class Node implements ComponentPeer {
         this.border = Border.NONE;
         this.bounds = Rect.ZERO;
         this.measureDirty = true;
+        this.minimumDirty = true;
         this.arrangeDirty = true;
         this.lastAvailableWidth = Float.NaN;
         this.lastAvailableHeight = Float.NaN;
@@ -295,6 +300,34 @@ public class Node implements ComponentPeer {
     }
 
     /**
+     * Returns the smallest space the component can work in, margin included, as
+     * {@link org.inspirenxe.strata.api.extension.MeasureContext#minimumSize} describes. The hook runs only when the
+     * layout was invalidated since it last ran; if it throws, it runs again next time. A hidden component has a zero
+     * minimum without calling its hook.
+     *
+     * @param pass the layout context
+     * @return the outer minimum
+     */
+    public final Size minimumSize(final LayoutPass pass) {
+        if (!this.visible) {
+            return Size.ZERO;
+        }
+        if (this.minimumDirty) {
+            final Size content = this.hooks.measureMinimum(pass);
+            this.contentMinWidth = Float.isFinite(content.width()) ? Math.max(0f, content.width()) : 0f;
+            this.contentMinHeight = Float.isFinite(content.height()) ? Math.max(0f, content.height()) : 0f;
+            this.minimumDirty = false;
+        }
+        final float width = Float.isNaN(this.explicitWidth)
+                ? Math.max(this.minWidth, Math.min(this.maxWidth, this.contentMinWidth))
+                : this.clampWidth(this.explicitWidth);
+        final float height = Float.isNaN(this.explicitHeight)
+                ? Math.max(this.minHeight, Math.min(this.maxHeight, this.contentMinHeight))
+                : this.clampHeight(this.explicitHeight);
+        return new Size(width + this.margin.horizontal(), height + this.margin.vertical());
+    }
+
+    /**
      * Places the component in a slot and arranges its children. The slot is shrunk by the margin; the component
      * then takes its desired size, or the whole inner slot on an axis set to stretch with no fixed size (still
      * clamped), and is aligned inside, then moved by its offset. A hidden component gets an empty rectangle at the
@@ -373,6 +406,7 @@ public class Node implements ComponentPeer {
     public final void invalidateLayout() {
         for (Node node = this; node != null; node = node.parent) {
             node.measureDirty = true;
+            node.minimumDirty = true;
             node.arrangeDirty = true;
         }
         if (this.root != null) {

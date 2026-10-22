@@ -193,6 +193,17 @@ public abstract class BuiltInComponent<T extends Component<T>> implements Compon
     protected abstract Size measure(MeasureContext context, float availableWidth, float availableHeight);
 
     /**
+     * Returns the smallest size the content can work in, as {@code CustomComponent.measureMinimum} does. The default
+     * returns {@link Size#ZERO}.
+     *
+     * @param context text measurement and the children's minimums
+     * @return the smallest size of the content
+     */
+    protected Size measureMinimum(final MeasureContext context) {
+        return Size.ZERO;
+    }
+
+    /**
      * Draws the component over its background and border and under its children. The default draws nothing.
      *
      * @param painter what to draw with; valid only during this call
@@ -454,6 +465,11 @@ public abstract class BuiltInComponent<T extends Component<T>> implements Compon
         @Override
         public Size measure(final MeasureContext context, final float availableWidth, final float availableHeight) {
             return BuiltInComponent.this.measure(context, availableWidth, availableHeight);
+        }
+
+        @Override
+        public Size measureMinimum(final MeasureContext context) {
+            return BuiltInComponent.this.measureMinimum(context);
         }
 
         @Override

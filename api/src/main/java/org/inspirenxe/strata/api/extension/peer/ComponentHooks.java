@@ -47,6 +47,14 @@ public interface ComponentHooks {
     Size measure(MeasureContext context, float availableWidth, float availableHeight);
 
     /**
+     * Forwards to {@code CustomComponent.measureMinimum}.
+     *
+     * @param context the measure context
+     * @return the smallest size of the content
+     */
+    Size measureMinimum(MeasureContext context);
+
+    /**
      * Forwards to {@code CustomComposite.arrange}; does nothing for a leaf component.
      *
      * @param context the arrange context

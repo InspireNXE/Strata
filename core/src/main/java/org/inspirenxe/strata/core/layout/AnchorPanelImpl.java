@@ -57,6 +57,19 @@ public final class AnchorPanelImpl extends BuiltInContainer<AnchorPanel> impleme
     }
 
     @Override
+    protected Size measureMinimum(final MeasureContext context) {
+        float width = 0f;
+        float height = 0f;
+        for (final Component<?> child : this.children()) {
+            final Size minimum = context.minimumSize(child);
+            width = Math.max(width, minimum.width());
+            height = Math.max(height, minimum.height());
+        }
+        final Insets padding = this.padding();
+        return new Size(width + padding.horizontal(), height + padding.vertical());
+    }
+
+    @Override
     protected void arrange(final ArrangeContext context, final Rect bounds) {
         final Rect content = this.contentBox();
         for (final Component<?> child : this.children()) {

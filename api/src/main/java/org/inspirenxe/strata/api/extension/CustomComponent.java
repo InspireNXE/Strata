@@ -113,7 +113,8 @@ import java.util.function.Consumer;
  *     not change other components or call {@link #invalidateLayout()} from it.</li>
  *     <li>{@link #paint} draws inside the given bounds and must not change layout state. Painting happens every
  *     frame, so avoid allocating there.</li>
- *     <li>Call {@link #invalidateLayout()} whenever something that {@link #measure} reads changes.</li>
+ *     <li>Call {@link #invalidateLayout()} whenever something that {@link #measure} or {@link #measureMinimum}
+ *     reads changes.</li>
  *     <li>Read time, the clipboard and text sizes through {@link #environment()}, never from the system directly,
  *     so the component works on every engine and in tests.</li>
  *     <li>Event hooks run only while the component is attached, and a disabled or hidden component gets no new
@@ -195,6 +196,28 @@ public abstract class CustomComponent<T extends Component<T>> implements Compone
      * @return the natural size of the content; a negative value counts as zero
      */
     protected abstract Size measure(MeasureContext context, float availableWidth, float availableHeight);
+
+    /**
+     * Returns the smallest size the content can work in. A parent that shares space among its children, such as a
+     * stack panel with weighted children or a grid with weighted tracks, gives no child less than this, read through
+     * {@link MeasureContext#minimumSize}. The component itself is not laid out larger because of it: {@link #measure}
+     * may still be offered less, for example inside a fixed size. The default returns {@link Size#ZERO}, so only the
+     * {@linkplain #setMinSize minimum size} counts.
+     *
+     * <p>Return what does not depend on the space offered: the longest word of wrapping text, a caption that cannot
+     * shrink, or the sum of the children's minimums read with {@link MeasureContext#minimumSize}. Do not measure
+     * children here. Strata raises the result to the minimum size, caps it by the maximum size and puts the fixed
+     * size in its place on an axis that has one. It calls this hook when a parent first asks after the layout was
+     * {@linkplain #invalidateLayout() invalidated}, which can come before or after {@link #measure}, so call
+     * {@link #invalidateLayout()} whenever something it reads changes. It is not called while the component is
+     * hidden.</p>
+     *
+     * @param context text measurement and the children's minimums
+     * @return the smallest size of the content; a negative or non-finite value counts as zero
+     */
+    protected Size measureMinimum(final MeasureContext context) {
+        return Size.ZERO;
+    }
 
     /**
      * Draws the component. The {@linkplain #background() background} and border are already drawn, and a
@@ -448,6 +471,11 @@ public abstract class CustomComponent<T extends Component<T>> implements Compone
         @Override
         public Size measure(final MeasureContext context, final float availableWidth, final float availableHeight) {
             return CustomComponent.this.measure(context, availableWidth, availableHeight);
+        }
+
+        @Override
+        public Size measureMinimum(final MeasureContext context) {
+            return CustomComponent.this.measureMinimum(context);
         }
 
         @Override
