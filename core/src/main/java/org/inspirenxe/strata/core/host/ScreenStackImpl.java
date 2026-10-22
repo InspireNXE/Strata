@@ -43,6 +43,11 @@ import java.util.Optional;
  * <p>Pushed screens take the stack's theme and follow {@link #setTheme}. Screens opened with
  * {@link #open(Screen, ThemeRef)}, or from a screen's handle, keep the theme they were opened in. A screen opened
  * from a handle goes straight above the screen whose handle it was, so closing it shows that screen again.</p>
+ *
+ * <p>Only the top screen gets input. A screen that another covers hears that the pointer left, so it drops its hover,
+ * tooltip and cursor, and the engine's text input stops if its focused field had it; when it is on top again, text
+ * input starts again for that field. The platform's text input is shared by every screen, so only the top one may
+ * hold it.</p>
  */
 public final class ScreenStackImpl implements ScreenStack {
     private final Platform platform;
@@ -116,12 +121,24 @@ public final class ScreenStackImpl implements ScreenStack {
             host.setTooltipDelay(this.tooltipDelay);
         }
         final Entry entry = new Entry(host, own != null);
+        final ScreenHostImpl covered = this.topHost();
         // In the stack before it opens, so a screen can open another above itself from opened()
         this.entries.add(index, entry);
+        if (this.topHost() == host) {
+            // Before the new screen opens, so a text field it focuses keeps the engine's text input
+            this.covered(covered);
+        }
         try {
             return host.openScreen(screen);
         } catch (final RuntimeException e) {
             this.entries.remove(entry);
+            try {
+                // closed() for a screen whose opened() threw, and the host lets go of its tree
+                host.close();
+            } catch (final RuntimeException suppressed) {
+                e.addSuppressed(suppressed);
+            }
+            this.uncovered(covered);
             throw e;
         }
     }
@@ -133,13 +150,48 @@ public final class ScreenStackImpl implements ScreenStack {
         }
         final ScreenHostImpl host = this.entries.removeLast().host();
         final Optional<Screen> screen = host.screen();
-        host.close();
+        try {
+            host.close();
+        } finally {
+            this.uncovered(this.topHost());
+        }
         return screen;
     }
 
     private void remove(final ScreenHostImpl host) {
+        final boolean wasTop = this.topHost() == host;
         if (this.entries.removeIf(entry -> entry.host() == host)) {
-            host.close();
+            try {
+                host.close();
+            } finally {
+                if (wasTop) {
+                    this.uncovered(this.topHost());
+                }
+            }
+        }
+    }
+
+    private ScreenHostImpl topHost() {
+        return this.entries.isEmpty() ? null : this.entries.getLast().host();
+    }
+
+    /**
+     * Tells a host that another screen now covers it and takes the input: the pointer has left it, so it drops its
+     * hover, tooltip and cursor, and the engine's text input stops if its focused field had it.
+     */
+    private void covered(final ScreenHostImpl host) {
+        if (host != null) {
+            host.pointerLeft();
+            host.root().suspendTextInput();
+        }
+    }
+
+    /**
+     * Tells a host that it is on top again: the engine's text input starts again if its focused field takes text.
+     */
+    private void uncovered(final ScreenHostImpl host) {
+        if (host != null && this.topHost() == host) {
+            host.root().resumeTextInput();
         }
     }
 

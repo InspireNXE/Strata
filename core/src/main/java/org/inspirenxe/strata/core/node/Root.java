@@ -1423,6 +1423,26 @@ public final class Root {
         }
     }
 
+    /**
+     * Stops the engine's text input if the focused node takes text, because another screen now covers this one and
+     * takes the keyboard. {@link #resumeTextInput()} starts it again.
+     */
+    public void suspendTextInput() {
+        if (this.focused != null && this.focused.acceptsTextInput()) {
+            this.platform.textInput().stop();
+        }
+    }
+
+    /**
+     * Starts the engine's text input again if the focused node takes text, because this screen is on top again after
+     * the screen that covered it closed.
+     */
+    public void resumeTextInput() {
+        if (this.focused != null && this.focused.acceptsTextInput()) {
+            this.platform.textInput().start(this.focused.bounds(), this.focused.textInputKind());
+        }
+    }
+
     // ------------------------------------------------------------------
     // Overlays
     // ------------------------------------------------------------------

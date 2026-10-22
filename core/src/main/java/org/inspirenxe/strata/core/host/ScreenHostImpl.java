@@ -151,6 +151,10 @@ public final class ScreenHostImpl implements ScreenHost {
         return opened;
     }
 
+    /**
+     * Closes the open screen: calls its {@code closed()}, then empties the root. The root is emptied even when
+     * {@code closed()} throws, so the old tree never stays shown in a host that has no screen.
+     */
     @Override
     public void close() {
         if (this.screen == null) {
@@ -159,9 +163,12 @@ public final class ScreenHostImpl implements ScreenHost {
         final Screen closing = this.screen;
         this.screen = null;
         this.handle = null;
-        closing.closed();
-        this.root.setContent(null);
-        this.root.setScreen(null);
+        try {
+            closing.closed();
+        } finally {
+            this.root.setContent(null);
+            this.root.setScreen(null);
+        }
     }
 
     @Override
