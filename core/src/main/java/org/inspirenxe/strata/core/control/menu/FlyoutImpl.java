@@ -16,7 +16,6 @@
 package org.inspirenxe.strata.core.control.menu;
 
 import org.inspirenxe.strata.api.component.Component;
-import org.inspirenxe.strata.api.component.Focusable;
 import org.inspirenxe.strata.api.control.collection.ComboBox;
 import org.inspirenxe.strata.api.control.menu.Flyout;
 import org.inspirenxe.strata.api.event.input.KeyEvent;
@@ -31,6 +30,7 @@ import org.inspirenxe.strata.api.overlay.Overlay;
 import org.inspirenxe.strata.api.theme.Paint;
 import org.inspirenxe.strata.api.theme.Theme;
 import org.inspirenxe.strata.core.control.CorePopup;
+import org.inspirenxe.strata.core.control.PopupSession;
 import org.inspirenxe.strata.core.node.BuiltInComposite;
 import org.inspirenxe.strata.core.node.ComponentFactoryImpl;
 import org.inspirenxe.strata.core.node.Node;
@@ -65,9 +65,7 @@ public final class FlyoutImpl extends BuiltInComposite<Flyout> implements Flyout
     private final ComponentFactoryImpl ui;
     private Component<?> content;
     private boolean lightDismiss;
-    private Overlay popup;
-    private Component<?> returnFocus;
-    private Holder holder;
+    private final PopupSession session;
 
     // Theme
     private Paint background;
@@ -82,6 +80,7 @@ public final class FlyoutImpl extends BuiltInComposite<Flyout> implements Flyout
     public FlyoutImpl(final ComponentFactoryImpl ui) {
         super(ui);
         this.ui = ui;
+        this.session = new PopupSession(() -> { }, () -> this.report(CLOSED));
         this.lightDismiss = true;
         this.background = Paint.NONE;
         this.setTabbable(false);
@@ -132,8 +131,8 @@ public final class FlyoutImpl extends BuiltInComposite<Flyout> implements Flyout
     @Override
     public Flyout setLightDismiss(final boolean dismiss) {
         this.lightDismiss = dismiss;
-        if (this.popup != null && this.hostRoot() != null) {
-            this.hostRoot().setLightDismiss(this.popup, dismiss);
+        if (this.session.overlay() != null && this.hostRoot() != null) {
+            this.hostRoot().setLightDismiss(this.session.overlay(), dismiss);
         }
         return this;
     }
@@ -144,7 +143,7 @@ public final class FlyoutImpl extends BuiltInComposite<Flyout> implements Flyout
 
     @Override
     public boolean isOpen() {
-        return this.popup != null && this.popup.isOpen();
+        return this.session.isOpen();
     }
 
     @Override
@@ -172,9 +171,8 @@ public final class FlyoutImpl extends BuiltInComposite<Flyout> implements Flyout
             this.ui.overlays();
             return this;
         }
-        this.returnFocus = root.focused() == null ? null : root.focused().facade();
-        this.popup = opener.apply(root);
-        this.popup.onEvent(Overlay.CLOSED, event -> this.closed());
+        final Component<?> returnFocus = root.focused() == null ? null : root.focused().facade();
+        this.session.start(opener.apply(root), returnFocus);
         // Lay the popup out now, so focus and keys find the content before the next frame
         root.layout();
         this.focusFirst();
@@ -189,29 +187,8 @@ public final class FlyoutImpl extends BuiltInComposite<Flyout> implements Flyout
 
     @Override
     public Flyout close() {
-        if (this.popup != null) {
-            this.popup.close();
-        }
+        this.session.close();
         return this;
-    }
-
-    /**
-     * Runs once the popup has closed, however it closed: gives focus back, reports {@code CLOSED} and tells the
-     * holder.
-     */
-    private void closed() {
-        this.popup = null;
-        if (this.returnFocus != null) {
-            final Component<?> focus = this.returnFocus;
-            this.returnFocus = null;
-            if (focus.isAttached() && focus instanceof final Focusable<?> focusable) {
-                focusable.requestFocus();
-            }
-        }
-        this.report(CLOSED);
-        if (this.holder != null) {
-            this.holder.popupClosed();
-        }
     }
 
     /**
@@ -249,15 +226,15 @@ public final class FlyoutImpl extends BuiltInComposite<Flyout> implements Flyout
 
     @Override
     public Holder holder() {
-        return this.holder;
+        return this.session.holder();
     }
 
     @Override
     public void setHolder(final Holder holder) {
-        if (holder != null && this.holder != null && holder != this.holder) {
+        if (holder != null && this.session.holder() != null && holder != this.session.holder()) {
             throw new IllegalArgumentException(this + " already belongs to another drop-down button");
         }
-        this.holder = holder;
+        this.session.setHolder(holder);
     }
 
     @Override

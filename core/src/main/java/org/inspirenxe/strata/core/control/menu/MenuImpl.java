@@ -16,7 +16,6 @@
 package org.inspirenxe.strata.core.control.menu;
 
 import org.inspirenxe.strata.api.component.Component;
-import org.inspirenxe.strata.api.component.Focusable;
 import org.inspirenxe.strata.api.control.display.Separator;
 import org.inspirenxe.strata.api.control.menu.Menu;
 import org.inspirenxe.strata.api.control.menu.MenuEntry;
@@ -31,13 +30,13 @@ import org.inspirenxe.strata.api.geometry.Size;
 import org.inspirenxe.strata.api.input.Key;
 import org.inspirenxe.strata.api.input.KeyAction;
 import org.inspirenxe.strata.api.input.MouseButton;
-import org.inspirenxe.strata.api.overlay.Overlay;
 import org.inspirenxe.strata.api.text.Text;
 import org.inspirenxe.strata.api.text.TextMetrics;
 import org.inspirenxe.strata.api.text.TextStyle;
 import org.inspirenxe.strata.api.theme.Paint;
 import org.inspirenxe.strata.api.theme.Theme;
 import org.inspirenxe.strata.core.control.CorePopup;
+import org.inspirenxe.strata.core.control.PopupSession;
 import org.inspirenxe.strata.core.control.Rings;
 import org.inspirenxe.strata.core.node.BuiltInComponent;
 import org.inspirenxe.strata.core.node.ComponentFactoryImpl;
@@ -92,12 +91,10 @@ public final class MenuImpl extends BuiltInComponent<Menu> implements Menu, Core
     private final List<MenuEntryImpl> items;
     private MenuImpl parent;
     private MenuBarImpl bar;
-    private Holder holder;
     // The width of what opened the menu through openBelow, kept until it closes
     private float anchorWidth;
-    private Overlay popup;
+    private final PopupSession session;
     private MenuImpl openSubmenu;
-    private Component<?> returnFocus;
     private int highlighted;
 
     // Theme
@@ -125,6 +122,7 @@ public final class MenuImpl extends BuiltInComponent<Menu> implements Menu, Core
         super(ui);
         this.ui = ui;
         this.items = new ArrayList<>();
+        this.session = new PopupSession(this::closed, () -> this.report(CLOSED));
         this.highlighted = -1;
         this.background = Paint.NONE;
         this.itemHovered = Paint.NONE;
@@ -281,7 +279,7 @@ public final class MenuImpl extends BuiltInComponent<Menu> implements Menu, Core
 
     @Override
     public boolean isOpen() {
-        return this.popup != null && this.popup.isOpen();
+        return this.session.isOpen();
     }
 
     @Override
@@ -290,10 +288,9 @@ public final class MenuImpl extends BuiltInComponent<Menu> implements Menu, Core
         if (this.isOpen() || this.items.isEmpty()) {
             return this;
         }
-        this.returnFocus = this.parent == null ? this.focusedComponent() : null;
+        final Component<?> returnFocus = this.parent == null ? this.focusedComponent() : null;
         this.highlighted = -1;
-        this.popup = this.ui.overlays().popup(this, anchor);
-        this.popup.onEvent(Overlay.CLOSED, event -> this.closed());
+        this.session.start(this.ui.overlays().popup(this, anchor), returnFocus);
         // Lay the popup out now, so keys pressed before the next frame find the items, and a submenu its anchor
         if (this.hostRoot() != null) {
             this.hostRoot().layout();
@@ -313,17 +310,16 @@ public final class MenuImpl extends BuiltInComponent<Menu> implements Menu, Core
         if (this.openSubmenu != null) {
             this.openSubmenu.close();
         }
-        if (this.popup != null) {
-            this.popup.close();
-        }
+        this.session.close();
         return this;
     }
 
     /**
-     * Runs once the popup has closed, however it closed.
+     * Runs first once the popup has closed, however it closed, before the session gives focus back and reports
+     * {@code CLOSED}: forgets the highlight and the anchor's width, closes the open submenu and tells the parent
+     * menu or the bar.
      */
     private void closed() {
-        this.popup = null;
         this.highlighted = -1;
         if (this.anchorWidth != 0f) {
             this.anchorWidth = 0f;
@@ -337,17 +333,6 @@ public final class MenuImpl extends BuiltInComponent<Menu> implements Menu, Core
         }
         if (this.bar != null) {
             this.bar.menuClosed(this);
-        }
-        if (this.returnFocus != null) {
-            final Component<?> focus = this.returnFocus;
-            this.returnFocus = null;
-            if (focus.isAttached() && focus instanceof final Focusable<?> focusable) {
-                focusable.requestFocus();
-            }
-        }
-        this.report(CLOSED);
-        if (this.holder != null) {
-            this.holder.popupClosed();
         }
     }
 
@@ -372,7 +357,7 @@ public final class MenuImpl extends BuiltInComponent<Menu> implements Menu, Core
     }
 
     boolean isFree() {
-        return this.bar == null && this.parent == null && this.holder == null;
+        return this.bar == null && this.parent == null && this.session.holder() == null;
     }
 
     // ------------------------------------------------------------------
@@ -386,20 +371,20 @@ public final class MenuImpl extends BuiltInComponent<Menu> implements Menu, Core
 
     @Override
     public Holder holder() {
-        return this.holder;
+        return this.session.holder();
     }
 
     @Override
     public void setHolder(final Holder holder) {
-        if (holder != null && holder != this.holder) {
-            if (this.holder != null) {
+        if (holder != null && holder != this.session.holder()) {
+            if (this.session.holder() != null) {
                 throw new IllegalArgumentException(this + " already belongs to another drop-down button");
             }
             if (this.bar != null || this.parent != null) {
                 throw new IllegalArgumentException(this + " opens from a menu or a menu bar");
             }
         }
-        this.holder = holder;
+        this.session.setHolder(holder);
     }
 
     @Override
