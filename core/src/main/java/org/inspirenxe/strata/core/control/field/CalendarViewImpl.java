@@ -419,11 +419,7 @@ public final class CalendarViewImpl extends BuiltInComponent<CalendarView> imple
         return switch (this.zoom) {
             case MONTH -> this.range.contains(target);
             case YEAR -> this.range.containsYear(target.getYear());
-            case DECADE -> {
-                final int start = decadeStart(target.getYear());
-                yield (this.range.min() == null || start + 9 >= this.range.min().getYear())
-                        && (this.range.max() == null || start <= this.range.max().getYear());
-            }
+            case DECADE -> this.range.containsDecade(decadeStart(target.getYear()));
         };
     }
 

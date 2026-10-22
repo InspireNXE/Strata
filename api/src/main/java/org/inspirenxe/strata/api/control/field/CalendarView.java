@@ -226,7 +226,8 @@ public interface CalendarView extends Component<CalendarView>, Focusable<Calenda
     YearMonth shownMonth();
 
     /**
-     * Shows a month, kept inside the range's months. Fires {@link #BROWSED} if the month changed, and never
+     * Shows a month, kept inside the range's months and the dates {@link HasDate} supports. Fires {@link #BROWSED} if
+     * the month changed, and never
      * {@link #BROWSE}. {@link #setDate} also shows the new date's month.
      *
      * @param month the month

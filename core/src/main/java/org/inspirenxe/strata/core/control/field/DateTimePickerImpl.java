@@ -46,8 +46,10 @@ import java.util.function.Predicate;
  * The core {@link DateTimePicker}: one field of date parts, a space and time parts over a {@link SegmentedField},
  * with a private {@link CalendarViewImpl} beside {@link TimeColumns} in its popup.
  *
- * <p>The value is kept to whole minutes, or seconds while they show, and inside the range. When cutting it to the
- * minute or second would leave it before the range's start, it moves up to the next whole one. The calendar in the
+ * <p>The value is kept to whole minutes, or seconds while they show, and inside the range, which never reaches past
+ * the dates {@link DateRange} supports. A value is cut to the unit and then clamped to the first and last whole unit
+ * inside the range, so a value cut to before a start that carries seconds moves up to the next whole minute; typed
+ * drafts are allowed by the same two ends. A range too short to hold a whole unit keeps the value at its start. The calendar in the
  * popup is not focusable, so focus stays in the field; a press on the calendar or a column takes it back. The popup's
  * parts are made the first time it opens and kept.</p>
  */
@@ -128,9 +130,21 @@ public final class DateTimePickerImpl extends PickerBase<DateTimePicker, LocalDa
         if (min != null && max != null && min.isAfter(max)) {
             throw new IllegalArgumentException("The range must not end before it starts: " + min + " to " + max);
         }
-        this.min = min;
-        this.max = max;
+        this.min = min == null ? null : limit(min);
+        this.max = max == null ? null : limit(max);
         return this.setDateTime(this.value);
+    }
+
+    /**
+     * Moves a range end inside the supported dates.
+     */
+    private static LocalDateTime limit(final LocalDateTime end) {
+        final LocalDateTime first = DateRange.FIRST.atStartOfDay();
+        final LocalDateTime last = DateRange.LAST.atTime(LocalTime.MAX);
+        if (end.isBefore(first)) {
+            return first;
+        }
+        return end.isAfter(last) ? last : end;
     }
 
     @Override
@@ -156,29 +170,58 @@ public final class DateTimePickerImpl extends PickerBase<DateTimePicker, LocalDa
     }
 
     /**
-     * Cuts a value to the shown unit and keeps it inside the range.
+     * The start of the range, or of the supported dates when it has none.
+     */
+    private LocalDateTime start() {
+        return this.min == null ? DateRange.FIRST.atStartOfDay() : this.min;
+    }
+
+    /**
+     * The first whole unit at or after the range's start.
+     */
+    private LocalDateTime firstWhole() {
+        final LocalDateTime start = this.start();
+        final LocalDateTime cut = start.truncatedTo(this.unit());
+        return cut.equals(start) ? cut : cut.plus(1L, this.unit());
+    }
+
+    /**
+     * The last whole unit at or before the range's end, or the end of the supported dates when it has none.
+     */
+    private LocalDateTime lastWhole() {
+        return (this.max == null ? DateRange.LAST.atTime(LocalTime.MAX) : this.max).truncatedTo(this.unit());
+    }
+
+    /**
+     * Cuts a value to the shown unit and clamps it to the first and last whole unit inside the range. A range too
+     * short to hold a whole unit gives its start.
      */
     private LocalDateTime fit(final LocalDateTime value) {
         if (value == null) {
             return null;
         }
-        LocalDateTime fitted = value.truncatedTo(this.unit());
-        if (this.max != null && fitted.isAfter(this.max)) {
-            fitted = this.max.truncatedTo(this.unit());
+        final LocalDateTime first = this.firstWhole();
+        final LocalDateTime last = this.lastWhole();
+        if (first.isAfter(last)) {
+            return this.start();
         }
-        if (this.min != null && fitted.isBefore(this.min)) {
-            final LocalDateTime start = this.min.truncatedTo(this.unit());
-            fitted = start.equals(this.min) ? start : start.plus(1L, this.unit());
+        final LocalDateTime cut = value.truncatedTo(this.unit());
+        if (cut.isBefore(first)) {
+            return first;
         }
-        return fitted;
+        return cut.isAfter(last) ? last : cut;
     }
 
     private LocalDate clampDate(final LocalDate day) {
         return this.dates().clamp(day);
     }
 
+    /**
+     * Returns whether the user may take a draft: a whole unit from the first to the last whole one inside the range,
+     * on a date the filter allows.
+     */
     private boolean isAllowed(final LocalDateTime value) {
-        return (this.min == null || !value.isBefore(this.min)) && (this.max == null || !value.isAfter(this.max))
+        return !value.isBefore(this.firstWhole()) && !value.isAfter(this.lastWhole())
                 && this.filter.test(value.toLocalDate());
     }
 

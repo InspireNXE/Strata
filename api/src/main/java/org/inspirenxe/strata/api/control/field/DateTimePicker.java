@@ -42,7 +42,10 @@ import java.util.Optional;
  * parts. Setting one part of an empty value fills the other: the date with today, kept inside the range, and the time
  * with the {@linkplain #defaultTime() default time}. Clearing either part clears the whole value. The date range is
  * the dates of the range, and {@link #setDateRange} sets the range from the start of the first day to the end of the
- * last. The value is kept inside the range, and the filter refuses dates as on a {@link DatePicker}.</p>
+ * last. The value is kept inside the range, and the filter refuses dates as on a {@link DatePicker}. Values run over
+ * the dates {@link HasDate} supports. A value is kept to the first and last whole minute inside the range, or whole
+ * second while seconds show, and the user may type only those; a range too short to hold one keeps the value at its
+ * start.</p>
  *
  * <h2>The field and the popup</h2>
  * <p>The field edits as those of {@link DatePicker} and {@link TimePicker} do, one part at a time, and its draft

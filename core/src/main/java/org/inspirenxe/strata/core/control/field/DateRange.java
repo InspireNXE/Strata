@@ -19,17 +19,35 @@ import java.time.LocalDate;
 import java.time.YearMonth;
 
 /**
- * The dates a calendar or a date picker holds: both ends included, either end open. The calendar, the date picker and
- * the date and time picker check and clamp their dates through it, so they agree on what the range allows.
+ * The dates a calendar or a date picker holds: both ends included, either end open, and never outside the dates the
+ * date controls support, {@link #FIRST} to {@link #LAST}. The calendar, the date picker and the date and time picker
+ * check and clamp their dates through it, so they agree on what the range allows, and a date never reaches a year the
+ * field cannot show in four digits or a month whose grid would leave what {@link LocalDate} holds.
  *
- * @param min the earliest date, or null for no limit
- * @param max the latest date, or null for no limit
+ * @param min the earliest date, or null for no limit but {@link #FIRST}; an earlier one is moved to it
+ * @param max the latest date, or null for no limit but {@link #LAST}; a later one is moved to it
  */
 record DateRange(LocalDate min, LocalDate max) {
     /**
-     * The range with no limit at either end.
+     * The first date the date controls support: 1 January of year 1.
+     */
+    static final LocalDate FIRST = LocalDate.of(1, 1, 1);
+    /**
+     * The last date the date controls support: 31 December 9999.
+     */
+    static final LocalDate LAST = LocalDate.of(9999, 12, 31);
+    /**
+     * The range with no limit at either end but the supported dates.
      */
     static final DateRange ALL = new DateRange(null, null);
+
+    /**
+     * Moves the ends inside the supported dates.
+     */
+    DateRange {
+        min = min == null ? null : limit(min);
+        max = max == null ? null : limit(max);
+    }
 
     /**
      * Makes a range, refusing one that ends before it starts.
@@ -43,11 +61,32 @@ record DateRange(LocalDate min, LocalDate max) {
         return new DateRange(min, max);
     }
 
+    private static LocalDate limit(final LocalDate day) {
+        if (day.isBefore(FIRST)) {
+            return FIRST;
+        }
+        return day.isAfter(LAST) ? LAST : day;
+    }
+
+    /**
+     * Returns the earliest date the range allows.
+     */
+    LocalDate first() {
+        return this.min == null ? FIRST : this.min;
+    }
+
+    /**
+     * Returns the latest date the range allows.
+     */
+    LocalDate last() {
+        return this.max == null ? LAST : this.max;
+    }
+
     /**
      * Returns whether a date lies inside the range.
      */
     boolean contains(final LocalDate day) {
-        return (this.min == null || !day.isBefore(this.min)) && (this.max == null || !day.isAfter(this.max));
+        return !day.isBefore(this.first()) && !day.isAfter(this.last());
     }
 
     /**
@@ -60,34 +99,40 @@ record DateRange(LocalDate min, LocalDate max) {
         if (day == null) {
             return null;
         }
-        if (this.min != null && day.isBefore(this.min)) {
-            return this.min;
+        if (day.isBefore(this.first())) {
+            return this.first();
         }
-        return this.max != null && day.isAfter(this.max) ? this.max : day;
+        return day.isAfter(this.last()) ? this.last() : day;
     }
 
     /**
      * Returns whether any day of a month lies inside the range.
      */
     boolean contains(final YearMonth month) {
-        return (this.min == null || !month.isBefore(YearMonth.from(this.min)))
-                && (this.max == null || !month.isAfter(YearMonth.from(this.max)));
+        return !month.isBefore(YearMonth.from(this.first())) && !month.isAfter(YearMonth.from(this.last()));
     }
 
     /**
      * Returns a month moved to the nearer end's month if no day of it lies inside the range.
      */
     YearMonth clamp(final YearMonth month) {
-        if (this.min != null && month.isBefore(YearMonth.from(this.min))) {
-            return YearMonth.from(this.min);
+        if (month.isBefore(YearMonth.from(this.first()))) {
+            return YearMonth.from(this.first());
         }
-        return this.max != null && month.isAfter(YearMonth.from(this.max)) ? YearMonth.from(this.max) : month;
+        return month.isAfter(YearMonth.from(this.last())) ? YearMonth.from(this.last()) : month;
     }
 
     /**
      * Returns whether any day of a year lies inside the range.
      */
     boolean containsYear(final int year) {
-        return (this.min == null || year >= this.min.getYear()) && (this.max == null || year <= this.max.getYear());
+        return year >= this.first().getYear() && year <= this.last().getYear();
+    }
+
+    /**
+     * Returns whether any day of the ten years from {@code start} lies inside the range.
+     */
+    boolean containsDecade(final int start) {
+        return start + 9 >= this.first().getYear() && start <= this.last().getYear();
     }
 }
