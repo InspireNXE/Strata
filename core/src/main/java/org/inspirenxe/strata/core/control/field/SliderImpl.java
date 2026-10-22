@@ -264,7 +264,12 @@ public final class SliderImpl extends BuiltInComponent<Slider> implements Slider
     private void change(final double requested) {
         final double normalized = this.normalize(requested);
         if (normalized != this.value) {
-            this.request(CHANGE, normalized, this::setValue);
+            this.request(CHANGE, normalized, value -> {
+                // A handler that rewrote the value to null or NaN leaves it as it is
+                if (value != null && !value.isNaN()) {
+                    this.setValue(value);
+                }
+            });
         }
     }
 

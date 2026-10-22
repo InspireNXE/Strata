@@ -216,7 +216,12 @@ public final class MessageBoxImpl extends BuiltInComposite<MessageBox> implement
      */
     private void answer(final Result result) {
         if (!this.done) {
-            this.request(ANSWER, result, this::finish);
+            this.request(ANSWER, result, answer -> {
+                // A handler that rewrote the answer to null leaves the box open, as canceling does
+                if (answer != null) {
+                    this.finish(answer);
+                }
+            });
         }
     }
 
@@ -231,8 +236,10 @@ public final class MessageBoxImpl extends BuiltInComposite<MessageBox> implement
             return;
         }
         this.request(ANSWER, this.buttonSet.dismissResult(), result -> {
-            this.finish(result);
-            this.window.close();
+            if (result != null) {
+                this.finish(result);
+                this.window.close();
+            }
         });
     }
 

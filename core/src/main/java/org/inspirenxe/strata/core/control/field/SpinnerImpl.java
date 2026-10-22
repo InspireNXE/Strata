@@ -205,7 +205,12 @@ public final class SpinnerImpl extends BuiltInComposite<Spinner> implements Spin
     private void change(final double requested) {
         final double fitted = this.fit(requested);
         if (fitted != this.value) {
-            this.request(CHANGE, fitted, this::setValue);
+            this.request(CHANGE, fitted, value -> {
+                // A handler that rewrote the value to null or NaN leaves it as it is
+                if (value != null && !value.isNaN()) {
+                    this.setValue(value);
+                }
+            });
         }
         this.show();
     }

@@ -239,7 +239,12 @@ public final class ScrollBarImpl extends BuiltInComponent<ScrollBar> implements 
             return false;
         }
         final double before = this.value;
-        this.request(CHANGE, clamped, this::setValue);
+        this.request(CHANGE, clamped, value -> {
+            // A handler that rewrote the value to null or NaN leaves it as it is
+            if (value != null && !value.isNaN()) {
+                this.setValue(value);
+            }
+        });
         return this.value != before;
     }
 

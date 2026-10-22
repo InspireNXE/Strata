@@ -114,8 +114,8 @@ public interface MessageBox extends Component<MessageBox>, HasCursor<MessageBox>
      * inside the box, or when nothing has focus and the box is the content of the top dialog. The value is the
      * answer. Unless a handler cancels the request, the box reports {@link #ANSWERED} and closes the overlay showing
      * it; cancel it to keep the box open. A handler may rewrite the answer to any result, even one the box has no
-     * button for, and the box reports it as it is. Once the box has answered, it fires no more requests. Fires only
-     * for the user's actions.
+     * button for, and the box reports it as it is; an answer rewritten to null keeps the box open, as canceling
+     * does. Once the box has answered, it fires no more requests. Fires only for the user's actions.
      */
     EventType<ValueRequestEvent<MessageBox, Result>> ANSWER = EventType.valueRequest("message_box.answer");
     /**
