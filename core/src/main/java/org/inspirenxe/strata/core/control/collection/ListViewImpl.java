@@ -40,6 +40,7 @@ import org.inspirenxe.strata.api.theme.Theme;
 import org.inspirenxe.strata.core.control.Caption;
 import org.inspirenxe.strata.core.control.Rings;
 import org.inspirenxe.strata.core.layout.ScrollTrack;
+import org.inspirenxe.strata.core.layout.ThumbDrag;
 import org.inspirenxe.strata.core.node.BuiltInComposite;
 import org.inspirenxe.strata.core.node.ComponentFactoryImpl;
 import org.inspirenxe.strata.core.text.TextLine;
@@ -76,6 +77,7 @@ public final class ListViewImpl<T> extends BuiltInComposite<ListView<T>> impleme
 
     private final Map<Integer, Component<?>> rows;
     private final ScrollTrack bar;
+    private final ThumbDrag thumbDrag;
     private final Runnable drawRows;
     private List<T> items;
     private Function<? super T, ? extends Component<?>> cellFactory;
@@ -148,6 +150,7 @@ public final class ListViewImpl<T> extends BuiltInComposite<ListView<T>> impleme
         super(ui);
         this.rows = new HashMap<>();
         this.bar = new ScrollTrack(true);
+        this.thumbDrag = new ThumbDrag(this.bar, true);
         this.drawRows = this::drawRows;
         this.items = List.of();
         this.cellFactory = Objects.requireNonNull(cellFactory, "cellFactory");
@@ -940,7 +943,7 @@ public final class ListViewImpl<T> extends BuiltInComposite<ListView<T>> impleme
     @Override
     protected void paintOverChildren(final Painter painter, final Rect bounds) {
         if (this.barShown) {
-            this.bar.paint(painter, this.scrollY, this.maxScrollY, this.track, this.bar.isDragging() ? this.thumbHovered : this.thumb);
+            this.bar.paint(painter, this.scrollY, this.maxScrollY, this.track, this.thumbDrag.isDragging() ? this.thumbHovered : this.thumb);
         }
     }
 
@@ -956,13 +959,13 @@ public final class ListViewImpl<T> extends BuiltInComposite<ListView<T>> impleme
     @Override
     protected void onPointerPress(final PointerButtonEvent event) {
         this.pointerY = event.y();
-        this.bar.release();
+        this.thumbDrag.release();
         if (event.button() != MouseButton.LEFT) {
             return;
         }
         if (this.barShown) {
             final float page = Math.max(this.step(), this.viewport.height() - this.step());
-            final float next = this.bar.press(event.x(), event.y(), this.scrollY, this.maxScrollY, page);
+            final float next = this.thumbDrag.press(event.x(), event.y(), this.scrollY, this.maxScrollY, page);
             if (!Float.isNaN(next)) {
                 this.scrollTo(next);
                 event.consume();
@@ -1004,22 +1007,22 @@ public final class ListViewImpl<T> extends BuiltInComposite<ListView<T>> impleme
 
     @Override
     protected void onDrag(final DragEvent event) {
-        if (this.bar.isDragging()) {
-            this.scrollTo(this.bar.drag(event.x(), event.y(), this.maxScrollY));
+        if (this.thumbDrag.isDragging()) {
+            this.scrollTo(this.thumbDrag.drag(event.x(), event.y(), this.maxScrollY));
             event.consume();
         }
     }
 
     @Override
     protected void onDragEnd(final DragEvent event) {
-        this.bar.release();
+        this.thumbDrag.release();
     }
 
     @Override
     protected void onPointerRelease(final PointerButtonEvent event) {
         // A press on the thumb that never became a drag ends here, with no drag end
         if (event.button() == MouseButton.LEFT) {
-            this.bar.release();
+            this.thumbDrag.release();
         }
     }
 
