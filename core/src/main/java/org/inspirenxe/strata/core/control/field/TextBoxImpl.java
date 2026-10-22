@@ -33,6 +33,7 @@ import org.inspirenxe.strata.api.geometry.Rect;
 import org.inspirenxe.strata.api.geometry.Size;
 import org.inspirenxe.strata.api.input.Key;
 import org.inspirenxe.strata.api.input.KeyAction;
+import org.inspirenxe.strata.api.input.Modifier;
 import org.inspirenxe.strata.api.input.Modifiers;
 import org.inspirenxe.strata.api.input.MouseButton;
 import org.inspirenxe.strata.api.layout.Anchor;
@@ -49,6 +50,8 @@ import org.inspirenxe.strata.api.theme.Theme;
 import org.inspirenxe.strata.api.transfer.DataFormat;
 import org.inspirenxe.strata.api.transfer.DropEffect;
 import org.inspirenxe.strata.api.transfer.Transfer;
+import org.inspirenxe.strata.core.control.Rings;
+import org.inspirenxe.strata.core.control.collection.ComboBoxImpl;
 import org.inspirenxe.strata.core.control.collection.ListViewImpl;
 import org.inspirenxe.strata.core.control.button.ButtonImpl;
 import org.inspirenxe.strata.core.node.BuiltInComponent;
@@ -143,6 +146,8 @@ public final class TextBoxImpl extends BuiltInComponent<TextBox> implements Text
 
     // Suggestions
     private SuggestionProvider suggestionProvider;
+    private boolean dropDown;
+    private final Rings.Arrow arrow = new Rings.Arrow();
     private int maxVisibleSuggestions;
     private List<Suggestion> suggestions;
     private Overlay suggestionPopup;
@@ -368,7 +373,7 @@ public final class TextBoxImpl extends BuiltInComponent<TextBox> implements Text
     @Override
     public TextBox setTextPadding(final Insets padding) {
         this.setPadding = Objects.requireNonNull(padding, "padding");
-        this.textPadding = padding;
+        this.updatePadding();
         this.invalidateLayout();
         return this;
     }
@@ -376,9 +381,49 @@ public final class TextBoxImpl extends BuiltInComponent<TextBox> implements Text
     @Override
     public TextBox clearTextPadding() {
         this.setPadding = null;
-        this.textPadding = this.themePadding;
+        this.updatePadding();
         this.invalidateLayout();
         return this;
+    }
+
+    /**
+     * Works out the padding in use: the one set, else the theme's, with room for the arrow at the right while the
+     * box is a drop-down.
+     */
+    private void updatePadding() {
+        final Insets base = this.basePadding();
+        this.textPadding = this.dropDown
+                ? new Insets(base.left(), base.top(), base.right() + ComboBoxImpl.ARROW_GAP + ComboBoxImpl.ARROW_WIDTH,
+                base.bottom())
+                : base;
+    }
+
+    private Insets basePadding() {
+        return this.setPadding != null ? this.setPadding : this.themePadding;
+    }
+
+    @Override
+    public boolean isDropDown() {
+        return this.dropDown;
+    }
+
+    @Override
+    public TextBox setDropDown(final boolean dropDown) {
+        this.dropDown = dropDown;
+        this.updatePadding();
+        this.invalidateLayout();
+        return this;
+    }
+
+    /**
+     * Shows every suggestion for a drop-down box, or closes the list when it is open.
+     */
+    private void toggleEverySuggestion() {
+        if (this.suggestionPopup != null) {
+            this.hideSuggestions();
+        } else if (this.suggestionProvider != null) {
+            this.showFound(this.suggestionProvider.every(this.buffer.toString()));
+        }
     }
 
     @Override
@@ -505,10 +550,20 @@ public final class TextBoxImpl extends BuiltInComponent<TextBox> implements Text
 
     @Override
     public TextBox showSuggestions() {
-        if (this.suggestionProvider == null || this.readOnly || !this.isEnabled() || !this.isAttached()) {
+        if (this.suggestionProvider == null) {
             return this;
         }
-        final List<Suggestion> found = List.copyOf(this.suggestionProvider.suggest(this.buffer.toString(), this.caret()));
+        return this.showFound(this.suggestionProvider.suggest(this.buffer.toString(), this.caret()));
+    }
+
+    /**
+     * Shows a list of suggestions, or closes the list for none.
+     */
+    private TextBox showFound(final List<Suggestion> suggested) {
+        if (this.readOnly || !this.isEnabled() || !this.isAttached()) {
+            return this;
+        }
+        final List<Suggestion> found = List.copyOf(suggested);
         if (found.isEmpty()) {
             return this.hideSuggestions();
         }
@@ -718,9 +773,7 @@ public final class TextBoxImpl extends BuiltInComponent<TextBox> implements Text
     protected void onApplyTheme(final Theme theme) {
         this.validity.applyTheme(theme, STYLE_INVALID);
         this.themePadding = theme.insetsOr(STYLE_PADDING, DEFAULT_PADDING);
-        if (this.setPadding == null) {
-            this.textPadding = this.themePadding;
-        }
+        this.updatePadding();
         this.normal = theme.paintOr(STYLE_NORMAL, Paint.NONE);
         this.focusedPaint = theme.paintOr(STYLE_FOCUSED, this.normal);
         this.disabledPaint = theme.paintOr(STYLE_DISABLED, this.normal);
@@ -782,6 +835,11 @@ public final class TextBoxImpl extends BuiltInComponent<TextBox> implements Text
         final float textY = contentBox.y() + (contentBox.height() - this.lineHeight) * 0.5f;
         this.editor.paint(painter, contentBox, textY, this.lineHeight, this.look, this.style(),
                 this.isFocused() && this.isEnabled() && !this.readOnly);
+        if (this.dropDown) {
+            this.arrow.down(painter, this.style().color(),
+                    bounds.right() - this.basePadding().right() - ComboBoxImpl.ARROW_WIDTH,
+                    contentBox.y() + (contentBox.height() - Rings.ARROW_SHORT) * 0.5f);
+        }
     }
 
     private TextStyle style() {
@@ -805,6 +863,11 @@ public final class TextBoxImpl extends BuiltInComponent<TextBox> implements Text
     @Override
     protected void onPointerPress(final PointerButtonEvent event) {
         if (event.button() != MouseButton.LEFT || !this.isEnabled()) {
+            return;
+        }
+        if (this.dropDown && event.localX() >= this.bounds().width() - this.textPadding.right()) {
+            this.toggleEverySuggestion();
+            event.consume();
             return;
         }
         this.editor.press(event, event.localX() - this.textPadding.left());
@@ -960,6 +1023,13 @@ public final class TextBoxImpl extends BuiltInComponent<TextBox> implements Text
         }
         final Key key = event.key();
         final Modifiers modifiers = event.modifiers();
+        if (this.dropDown && key == Key.DOWN && modifiers.equals(Modifiers.of(Modifier.ALT))) {
+            if (event.action() == KeyAction.PRESS) {
+                this.toggleEverySuggestion();
+            }
+            event.consume();
+            return;
+        }
         if (key == Key.SPACE && modifiers.control() && !modifiers.alt() && this.suggestionProvider != null) {
             if (event.action() == KeyAction.PRESS) {
                 this.showSuggestions();

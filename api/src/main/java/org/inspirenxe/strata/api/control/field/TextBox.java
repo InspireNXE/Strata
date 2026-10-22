@@ -88,6 +88,12 @@ import java.util.Objects;
  * list. The change is an edit by the user, so it goes through {@link #EDIT} like typing, and the list does not open
  * again until the next edit. A read-only or disabled box shows no suggestions.</p>
  *
+ * <h2>Drop-down</h2>
+ * <p>A box made a {@linkplain #setDropDown drop-down} is an editable combo box: it draws the combo box's arrow at its
+ * right, inside its padding and 4 units after the text, which ends that much sooner. A left press on the arrow, or
+ * Alt+Down, shows {@linkplain SuggestionProvider#every every suggestion} the provider offers for the text in the same
+ * list, each replacing the whole text, or closes the list when it is open. The arrow is drawn in the text's color.</p>
+ *
  * <pre>{@code
  * TextBox name = factory.textBox()
  *         .setSuggestionProvider(TextBox.SuggestionProvider.words(List.of("Ana", "Ben", "Cleo", "Dev")))
@@ -496,6 +502,22 @@ public interface TextBox extends Component<TextBox>, Focusable<TextBox>, HasCurs
     TextBox setSuggestionProvider(SuggestionProvider provider);
 
     /**
+     * Returns whether the box draws a drop-down arrow that shows every suggestion.
+     *
+     * @return true after {@code setDropDown(true)}; false for a new box
+     */
+    boolean isDropDown();
+
+    /**
+     * Makes the box an editable combo box, with an arrow at its right that shows every suggestion, or a plain box
+     * again. A new layout runs.
+     *
+     * @param dropDown true for the arrow
+     * @return this box
+     */
+    TextBox setDropDown(boolean dropDown);
+
+    /**
      * Returns how many suggestions show before the list scrolls.
      *
      * @return the maximum; {@value #DEFAULT_MAX_VISIBLE_SUGGESTIONS} by default
@@ -585,17 +607,35 @@ public interface TextBox extends Component<TextBox>, Focusable<TextBox>, HasCurs
         List<Suggestion> suggest(String text, int caret);
 
         /**
+         * Returns every suggestion a {@linkplain TextBox#setDropDown drop-down} box shows when its arrow opens the
+         * list, each replacing the whole text. Called on the UI thread. The default asks {@link #suggest} with empty
+         * text and the caret at 0 and stretches each suggestion's range over the whole text; override it when that
+         * offers nothing, as a provider that completes a typed prefix would.
+         *
+         * @param text the box's whole text
+         * @return the suggestions, or an empty list for none; never null
+         */
+        default List<Suggestion> every(final String text) {
+            final List<Suggestion> found = new ArrayList<>();
+            for (final Suggestion suggestion : this.suggest("", 0)) {
+                found.add(new Suggestion(suggestion.text(), 0, text.length()));
+            }
+            return found;
+        }
+
+        /**
          * Returns a provider that completes the word at the caret from a list. The word is the run of characters
          * other than whitespace around the caret. Every entry that starts with the part of the word before the
          * caret, ignoring case, is suggested in the list's order, except an entry equal to the whole word. Each
-         * suggestion replaces the whole word. A caret with no word before it gets no suggestions.
+         * suggestion replaces the whole word. A caret with no word before it gets no suggestions. For a drop-down,
+         * {@link #every} offers every entry in the list's order, each replacing the whole text.
          *
          * @param words the words to offer; copied, so later changes to the collection are not seen
          * @return the provider
          */
         static SuggestionProvider words(final Collection<String> words) {
             final List<String> copy = List.copyOf(words);
-            return (text, caret) -> {
+            final SuggestionProvider completing = (text, caret) -> {
                 int start = caret;
                 while (start > 0 && !Character.isWhitespace(text.codePointBefore(start))) {
                     start -= Character.charCount(text.codePointBefore(start));
@@ -616,6 +656,21 @@ public interface TextBox extends Component<TextBox>, Focusable<TextBox>, HasCurs
                     }
                 }
                 return found;
+            };
+            return new SuggestionProvider() {
+                @Override
+                public List<Suggestion> suggest(final String text, final int caret) {
+                    return completing.suggest(text, caret);
+                }
+
+                @Override
+                public List<Suggestion> every(final String text) {
+                    final List<Suggestion> found = new ArrayList<>();
+                    for (final String candidate : copy) {
+                        found.add(new Suggestion(candidate, 0, text.length()));
+                    }
+                    return found;
+                }
             };
         }
     }
