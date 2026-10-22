@@ -60,9 +60,7 @@ public final class DateTimePickerImpl extends PickerBase<DateTimePicker, LocalDa
     private LocalDateTime max;
     private Predicate<? super LocalDate> filter;
     private DayOfWeek firstDay;
-    private ClockFormat clockFormat;
-    private boolean seconds;
-    private int minuteStep;
+    private final TimeSettings settings;
     private LocalTime defaultTime;
     private CalendarViewImpl calendar;
     private TimeColumns columns;
@@ -77,7 +75,7 @@ public final class DateTimePickerImpl extends PickerBase<DateTimePicker, LocalDa
     public DateTimePickerImpl(final ComponentFactoryImpl ui) {
         super(ui, Text.translatable("strata.datetime.placeholder"));
         this.filter = day -> true;
-        this.minuteStep = 1;
+        this.settings = new TimeSettings();
         this.defaultTime = LocalTime.MIDNIGHT;
         this.rowStyle = TextStyle.DEFAULT;
     }
@@ -147,7 +145,14 @@ public final class DateTimePickerImpl extends PickerBase<DateTimePicker, LocalDa
     }
 
     private ChronoUnit unit() {
-        return this.seconds ? ChronoUnit.SECONDS : ChronoUnit.MINUTES;
+        return this.settings.unit();
+    }
+
+    /**
+     * The dates of the range.
+     */
+    private DateRange dates() {
+        return new DateRange(this.min == null ? null : this.min.toLocalDate(), this.max == null ? null : this.max.toLocalDate());
     }
 
     /**
@@ -169,12 +174,7 @@ public final class DateTimePickerImpl extends PickerBase<DateTimePicker, LocalDa
     }
 
     private LocalDate clampDate(final LocalDate day) {
-        final LocalDate first = this.min == null ? null : this.min.toLocalDate();
-        final LocalDate last = this.max == null ? null : this.max.toLocalDate();
-        if (first != null && day.isBefore(first)) {
-            return first;
-        }
-        return last != null && day.isAfter(last) ? last : day;
+        return this.dates().clamp(day);
     }
 
     private boolean isAllowed(final LocalDateTime value) {
@@ -263,25 +263,24 @@ public final class DateTimePickerImpl extends PickerBase<DateTimePicker, LocalDa
 
     @Override
     public Optional<ClockFormat> clockFormat() {
-        return Optional.ofNullable(this.clockFormat);
+        return this.settings.clockFormat();
     }
 
     @Override
     public DateTimePicker setClockFormat(final ClockFormat format) {
-        this.clockFormat = format;
+        this.settings.setClockFormat(format);
         this.relayoutField();
         return this;
     }
 
     @Override
     public boolean isSecondsShown() {
-        return this.seconds;
+        return this.settings.seconds();
     }
 
     @Override
     public DateTimePicker setSecondsShown(final boolean shown) {
-        if (shown != this.seconds) {
-            this.seconds = shown;
+        if (this.settings.setSeconds(shown)) {
             this.relayoutField();
             this.setDateTime(this.value);
         }
@@ -290,21 +289,18 @@ public final class DateTimePickerImpl extends PickerBase<DateTimePicker, LocalDa
 
     @Override
     public int minuteStep() {
-        return this.minuteStep;
+        return this.settings.minuteStep();
     }
 
     @Override
     public DateTimePicker setMinuteStep(final int minutes) {
-        if (minutes < 1 || minutes > 60 || 60 % minutes != 0) {
-            throw new IllegalArgumentException("The minute step must divide 60: " + minutes);
-        }
-        this.minuteStep = minutes;
+        this.settings.setMinuteStep(minutes);
         this.field.setMinuteStep(minutes);
         return this;
     }
 
     private boolean twelveHour(final DateFormats formats) {
-        return this.clockFormat == null ? formats.isTwelveHour() : this.clockFormat == ClockFormat.H12;
+        return this.settings.twelveHour(formats);
     }
 
     // ------------------------------------------------------------------
@@ -371,7 +367,7 @@ public final class DateTimePickerImpl extends PickerBase<DateTimePicker, LocalDa
 
     @Override
     void layoutField(final DateFormats formats) {
-        this.field.layout(formats, true, true, this.twelveHour(formats), this.seconds);
+        this.field.layout(formats, true, true, this.twelveHour(formats), this.settings.seconds());
     }
 
     @Override
@@ -406,20 +402,21 @@ public final class DateTimePickerImpl extends PickerBase<DateTimePicker, LocalDa
         }
         final DateFormats formats = this.field.formats() != null ? this.field.formats() : DateFormats.current();
         final CalendarViewImpl view = this.calendar;
-        view.setDateRange(this.min == null ? null : this.min.toLocalDate(),
-                this.max == null ? null : this.max.toLocalDate());
+        view.setDateRange(this.dates().min(), this.dates().max());
         view.setDateFilter(this.filter);
         view.setFirstDayOfWeek(this.firstDay);
         view.setDate(this.value == null ? null : this.value.toLocalDate());
         view.setZoom(CalendarView.Zoom.MONTH);
         view.setShownMonth(YearMonth.from(this.value != null ? this.value.toLocalDate() : this.today()));
-        this.columns.build(this.twelveHour(formats), this.seconds, this.minuteStep, formats, this.rowStyle,
+        this.columns.build(this.twelveHour(formats), this.settings.seconds(), this.settings.minuteStep(), formats,
+                this.rowStyle,
                 this.environment().text().lineHeight(this.rowStyle));
         this.columns.show(this.value == null ? null : this.value.toLocalTime(), this.twelveHour(formats));
         return this.popupRow;
     }
 
-    private void syncPopup() {
+    @Override
+    void syncPopup() {
         if (this.popupRow == null || !this.isOpen() || this.field.formats() == null) {
             return;
         }
@@ -440,27 +437,13 @@ public final class DateTimePickerImpl extends PickerBase<DateTimePicker, LocalDa
     }
 
     /**
-     * Sets one part of the time from a row the user pressed, filling an empty value first, and takes focus back.
+     * The draft's date and time without the range or the filter, which the requests and {@link #setDateTime} apply.
      */
-    private void pickPart(final SegmentedField.Kind kind, final int number) {
-        this.loadField();
-        if (this.value == null) {
-            this.fillForPopup();
-        }
-        this.field.setPart(kind, number);
-        final int index = this.field.indexOf(kind);
+    @Override
+    LocalDateTime pickedValue() {
         final LocalDate day = this.field.date(this.today());
         final LocalTime time = this.field.time();
-        if (day != null && time != null) {
-            this.userPick(day.atTime(time));
-        }
-        this.loadField();
-        if (!this.isFocused()) {
-            this.requestFocus();
-        }
-        if (index >= 0) {
-            this.field.setFocus(index);
-        }
+        return day == null || time == null ? null : day.atTime(time);
     }
 
     @Override

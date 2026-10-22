@@ -220,6 +220,23 @@ abstract class PickerBase<T extends Component<T>, V> extends BuiltInComponent<T>
     }
 
     /**
+     * Returns the value the draft makes for a part picked in the popup's time columns, before the range applies:
+     * the draft's value without the checks {@link #draftValue()} makes. The default is the draft's value.
+     *
+     * @return the value, or null while a part is missing
+     */
+    V pickedValue() {
+        return this.draftValue();
+    }
+
+    /**
+     * Shows the value in the open popup again, after a pick from it that the requests may have changed or refused.
+     * The default does nothing.
+     */
+    void syncPopup() {
+    }
+
+    /**
      * Returns the key of the button's icon.
      *
      * @return the style key
@@ -371,6 +388,35 @@ abstract class PickerBase<T extends Component<T>, V> extends BuiltInComponent<T>
     final void valueChanged() {
         if (this.field.formats() != null) {
             this.loadField();
+        }
+    }
+
+    /**
+     * Sets one part from a row the user pressed in the popup's time columns, starting an empty value where the popup
+     * would, asks to pick the value that makes, then shows the value in the field and the popup again, whatever the
+     * requests did, and takes focus back to the part.
+     *
+     * @param kind the part
+     * @param number the row's number
+     */
+    final void pickPart(final SegmentedField.Kind kind, final int number) {
+        this.loadField();
+        if (this.value() == null) {
+            this.fillForPopup();
+        }
+        this.field.setPart(kind, number);
+        final int index = this.field.indexOf(kind);
+        final V picked = this.pickedValue();
+        if (picked != null) {
+            this.userPick(picked);
+        }
+        this.loadField();
+        this.syncPopup();
+        if (!this.isFocused()) {
+            this.requestFocus();
+        }
+        if (index >= 0) {
+            this.field.setFocus(index);
         }
     }
 

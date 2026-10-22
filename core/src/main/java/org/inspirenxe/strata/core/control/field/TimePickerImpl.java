@@ -27,7 +27,6 @@ import org.inspirenxe.strata.core.node.ComponentFactoryImpl;
 import org.inspirenxe.strata.core.text.DateFormats;
 
 import java.time.LocalTime;
-import java.time.temporal.ChronoUnit;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
@@ -44,10 +43,8 @@ import java.util.Set;
 public final class TimePickerImpl extends PickerBase<TimePicker, LocalTime> implements TimePicker {
     private static final Set<String> EXTRA = Set.of(ListView.STYLE_ROW_SELECTED, ScrollPanel.STYLE_THUMB);
 
+    private final TimeSettings settings;
     private LocalTime time;
-    private ClockFormat clockFormat;
-    private boolean seconds;
-    private int minuteStep;
     private TimeColumns columns;
     private TextStyle rowStyle;
 
@@ -58,7 +55,7 @@ public final class TimePickerImpl extends PickerBase<TimePicker, LocalTime> impl
      */
     public TimePickerImpl(final ComponentFactoryImpl ui) {
         super(ui, Text.translatable("strata.time.placeholder"));
-        this.minuteStep = 1;
+        this.settings = new TimeSettings();
         this.rowStyle = TextStyle.DEFAULT;
     }
 
@@ -73,7 +70,7 @@ public final class TimePickerImpl extends PickerBase<TimePicker, LocalTime> impl
 
     @Override
     public TimePicker setTime(final LocalTime time) {
-        final LocalTime next = time == null ? null : time.truncatedTo(this.seconds ? ChronoUnit.SECONDS : ChronoUnit.MINUTES);
+        final LocalTime next = time == null ? null : time.truncatedTo(this.settings.unit());
         final LocalTime previous = this.time;
         if (!Objects.equals(next, previous)) {
             this.time = next;
@@ -91,25 +88,24 @@ public final class TimePickerImpl extends PickerBase<TimePicker, LocalTime> impl
 
     @Override
     public Optional<ClockFormat> clockFormat() {
-        return Optional.ofNullable(this.clockFormat);
+        return this.settings.clockFormat();
     }
 
     @Override
     public TimePicker setClockFormat(final ClockFormat format) {
-        this.clockFormat = format;
+        this.settings.setClockFormat(format);
         this.relayoutField();
         return this;
     }
 
     @Override
     public boolean isSecondsShown() {
-        return this.seconds;
+        return this.settings.seconds();
     }
 
     @Override
     public TimePicker setSecondsShown(final boolean shown) {
-        if (shown != this.seconds) {
-            this.seconds = shown;
+        if (this.settings.setSeconds(shown)) {
             this.relayoutField();
             this.setTime(this.time);
         }
@@ -118,21 +114,18 @@ public final class TimePickerImpl extends PickerBase<TimePicker, LocalTime> impl
 
     @Override
     public int minuteStep() {
-        return this.minuteStep;
+        return this.settings.minuteStep();
     }
 
     @Override
     public TimePicker setMinuteStep(final int minutes) {
-        if (minutes < 1 || minutes > 60 || 60 % minutes != 0) {
-            throw new IllegalArgumentException("The minute step must divide 60: " + minutes);
-        }
-        this.minuteStep = minutes;
+        this.settings.setMinuteStep(minutes);
         this.field.setMinuteStep(minutes);
         return this;
     }
 
     private boolean twelveHour(final DateFormats formats) {
-        return this.clockFormat == null ? formats.isTwelveHour() : this.clockFormat == ClockFormat.H12;
+        return this.settings.twelveHour(formats);
     }
 
     // ------------------------------------------------------------------
@@ -158,7 +151,7 @@ public final class TimePickerImpl extends PickerBase<TimePicker, LocalTime> impl
 
     @Override
     void layoutField(final DateFormats formats) {
-        this.field.layout(formats, false, true, this.twelveHour(formats), this.seconds);
+        this.field.layout(formats, false, true, this.twelveHour(formats), this.settings.seconds());
     }
 
     @Override
@@ -183,7 +176,8 @@ public final class TimePickerImpl extends PickerBase<TimePicker, LocalTime> impl
             this.columns = new TimeColumns(this.ui, this::pickPart);
         }
         final DateFormats formats = this.field.formats() != null ? this.field.formats() : DateFormats.current();
-        this.columns.build(this.twelveHour(formats), this.seconds, this.minuteStep, formats, this.rowStyle,
+        this.columns.build(this.twelveHour(formats), this.settings.seconds(), this.settings.minuteStep(), formats,
+                this.rowStyle,
                 this.environment().text().lineHeight(this.rowStyle));
         this.columns.show(this.time, this.twelveHour(formats));
         return this.columns.panel();
@@ -195,28 +189,9 @@ public final class TimePickerImpl extends PickerBase<TimePicker, LocalTime> impl
         }
     }
 
-    /**
-     * Sets one part of the time from a row the user pressed, starting an empty time at zero, and takes focus back.
-     */
-    private void pickPart(final SegmentedField.Kind kind, final int value) {
-        this.field.load(null, this.time);
-        if (this.time == null) {
-            this.fillForPopup();
-        }
-        this.field.setPart(kind, value);
-        final int index = this.field.indexOf(kind);
-        final LocalTime picked = this.field.time();
-        if (picked != null) {
-            this.userPick(picked);
-        }
-        this.loadField();
+    @Override
+    void syncPopup() {
         this.showColumns();
-        if (!this.isFocused()) {
-            this.requestFocus();
-        }
-        if (index >= 0) {
-            this.field.setFocus(index);
-        }
     }
 
     @Override

@@ -44,8 +44,7 @@ public final class DatePickerImpl extends PickerBase<DatePicker, LocalDate> impl
     private static final Set<String> EXTRA = Set.of(CalendarView.STYLE_DAY_SELECTED);
 
     private LocalDate date;
-    private LocalDate min;
-    private LocalDate max;
+    private DateRange range;
     private Predicate<? super LocalDate> filter;
     private DayOfWeek firstDay;
     private CalendarViewImpl calendar;
@@ -57,6 +56,7 @@ public final class DatePickerImpl extends PickerBase<DatePicker, LocalDate> impl
      */
     public DatePickerImpl(final ComponentFactoryImpl ui) {
         super(ui, Text.translatable("strata.date.placeholder"));
+        this.range = DateRange.ALL;
         this.filter = day -> true;
     }
 
@@ -71,7 +71,7 @@ public final class DatePickerImpl extends PickerBase<DatePicker, LocalDate> impl
 
     @Override
     public DatePicker setDate(final LocalDate date) {
-        final LocalDate next = this.clamp(date);
+        final LocalDate next = this.range.clamp(date);
         final LocalDate previous = this.date;
         if (!Objects.equals(next, previous)) {
             this.date = next;
@@ -91,21 +91,17 @@ public final class DatePickerImpl extends PickerBase<DatePicker, LocalDate> impl
 
     @Override
     public Optional<LocalDate> minDate() {
-        return Optional.ofNullable(this.min);
+        return Optional.ofNullable(this.range.min());
     }
 
     @Override
     public Optional<LocalDate> maxDate() {
-        return Optional.ofNullable(this.max);
+        return Optional.ofNullable(this.range.max());
     }
 
     @Override
     public DatePicker setDateRange(final LocalDate min, final LocalDate max) {
-        if (min != null && max != null && min.isAfter(max)) {
-            throw new IllegalArgumentException("The range must not end before it starts: " + min + " to " + max);
-        }
-        this.min = min;
-        this.max = max;
+        this.range = DateRange.of(min, max);
         return this.setDate(this.date);
     }
 
@@ -126,19 +122,8 @@ public final class DatePickerImpl extends PickerBase<DatePicker, LocalDate> impl
         return this;
     }
 
-    private LocalDate clamp(final LocalDate day) {
-        if (day == null) {
-            return null;
-        }
-        if (this.min != null && day.isBefore(this.min)) {
-            return this.min;
-        }
-        return this.max != null && day.isAfter(this.max) ? this.max : day;
-    }
-
     private boolean isAllowed(final LocalDate day) {
-        return (this.min == null || !day.isBefore(this.min)) && (this.max == null || !day.isAfter(this.max))
-                && this.filter.test(day);
+        return this.range.contains(day) && this.filter.test(day);
     }
 
     // ------------------------------------------------------------------
@@ -175,7 +160,7 @@ public final class DatePickerImpl extends PickerBase<DatePicker, LocalDate> impl
 
     @Override
     void fillForPopup() {
-        this.field.fill(this.clamp(this.today()), null);
+        this.field.fill(this.range.clamp(this.today()), null);
     }
 
     @Override
@@ -185,7 +170,7 @@ public final class DatePickerImpl extends PickerBase<DatePicker, LocalDate> impl
             this.calendar.route(this::pickFromCalendar);
         }
         final CalendarViewImpl view = this.calendar;
-        view.setDateRange(this.min, this.max);
+        view.setDateRange(this.range.min(), this.range.max());
         view.setDateFilter(this.filter);
         view.setFirstDayOfWeek(this.firstDay);
         view.setDate(this.date);
