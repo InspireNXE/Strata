@@ -154,8 +154,10 @@ public interface Expander extends Component<Expander>, Focusable<Expander>, HasC
     /**
      * Flips the expander as if its header had been clicked, firing {@link #EXPANDED} but not {@link #EXPAND}. Does
      * nothing while disabled.
+     *
+     * @return this expander
      */
-    void toggle();
+    Expander toggle();
 
     /**
      * An expander's own state in a {@link org.inspirenxe.strata.api.component.ComponentSnapshot}.

@@ -393,12 +393,30 @@ public interface NavigationView extends Component<NavigationView>, Focusable<Nav
     NavigationView addFooterItem(NavigationEntry entry);
 
     /**
+     * Adds an entry at a place in the footer.
+     *
+     * @param index where it goes: 0 for the first, the number of footer entries for the last
+     * @param entry the entry
+     * @return this view
+     * @throws IndexOutOfBoundsException if the index is negative or greater than the number of footer entries
+     * @throws IllegalArgumentException if the entry belongs to a view or an item already, or was not made by Strata
+     */
+    NavigationView addFooterItem(int index, NavigationEntry entry);
+
+    /**
      * Removes an entry from the footer, as {@link #removeItem} does. Does nothing if the footer does not hold it.
      *
      * @param entry the entry
      * @return this view
      */
     NavigationView removeFooterItem(NavigationEntry entry);
+
+    /**
+     * Removes every entry from the footer, as {@link #removeFooterItem} does. The entries above the footer stay.
+     *
+     * @return this view
+     */
+    NavigationView clearFooterItems();
 
     /**
      * Returns every item of the view in the order selection indexes count them: the items above the footer depth

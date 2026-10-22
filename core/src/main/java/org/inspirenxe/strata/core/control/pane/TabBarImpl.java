@@ -88,6 +88,11 @@ public final class TabBarImpl extends BuiltInComposite<TabBar> implements TabBar
     }
 
     @Override
+    public Tab tab(final int index) {
+        return this.views.get(Objects.checkIndex(index, this.views.size())).tab;
+    }
+
+    @Override
     public TabBar addTab(final Tab tab) {
         return this.addTab(this.views.size(), tab);
     }
@@ -127,6 +132,29 @@ public final class TabBarImpl extends BuiltInComposite<TabBar> implements TabBar
         } else if (previous > index) {
             this.selectedIndex--;
             this.report(SELECTED, this.selectedIndex, previous);
+        }
+        return this;
+    }
+
+    @Override
+    public TabBar removeTab(final int index) {
+        return this.removeTab(this.tab(index));
+    }
+
+    @Override
+    public TabBar clearTabs() {
+        if (this.views.isEmpty()) {
+            return this;
+        }
+        for (final TabView view : this.views) {
+            this.removeChild(view);
+            view.tab.setBar(null);
+        }
+        this.views.clear();
+        final int previous = this.selectedIndex;
+        this.selectedIndex = -1;
+        if (previous != -1) {
+            this.report(SELECTED, -1, previous);
         }
         return this;
     }
@@ -210,6 +238,9 @@ public final class TabBarImpl extends BuiltInComposite<TabBar> implements TabBar
 
     @Override
     public TabBar setSpacing(final float spacing) {
+        if (!(spacing >= 0f) || Float.isInfinite(spacing)) {
+            throw new IllegalArgumentException("Spacing must be finite and not negative: " + spacing);
+        }
         this.spacing = spacing;
         this.invalidateLayout();
         return this;

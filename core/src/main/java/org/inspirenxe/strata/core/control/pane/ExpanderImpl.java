@@ -156,10 +156,11 @@ public final class ExpanderImpl extends BuiltInComposite<Expander> implements Ex
     }
 
     @Override
-    public void toggle() {
+    public Expander toggle() {
         if (this.isEnabled()) {
             this.setExpanded(!this.expanded);
         }
+        return this;
     }
 
     /**

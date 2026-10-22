@@ -457,6 +457,30 @@ class ButtonPaneEventsTest {
         }
 
         @Test
+        void tabsCanBeReachedAndRemovedByIndexAndClearedTogether() {
+            this.show();
+            assertEquals("Sell", this.tabs.tab(1).text().plain());
+            assertThrows(IndexOutOfBoundsException.class, () -> this.tabs.tab(3));
+            this.tabs.select(2);
+            this.tabs.removeTab(0);
+            assertEquals(List.of("Sell", "Trade"), this.tabs.tabs().stream().map(tab -> tab.text().plain()).toList());
+            assertThrows(IndexOutOfBoundsException.class, () -> this.tabs.removeTab(2));
+            this.tabs.clearTabs();
+            assertEquals(List.of(), this.tabs.tabs());
+            assertEquals(-1, this.tabs.selectedIndex());
+            assertEquals(List.of("0->2", "2->1", "1->-1"), this.heard);
+        }
+
+        @Test
+        void spacingMustBeANumberThatIsNotNegative() {
+            this.show();
+            assertThrows(IllegalArgumentException.class, () -> this.tabs.setSpacing(Float.NaN));
+            assertThrows(IllegalArgumentException.class, () -> this.tabs.setSpacing(-1f));
+            assertThrows(IllegalArgumentException.class, () -> this.tabs.setSpacing(Float.POSITIVE_INFINITY));
+            assertEquals(0f, this.tabs.spacing());
+        }
+
+        @Test
         void clicksAndKeysSelect() {
             this.show();
             ButtonPaneEventsTest.this.test.click(150, 5);

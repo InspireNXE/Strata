@@ -283,9 +283,15 @@ public final class NavigationViewImpl extends BuiltInComposite<NavigationView> i
 
     @Override
     public NavigationView addFooterItem(final NavigationEntry entry) {
+        return this.addFooterItem(this.footerEntries.size(), entry);
+    }
+
+    @Override
+    public NavigationView addFooterItem(final int index, final NavigationEntry entry) {
         final NavigationEntryImpl impl = NavigationViewImpl.entry(entry);
+        Objects.checkIndex(index, this.footerEntries.size() + 1);
         impl.setOwner(this);
-        this.footerEntries.add(impl);
+        this.footerEntries.add(index, impl);
         this.structureChanged();
         return this;
     }
@@ -295,6 +301,14 @@ public final class NavigationViewImpl extends BuiltInComposite<NavigationView> i
         if (entry instanceof final NavigationEntryImpl impl && this.footerEntries.remove(impl)) {
             impl.setOwner(null);
             this.entryRemoved(impl);
+        }
+        return this;
+    }
+
+    @Override
+    public NavigationView clearFooterItems() {
+        for (final NavigationEntryImpl entry : List.copyOf(this.footerEntries)) {
+            this.removeFooterItem(entry.asEntry());
         }
         return this;
     }
@@ -574,8 +588,9 @@ public final class NavigationViewImpl extends BuiltInComposite<NavigationView> i
         if (item == this.selected) {
             return;
         }
+        // The page is built first, so a page factory that throws leaves the selection as it was
+        this.showPage(item);
         this.selected = item;
-        this.showPage();
         final int index = this.selectedIndex();
         final int previous = this.reportedIndex;
         this.reportedIndex = index;
@@ -586,14 +601,22 @@ public final class NavigationViewImpl extends BuiltInComposite<NavigationView> i
      * Shows the selected item's page, building it the first time, or else the content.
      */
     private void showPage() {
+        this.showPage(this.selected);
+    }
+
+    /**
+     * Shows an item's page, building it the first time, or else the content. A page factory that throws, or returns
+     * a component already in a tree, changes nothing and is asked again next time.
+     */
+    private void showPage(final NavigationItemImpl item) {
         Component<?> next = this.content;
-        if (this.selected != null && this.selected.page() != null) {
-            if (this.selected.keptPage() == null) {
-                final Component<?> page = Objects.requireNonNull(this.selected.page().apply(this.ui), "page");
+        if (item != null && item.page() != null) {
+            if (item.keptPage() == null) {
+                final Component<?> page = Objects.requireNonNull(item.page().apply(this.ui), "page");
                 this.checkFree(page);
-                this.selected.setKeptPage(page);
+                item.setKeptPage(page);
             }
-            next = this.selected.keptPage();
+            next = item.keptPage();
         }
         if (next != this.shown) {
             if (this.shown != null) {
