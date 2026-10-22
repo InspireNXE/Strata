@@ -16,6 +16,7 @@
 package org.inspirenxe.strata.api.control.pane;
 
 import org.inspirenxe.strata.api.component.Component;
+import org.inspirenxe.strata.api.component.Focusable;
 import org.inspirenxe.strata.api.component.HasContextMenu;
 import org.inspirenxe.strata.api.component.HasCursor;
 import org.inspirenxe.strata.api.component.HasTooltip;
@@ -40,6 +41,12 @@ import java.util.Optional;
  * change fires {@link #MOVED}. Each side is placed in its part by its own alignment, so give it
  * {@link org.inspirenxe.strata.api.layout.Anchor#FILL} to fill the part.</p>
  *
+ * <p>The divider is a tab stop between the two sides, and a press on it focuses it: {@link #requestFocus()} focuses
+ * it, and {@link #isFocused()} is true while it has focus. While focused, the arrow keys along the split, Left and
+ * Right for a pane side by side and Up and Down for one above the other, move it by {@value #KEY_STEP} units, or by 1
+ * with Shift, and Home and End move it until the first or the second side is at its minimum, each through
+ * {@link #MOVE}. It draws a focus ring while focused.</p>
+ *
  * <p>The desired size is the two components' desired sizes and the divider along the split, and the larger of the
  * two across it. A missing side counts as empty.</p>
  *
@@ -48,6 +55,8 @@ import java.util.Optional;
  *     <li>{@value #STYLE_DIVIDER} (paint, optional): the divider. Falls back to {@value Separator#STYLE_LINE}.</li>
  *     <li>{@value #STYLE_DIVIDER_HOVERED} (paint, optional): the divider under the pointer or being dragged. Falls
  *     back to {@value #STYLE_DIVIDER}.</li>
+ *     <li>{@value #STYLE_FOCUS} (paint, optional): a one-unit ring drawn inside the divider while it has focus. Falls
+ *     back to {@value org.inspirenxe.strata.api.control.button.Button#STYLE_FOCUS}; no ring if both are missing.</li>
  * </ul>
  *
  * <pre>{@code
@@ -61,8 +70,8 @@ import java.util.Optional;
  * <p>Get one from {@link org.inspirenxe.strata.api.ComponentFactory#splitPane()}, which is side by side, or
  * {@link org.inspirenxe.strata.api.ComponentFactory#splitPane(Orientation)}. Do not implement this interface.</p>
  */
-public interface SplitPane extends Component<SplitPane>, HasCursor<SplitPane>, HasTooltip<SplitPane>,
-        HasContextMenu<SplitPane> {
+public interface SplitPane extends Component<SplitPane>, Focusable<SplitPane>, HasCursor<SplitPane>,
+        HasTooltip<SplitPane>, HasContextMenu<SplitPane> {
     /**
      * Style key for the divider (paint, optional).
      */
@@ -71,6 +80,14 @@ public interface SplitPane extends Component<SplitPane>, HasCursor<SplitPane>, H
      * Style key for the divider under the pointer or being dragged (paint, optional).
      */
     String STYLE_DIVIDER_HOVERED = "split.divider.hovered";
+    /**
+     * Style key for the ring drawn inside the divider while it has focus (paint, optional).
+     */
+    String STYLE_FOCUS = "splitpane.focus";
+    /**
+     * How far an arrow key moves the divider, in UI units; with Shift held it moves 1.
+     */
+    float KEY_STEP = 10f;
     /**
      * How thick the divider is, in UI units.
      */
@@ -81,7 +98,8 @@ public interface SplitPane extends Component<SplitPane>, HasCursor<SplitPane>, H
     float DEFAULT_MIN_SIZE = 20f;
 
     /**
-     * Fired each time a drag with the left button is about to move the divider to a new position, before it moves.
+     * Fired each time a drag with the left button or a key is about to move the divider to a new position, before
+     * it moves.
      * The value is the fraction of the space the first side is about to get, already kept within the minimum sizes.
      * Not fired while the divider would stay where it is. Canceling it keeps the divider in place. A handler may set
      * another value, which the pane clamps to 0 to 1 and keeps within the minimum sizes when both fit; NaN and null

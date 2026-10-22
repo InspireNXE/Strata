@@ -15,24 +15,29 @@
  */
 package org.inspirenxe.strata.core.control.pane;
 
-import org.inspirenxe.strata.api.component.HasCursor;
 import org.inspirenxe.strata.api.component.Component;
 import org.inspirenxe.strata.api.component.CursorKind;
+import org.inspirenxe.strata.api.component.Focusable;
+import org.inspirenxe.strata.api.component.HasCursor;
+import org.inspirenxe.strata.api.control.button.Button;
 import org.inspirenxe.strata.api.control.display.Separator;
 import org.inspirenxe.strata.api.control.pane.SplitPane;
 import org.inspirenxe.strata.api.event.input.DragEvent;
+import org.inspirenxe.strata.api.event.input.KeyEvent;
 import org.inspirenxe.strata.api.event.input.PointerButtonEvent;
 import org.inspirenxe.strata.api.extension.ArrangeContext;
 import org.inspirenxe.strata.api.extension.MeasureContext;
 import org.inspirenxe.strata.api.extension.Painter;
 import org.inspirenxe.strata.api.geometry.Rect;
 import org.inspirenxe.strata.api.geometry.Size;
+import org.inspirenxe.strata.api.input.Key;
 import org.inspirenxe.strata.api.input.MouseButton;
 import org.inspirenxe.strata.api.layout.Anchor;
 import org.inspirenxe.strata.api.layout.Orientation;
 import org.inspirenxe.strata.api.theme.Paint;
 import org.inspirenxe.strata.api.theme.Theme;
 import org.inspirenxe.strata.core.control.Adoption;
+import org.inspirenxe.strata.core.control.Rings;
 import org.inspirenxe.strata.core.node.BuiltInComponent;
 import org.inspirenxe.strata.core.node.BuiltInComposite;
 import org.inspirenxe.strata.core.node.ComponentFactoryImpl;
@@ -43,6 +48,10 @@ import java.util.Optional;
 /**
  * The core {@link SplitPane}. The divider is a private child component, so it can show its own cursor and receive
  * the drag. Each side is arranged in its whole part, where its own alignment places it.
+ *
+ * <p>The divider takes focus for the pane, as {@code BuiltInComponent.setFocusDelegate} describes, so the pane is one
+ * tab stop where the divider sits, between the two sides. Keys move it from the length of the first side as of the
+ * last arrange.</p>
  */
 public final class SplitPaneImpl extends BuiltInComposite<SplitPane> implements SplitPane {
     private Orientation orientation;
@@ -70,6 +79,7 @@ public final class SplitPaneImpl extends BuiltInComposite<SplitPane> implements 
         this.minSecond = DEFAULT_MIN_SIZE;
         this.divider = new Divider(ui, this);
         this.addChild(this.divider);
+        this.setFocusDelegate(this.divider);
     }
 
     private boolean horizontal() {
@@ -96,7 +106,7 @@ public final class SplitPaneImpl extends BuiltInComposite<SplitPane> implements 
 
     @Override
     public SplitPane setFirst(final Component<?> first) {
-        this.first = this.swap(this.first, first);
+        this.first = this.swap(this.first, first, true);
         return this;
     }
 
@@ -107,7 +117,7 @@ public final class SplitPaneImpl extends BuiltInComposite<SplitPane> implements 
 
     @Override
     public SplitPane setSecond(final Component<?> second) {
-        this.second = this.swap(this.second, second);
+        this.second = this.swap(this.second, second, false);
         return this;
     }
 
@@ -115,7 +125,7 @@ public final class SplitPaneImpl extends BuiltInComposite<SplitPane> implements 
      * Puts a new side in place of an old one, after checking that the pane can take it, so a side it cannot take
      * leaves the pane as it was.
      */
-    private Component<?> swap(final Component<?> old, final Component<?> next) {
+    private Component<?> swap(final Component<?> old, final Component<?> next, final boolean isFirst) {
         if (next == old) {
             return next;
         }
@@ -126,7 +136,12 @@ public final class SplitPaneImpl extends BuiltInComposite<SplitPane> implements 
             this.removeChild(old);
         }
         if (next != null) {
-            this.addContent(next);
+            // The children go first side, divider, second side, so Tab stops at the divider between them
+            if (isFirst) {
+                this.insertContent(0, next);
+            } else {
+                this.addContent(next);
+            }
         }
         this.invalidateLayout();
         return next;
@@ -214,6 +229,28 @@ public final class SplitPaneImpl extends BuiltInComposite<SplitPane> implements 
         return (float) (Math.abs(product - whole) < 1e-3 ? whole : Math.floor(product));
     }
 
+    /**
+     * Moves the divider for the user by a key: by a number of units along the split, or to an end.
+     */
+    private boolean keyMove(final KeyEvent event) {
+        final Key key = event.key();
+        final boolean across = this.horizontal();
+        final float step = event.modifiers().shift() ? 1f : KEY_STEP;
+        final float length = this.firstLength();
+        if (key == (across ? Key.LEFT : Key.UP)) {
+            this.dragTo(length - step);
+        } else if (key == (across ? Key.RIGHT : Key.DOWN)) {
+            this.dragTo(length + step);
+        } else if (key == Key.HOME) {
+            this.dragTo(this.minFirst);
+        } else if (key == Key.END) {
+            this.dragTo(this.space - this.minSecond);
+        } else {
+            return false;
+        }
+        return true;
+    }
+
     float firstStart() {
         return this.horizontal() ? this.bounds().x() : this.bounds().y();
     }
@@ -264,10 +301,13 @@ public final class SplitPaneImpl extends BuiltInComposite<SplitPane> implements 
     /**
      * The divider. A drag moves it by the pointer, keeping the point grabbed under the pointer.
      */
-    private static final class Divider extends BuiltInComponent<Divider> implements HasCursor<Divider> {
+    private static final class Divider extends BuiltInComponent<Divider> implements HasCursor<Divider>,
+            Focusable<Divider> {
         private final SplitPaneImpl pane;
         private Paint paint;
         private Paint hovered;
+        private Paint focus;
+        private final Rings.Ring ring = new Rings.Ring();
         private float grab;
         private boolean dragging;
 
@@ -277,6 +317,7 @@ public final class SplitPaneImpl extends BuiltInComposite<SplitPane> implements 
             this.pane = pane;
             this.paint = Paint.NONE;
             this.hovered = Paint.NONE;
+            this.focus = Paint.NONE;
             this.setAnchor(Anchor.FILL);
             this.setCursor(pane.horizontal() ? CursorKind.RESIZE_HORIZONTAL : CursorKind.RESIZE_VERTICAL);
         }
@@ -285,6 +326,7 @@ public final class SplitPaneImpl extends BuiltInComposite<SplitPane> implements 
         protected void onApplyTheme(final Theme theme) {
             this.paint = theme.paintOr(STYLE_DIVIDER, theme.paintOr(Separator.STYLE_LINE, Paint.NONE));
             this.hovered = theme.paintOr(STYLE_DIVIDER_HOVERED, this.paint);
+            this.focus = theme.paintOr(STYLE_FOCUS, theme.paintOr(Button.STYLE_FOCUS, Paint.NONE));
         }
 
         @Override
@@ -295,6 +337,17 @@ public final class SplitPaneImpl extends BuiltInComposite<SplitPane> implements 
         @Override
         protected void paint(final Painter painter, final Rect bounds) {
             (this.isHovered() || this.dragging ? this.hovered : this.paint).paint(painter, bounds);
+            if (this.isFocused() && this.focus != Paint.NONE) {
+                this.ring.paint(painter, this.focus, bounds);
+            }
+        }
+
+        @Override
+        protected void onKey(final KeyEvent event) {
+            if (event.action().isDown() && !event.modifiers().control() && !event.modifiers().alt()
+                    && this.pane.keyMove(event)) {
+                event.consume();
+            }
         }
 
         private float along(final float x, final float y) {
