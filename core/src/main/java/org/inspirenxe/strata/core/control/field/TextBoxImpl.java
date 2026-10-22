@@ -54,6 +54,7 @@ import org.inspirenxe.strata.core.text.TextLine;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
+import java.util.function.Consumer;
 import java.util.function.UnaryOperator;
 
 /**
@@ -112,7 +113,9 @@ public final class TextBoxImpl extends BuiltInComponent<TextBox> implements Text
 
     private final ComponentFactoryImpl ui;
     private final PlainBuffer buffer;
+    private final TextBoundaries boundaries;
     private final LineEditor editor;
+    private final PlainEdits edits;
     private int maxLength;
     // The padding in use: the one set, else the theme's
     private Insets textPadding;
@@ -130,15 +133,8 @@ public final class TextBoxImpl extends BuiltInComponent<TextBox> implements Text
     private ListViewImpl<Suggestion> suggestionList;
     // Set while an accepted suggestion applies, so the edit does not ask for suggestions again
     private boolean completing;
-    // Whether the last user edit applied, for a completion to report
-    private boolean editApplied;
     // Set while the box takes focus back from a press on the list, so the caret stays put
     private boolean refocusing;
-
-    // The text and selection before the edit in progress, for a rejected edit to fall back to
-    private String beforeText;
-    private int beforeCaret;
-    private int beforeAnchor;
 
     // Theme
     private Paint normal;
@@ -172,7 +168,9 @@ public final class TextBoxImpl extends BuiltInComponent<TextBox> implements Text
         super(ui);
         this.ui = ui;
         this.buffer = new PlainBuffer();
-        this.editor = new LineEditor(this.buffer, new TextBoundaries(this.buffer, false), new Editing());
+        this.boundaries = new TextBoundaries(this.buffer, false);
+        this.editor = new LineEditor(this.buffer, this.boundaries, new Editing());
+        this.edits = new PlainEdits(this.buffer, this.boundaries, this.editor.editor(), new Edits());
         this.maxLength = Integer.MAX_VALUE;
         this.textPadding = DEFAULT_PADDING;
         this.themePadding = DEFAULT_PADDING;
@@ -209,7 +207,7 @@ public final class TextBoxImpl extends BuiltInComponent<TextBox> implements Text
 
     @Override
     public TextBox setText(final String text) {
-        final String clean = truncate(sanitize(Objects.requireNonNull(text, "text")), this.maxLength);
+        final String clean = PlainEdits.truncate(sanitize(Objects.requireNonNull(text, "text")), this.maxLength);
         if (!this.buffer.contentEquals(clean)) {
             final String previous = this.buffer.toString();
             this.buffer.set(clean);
@@ -489,23 +487,19 @@ public final class TextBoxImpl extends BuiltInComponent<TextBox> implements Text
      * reports {@link TextBox#COMPLETED} if the edit applied. A null suggestion is ignored.
      */
     private void applySuggestion(final Suggestion suggestion) {
-        if (suggestion == null || !this.isEnabled() || !this.beginEdit()) {
+        if (suggestion == null || !this.isEnabled()) {
             return;
         }
-        final int start = this.snap(suggestion.start());
-        final int end = this.snap(suggestion.end());
-        final int kept = this.codePoints() - this.buffer.codePointCount(start, end);
-        final String fitted = truncate(sanitize(suggestion.text()), this.maxLength - kept);
-        this.buffer.replace(start, end, fitted);
-        this.editor.place(start + fitted.length());
-        this.editApplied = false;
+        final int start = this.boundaries.snap(suggestion.start());
+        final int end = this.boundaries.snap(suggestion.end());
+        final boolean applied;
         this.completing = true;
         try {
-            this.edited();
+            applied = this.edits.edit(start, end, sanitize(suggestion.text()));
         } finally {
             this.completing = false;
         }
-        if (this.editApplied) {
+        if (applied) {
             this.report(COMPLETED, suggestion, suggestion);
         }
     }
@@ -744,108 +738,6 @@ public final class TextBoxImpl extends BuiltInComponent<TextBox> implements Text
     // ------------------------------------------------------------------
 
     /**
-     * Replaces a range with text as an edit by the user: the text is cut to the room the length limit leaves, and
-     * the caret goes after it.
-     */
-    private void edit(final int start, final int end, final String text) {
-        if (!this.beginEdit()) {
-            return;
-        }
-        this.buffer.delete(start, end);
-        final String fitted = truncate(text, this.maxLength - this.codePoints());
-        if (!fitted.isEmpty()) {
-            this.buffer.insert(start, fitted);
-        }
-        this.editor.place(start + fitted.length());
-        this.edited();
-    }
-
-    /**
-     * Remembers the text and selection before a user edit, for a rejected edit to fall back to.
-     *
-     * @return false if the box is read-only and the edit must not happen
-     */
-    private boolean beginEdit() {
-        if (this.readOnly) {
-            return false;
-        }
-        this.beforeText = this.buffer.toString();
-        this.beforeCaret = this.editor.caret();
-        this.beforeAnchor = this.editor.anchor();
-        return true;
-    }
-
-    /**
-     * Ends a user edit. With no {@link TextBox#MODIFY} or {@link TextBox#EDIT} handler on the path, or when the edit
-     * left the text as it was, this applies the edit at once. Otherwise it puts the text and selection back as they
-     * were before the edit and asks {@code MODIFY}; unless that was canceled, it fires {@code EDIT} with the edited
-     * text, which applies the final text through {@code proceedEdit} unless a handler cancels it.
-     */
-    private void edited() {
-        if (!this.isHandled(MODIFY) && !this.isHandled(EDIT)) {
-            this.applyEdit();
-            return;
-        }
-        final String candidate = this.buffer.toString();
-        if (candidate.equals(this.beforeText)) {
-            this.applyEdit();
-            return;
-        }
-        final int fromEnd = candidate.length() - this.editor.caret();
-        this.buffer.set(this.beforeText);
-        this.editor.restore(this.beforeAnchor, this.beforeCaret);
-        this.editor.moved();
-        if (!this.request(MODIFY)) {
-            return;
-        }
-        this.request(EDIT, candidate, text -> this.proceedEdit(text, fromEnd));
-    }
-
-    /**
-     * Applies the final text of an {@link TextBox#EDIT} request: drops line breaks from the text, cuts it to the
-     * length limit, and puts it in the box with the caret {@code fromEnd} characters before its end and nothing
-     * selected. For the edited text itself that is where the edit left the caret. Then it applies the text as the
-     * edit.
-     */
-    private void proceedEdit(final String text, final int fromEnd) {
-        final String fitted = truncate(sanitize(Objects.requireNonNull(text, "text")), this.maxLength);
-        this.buffer.set(fitted);
-        this.editor.place(this.snap(this.buffer.length() - fromEnd));
-        this.applyEdit();
-    }
-
-    /**
-     * Applies the edit the buffer holds: runs the internal filter, then reports {@link TextBox#EDITED} and
-     * {@link TextBox#MODIFIED} if the text changed.
-     */
-    private void applyEdit() {
-        if (this.filter != null) {
-            final String candidate = this.buffer.toString();
-            final String result = this.filter.apply(candidate);
-            if (result == null || result.equals(this.beforeText)) {
-                this.buffer.set(this.beforeText);
-                this.editor.restore(this.beforeAnchor, this.beforeCaret);
-                this.editor.moved();
-                return;
-            }
-            if (!result.equals(candidate)) {
-                final int fromEnd = this.buffer.length() - this.editor.caret();
-                this.buffer.set(truncate(sanitize(result), this.maxLength));
-                this.editor.place(this.snap(this.buffer.length() - fromEnd));
-            }
-        }
-        this.editApplied = true;
-        if (this.buffer.contentEquals(this.beforeText)) {
-            this.editor.moved();
-            return;
-        }
-        this.changed(this.beforeText);
-        if (!this.completing) {
-            this.suggestAfterEdit();
-        }
-    }
-
-    /**
      * Reports a change of the text, from any source: {@link TextBox#EDITED}, then {@link TextBox#MODIFIED}.
      */
     private void changed(final String previous) {
@@ -865,33 +757,10 @@ public final class TextBoxImpl extends BuiltInComponent<TextBox> implements Text
     }
 
     /**
-     * Clamps to the text and moves off the middle of a surrogate pair.
-     */
-    private int snap(final int index) {
-        final int clamped = Math.max(0, Math.min(this.buffer.length(), index));
-        if (clamped > 0 && clamped < this.buffer.length()
-                && Character.isLowSurrogate(this.buffer.charAt(clamped))
-                && Character.isHighSurrogate(this.buffer.charAt(clamped - 1))) {
-            return clamped - 1;
-        }
-        return clamped;
-    }
-
-    /**
      * Single line only: newlines are dropped, as Wintergreen did for pasted text.
      */
     static String sanitize(final String text) {
         return text.replace("\r", "").replace("\n", "");
-    }
-
-    static String truncate(final String text, final int codePoints) {
-        if (codePoints <= 0) {
-            return "";
-        }
-        if (text.codePointCount(0, text.length()) <= codePoints) {
-            return text;
-        }
-        return text.substring(0, text.offsetByCodePoints(0, codePoints));
     }
 
     @Override
@@ -974,19 +843,19 @@ public final class TextBoxImpl extends BuiltInComponent<TextBox> implements Text
 
         @Override
         public void type(final int start, final int end, final int codePoint) {
-            TextBoxImpl.this.edit(start, end, Character.toString(codePoint));
+            TextBoxImpl.this.edits.edit(start, end, Character.toString(codePoint));
         }
 
         @Override
         public void delete(final int start, final int end) {
-            TextBoxImpl.this.edit(start, end, "");
+            TextBoxImpl.this.edits.edit(start, end, "");
         }
 
         @Override
         public void paste(final int start, final int end) {
             TextBoxImpl.this.environment().clipboardText()
                     .map(TextBoxImpl::sanitize)
-                    .ifPresent(text -> TextBoxImpl.this.edit(start, end, text));
+                    .ifPresent(text -> TextBoxImpl.this.edits.edit(start, end, text));
         }
 
         @Override
@@ -997,6 +866,55 @@ public final class TextBoxImpl extends BuiltInComponent<TextBox> implements Text
         @Override
         public void beforeMove() {
             TextBoxImpl.this.hideSuggestions();
+        }
+    }
+
+    /**
+     * What the box tells its {@link PlainEdits}: its length limit, its line rule and its filter, and its way to the
+     * edit requests and reports.
+     */
+    private final class Edits implements PlainEdits.Field {
+        @Override
+        public boolean isReadOnly() {
+            return TextBoxImpl.this.readOnly;
+        }
+
+        @Override
+        public int maxLength() {
+            return TextBoxImpl.this.maxLength;
+        }
+
+        @Override
+        public String clean(final String text) {
+            return sanitize(text);
+        }
+
+        @Override
+        public UnaryOperator<String> filter() {
+            return TextBoxImpl.this.filter;
+        }
+
+        @Override
+        public boolean hearsEdits() {
+            return TextBoxImpl.this.isHandled(MODIFY) || TextBoxImpl.this.isHandled(EDIT);
+        }
+
+        @Override
+        public boolean askModify() {
+            return TextBoxImpl.this.request(MODIFY);
+        }
+
+        @Override
+        public void askEdit(final String candidate, final Consumer<String> apply) {
+            TextBoxImpl.this.request(EDIT, candidate, apply);
+        }
+
+        @Override
+        public void userChanged(final String previous) {
+            TextBoxImpl.this.changed(previous);
+            if (!TextBoxImpl.this.completing) {
+                TextBoxImpl.this.suggestAfterEdit();
+            }
         }
     }
 }

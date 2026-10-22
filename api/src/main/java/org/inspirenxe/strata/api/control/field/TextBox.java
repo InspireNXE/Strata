@@ -82,11 +82,11 @@ import java.util.Objects;
  * <p>The box is focusable and tabbable and shows the text cursor. Focus by Tab puts the caret at the end; focus by
  * a click puts it at the click, unless the box {@linkplain #setSelectAllOnFocus selects all on focus}. While focused
  * it asks the engine for text input (required on SDL-based engines, which send no characters otherwise) and
- * consumes every key that types a character, so engine shortcuts on those keys, such as a game's inventory key, do
- * not fire. Tab and Escape are not consumed: Tab moves focus and Escape still reaches the engine. Enter is consumed
- * only when a handler for {@link #SUBMIT} or {@link #SUBMITTED} is on the box or on an ancestor those events reach.
- * While the suggestion list is open, the box consumes Up, Down, Tab, Enter and Escape itself. A disabled box ignores
- * input.</p>
+ * consumes every key that types a character, so shortcuts the engine binds to those keys do not fire. Tab and
+ * Escape are not consumed: Tab moves focus and Escape still reaches the engine. A key held with Alt neither edits
+ * nor moves the caret, and reaches the engine too. Enter is consumed only when a handler for {@link #SUBMIT} or
+ * {@link #SUBMITTED} is on the box or on an ancestor those events reach. While the suggestion list is open, the box
+ * consumes Up, Down, Tab, Enter and Escape itself. A disabled box ignores input.</p>
  *
  * <h2>Text and indexes</h2>
  * <p>Caret and selection indexes count UTF-16 chars, like {@link String} indexes, but never fall inside a surrogate

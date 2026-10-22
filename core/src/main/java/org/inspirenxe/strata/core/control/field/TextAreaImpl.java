@@ -23,6 +23,7 @@ import org.inspirenxe.strata.api.event.input.DragEvent;
 import org.inspirenxe.strata.api.event.input.KeyEvent;
 import org.inspirenxe.strata.api.event.input.PointerButtonEvent;
 import org.inspirenxe.strata.api.event.input.ScrollEvent;
+import org.inspirenxe.strata.api.extension.Environment;
 import org.inspirenxe.strata.api.extension.MeasureContext;
 import org.inspirenxe.strata.api.extension.Painter;
 import org.inspirenxe.strata.api.geometry.Insets;
@@ -48,6 +49,8 @@ import org.inspirenxe.strata.core.text.TextLine;
 import java.util.Arrays;
 import java.util.Objects;
 import java.util.Set;
+import java.util.function.Consumer;
+import java.util.function.UnaryOperator;
 
 /**
  * The core {@link TextArea}. It edits like {@link TextBoxImpl} and lays its text out in rows: one per line, and more
@@ -72,8 +75,10 @@ import java.util.Set;
  * with nothing selected. With neither handler on the path the edit applies directly, without putting the old text
  * back first. Every change reports {@link TextArea#EDITED} and then {@link TextArea#MODIFIED}.</p>
  *
- * <p>The text is a {@code PlainBuffer}, and code point and word boundaries come from {@code TextBoundaries}, which
- * the text box and the password box share; the rows are the area's own.</p>
+ * <p>The text is a {@code PlainBuffer}. The caret, the selection, the keys and the pointer are a {@code TextEditor},
+ * which the text box and the password box share, with the area's rows plugged in for Home, End, Up, Down, Page Up,
+ * Page Down and triple clicks, and a user's edit goes through the {@code PlainEdits} the text box uses too. The rows
+ * and their drawing are the area's own.</p>
  */
 public final class TextAreaImpl extends BuiltInComponent<TextArea> implements TextArea {
     /**
@@ -94,6 +99,8 @@ public final class TextAreaImpl extends BuiltInComponent<TextArea> implements Te
 
     private final PlainBuffer buffer;
     private final TextBoundaries boundaries;
+    private final TextEditor editor;
+    private final PlainEdits edits;
     private final ScrollTrack bar;
     private final ScrollTrack horizontalBar;
     private final Runnable drawContent;
@@ -106,26 +113,12 @@ public final class TextAreaImpl extends BuiltInComponent<TextArea> implements Te
     private Insets themePadding;
     private boolean readOnly;
 
-    // The text and selection before the edit in progress, for a rejected edit to fall back to
-    private String beforeText;
-    private int beforeCaret;
-    private int beforeAnchor;
-
-    private int caret;
-    private int anchor;
-    private float goalX;
     private float scrollX;
     private float scrollY;
-    private long blinkStart;
     private boolean revealPending;
     private boolean draggingBar;
     private boolean draggingHorizontalBar;
     private float barGrab;
-
-    // Double-click drags select whole words around the word first clicked
-    private boolean wordDrag;
-    private int dragWordStart;
-    private int dragWordEnd;
 
     // Theme
     private Paint normal;
@@ -185,6 +178,8 @@ public final class TextAreaImpl extends BuiltInComponent<TextArea> implements Te
         super(ui);
         this.buffer = new PlainBuffer();
         this.boundaries = new TextBoundaries(this.buffer, false);
+        this.editor = new TextEditor(this.buffer, this.boundaries, new Editing(), new RowMoves(), this::caretMoved);
+        this.edits = new PlainEdits(this.buffer, this.boundaries, this.editor, new Edits());
         this.bar = new ScrollTrack(true);
         this.horizontalBar = new ScrollTrack(false);
         this.drawContent = this::drawContent;
@@ -193,7 +188,6 @@ public final class TextAreaImpl extends BuiltInComponent<TextArea> implements Te
         this.visibleLines = DEFAULT_VISIBLE_LINES;
         this.textPadding = DEFAULT_PADDING;
         this.themePadding = DEFAULT_PADDING;
-        this.goalX = Float.NaN;
         this.normal = Paint.NONE;
         this.focusedPaint = Paint.NONE;
         this.disabledPaint = Paint.NONE;
@@ -235,12 +229,11 @@ public final class TextAreaImpl extends BuiltInComponent<TextArea> implements Te
 
     @Override
     public TextArea setText(final String text) {
-        final String clean = truncate(normalize(Objects.requireNonNull(text, "text")), this.maxLength);
+        final String clean = PlainEdits.truncate(normalize(Objects.requireNonNull(text, "text")), this.maxLength);
         if (!this.buffer.contentEquals(clean)) {
             final String previous = this.buffer.toString();
             this.buffer.set(clean);
-            this.caret = this.buffer.length();
-            this.anchor = this.caret;
+            this.editor.place(this.buffer.length());
             this.scrollX = 0f;
             this.scrollY = 0f;
             this.changed(previous);
@@ -277,8 +270,7 @@ public final class TextAreaImpl extends BuiltInComponent<TextArea> implements Te
         if (this.codePoints() > maxLength) {
             final String previous = this.buffer.toString();
             this.buffer.truncate(this.buffer.offsetByCodePoints(0, maxLength));
-            this.caret = Math.min(this.caret, this.buffer.length());
-            this.anchor = Math.min(this.anchor, this.buffer.length());
+            this.editor.clamp();
             this.changed(previous);
         }
         return this;
@@ -295,7 +287,7 @@ public final class TextAreaImpl extends BuiltInComponent<TextArea> implements Te
             this.wrap = wrap;
             this.scrollX = 0f;
             this.rowsDirty = true;
-            this.moved();
+            this.editor.moved();
         }
         return this;
     }
@@ -321,17 +313,17 @@ public final class TextAreaImpl extends BuiltInComponent<TextArea> implements Te
 
     @Override
     public int caret() {
-        return this.caret;
+        return this.editor.caret();
     }
 
     @Override
     public int selectionStart() {
-        return Math.min(this.anchor, this.caret);
+        return this.editor.selectionStart();
     }
 
     @Override
     public int selectionEnd() {
-        return Math.max(this.anchor, this.caret);
+        return this.editor.selectionEnd();
     }
 
     @Override
@@ -341,17 +333,13 @@ public final class TextAreaImpl extends BuiltInComponent<TextArea> implements Te
 
     @Override
     public TextArea select(final int anchor, final int caret) {
-        this.anchor = this.snap(anchor);
-        this.caret = this.snap(caret);
-        this.moved();
+        this.editor.select(anchor, caret);
         return this;
     }
 
     @Override
     public TextArea selectAll() {
-        this.anchor = 0;
-        this.caret = this.buffer.length();
-        this.moved();
+        this.editor.selectAll();
         return this;
     }
 
@@ -530,7 +518,7 @@ public final class TextAreaImpl extends BuiltInComponent<TextArea> implements Te
         int low = this.nextCodePoint(start);
         int high = end;
         while (low < high) {
-            final int mid = this.snap(low + (high - low + 1) / 2);
+            final int mid = this.boundaries.snap(low + (high - low + 1) / 2);
             if (mid <= low) {
                 break;
             }
@@ -638,8 +626,9 @@ public final class TextAreaImpl extends BuiltInComponent<TextArea> implements Te
             return;
         }
         this.visualsDirty = false;
-        this.caretRow = this.rowOf(this.caret);
-        this.caretX = this.xOnRow(this.caretRow, this.caret);
+        final int caret = this.editor.caret();
+        this.caretRow = this.rowOf(caret);
+        this.caretX = this.xOnRow(this.caretRow, caret);
         final int start = this.selectionStart();
         final int end = this.selectionEnd();
         for (int row = 0; row < this.rowCount; row++) {
@@ -710,7 +699,7 @@ public final class TextAreaImpl extends BuiltInComponent<TextArea> implements Te
             this.painter = null;
         }
 
-        if (this.isFocused() && this.isEnabled() && !this.readOnly && this.caretShown()) {
+        if (this.isFocused() && this.isEnabled() && !this.readOnly && this.editor.caretShown(this.look.blinkMillis())) {
             final float x = this.viewport.x() + this.caretX - this.scrollX;
             final float y = this.viewport.y() + this.caretRow * this.lineHeight - Math.round(this.scrollY);
             if (x >= this.viewport.x() && x < this.viewport.right() && y + this.lineHeight > this.viewport.y()
@@ -775,10 +764,6 @@ public final class TextAreaImpl extends BuiltInComponent<TextArea> implements Te
         }
     }
 
-    private boolean caretShown() {
-        return ((this.environment().millis() - this.blinkStart) / this.look.blinkMillis()) % 2 == 0;
-    }
-
     @Override
     public Text placeholder() {
         return this.placeholder;
@@ -827,31 +812,7 @@ public final class TextAreaImpl extends BuiltInComponent<TextArea> implements Te
             event.consume();
             return;
         }
-        final int index = this.indexAt(event.localX(), event.localY());
-        this.wordDrag = false;
-        switch (event.clicks()) {
-            case 1 -> {
-                this.caret = index;
-                if (!event.modifiers().shift()) {
-                    this.anchor = index;
-                }
-            }
-            case 2 -> {
-                final int[] word = this.wordAround(index);
-                this.anchor = word[0];
-                this.caret = word[1];
-                this.wordDrag = true;
-                this.dragWordStart = word[0];
-                this.dragWordEnd = word[1];
-            }
-            default -> {
-                this.anchor = this.lineStart(index);
-                this.caret = this.lineEnd(index);
-            }
-        }
-        this.goalX = Float.NaN;
-        this.moved();
-        event.consume();
+        this.editor.press(event, this.indexAt(event.localX(), event.localY()));
     }
 
     @Override
@@ -877,22 +838,7 @@ public final class TextAreaImpl extends BuiltInComponent<TextArea> implements Te
         if (event.clicks() >= 3) {
             return;
         }
-        final int index = this.indexAt(event.localX(), event.localY());
-        if (this.wordDrag) {
-            final int[] word = this.wordAround(index);
-            if (word[0] < this.dragWordStart) {
-                this.anchor = this.dragWordEnd;
-                this.caret = word[0];
-            } else {
-                this.anchor = this.dragWordStart;
-                this.caret = Math.max(word[1], this.dragWordEnd);
-            }
-        } else {
-            this.caret = index;
-        }
-        this.goalX = Float.NaN;
-        this.moved();
-        event.consume();
+        this.editor.drag(event, this.indexAt(event.localX(), event.localY()));
     }
 
     @Override
@@ -949,278 +895,41 @@ public final class TextAreaImpl extends BuiltInComponent<TextArea> implements Te
         }
         this.ensureRows();
         this.updateVisuals();
-        final boolean shift = modifiers.shift();
         final boolean handled;
-        if (modifiers.control() && !modifiers.alt()) {
-            handled = this.controlKey(key, shift);
-        } else if (!modifiers.alt()) {
-            handled = this.plainKey(key, shift);
+        if (key.isEnter() && !modifiers.control() && !modifiers.alt()) {
+            this.edits.edit(this.editor.selectionStart(), this.editor.selectionEnd(), "\n");
+            handled = true;
         } else {
-            handled = false;
+            handled = this.editor.key(key, modifiers);
         }
-        if (handled || (!modifiers.control() && !modifiers.alt() && key.isPrintable())) {
+        if (handled || TextEditor.typesCharacter(key, modifiers)) {
             event.consume();
         }
     }
 
-    private boolean controlKey(final Key key, final boolean shift) {
-        switch (key) {
-            case A -> this.selectAll();
-            case C -> this.copy();
-            case X -> this.cut();
-            case V -> this.paste();
-            case LEFT -> this.moveTo(this.previousWordStart(this.caret), shift);
-            case RIGHT -> this.moveTo(this.nextWordEnd(this.caret), shift);
-            case HOME -> this.moveTo(0, shift);
-            case END -> this.moveTo(this.buffer.length(), shift);
-            case BACKSPACE -> {
-                if (this.hasSelection()) {
-                    this.deleteSelection();
-                } else {
-                    this.deleteRange(this.previousWordStart(this.caret), this.caret);
-                }
-            }
-            case DELETE -> {
-                if (this.hasSelection()) {
-                    this.deleteSelection();
-                } else {
-                    this.deleteRange(this.caret, this.nextWordEnd(this.caret));
-                }
-            }
-            default -> {
-                return false;
-            }
-        }
-        return true;
-    }
-
-    private boolean plainKey(final Key key, final boolean shift) {
-        if (key.isEnter()) {
-            this.insert("\n");
-            return true;
-        }
-        switch (key) {
-            case LEFT -> {
-                if (this.hasSelection() && !shift) {
-                    this.moveTo(this.selectionStart(), false);
-                } else {
-                    this.moveTo(this.previousCodePoint(this.caret), shift);
-                }
-            }
-            case RIGHT -> {
-                if (this.hasSelection() && !shift) {
-                    this.moveTo(this.selectionEnd(), false);
-                } else {
-                    this.moveTo(this.nextCodePoint(this.caret), shift);
-                }
-            }
-            case UP -> this.moveRows(-1, shift);
-            case DOWN -> this.moveRows(1, shift);
-            case PAGE_UP -> this.moveRows(-this.pageRows(), shift);
-            case PAGE_DOWN -> this.moveRows(this.pageRows(), shift);
-            case HOME -> this.moveTo(this.rowStart[this.caretRow], shift);
-            case END -> this.moveTo(this.rowLimit(this.caretRow), shift);
-            case BACKSPACE -> {
-                if (this.hasSelection()) {
-                    this.deleteSelection();
-                } else {
-                    this.deleteRange(this.previousCodePoint(this.caret), this.caret);
-                }
-            }
-            case DELETE -> {
-                if (this.hasSelection()) {
-                    this.deleteSelection();
-                } else {
-                    this.deleteRange(this.caret, this.nextCodePoint(this.caret));
-                }
-            }
-            default -> {
-                return false;
-            }
-        }
-        return true;
-    }
-
-    private int pageRows() {
-        return Math.max(1, (int) Math.floor(this.viewport.height() / this.lineHeight) - 1);
-    }
-
-    /**
-     * Moves the caret up or down by rows, keeping the column it had when vertical movement began.
-     */
-    private void moveRows(final int rows, final boolean extend) {
-        final float goal = Float.isNaN(this.goalX) ? this.caretX : this.goalX;
-        final int target = this.caretRow + rows;
-        final int index;
-        if (target < 0) {
-            index = 0;
-        } else if (target >= this.rowCount) {
-            index = this.buffer.length();
-        } else {
-            index = this.indexOnRow(target, goal);
-        }
-        this.moveTo(index, extend);
-        this.goalX = goal;
-    }
-
     @Override
     protected void onChar(final CharEvent event) {
-        if (!this.isEnabled()) {
-            return;
+        if (this.isEnabled() && this.editor.type(event.codePoint())) {
+            event.consume();
         }
-        final int codePoint = event.codePoint();
-        if (Character.isISOControl(codePoint)) {
-            return;
-        }
-        this.insert(Character.toString(codePoint));
-        event.consume();
     }
 
     // ------------------------------------------------------------------
     // Editing
     // ------------------------------------------------------------------
 
-    private void insert(final String text) {
-        if (!this.beginEdit()) {
-            return;
-        }
-        if (this.hasSelection()) {
-            this.removeSelection();
-        }
-        final String fitted = truncate(text, this.maxLength - this.codePoints());
-        if (!fitted.isEmpty()) {
-            this.buffer.insert(this.caret, fitted);
-            this.caret += fitted.length();
-        }
-        this.anchor = this.caret;
-        this.edited();
-    }
-
-    private void copy() {
-        if (this.hasSelection()) {
-            this.environment().setClipboardText(this.selectedText());
-        }
-    }
-
-    private void cut() {
-        if (this.hasSelection() && !this.readOnly) {
-            this.copy();
-            this.deleteSelection();
-        }
-    }
-
-    private void paste() {
-        this.environment().clipboardText().map(TextAreaImpl::normalize).ifPresent(this::insert);
-    }
-
-    private void deleteSelection() {
-        if (!this.beginEdit()) {
-            return;
-        }
-        this.removeSelection();
-        this.edited();
-    }
-
-    private void removeSelection() {
-        final int start = this.selectionStart();
-        this.buffer.delete(start, this.selectionEnd());
-        this.caret = start;
-        this.anchor = start;
-    }
-
-    private void deleteRange(final int start, final int end) {
-        if (start >= end || !this.beginEdit()) {
-            return;
-        }
-        this.buffer.delete(start, end);
-        this.caret = start;
-        this.anchor = start;
-        this.edited();
-    }
-
-    private boolean beginEdit() {
-        if (this.readOnly) {
-            return false;
-        }
-        this.beforeText = this.buffer.toString();
-        this.beforeCaret = this.caret;
-        this.beforeAnchor = this.anchor;
-        return true;
-    }
-
     /**
-     * Ends a user edit. With no {@link TextArea#MODIFY} or {@link TextArea#EDIT} handler on the path, or when the edit
-     * left the text as it was, this applies the edit at once. Otherwise it puts the text and selection back as they
-     * were before the edit and asks {@code MODIFY}; unless that was canceled, it fires {@code EDIT} with the edited
-     * text, which applies the final text through {@code proceedEdit} unless a handler cancels it.
+     * Marks the caret and selection out of date and scrolls to the caret on the next frame, after the caret or the
+     * text changed.
      */
-    private void edited() {
-        this.goalX = Float.NaN;
-        if (!this.isHandled(MODIFY) && !this.isHandled(EDIT)) {
-            this.applyEdit();
-            return;
-        }
-        final String candidate = this.buffer.toString();
-        if (candidate.equals(this.beforeText)) {
-            this.applyEdit();
-            return;
-        }
-        final int fromEnd = candidate.length() - this.caret;
-        this.buffer.set(this.beforeText);
-        this.caret = this.beforeCaret;
-        this.anchor = this.beforeAnchor;
-        this.moved();
-        if (!this.request(MODIFY)) {
-            return;
-        }
-        this.request(EDIT, candidate, text -> this.proceedEdit(text, fromEnd));
-    }
-
-    /**
-     * Applies the final text of an {@link TextArea#EDIT} request: turns its line breaks into {@code \n}, cuts
-     * it to the length limit, and puts it in the area with the caret {@code fromEnd} characters before its end and
-     * nothing selected. For the edited text itself that is where the edit left the caret. Then it applies the text
-     * as the edit.
-     */
-    private void proceedEdit(final String text, final int fromEnd) {
-        final String fitted = truncate(normalize(Objects.requireNonNull(text, "text")), this.maxLength);
-        this.buffer.set(fitted);
-        this.caret = this.snap(this.buffer.length() - fromEnd);
-        this.anchor = this.caret;
-        this.goalX = Float.NaN;
-        this.applyEdit();
-    }
-
-    /**
-     * Applies the edit the buffer holds, reporting {@link TextArea#EDITED} and {@link TextArea#MODIFIED} if the text
-     * changed.
-     */
-    private void applyEdit() {
-        if (this.buffer.contentEquals(this.beforeText)) {
-            this.moved();
-            return;
-        }
-        this.changed(this.beforeText);
-    }
-
-    private void moveTo(final int index, final boolean extend) {
-        this.caret = this.snap(index);
-        if (!extend) {
-            this.anchor = this.caret;
-        }
-        this.goalX = Float.NaN;
-        this.moved();
-    }
-
-    private void moved() {
+    private void caretMoved() {
         this.visualsDirty = true;
         this.revealPending = true;
-        this.blinkStart = this.environment().millis();
     }
 
     private void changed(final String previous) {
         this.rowsDirty = true;
-        this.moved();
+        this.editor.moved();
         this.report(EDITED, this.buffer.toString(), previous);
         if (this.isHandled(MODIFIED)) {
             this.report(MODIFIED, this.codePoints(), previous.codePointCount(0, previous.length()));
@@ -1231,16 +940,8 @@ public final class TextAreaImpl extends BuiltInComponent<TextArea> implements Te
     // Text helpers
     // ------------------------------------------------------------------
 
-    private boolean hasSelection() {
-        return this.anchor != this.caret;
-    }
-
     private int codePoints() {
         return this.buffer.codePointCount(0, this.buffer.length());
-    }
-
-    private int snap(final int index) {
-        return this.boundaries.snap(index);
     }
 
     private int previousCodePoint(final int index) {
@@ -1261,34 +962,155 @@ public final class TextAreaImpl extends BuiltInComponent<TextArea> implements Te
         return newline < 0 ? this.buffer.length() : newline;
     }
 
-    private int previousWordStart(final int index) {
-        return this.boundaries.previousWordStart(index);
-    }
-
-    private int nextWordEnd(final int index) {
-        return this.boundaries.nextWordEnd(index);
-    }
-
-    private int[] wordAround(final int index) {
-        return this.boundaries.wordAround(index);
-    }
-
     private static String normalize(final String text) {
         return text.replace("\r\n", "\n").replace('\r', '\n');
     }
 
-    private static String truncate(final String text, final int codePoints) {
-        if (codePoints <= 0) {
-            return "";
-        }
-        if (text.codePointCount(0, text.length()) <= codePoints) {
-            return text;
-        }
-        return text.substring(0, text.offsetByCodePoints(0, codePoints));
-    }
-
     @Override
     protected Object snapshotState() {
-        return new TextArea.State(this.buffer.toString(), this.caret, this.anchor, this.maxLength);
+        return new TextArea.State(this.buffer.toString(), this.editor.caret(), this.editor.anchor(), this.maxLength);
+    }
+
+    /**
+     * What the area tells its {@link TextEditor}: how the user's edits apply. Copying is always allowed.
+     */
+    private final class Editing implements TextEditor.Host {
+        @Override
+        public Environment environment() {
+            return TextAreaImpl.this.environment();
+        }
+
+        @Override
+        public boolean isReadOnly() {
+            return TextAreaImpl.this.readOnly;
+        }
+
+        @Override
+        public boolean allowsCopy() {
+            return true;
+        }
+
+        @Override
+        public void selectAll() {
+            TextAreaImpl.this.selectAll();
+        }
+
+        @Override
+        public void type(final int start, final int end, final int codePoint) {
+            TextAreaImpl.this.edits.edit(start, end, Character.toString(codePoint));
+        }
+
+        @Override
+        public void delete(final int start, final int end) {
+            TextAreaImpl.this.edits.edit(start, end, "");
+        }
+
+        @Override
+        public void paste(final int start, final int end) {
+            TextAreaImpl.this.environment().clipboardText()
+                    .map(TextAreaImpl::normalize)
+                    .ifPresent(text -> TextAreaImpl.this.edits.edit(start, end, text));
+        }
+
+        @Override
+        public void copy(final int start, final int end) {
+            TextAreaImpl.this.environment().setClipboardText(TextAreaImpl.this.buffer.substring(start, end));
+        }
+
+        @Override
+        public void beforeMove() {
+        }
+    }
+
+    /**
+     * The area's rows, as its {@link TextEditor} moves through them. The area brings its rows and caret up to date
+     * before it hands the editor a key.
+     */
+    private final class RowMoves implements TextEditor.Rows {
+        @Override
+        public int rowStart(final int index) {
+            return TextAreaImpl.this.rowStart[TextAreaImpl.this.rowOf(index)];
+        }
+
+        @Override
+        public int rowEnd(final int index) {
+            return TextAreaImpl.this.rowLimit(TextAreaImpl.this.rowOf(index));
+        }
+
+        @Override
+        public int lineStart(final int index) {
+            return TextAreaImpl.this.lineStart(index);
+        }
+
+        @Override
+        public int lineEnd(final int index) {
+            return TextAreaImpl.this.lineEnd(index);
+        }
+
+        @Override
+        public float caretX() {
+            return TextAreaImpl.this.caretX;
+        }
+
+        @Override
+        public int indexAt(final int count, final float x) {
+            final TextAreaImpl area = TextAreaImpl.this;
+            final int target = area.caretRow + count;
+            if (target < 0) {
+                return 0;
+            }
+            return target >= area.rowCount ? area.buffer.length() : area.indexOnRow(target, x);
+        }
+
+        @Override
+        public int pageRows() {
+            return Math.max(1, (int) Math.floor(TextAreaImpl.this.viewport.height() / TextAreaImpl.this.lineHeight) - 1);
+        }
+    }
+
+    /**
+     * What the area tells its {@link PlainEdits}: its length limit and line rule, and its way to the edit requests and
+     * reports. It has no filter of its own.
+     */
+    private final class Edits implements PlainEdits.Field {
+        @Override
+        public boolean isReadOnly() {
+            return TextAreaImpl.this.readOnly;
+        }
+
+        @Override
+        public int maxLength() {
+            return TextAreaImpl.this.maxLength;
+        }
+
+        @Override
+        public String clean(final String text) {
+            return normalize(text);
+        }
+
+        @Override
+        public UnaryOperator<String> filter() {
+            return null;
+        }
+
+        @Override
+        public boolean hearsEdits() {
+            return TextAreaImpl.this.isHandled(MODIFY) || TextAreaImpl.this.isHandled(EDIT);
+        }
+
+        @Override
+        public boolean askModify() {
+            return TextAreaImpl.this.request(MODIFY);
+        }
+
+        @Override
+        public void askEdit(final String candidate, final Consumer<String> apply) {
+            TextAreaImpl.this.request(EDIT, candidate, apply);
+        }
+
+        @Override
+        public void userChanged(final String previous) {
+            TextAreaImpl.this.changed(previous);
+        }
     }
 }

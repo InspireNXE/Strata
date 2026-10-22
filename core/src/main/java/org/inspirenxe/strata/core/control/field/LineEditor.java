@@ -28,9 +28,10 @@ import org.inspirenxe.strata.api.text.TextStyle;
 import org.inspirenxe.strata.api.theme.Paint;
 
 /**
- * The caret, the selection, the blink, the sideways scroll, and the key and pointer handling of a single-line field,
- * over an {@link EditBuffer}. A {@link TextBoxImpl} and a {@link PasswordTextBoxImpl} each own one and tell it, through
- * an {@link Owner}, how to measure and draw their text, whether copying is allowed, and how to apply the user's edits.
+ * A single-line field's editing: a {@link TextEditor} for the caret, the selection, the blink, the keys and the
+ * pointer over an {@link EditBuffer}, and the sideways scroll and drawing of one line. A {@link TextBoxImpl} and a
+ * {@link PasswordTextBoxImpl} each own one and tell it, through an {@link Owner}, how to measure and draw their text,
+ * whether copying is allowed, and how to apply the user's edits.
  *
  * <p>It never changes the text itself: every edit goes to the owner, which fires its requests and reports and then
  * places the caret with {@link #place}. Word movement and double clicks use the {@link TextBoundaries} it is given,
@@ -44,29 +45,16 @@ final class LineEditor {
     static final long BLINK_MILLIS = 500L;
 
     private final EditBuffer buffer;
-    private final TextBoundaries boundaries;
     private final Owner owner;
+    private final TextEditor editor;
     private final Runnable drawContent;
 
     private final Runnable drawPlain;
     private final Runnable drawSelected;
-    private int caret;
-    private int anchor;
     private float scrollX;
-    private long blinkStart;
     private FieldLook look = FieldLook.plain(Paint.NONE, Paint.NONE);
     private TextStyle underscoreStyle;
     private TextSpan underscore;
-
-    // Double-click drags select whole words around the word first clicked
-    private boolean wordDrag;
-    private int dragWordStart;
-    private int dragWordEnd;
-    // Set when a press gives focus to a field that selects all on focus, so that press keeps everything selected
-    private boolean pressSelectsAll;
-    // Set while a press keeps everything selected; a drag from it selects from where the press landed instead
-    private boolean allFromPress;
-    private int pressIndex;
 
     // Derived from the text and the caret, worked out again only after a change
     private boolean visualsDirty;
@@ -82,10 +70,11 @@ final class LineEditor {
     private float lineHeight;
     private Paint selectionPaint;
 
+    @SuppressWarnings("this-escape")
     LineEditor(final EditBuffer buffer, final TextBoundaries boundaries, final Owner owner) {
         this.buffer = buffer;
-        this.boundaries = boundaries;
         this.owner = owner;
+        this.editor = new TextEditor(buffer, boundaries, owner, null, this::invalidate);
         this.drawContent = this::drawContent;
         this.drawPlain = this::drawPlainText;
         this.drawSelected = this::drawSelectedText;
@@ -94,75 +83,63 @@ final class LineEditor {
         this.visualsDirty = true;
     }
 
+    /**
+     * Returns the editor under this line, for the owner's edits.
+     */
+    TextEditor editor() {
+        return this.editor;
+    }
+
     // ------------------------------------------------------------------
     // Caret and selection
     // ------------------------------------------------------------------
 
     int caret() {
-        return this.caret;
+        return this.editor.caret();
     }
 
     int anchor() {
-        return this.anchor;
+        return this.editor.anchor();
     }
 
     int selectionStart() {
-        return Math.min(this.anchor, this.caret);
+        return this.editor.selectionStart();
     }
 
     int selectionEnd() {
-        return Math.max(this.anchor, this.caret);
-    }
-
-    boolean hasSelection() {
-        return this.anchor != this.caret;
+        return this.editor.selectionEnd();
     }
 
     /**
      * Selects a range for code, clamped to the text and snapped to code points.
      */
     void select(final int anchor, final int caret) {
-        this.anchor = this.boundaries.snap(anchor);
-        this.caret = this.boundaries.snap(caret);
-        this.moved();
+        this.editor.select(anchor, caret);
     }
 
     void selectAll() {
-        this.anchor = 0;
-        this.caret = this.buffer.length();
-        this.moved();
+        this.editor.selectAll();
     }
 
     /**
      * Puts the caret at an index with nothing selected, after the owner changed the text.
      */
     void place(final int index) {
-        this.caret = index;
-        this.anchor = index;
-    }
-
-    /**
-     * Sets the caret and anchor as they are, for an owner putting back what it saved.
-     */
-    void restore(final int anchor, final int caret) {
-        this.anchor = anchor;
-        this.caret = caret;
+        this.editor.place(index);
     }
 
     /**
      * Keeps the caret and anchor inside the text, after the owner cut it.
      */
     void clamp() {
-        this.caret = Math.min(this.caret, this.buffer.length());
-        this.anchor = Math.min(this.anchor, this.buffer.length());
+        this.editor.clamp();
     }
 
     /**
      * Marks the drawing out of date and shows the caret again from the start of its blink.
      */
     void moved() {
-        this.visualsDirty = true;
-        this.blinkStart = this.owner.environment().millis();
+        this.editor.moved();
     }
 
     /**
@@ -176,16 +153,7 @@ final class LineEditor {
      * Returns whether the caret is in the shown half of its blink.
      */
     boolean caretShown() {
-        return ((this.owner.environment().millis() - this.blinkStart) / this.look.blinkMillis()) % 2 == 0;
-    }
-
-    private void moveTo(final int index, final boolean extend) {
-        this.owner.beforeMove();
-        this.caret = this.boundaries.snap(index);
-        if (!extend) {
-            this.anchor = this.caret;
-        }
-        this.moved();
+        return this.editor.caretShown(this.look.blinkMillis());
     }
 
     // ------------------------------------------------------------------
@@ -197,22 +165,18 @@ final class LineEditor {
      * press that gave focus places the caret right after this, unless the field selects all on focus.
      */
     void focusGained(final boolean selectAll, final boolean fromPress) {
-        this.pressSelectsAll = selectAll && fromPress;
-        this.anchor = selectAll ? 0 : this.buffer.length();
-        this.caret = this.buffer.length();
-        this.moved();
+        this.editor.focusGained(selectAll, fromPress);
     }
 
     void focusLost() {
-        this.pressSelectsAll = false;
-        this.allFromPress = false;
+        this.editor.focusLost();
     }
 
     /**
      * Forgets that the press that gave focus should keep everything selected, for a press that landed elsewhere.
      */
     void cancelPress() {
-        this.pressSelectsAll = false;
+        this.editor.cancelPress();
     }
 
     /**
@@ -221,38 +185,7 @@ final class LineEditor {
      * @param textX the press relative to where the text starts when not scrolled
      */
     void press(final PointerButtonEvent event, final float textX) {
-        final int index = this.indexAt(textX);
-        this.wordDrag = false;
-        this.allFromPress = this.pressSelectsAll && event.clicks() == 1 && !event.modifiers().shift();
-        this.pressSelectsAll = false;
-        this.pressIndex = index;
-        switch (event.clicks()) {
-            case 1 -> {
-                if (this.allFromPress) {
-                    this.anchor = 0;
-                    this.caret = this.buffer.length();
-                } else {
-                    this.caret = index;
-                    if (!event.modifiers().shift()) {
-                        this.anchor = index;
-                    }
-                }
-            }
-            case 2 -> {
-                final int[] word = this.boundaries.wordAround(index);
-                this.anchor = word[0];
-                this.caret = word[1];
-                this.wordDrag = true;
-                this.dragWordStart = word[0];
-                this.dragWordEnd = word[1];
-            }
-            default -> {
-                this.anchor = 0;
-                this.caret = this.buffer.length();
-            }
-        }
-        this.moved();
-        event.consume();
+        this.editor.press(event, this.indexAt(textX));
     }
 
     /**
@@ -262,25 +195,7 @@ final class LineEditor {
      * @param textX the pointer relative to where the text starts when not scrolled
      */
     void drag(final DragEvent event, final float textX) {
-        final int index = this.indexAt(textX);
-        if (this.wordDrag) {
-            final int[] word = this.boundaries.wordAround(index);
-            if (word[0] < this.dragWordStart) {
-                this.anchor = this.dragWordEnd;
-                this.caret = word[0];
-            } else {
-                this.anchor = this.dragWordStart;
-                this.caret = Math.max(word[1], this.dragWordEnd);
-            }
-        } else {
-            if (this.allFromPress) {
-                this.allFromPress = false;
-                this.anchor = this.pressIndex;
-            }
-            this.caret = index;
-        }
-        this.moved();
-        event.consume();
+        this.editor.drag(event, this.indexAt(textX));
     }
 
     private int indexAt(final float textX) {
@@ -300,81 +215,7 @@ final class LineEditor {
      * @return true if the key did something
      */
     boolean key(final Key key, final Modifiers modifiers) {
-        final boolean shift = modifiers.shift();
-        if (modifiers.control() && !modifiers.alt()) {
-            return this.controlKey(key, shift);
-        }
-        return this.plainKey(key, shift);
-    }
-
-    private boolean controlKey(final Key key, final boolean shift) {
-        switch (key) {
-            case A -> this.owner.selectAll();
-            case C -> this.copy();
-            case X -> this.cut();
-            case V -> this.owner.paste(this.selectionStart(), this.selectionEnd());
-            case LEFT -> this.moveTo(this.boundaries.previousWordStart(this.caret), shift);
-            case RIGHT -> this.moveTo(this.boundaries.nextWordEnd(this.caret), shift);
-            case HOME -> this.moveTo(0, shift);
-            case END -> this.moveTo(this.buffer.length(), shift);
-            case BACKSPACE -> {
-                if (this.hasSelection()) {
-                    this.deleteSelection();
-                } else {
-                    this.delete(this.boundaries.previousWordStart(this.caret), this.caret);
-                }
-            }
-            case DELETE -> {
-                if (this.hasSelection()) {
-                    this.deleteSelection();
-                } else {
-                    this.delete(this.caret, this.boundaries.nextWordEnd(this.caret));
-                }
-            }
-            default -> {
-                return false;
-            }
-        }
-        return true;
-    }
-
-    private boolean plainKey(final Key key, final boolean shift) {
-        switch (key) {
-            case LEFT -> {
-                if (this.hasSelection() && !shift) {
-                    this.moveTo(this.selectionStart(), false);
-                } else {
-                    this.moveTo(this.boundaries.previousCodePoint(this.caret), shift);
-                }
-            }
-            case RIGHT -> {
-                if (this.hasSelection() && !shift) {
-                    this.moveTo(this.selectionEnd(), false);
-                } else {
-                    this.moveTo(this.boundaries.nextCodePoint(this.caret), shift);
-                }
-            }
-            case HOME -> this.moveTo(0, shift);
-            case END -> this.moveTo(this.buffer.length(), shift);
-            case BACKSPACE -> {
-                if (this.hasSelection()) {
-                    this.deleteSelection();
-                } else {
-                    this.delete(this.boundaries.previousCodePoint(this.caret), this.caret);
-                }
-            }
-            case DELETE -> {
-                if (this.hasSelection()) {
-                    this.deleteSelection();
-                } else {
-                    this.delete(this.caret, this.boundaries.nextCodePoint(this.caret));
-                }
-            }
-            default -> {
-                return false;
-            }
-        }
-        return true;
+        return this.editor.key(key, modifiers);
     }
 
     /**
@@ -383,34 +224,7 @@ final class LineEditor {
      * @return false for a control character, which the field leaves alone
      */
     boolean type(final int codePoint) {
-        if (Character.isISOControl(codePoint)) {
-            return false;
-        }
-        this.owner.type(this.selectionStart(), this.selectionEnd(), codePoint);
-        return true;
-    }
-
-    private void copy() {
-        if (this.hasSelection() && this.owner.allowsCopy()) {
-            this.owner.copy(this.selectionStart(), this.selectionEnd());
-        }
-    }
-
-    private void cut() {
-        if (this.hasSelection() && this.owner.allowsCopy() && !this.owner.isReadOnly()) {
-            this.copy();
-            this.deleteSelection();
-        }
-    }
-
-    private void deleteSelection() {
-        this.owner.delete(this.selectionStart(), this.selectionEnd());
-    }
-
-    private void delete(final int start, final int end) {
-        if (start < end) {
-            this.owner.delete(start, end);
-        }
+        return this.editor.type(codePoint);
     }
 
     // ------------------------------------------------------------------
@@ -447,7 +261,7 @@ final class LineEditor {
 
         if (showCaret && this.caretShown()) {
             final float atX = contentBox.x() + this.caretX - this.scrollX;
-            if (look.underscoreCaret() && this.caret == this.buffer.length()) {
+            if (look.underscoreCaret() && this.editor.caret() == this.buffer.length()) {
                 if (this.underscore == null || !textStyle.equals(this.underscoreStyle)) {
                     this.underscoreStyle = textStyle;
                     this.underscore = new TextSpan("_", textStyle);
@@ -467,7 +281,7 @@ final class LineEditor {
      */
     private void drawContent() {
         final float originX = this.contentBox.x() - this.scrollX;
-        if (!this.hasSelection()) {
+        if (!this.editor.hasSelection()) {
             this.owner.drawText(this.painter, originX, this.contentBox.x(), this.textY, null);
             return;
         }
@@ -519,30 +333,16 @@ final class LineEditor {
         }
         this.visualsDirty = false;
         this.textWidth = this.owner.layoutText(metrics);
-        this.caretX = this.owner.xForIndex(metrics, this.caret);
-        this.selectionStartX = this.owner.xForIndex(metrics, this.selectionStart());
-        this.selectionEndX = this.owner.xForIndex(metrics, this.selectionEnd());
+        this.caretX = this.owner.xForIndex(metrics, this.editor.caret());
+        this.selectionStartX = this.owner.xForIndex(metrics, this.editor.selectionStart());
+        this.selectionEndX = this.owner.xForIndex(metrics, this.editor.selectionEnd());
     }
 
     /**
-     * What a field tells its editor. Every method runs on the UI thread.
+     * What a single-line field tells its editor: how it edits, as every field does, and how it measures and draws its
+     * one line. Every method runs on the UI thread.
      */
-    interface Owner {
-
-        /**
-         * The field's environment, for the clock and text measurement.
-         */
-        Environment environment();
-
-        /**
-         * Whether the field is read-only, which stops cutting.
-         */
-        boolean isReadOnly();
-
-        /**
-         * Whether Ctrl+C and Ctrl+X may put the selection on the clipboard.
-         */
-        boolean allowsCopy();
+    interface Owner extends TextEditor.Host {
 
         /**
          * Brings the drawn text up to date with the buffer and the style.
@@ -568,35 +368,5 @@ final class LineEditor {
          * @param style the style to draw the text in instead of its own, or null to keep its own
          */
         void drawText(Painter painter, float originX, float left, float y, TextStyle style);
-
-        /**
-         * Selects everything, for Ctrl+A.
-         */
-        void selectAll();
-
-        /**
-         * Applies the user typing a code point over a range, which is empty when nothing is selected.
-         */
-        void type(int start, int end, int codePoint);
-
-        /**
-         * Applies the user deleting a non-empty range.
-         */
-        void delete(int start, int end);
-
-        /**
-         * Applies the user pasting over a range, which is empty when nothing is selected.
-         */
-        void paste(int start, int end);
-
-        /**
-         * Puts a range of the text on the clipboard. Called only when {@link #allowsCopy} is true.
-         */
-        void copy(int start, int end);
-
-        /**
-         * Called before a key moves the caret.
-         */
-        void beforeMove();
     }
 }
