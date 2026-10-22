@@ -142,6 +142,9 @@ public final class ListViewImpl<T> extends BuiltInComposite<ListView<T>> impleme
     private boolean arranged;
     private boolean barShown;
     private Rect viewport;
+    // The viewport as drawn: mirrored inside the bounds right to left, where the rows are worked out as for left to
+    // right and the node mirrors them
+    private Rect shownViewport;
     private float rowWidth;
     private float rowX;
     // Set for a list the factory made, which follows the theme's row width and edges
@@ -224,6 +227,7 @@ public final class ListViewImpl<T> extends BuiltInComposite<ListView<T>> impleme
         this.anchor = -1;
         this.reveal = -1;
         this.viewport = Rect.ZERO;
+        this.shownViewport = Rect.ZERO;
         this.background = Paint.NONE;
         this.row = Paint.NONE;
         this.rowHovered = Paint.NONE;
@@ -825,7 +829,7 @@ public final class ListViewImpl<T> extends BuiltInComposite<ListView<T>> impleme
 
     @Override
     protected boolean onEdgeScroll(final float x, final float y) {
-        if (!this.dragScroll || !this.arranged || !(x >= this.viewport.x() && x < this.viewport.right())) {
+        if (!this.dragScroll || !this.arranged || !(x >= this.shownViewport.x() && x < this.shownViewport.right())) {
             return false;
         }
         final float step = EdgeScroll.step(y, this.viewport.y(), this.viewport.bottom(), this.step(), this.scrollY,
@@ -1233,15 +1237,16 @@ public final class ListViewImpl<T> extends BuiltInComposite<ListView<T>> impleme
                     this.rowWidth, this.rowHeight);
             context.arrange(cell, rect);
             this.paintIndex[this.paintCount] = i;
-            this.paintRect[this.paintCount] = rect;
+            this.paintRect[this.paintCount] = this.flow(rect);
             this.paintRing[this.paintCount] = null;
             this.paintCount++;
         }
         final float barX = column
                 ? this.rowX + this.rowWidth + this.barGap
                 : inner.right() - ScrollPanel.BAR_WIDTH;
-        this.bar.update(new Rect(barX, inner.y(), ScrollPanel.BAR_WIDTH, inner.height()),
+        this.bar.update(this.flow(new Rect(barX, inner.y(), ScrollPanel.BAR_WIDTH, inner.height())),
                 this.viewport.height(), Math.max(total, this.viewport.height()));
+        this.shownViewport = this.flow(this.viewport);
         this.thumbRect = this.bar.thumb(this.scrollY, this.maxScrollY);
         this.edges = this.standalone ? new Rect[] {
                 new Rect(bounds.x(), bounds.y() - 1f, bounds.width(), 1f),
@@ -1253,7 +1258,7 @@ public final class ListViewImpl<T> extends BuiltInComposite<ListView<T>> impleme
 
     @Override
     protected Rect childClip() {
-        return this.viewport;
+        return this.shownViewport;
     }
 
     @Override
@@ -1275,7 +1280,7 @@ public final class ListViewImpl<T> extends BuiltInComposite<ListView<T>> impleme
         }
         this.painter = painter;
         try {
-            painter.clipped(this.viewport, this.drawRows);
+            painter.clipped(this.shownViewport, this.drawRows);
         } finally {
             this.painter = null;
         }
@@ -1310,7 +1315,7 @@ public final class ListViewImpl<T> extends BuiltInComposite<ListView<T>> impleme
         if (this.dropMark != null && this.isHoverWithin()) {
             this.painter = painter;
             try {
-                painter.clipped(this.viewport, this.drawDrop);
+                painter.clipped(this.shownViewport, this.drawDrop);
             } finally {
                 this.painter = null;
             }
@@ -1425,7 +1430,7 @@ public final class ListViewImpl<T> extends BuiltInComposite<ListView<T>> impleme
             this.dropGap = gap;
             final float y = this.viewport.y() + this.padding.top() + gap * this.step() - Math.round(this.scrollY)
                     - this.rowSpacing * 0.5f - DROP_MARK_HEIGHT * 0.5f;
-            this.dropMark = new Rect(this.rowX, y, this.rowWidth, DROP_MARK_HEIGHT);
+            this.dropMark = this.flow(new Rect(this.rowX, y, this.rowWidth, DROP_MARK_HEIGHT));
             this.repaint();
         }
         event.accept(DropEffect.MOVE);

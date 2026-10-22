@@ -15,6 +15,7 @@
  */
 package org.inspirenxe.strata.core.control.pane;
 
+import org.inspirenxe.strata.core.text.TextLine;
 import org.inspirenxe.strata.api.animation.Animator;
 import org.inspirenxe.strata.api.component.Component;
 import org.inspirenxe.strata.api.component.CursorKind;
@@ -278,15 +279,21 @@ public final class ExpanderImpl extends BuiltInComposite<Expander> implements Ex
         final Insets padding = this.headerPadding;
         final float innerY = head.y() + padding.top();
         final float innerHeight = head.height() - padding.vertical();
-        final float arrowX = head.x() + padding.left();
+        // Right to left the arrow sits at the right, pointing left while closed, and the title before it
+        final boolean rightToLeft = this.isRightToLeft();
+        final float arrowX = rightToLeft ? head.right() - padding.left() - Rings.ARROW_LONG : head.x() + padding.left();
         if (this.expanded) {
             this.arrow.down(painter, color, arrowX, innerY + (innerHeight - Rings.ARROW_SHORT) * 0.5f);
+        } else if (rightToLeft) {
+            this.arrow.left(painter, color, arrowX + (Rings.ARROW_LONG - Rings.ARROW_SHORT) * 0.5f,
+                    innerY + (innerHeight - Rings.ARROW_LONG) * 0.5f);
         } else {
             this.arrow.right(painter, color, arrowX + (Rings.ARROW_LONG - Rings.ARROW_SHORT) * 0.5f,
                     innerY + (innerHeight - Rings.ARROW_LONG) * 0.5f);
         }
-        (enabled ? this.span : this.disabledSpan).line(this.hostRoot() != null && this.hostRoot().showsMnemonics())
-                .draw(painter, arrowX + Rings.ARROW_LONG + ARROW_GAP,
+        final TextLine title = (enabled ? this.span : this.disabledSpan)
+                .line(this.hostRoot() != null && this.hostRoot().showsMnemonics());
+        title.draw(painter, rightToLeft ? arrowX - ARROW_GAP - title.width() : arrowX + Rings.ARROW_LONG + ARROW_GAP,
                 innerY + (innerHeight - this.lineHeight) * 0.5f);
     }
 

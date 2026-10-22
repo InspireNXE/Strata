@@ -15,6 +15,7 @@
  */
 package org.inspirenxe.strata.core.control.pane;
 
+import org.inspirenxe.strata.core.layout.Flow;
 import org.inspirenxe.strata.api.component.CursorKind;
 import org.inspirenxe.strata.api.control.pane.ScrollBar;
 import org.inspirenxe.strata.api.event.input.DragEvent;
@@ -261,8 +262,11 @@ public final class ScrollBarImpl extends BuiltInComponent<ScrollBar> implements 
      */
     private Rect thumb() {
         final Rect bounds = this.bounds();
-        if (this.stale || !bounds.equals(this.measuredBounds)) {
+        final boolean rightToLeft = this.isRightToLeft();
+        if (this.stale || !bounds.equals(this.measuredBounds) || rightToLeft != this.track.isReversed()) {
             final double range = this.max - this.min;
+            // Right to left a horizontal bar starts at its right end
+            this.track.setReversed(rightToLeft);
             this.track.update(bounds, (float) this.visible, (float) (range + this.visible));
             this.thumbRect = this.track.thumb((float) (this.value - this.min), (float) range);
             this.measuredBounds = bounds;
@@ -340,7 +344,8 @@ public final class ScrollBarImpl extends BuiltInComponent<ScrollBar> implements 
             this.dragging = true;
             this.dragGrab = along - thumbStart;
         } else {
-            this.change(this.value + (along < thumbStart ? -this.page() : this.page()));
+            final boolean towardStart = along < thumbStart != this.track.isReversed();
+            this.change(this.value + (towardStart ? -this.page() : this.page()));
         }
     }
 
@@ -404,7 +409,8 @@ public final class ScrollBarImpl extends BuiltInComponent<ScrollBar> implements 
             return;
         }
         final boolean vertical = this.orientation == Orientation.VERTICAL;
-        final double next = switch (event.key()) {
+        // Right to left, Left moves a horizontal bar toward its end
+        final double next = switch (vertical ? event.key() : Flow.key(event.key(), this.isRightToLeft())) {
             case UP -> vertical ? this.value - this.rate : Double.NaN;
             case DOWN -> vertical ? this.value + this.rate : Double.NaN;
             case LEFT -> vertical ? Double.NaN : this.value - this.rate;

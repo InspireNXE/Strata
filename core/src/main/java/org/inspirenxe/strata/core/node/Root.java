@@ -149,7 +149,7 @@ import java.util.function.Consumer;
  * {@code DRAG_END}, and Escape ends the transfer with no effect. One drag carries a transfer at a time, whether it
  * started here or in another application. While a drag started here carries one, the canvas is asked for the cursor
  * of the accepted effect, and the drag image is laid out {@link #DRAG_IMAGE_OFFSET} units right of and below the
- * pointer, kept inside the host, and drawn on top of everything, the tooltip included. A source that leaves the tree
+ * pointer, or left of it while the screen runs right to left, kept inside the host, and drawn on top of everything, the tooltip included. A source that leaves the tree
  * ends its drag with no events. Each frame of such a drag, the node under the pointer or its nearest ancestor that
  * scrolls may scroll a step toward the edge the pointer is near (see {@link NodeHooks#edgeScroll}).</p>
  *
@@ -1131,7 +1131,10 @@ public final class Root {
         node.measure(this.layoutPass, this.width, this.height);
         final float imageWidth = node.outerWidth();
         final float imageHeight = node.outerHeight();
-        final float x = Math.max(0f, Math.min(drag.x() + DRAG_IMAGE_OFFSET, this.width - imageWidth));
+        // Right to left the image trails the pointer on its left
+        final float wanted = node.flowDirection() == FlowDirection.RIGHT_TO_LEFT
+                ? drag.x() - DRAG_IMAGE_OFFSET - imageWidth : drag.x() + DRAG_IMAGE_OFFSET;
+        final float x = Math.max(0f, Math.min(wanted, this.width - imageWidth));
         final float y = Math.max(0f, Math.min(drag.y() + DRAG_IMAGE_OFFSET, this.height - imageHeight));
         node.arrange(this.layoutPass, new Rect(x, y, imageWidth, imageHeight));
     }

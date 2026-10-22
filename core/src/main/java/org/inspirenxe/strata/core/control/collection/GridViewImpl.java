@@ -15,6 +15,7 @@
  */
 package org.inspirenxe.strata.core.control.collection;
 
+import org.inspirenxe.strata.core.layout.Flow;
 import org.inspirenxe.strata.api.component.Component;
 import org.inspirenxe.strata.api.component.HasTooltip;
 import org.inspirenxe.strata.api.component.Tooltip;
@@ -844,14 +845,15 @@ public final class GridViewImpl<T> extends BuiltInComposite<GridView<T>> impleme
             context.arrange(kept, new Rect(bounds.x() + (this.pinned % this.columns) * step,
                     bounds.y() + (this.pinned / this.columns) * step - offset, this.cellSize, this.cellSize));
         }
-        this.bar.update(new Rect(bounds.right() - ScrollPanel.BAR_WIDTH, bounds.y(), ScrollPanel.BAR_WIDTH,
-                bounds.height()), this.viewport.height(), Math.max(total, this.viewport.height()));
+        // Right to left the bar sits at the left; the node mirrors the cells
+        this.bar.update(this.flow(new Rect(bounds.right() - ScrollPanel.BAR_WIDTH, bounds.y(), ScrollPanel.BAR_WIDTH,
+                bounds.height())), this.viewport.height(), Math.max(total, this.viewport.height()));
         this.thumbRect = this.bar.thumb(this.scrollY, this.maxScrollY);
     }
 
     @Override
     protected Rect childClip() {
-        return this.viewport;
+        return this.flow(this.viewport);
     }
 
     @Override
@@ -964,7 +966,8 @@ public final class GridViewImpl<T> extends BuiltInComposite<GridView<T>> impleme
         final int columns = this.columns;
         final int rowStart = from - from % columns;
         final int page = Math.max(1, (int) Math.floor((this.viewport.height() + this.spacing) / this.step()));
-        final int next = switch (key) {
+        // Right to left the cells run from the right, so Left goes to the next one
+        final int next = switch (Flow.key(key, this.isRightToLeft())) {
             case LEFT -> Math.max(0, from - 1);
             case RIGHT -> Math.min(count - 1, from + 1);
             case UP -> from >= columns ? from - columns : from;

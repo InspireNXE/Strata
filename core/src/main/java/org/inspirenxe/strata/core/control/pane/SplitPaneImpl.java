@@ -15,6 +15,7 @@
  */
 package org.inspirenxe.strata.core.control.pane;
 
+import org.inspirenxe.strata.core.layout.Flow;
 import org.inspirenxe.strata.api.component.Component;
 import org.inspirenxe.strata.api.component.CursorKind;
 import org.inspirenxe.strata.api.component.Focusable;
@@ -233,8 +234,9 @@ public final class SplitPaneImpl extends BuiltInComposite<SplitPane> implements 
      * Moves the divider for the user by a key: by a number of units along the split, or to an end.
      */
     private boolean keyMove(final KeyEvent event) {
-        final Key key = event.key();
         final boolean across = this.horizontal();
+        // Right to left the first side is at the right, so Left grows it
+        final Key key = across ? Flow.key(event.key(), this.isRightToLeft()) : event.key();
         final float step = event.modifiers().shift() ? 1f : KEY_STEP;
         final float length = this.firstLength();
         if (key == (across ? Key.LEFT : Key.UP)) {
@@ -350,15 +352,32 @@ public final class SplitPaneImpl extends BuiltInComposite<SplitPane> implements 
             }
         }
 
+        /**
+         * Returns a point's place along the split as for left to right: right to left a side by side split counts
+         * from the right, where its first side is.
+         */
         private float along(final float x, final float y) {
-            return this.pane.horizontal() ? x : y;
+            if (!this.pane.horizontal()) {
+                return y;
+            }
+            return this.pane.isRightToLeft() ? Flow.mirrorX(x, this.pane.bounds()) : x;
+        }
+
+        /**
+         * Returns where the divider starts along the split as for left to right.
+         */
+        private float start(final Rect bounds) {
+            if (!this.pane.horizontal()) {
+                return bounds.y();
+            }
+            return this.pane.isRightToLeft() ? Flow.mirrorX(bounds.right(), this.pane.bounds()) : bounds.x();
         }
 
         @Override
         protected void onPointerPress(final PointerButtonEvent event) {
             if (event.button() == MouseButton.LEFT) {
                 final Rect bounds = this.bounds();
-                this.grab = this.along(event.x(), event.y()) - this.along(bounds.x(), bounds.y());
+                this.grab = this.along(event.x(), event.y()) - this.start(bounds);
                 event.consume();
             }
         }
