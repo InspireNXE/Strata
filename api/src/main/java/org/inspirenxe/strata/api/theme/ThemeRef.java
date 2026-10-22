@@ -17,6 +17,7 @@ package org.inspirenxe.strata.api.theme;
 
 import org.inspirenxe.strata.api.geometry.Insets;
 import org.inspirenxe.strata.api.text.TextStyle;
+import org.inspirenxe.strata.api.text.TextStylePatch;
 
 import java.util.Map;
 import java.util.Objects;
@@ -130,6 +131,15 @@ public record ThemeRef(ThemeId id, ThemeOverrides overrides) {
     }
 
     /**
+     * Returns the text style patches, as {@link ThemeOverrides#textPatches()} on {@link #overrides()} does.
+     *
+     * @return text style patches by style key; unmodifiable
+     */
+    public Map<String, TextStylePatch> textPatches() {
+        return this.overrides.textPatches();
+    }
+
+    /**
      * Returns the insets overrides, as {@link ThemeOverrides#insets()} on {@link #overrides()} does.
      *
      * @return insets overrides by style key; unmodifiable
@@ -172,6 +182,20 @@ public record ThemeRef(ThemeId id, ThemeOverrides overrides) {
     }
 
     /**
+     * Returns a copy of this ref that patches a text style after the packs are applied, changing only the properties
+     * the patch sets on the style the layers below give the key, so
+     * {@code ThemeRef.platform().override(Label.STYLE_TEXT, TextStylePatch.of().color(0xFFE0C060))} recolors labels
+     * and keeps their shadow. A later patch of the same key applies over an earlier one.
+     *
+     * @param key the style key
+     * @param patch the patch
+     * @return the new ref
+     */
+    public ThemeRef override(final String key, final TextStylePatch patch) {
+        return new ThemeRef(this.id, this.overrides.with(key, patch));
+    }
+
+    /**
      * Returns a copy of this ref that sets insets after the packs are applied. A later override of the same key
      * replaces an earlier one.
      *
@@ -194,6 +218,18 @@ public record ThemeRef(ThemeId id, ThemeOverrides overrides) {
      */
     public ThemeRef override(final String key, final float value) {
         return new ThemeRef(this.id, this.overrides.with(key, value));
+    }
+
+    /**
+     * Returns a copy of this ref that sets a flag after the packs are applied, a metric of 1 for true or 0 for false,
+     * as {@link Theme#flagOr} reads it. A later override of the same key replaces an earlier one.
+     *
+     * @param key the style key
+     * @param flag the flag
+     * @return the new ref
+     */
+    public ThemeRef override(final String key, final boolean flag) {
+        return new ThemeRef(this.id, this.overrides.with(key, flag));
     }
 
     /**

@@ -18,6 +18,7 @@ package org.inspirenxe.strata.core.theme;
 import org.inspirenxe.strata.api.geometry.Insets;
 import org.inspirenxe.strata.api.geometry.Size;
 import org.inspirenxe.strata.api.text.TextStyle;
+import org.inspirenxe.strata.api.text.TextStylePatch;
 import org.inspirenxe.strata.api.theme.Paint;
 import org.inspirenxe.strata.api.theme.SpriteId;
 import org.inspirenxe.strata.api.theme.ThemeException;
@@ -29,6 +30,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * One parsed theme file. The format is described on {@link ThemeResolver}.
@@ -41,12 +44,13 @@ import java.util.Set;
  * @param metrics the metrics it sets
  */
 record ThemeFile(String layer, Optional<ThemeId> parent, Map<String, Paint> paints,
-                 Map<String, TextPatch> text, Map<String, Insets> insets, Map<String, Float> metrics) {
+                 Map<String, TextStylePatch> text, Map<String, Insets> insets, Map<String, Float> metrics) {
     private static final Set<String> TOP_KEYS = Set.of("parent", "paints", "text", "insets", "metrics");
     private static final Set<String> SPRITE_KEYS = Set.of("sprite", "tint");
     private static final Set<String> NINE_SLICE_KEYS = Set.of("nine_slice", "border", "tint", "size", "tiled");
     private static final Set<String> TILED_KEYS = Set.of("tiled", "size", "tint");
     private static final Set<String> GRADIENT_KEYS = Set.of("gradient");
+    private static final Pattern DURATION = Pattern.compile("([0-9]+(?:\\.[0-9]+)?)(ms|s)");
     private static final Set<String> TEXT_KEYS =
             Set.of("color", "bold", "italic", "underline", "strikethrough", "shadow", "monospace");
 
@@ -70,7 +74,7 @@ record ThemeFile(String layer, Optional<ThemeId> parent, Map<String, Paint> pain
                     paints.put(entry.getKey(), paint(entry.getValue(), "paints." + entry.getKey()));
                 }
             }
-            final Map<String, TextPatch> text = new LinkedHashMap<>();
+            final Map<String, TextStylePatch> text = new LinkedHashMap<>();
             if (root.containsKey("text")) {
                 for (final Map.Entry<String, Object> entry : object(root.get("text"), "text").entrySet()) {
                     text.put(entry.getKey(), textPatch(entry.getValue(), "text." + entry.getKey()));
@@ -137,17 +141,38 @@ record ThemeFile(String layer, Optional<ThemeId> parent, Map<String, Paint> pain
                 + " needs a color, \"none\", or one of sprite, tiled, nine_slice, gradient");
     }
 
-    private static TextPatch textPatch(final Object value, final String where) {
+    private static TextStylePatch textPatch(final Object value, final String where) {
         final Map<String, Object> map = object(value, where);
         checkKeys(map, TEXT_KEYS, where);
-        return new TextPatch(
-                map.containsKey("color") ? color(string(map.get("color"), where + ".color"), where + ".color") : null,
-                flag(map, "bold", where),
-                flag(map, "italic", where),
-                flag(map, "underline", where),
-                flag(map, "strikethrough", where),
-                flag(map, "shadow", where),
-                flag(map, "monospace", where));
+        TextStylePatch patch = TextStylePatch.of();
+        if (map.containsKey("color")) {
+            patch = patch.color(color(string(map.get("color"), where + ".color"), where + ".color"));
+        }
+        final Boolean bold = flag(map, "bold", where);
+        if (bold != null) {
+            patch = patch.bold(bold);
+        }
+        final Boolean italic = flag(map, "italic", where);
+        if (italic != null) {
+            patch = patch.italic(italic);
+        }
+        final Boolean underline = flag(map, "underline", where);
+        if (underline != null) {
+            patch = patch.underline(underline);
+        }
+        final Boolean strikethrough = flag(map, "strikethrough", where);
+        if (strikethrough != null) {
+            patch = patch.strikethrough(strikethrough);
+        }
+        final Boolean shadow = flag(map, "shadow", where);
+        if (shadow != null) {
+            patch = patch.shadow(shadow);
+        }
+        final Boolean monospace = flag(map, "monospace", where);
+        if (monospace != null) {
+            patch = patch.monospace(monospace);
+        }
+        return patch;
     }
 
     private static int tint(final Map<String, Object> map, final String where) {
@@ -168,11 +193,28 @@ record ThemeFile(String layer, Optional<ThemeId> parent, Map<String, Paint> pain
         };
     }
 
+    /**
+     * Parses a metric: a number, {@code true} or {@code false} for a flag, stored as 1 or 0, or a duration with a
+     * unit, {@code "500ms"} or {@code "0.5s"}, stored in milliseconds.
+     */
     private static float metric(final Object value, final String where) {
-        if (value instanceof final Double number && Double.isFinite(number)) {
+        if (value instanceof final Double number && Float.isFinite(number.floatValue())) {
             return number.floatValue();
         }
-        throw new IllegalArgumentException(where + " must be a number");
+        if (value instanceof final Boolean flag) {
+            return flag ? 1f : 0f;
+        }
+        if (value instanceof final String text) {
+            final Matcher matcher = DURATION.matcher(text);
+            if (matcher.matches()) {
+                final double amount = Double.parseDouble(matcher.group(1)) * ("s".equals(matcher.group(2)) ? 1000.0 : 1.0);
+                if (Float.isFinite((float) amount)) {
+                    return (float) amount;
+                }
+            }
+        }
+        throw new IllegalArgumentException(where + " must be a number, true or false, or a duration such as \"500ms\""
+                + " or \"0.5s\"");
     }
 
     /**
@@ -246,37 +288,6 @@ record ThemeFile(String layer, Optional<ThemeId> parent, Map<String, Paint> pain
             if (!allowed.contains(key)) {
                 throw new IllegalArgumentException("Unknown key '" + key + "' in " + where);
             }
-        }
-    }
-
-    /**
-     * Text style fields a file sets. A null field keeps the inherited value.
-     *
-     * @param color the color, or null
-     * @param bold bold, or null
-     * @param italic italic, or null
-     * @param underline underline, or null
-     * @param strikethrough strikethrough, or null
-     * @param shadow shadow, or null
-     * @param monospace monospace, or null
-     */
-    record TextPatch(Integer color, Boolean bold, Boolean italic, Boolean underline, Boolean strikethrough,
-                     Boolean shadow, Boolean monospace) {
-        /**
-         * Applies the set fields over a style.
-         *
-         * @param base the inherited style
-         * @return the changed style
-         */
-        TextStyle apply(final TextStyle base) {
-            return new TextStyle(
-                    this.color != null ? this.color : base.color(),
-                    this.bold != null ? this.bold : base.bold(),
-                    this.italic != null ? this.italic : base.italic(),
-                    this.underline != null ? this.underline : base.underline(),
-                    this.strikethrough != null ? this.strikethrough : base.strikethrough(),
-                    this.shadow != null ? this.shadow : base.shadow(),
-                    this.monospace != null ? this.monospace : base.monospace());
         }
     }
 }

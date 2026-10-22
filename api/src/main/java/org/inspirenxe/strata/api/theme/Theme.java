@@ -167,6 +167,32 @@ public final class Theme {
     }
 
     /**
+     * Looks up a flag, a metric that is on when it is not 0. Theme files write flags as {@code true} and
+     * {@code false}, which are stored as 1 and 0.
+     *
+     * @param key the style key
+     * @param fallback returned if the key has no metric
+     * @return whether the metric is not 0, or {@code fallback}
+     */
+    public boolean flagOr(final String key, final boolean fallback) {
+        final Float value = this.metrics.get(key);
+        return value != null ? value != 0f : fallback;
+    }
+
+    /**
+     * Looks up a duration, a metric in milliseconds. Theme files may write it with a unit, {@code "500ms"} or
+     * {@code "0.5s"}, or as a plain number of milliseconds.
+     *
+     * @param key the style key
+     * @param fallback returned if the key has no metric, in milliseconds
+     * @return the metric rounded to whole milliseconds, or {@code fallback}
+     */
+    public long millisOr(final String key, final long fallback) {
+        final Float value = this.metrics.get(key);
+        return value != null ? Math.round((double) value) : fallback;
+    }
+
+    /**
      * Returns every paint this theme sets, by style key.
      *
      * @return an immutable map

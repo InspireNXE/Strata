@@ -79,7 +79,8 @@ import java.util.Set;
  *     "tab.padding": [8, 5, 8, 2]
  *   },
  *   "metrics": {
- *     "tooltip.delay": 250
+ *     "tooltip.delay": "250ms",
+ *     "tooltip.below": true
  *   }
  * }
  * }</pre>
@@ -91,7 +92,12 @@ import java.util.Set;
  * {@code [horizontal, vertical]} or {@code [left, top, right, bottom]}. A text style sets any of {@code color},
  * {@code bold}, {@code italic}, {@code underline}, {@code strikethrough}, {@code shadow} and {@code monospace}; the
  * rest keep the inherited style for that key, or {@link TextStyle#DEFAULT} if there is none. Insets take the same
- * forms as a border, in UI units. A metric is one number, in the unit its key states. Unknown members are errors. Overrides from code and from the ref replace a key's
+ * forms as a border, in UI units. A metric is one number, in the unit its key states, {@code true} or {@code false}
+ * for a flag, stored as 1 or 0, or a duration with a unit, {@code "500ms"} or {@code "0.5s"}, stored as a number of
+ * milliseconds; {@link Theme#flagOr} and {@link Theme#millisOr} read them back. Unknown members are errors.
+ * Overrides from code and from the ref replace a key's whole text style, except for their
+ * {@linkplain ThemeOverrides#textPatches() text style patches}, which change only the fields they set, as a file's
+ * text entry does, after any whole style the same overrides give the key. Overrides from code and from the ref replace a key's
  * whole text style.</p>
  *
  * <p>A theme file from {@link ThemeSource#documents} that cannot be parsed is skipped and logged, so one broken
@@ -289,7 +295,7 @@ public final class ThemeResolver {
         }
 
         /**
-         * Sets whole values, as overrides and base themes built in code do.
+         * Sets whole values, as overrides and base themes built in code do, then applies the text style patches.
          */
         private void set(final ThemeOverrides overrides, final String layer) {
             overrides.paints().forEach((key, paint) -> {
@@ -306,6 +312,10 @@ public final class ThemeResolver {
             });
             overrides.metrics().forEach((key, value) -> {
                 this.metrics.put(key, value);
+                this.layers.put(key, layer);
+            });
+            overrides.textPatches().forEach((key, patch) -> {
+                this.text.put(key, patch.apply(this.text.getOrDefault(key, TextStyle.DEFAULT)));
                 this.layers.put(key, layer);
             });
         }
