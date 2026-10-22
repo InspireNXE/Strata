@@ -40,6 +40,7 @@ import org.inspirenxe.strata.api.theme.Paint;
 import org.inspirenxe.strata.api.theme.Theme;
 import org.inspirenxe.strata.core.node.BuiltInComponent;
 import org.inspirenxe.strata.core.node.ComponentFactoryImpl;
+import org.inspirenxe.strata.core.node.Root;
 import org.inspirenxe.strata.core.text.TextLine;
 
 import java.util.List;
@@ -249,7 +250,13 @@ public final class ComboBoxImpl<T> extends BuiltInComponent<ComboBox<T>> impleme
         if (!this.canOpen()) {
             return this;
         }
-        final float rowHeight = this.lineHeight + 4f;
+        // A box opened before its first layout has no bounds to anchor to yet; lay the host out first
+        final Root root = this.hostRoot();
+        if (root != null) {
+            root.layout();
+        }
+        // Worked out here rather than read from the last measure, which may not have run yet
+        final float rowHeight = this.lineHeight(this.environment().text()) + 4f;
         final ListViewImpl<T> options = new ListViewImpl<>(this.ui, this::cell);
         options.route(options::applySelect, this::pick, (index, previous) -> { });
         options.setFocusable(false);
@@ -358,17 +365,26 @@ public final class ComboBoxImpl<T> extends BuiltInComponent<ComboBox<T>> impleme
     protected Size measure(final MeasureContext context, final float availableWidth, final float availableHeight) {
         final TextMetrics metrics = context.text();
         float widest = 0f;
-        float height = Math.max(metrics.lineHeight(this.textStyle), metrics.lineHeight(this.disabledTextStyle));
         for (int i = 0; i < this.options.size(); i++) {
-            final TextLine line = TextLine.of(this.label(i), this.textStyle, metrics);
-            widest = Math.max(widest, line.width());
-            height = Math.max(height, line.height());
+            widest = Math.max(widest, TextLine.of(this.label(i), this.textStyle, metrics).width());
         }
-        this.lineHeight = height;
+        this.lineHeight = this.lineHeight(metrics);
         this.shownIndex = -2;
         final Insets padding = this.padding;
         return new Size(padding.left() + widest + ARROW_GAP + ARROW_WIDTH + padding.right(),
                 this.lineHeight + padding.vertical());
+    }
+
+    /**
+     * Returns the height of the box's line: the taller of its two styles' line heights and every option's line,
+     * which an inline picture can make taller.
+     */
+    private float lineHeight(final TextMetrics metrics) {
+        float height = Math.max(metrics.lineHeight(this.textStyle), metrics.lineHeight(this.disabledTextStyle));
+        for (int i = 0; i < this.options.size(); i++) {
+            height = Math.max(height, TextLine.of(this.label(i), this.textStyle, metrics).height());
+        }
+        return height;
     }
 
     @Override

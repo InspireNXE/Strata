@@ -184,6 +184,20 @@ class CollectionEdgeCaseTest {
         }
 
         @Test
+        void aListOpenedBeforeTheFirstMeasureHasRowsALineTall() {
+            final ComponentFactory ui = CollectionEdgeCaseTest.this.ui;
+            this.combo = ui.<String>comboBox().setItems(List.of("Ana", "Ben", "Cleo"));
+            CollectionEdgeCaseTest.this.test.host().open(screen -> CollectionEdgeCaseTest.this.panel.add(this.combo, 10, 10));
+            this.combo.open();
+            CollectionEdgeCaseTest.this.test.host().layout();
+            final ListView<?> list = (ListView<?>) ui.overlays().open().getFirst().content();
+            assertEquals(TestPlatform.LINE_HEIGHT + 4f, list.rowHeight());
+            assertEquals(3 * (TestPlatform.LINE_HEIGHT + 4f), list.bounds().height());
+            assertTrue(list.bounds().y() >= this.combo.bounds().bottom(), "the list opens below the box");
+            assertTrue(list.bounds().width() >= this.combo.bounds().width(), "the list is as wide as the box");
+        }
+
+        @Test
         void tabbingAwayClosesTheList() {
             this.show();
             this.combo.requestFocus();
