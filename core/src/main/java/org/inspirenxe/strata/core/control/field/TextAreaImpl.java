@@ -178,7 +178,7 @@ public final class TextAreaImpl extends BuiltInComponent<TextArea> implements Te
     public TextAreaImpl(final ComponentFactoryImpl ui) {
         super(ui);
         this.buffer = new PlainBuffer();
-        this.boundaries = new TextBoundaries(this.buffer, false);
+        this.boundaries = new TextBoundaries(this.buffer);
         this.editor = new TextEditor(this.buffer, this.boundaries, new Editing(), new RowMoves(), this::caretMoved);
         this.edits = new PlainEdits(this.buffer, this.boundaries, this.editor, new Edits());
         this.bar = new ScrollTrack(true);
@@ -601,7 +601,7 @@ public final class TextAreaImpl extends BuiltInComponent<TextArea> implements Te
         float previousX = 0f;
         int index = start;
         while (index < limit) {
-            index = this.nextCodePoint(index);
+            index = Math.min(limit, this.boundaries.next(index));
             final float indexX = this.xOnRow(row, index);
             if (indexX >= x) {
                 return x - previousX < indexX - x ? previous : index;

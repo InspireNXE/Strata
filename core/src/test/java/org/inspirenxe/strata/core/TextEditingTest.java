@@ -25,6 +25,7 @@ import org.inspirenxe.strata.api.input.Key;
 import org.inspirenxe.strata.api.input.KeyAction;
 import org.inspirenxe.strata.api.input.Modifier;
 import org.inspirenxe.strata.api.input.Modifiers;
+import org.inspirenxe.strata.api.input.MouseButton;
 import org.inspirenxe.strata.api.layout.Anchor;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -56,6 +57,14 @@ class TextEditingTest {
     private void paste(final String text) {
         this.test.platform().clipboard().set(text);
         this.press(Key.V, CONTROL);
+    }
+
+    private void doubleClickBoxAt(final int index) {
+        final float x = 4f + 6f * index + 1f;
+        for (int i = 0; i < 2; i++) {
+            this.test.host().pointerButton(x, 10, MouseButton.LEFT, true, Modifiers.NONE);
+            this.test.host().pointerButton(x, 10, MouseButton.LEFT, false, Modifiers.NONE);
+        }
     }
 
     private void type(final String text) {
@@ -328,6 +337,102 @@ class TextEditingTest {
             TextEditingTest.this.press(Key.LEFT, Modifiers.NONE);
             this.render();
             assertTrue(area.scrollY() > 0f, "moving the caret brings it into view");
+        }
+    }
+
+    @Nested
+    class Characters {
+        // A flag is two regional indicators, four chars
+        private static final String FLAG = "\uD83C\uDDFA\uD83C\uDDF8";
+        // A thumbs-up with a skin tone, four chars
+        private static final String THUMB = "\uD83D\uDC4D\uD83C\uDFFD";
+
+        @Test
+        void leftAndRightStepOverAFlagWhole() {
+            final TextBox box = TextEditingTest.this.showBox("a" + FLAG + "b");
+
+            TextEditingTest.this.press(Key.LEFT, Modifiers.NONE);
+            TextEditingTest.this.press(Key.LEFT, Modifiers.NONE);
+            assertEquals(1, box.caret());
+
+            TextEditingTest.this.press(Key.RIGHT, Modifiers.NONE);
+            assertEquals(5, box.caret());
+        }
+
+        @Test
+        void backspaceRemovesAFlagOrASkinToneWhole() {
+            final TextBox box = TextEditingTest.this.showBox("a" + FLAG + THUMB);
+
+            TextEditingTest.this.press(Key.BACKSPACE, Modifiers.NONE);
+            assertEquals("a" + FLAG, box.text());
+            TextEditingTest.this.press(Key.BACKSPACE, Modifiers.NONE);
+            assertEquals("a", box.text());
+        }
+
+        @Test
+        void anAccentTypedAfterItsLetterMovesAndDeletesWithIt() {
+            final TextArea area = TextEditingTest.this.showArea("e\u0301x");
+
+            TextEditingTest.this.press(Key.LEFT, Modifiers.NONE);
+            TextEditingTest.this.press(Key.LEFT, Modifiers.NONE);
+            assertEquals(0, area.caret());
+
+            TextEditingTest.this.press(Key.DELETE, Modifiers.NONE);
+            assertEquals("x", area.text());
+        }
+
+        @Test
+        void aPasswordBoxStillStepsByCodePointLikeItsMask() {
+            final PasswordTextBox box = TextEditingTest.this.ui.passwordTextBox().setAnchor(Anchor.TOP_LEFT);
+            TextEditingTest.this.test.show(box);
+            box.setPassword(("a" + FLAG).toCharArray());
+            box.requestFocus();
+
+            TextEditingTest.this.press(Key.BACKSPACE, Modifiers.NONE);
+
+            assertEquals(2, box.length(), "one mask glyph, one code point, goes");
+        }
+    }
+
+    @Nested
+    class Words {
+
+        @Test
+        void controlArrowsStopAtPunctuation() {
+            final TextBox box = TextEditingTest.this.showBox("hello, world");
+
+            TextEditingTest.this.press(Key.LEFT, CONTROL);
+            assertEquals(7, box.caret());
+            TextEditingTest.this.press(Key.LEFT, CONTROL);
+            assertEquals(5, box.caret());
+            TextEditingTest.this.press(Key.LEFT, CONTROL);
+            assertEquals(0, box.caret());
+
+            TextEditingTest.this.press(Key.RIGHT, CONTROL);
+            assertEquals(5, box.caret());
+            TextEditingTest.this.press(Key.RIGHT, CONTROL);
+            assertEquals(6, box.caret());
+        }
+
+        @Test
+        void controlBackspaceDeletesTheWordAndLeavesItsPunctuation() {
+            final TextBox box = TextEditingTest.this.showBox("path/to/file");
+
+            TextEditingTest.this.press(Key.BACKSPACE, CONTROL);
+
+            assertEquals("path/to/", box.text());
+        }
+
+        @Test
+        void aDoubleClickSelectsAWordWithItsApostropheOrARunOfPunctuation() {
+            final TextBox box = TextEditingTest.this.showBox("don't stop...now");
+
+            TextEditingTest.this.doubleClickBoxAt(1);
+            assertEquals("don't", box.selectedText());
+
+            TextEditingTest.this.test.platform().advanceMillis(1000);
+            TextEditingTest.this.doubleClickBoxAt(11);
+            assertEquals("...", box.selectedText());
         }
     }
 }

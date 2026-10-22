@@ -40,10 +40,16 @@ import java.util.Objects;
  * <ul>
  *     <li>A click places the caret at the nearest character boundary. Shift+click extends the selection to it.</li>
  *     <li>Dragging selects by character. A drag that starts with a double click selects whole words. A double click
- *     selects the word (or run of spaces) under the pointer; a triple click selects everything.</li>
+ *     selects the word, run of punctuation or run of spaces under the pointer; a triple click selects
+ *     everything.</li>
  *     <li>Left and Right move by character, Home and End to either end. With Shift they extend the selection. With
- *     a selection and no Shift, Left and Right collapse it to its start or end.</li>
- *     <li>Ctrl+Left and Ctrl+Right move by word; Ctrl+Backspace and Ctrl+Delete delete by word.</li>
+ *     a selection and no Shift, Left and Right collapse it to its start or end. Backspace and Delete remove the
+ *     character before or after the caret, or the selection. A character is what a reader sees as one: a letter
+ *     with its accents, a flag or an emoji with its skin tone is one step and goes in one Backspace.</li>
+ *     <li>Ctrl+Left and Ctrl+Right move by word; Ctrl+Backspace and Ctrl+Delete delete by word. They skip spaces,
+ *     then stop at the other end of a word or of a run of punctuation, so {@code path/to/file} takes five steps.
+ *     Words follow the Unicode word rules that {@link java.text.BreakIterator} applies, so an apostrophe or a
+ *     decimal point inside a word stays in it.</li>
  *     <li>Ctrl+A selects all. Ctrl+C copies, Ctrl+X cuts and Ctrl+V pastes, through the host's clipboard. Pasted
  *     line breaks and other control characters, such as tabs, are removed, as typing never inserts them.</li>
  *     <li>Typing replaces the selection. Text past {@link #maxLength()} is dropped.</li>
@@ -90,7 +96,8 @@ import java.util.Objects;
  *
  * <h2>Text and indexes</h2>
  * <p>Caret and selection indexes count UTF-16 chars, like {@link String} indexes, but never fall inside a surrogate
- * pair: editing works on whole code points. {@link #maxLength()} counts code points. The box holds one line; line
+ * pair, and the keys and the pointer keep the caret off the middle of a character as the editing list describes it.
+ * {@link #select} may still put it there. {@link #maxLength()} counts code points. The box holds one line; line
  * breaks and other control characters given to {@link #setText} or pasted are removed. For a password, use a
  * {@link PasswordTextBox}, which keeps its text out of events, snapshots and the clipboard.</p>
  *

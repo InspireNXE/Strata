@@ -336,14 +336,14 @@ final class TextEditor {
                 if (this.hasSelection() && !shift) {
                     this.moveTo(this.selectionStart(), false);
                 } else {
-                    this.moveTo(this.boundaries.previousCodePoint(this.caret), shift);
+                    this.moveTo(this.boundaries.previous(this.caret), shift);
                 }
             }
             case RIGHT -> {
                 if (this.hasSelection() && !shift) {
                     this.moveTo(this.selectionEnd(), false);
                 } else {
-                    this.moveTo(this.boundaries.nextCodePoint(this.caret), shift);
+                    this.moveTo(this.boundaries.next(this.caret), shift);
                 }
             }
             case UP -> {
@@ -364,14 +364,14 @@ final class TextEditor {
                 if (this.hasSelection()) {
                     this.deleteSelection();
                 } else {
-                    this.delete(this.boundaries.previousCodePoint(this.caret), this.caret);
+                    this.delete(this.boundaries.previous(this.caret), this.caret);
                 }
             }
             case DELETE -> {
                 if (this.hasSelection()) {
                     this.deleteSelection();
                 } else {
-                    this.delete(this.caret, this.boundaries.nextCodePoint(this.caret));
+                    this.delete(this.caret, this.boundaries.next(this.caret));
                 }
             }
             default -> {

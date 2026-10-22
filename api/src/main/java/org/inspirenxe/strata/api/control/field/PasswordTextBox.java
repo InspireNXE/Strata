@@ -67,7 +67,8 @@ import java.util.function.IntPredicate;
  * <p>Editing works as in a {@link TextBox}, with these differences:</p>
  * <ul>
  *     <li>Every code point draws as the {@linkplain #setMaskCodePoint mask}. The caret and the selection sit on the
- *     mask glyphs. The placeholder is not masked.</li>
+ *     mask glyphs, and Left, Right, Backspace and Delete move or delete one code point, one glyph, at a time. The
+ *     placeholder is not masked.</li>
  *     <li>Ctrl+C and Ctrl+X do nothing, read-only or not, revealed or not.</li>
  *     <li>Ctrl+V pastes with line breaks removed. A paste that still holds a control character, such as a tab, or
  *     that the length limit or the {@linkplain #setCodePointFilter code point filter} would change is refused whole,

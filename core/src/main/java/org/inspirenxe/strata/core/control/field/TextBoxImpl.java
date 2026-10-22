@@ -163,7 +163,7 @@ public final class TextBoxImpl extends BuiltInComponent<TextBox> implements Text
         super(ui);
         this.ui = ui;
         this.buffer = new PlainBuffer();
-        this.boundaries = new TextBoundaries(this.buffer, false);
+        this.boundaries = new TextBoundaries(this.buffer);
         this.editor = new LineEditor(this.buffer, this.boundaries, new Editing());
         this.edits = new PlainEdits(this.buffer, this.boundaries, this.editor.editor(), new Edits());
         this.maxLength = Integer.MAX_VALUE;
@@ -799,7 +799,7 @@ public final class TextBoxImpl extends BuiltInComponent<TextBox> implements Text
             float previousX = 0f;
             int index = 0;
             while (index < box.buffer.length()) {
-                index += Character.charCount(box.buffer.codePointAt(index));
+                index = box.boundaries.next(index);
                 final float indexX = this.xForIndex(metrics, index);
                 if (indexX >= x) {
                     return x - previousX < indexX - x ? previous : index;

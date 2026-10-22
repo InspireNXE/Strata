@@ -139,7 +139,7 @@ public final class PasswordTextBoxImpl extends BuiltInComposite<PasswordTextBox>
         super(ui);
         this.ui = ui;
         this.buffer = new SecretBuffer();
-        this.editor = new LineEditor(this.buffer, new TextBoundaries(this.buffer, true), new Editing());
+        this.editor = new LineEditor(this.buffer, new TextBoundaries(this.buffer), new Editing());
         this.maxLength = Integer.MAX_VALUE;
         this.textPadding = TextBoxImpl.DEFAULT_PADDING;
         this.themePadding = TextBoxImpl.DEFAULT_PADDING;
