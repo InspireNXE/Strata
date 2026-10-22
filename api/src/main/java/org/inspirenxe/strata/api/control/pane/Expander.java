@@ -44,6 +44,12 @@ import java.util.Optional;
  * header's height plus the content's when expanded. The content is placed below the header, across the expander's
  * width, by its own alignment.</p>
  *
+ * <p>A {@linkplain #setHeader header component}, such as a check box that turns a group of settings on, takes the
+ * title's place after the arrow. The header is then as tall as that component and the padding, at least one line
+ * of the title's style, and the component is placed in the rest of the header's width by its own alignment. A press
+ * on a control in it goes to the control, and a click elsewhere on the header expands or collapses. Its events pass
+ * the expander on to its ancestors.</p>
+ *
  * <h2>Theme keys</h2>
  * <ul>
  *     <li>{@value #STYLE_HEADER} (paint, optional): behind the header. Nothing if missing.</li>
@@ -130,6 +136,25 @@ public interface Expander extends Component<Expander>, Focusable<Expander>, HasC
      * @return this expander
      */
     Expander setTitle(Text title);
+
+    /**
+     * Returns the component shown in the header in place of the title.
+     *
+     * @return the component, or empty for the title, as for a new expander
+     */
+    Optional<Component<?>> header();
+
+    /**
+     * Shows a component in the header after the arrow, in place of the title, or the title again for null. The old
+     * header component is removed from the tree. The title is kept, and still names the expander, but is not drawn
+     * and marks no mnemonic while a component takes its place. A new layout runs.
+     *
+     * @param header the component, or null for the title; it must not have a parent
+     * @return this expander
+     * @throws IllegalArgumentException if {@code header} already has a parent, is a host's content, or is this
+     *     expander or one of its ancestors; the expander is left as it was
+     */
+    Expander setHeader(Component<?> header);
 
     /**
      * Returns the content.

@@ -57,6 +57,7 @@ import org.inspirenxe.strata.api.control.menu.Menu;
 import org.inspirenxe.strata.api.control.menu.MenuBar;
 import org.inspirenxe.strata.api.control.menu.MenuItem;
 import org.inspirenxe.strata.api.control.menu.MenuSeparator;
+import org.inspirenxe.strata.api.control.menu.RadioMenuItem;
 import org.inspirenxe.strata.api.control.menu.SubmenuItem;
 import org.inspirenxe.strata.api.control.pane.Expander;
 import org.inspirenxe.strata.api.control.pane.NavigationEntry;
@@ -1038,6 +1039,34 @@ public interface ComponentFactory {
      */
     default MenuItem menuItem(final String text) {
         return this.menuItem(Text.of(text));
+    }
+
+    /**
+     * Makes an enabled {@link RadioMenuItem} that is not selected, in no group, with no text and an action that does
+     * nothing, as {@code radioMenuItem("")} does.
+     *
+     * @return a new item
+     */
+    default RadioMenuItem radioMenuItem() {
+        return this.radioMenuItem("");
+    }
+
+    /**
+     * Makes an enabled {@link RadioMenuItem} that is not selected, in no group, with an action that does nothing.
+     *
+     * @param text the item's text
+     * @return a new item
+     */
+    RadioMenuItem radioMenuItem(Text text);
+
+    /**
+     * Does the same as {@link #radioMenuItem(Text)} with literal text.
+     *
+     * @param text the item's text
+     * @return a new item
+     */
+    default RadioMenuItem radioMenuItem(final String text) {
+        return this.radioMenuItem(Text.of(text));
     }
 
     /**

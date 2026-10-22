@@ -37,7 +37,7 @@ import java.util.function.Consumer;
  * A list of commands that opens in a popup, such as a right-click menu or a menu in a {@link MenuBar}.
  *
  * <p>Its entries are {@link MenuEntry}s: {@link MenuItem} commands, {@link CheckMenuItem}s that flip a setting,
- * {@link SubmenuItem}s that open another menu, and {@link MenuSeparator}s. Add them with {@link #addItem(MenuEntry)},
+ * {@link RadioMenuItem}s that pick one of several, {@link SubmenuItem}s that open another menu, and {@link MenuSeparator}s. Add them with {@link #addItem(MenuEntry)},
  * or let the shorthands such as {@link #addItem(String, Runnable)} make them. A shortcut is text drawn at the right of
  * an item; it is only a hint and binds no key. An item showing a {@linkplain MenuItem#setCommand command} with a
  * stroke and no hint text shows the stroke, and a menu bar runs that command from it.</p>
@@ -150,7 +150,7 @@ public interface Menu extends Component<Menu>, Focusable<Menu>, HasCursor<Menu>,
 
     /**
      * Requested when the user chooses an entry: a click on it, or Enter, keypad Enter or Space while it is
-     * highlighted. The value is the {@link MenuItem} or {@link CheckMenuItem} chosen. Unless a handler cancels the
+     * highlighted. The value is the {@link MenuItem}, {@link CheckMenuItem} or {@link RadioMenuItem} chosen. Unless a handler cancels the
      * request, the menu closes its whole chain, flips a check item and runs the entry's action. A rewritten value
      * that is not one of this menu's items, is disabled, or is a separator or a submenu item is ignored, which leaves
      * the menu open. Submenu items do not fire this event, and a choice in a submenu fires the submenu's event, not

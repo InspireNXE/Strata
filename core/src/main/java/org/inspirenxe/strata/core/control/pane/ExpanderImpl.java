@@ -72,6 +72,7 @@ public final class ExpanderImpl extends BuiltInComposite<Expander> implements Ex
     private Insets headerPadding = DEFAULT_HEADER_PADDING;
 
     private Text title;
+    private Component<?> headerComponent;
     private Component<?> content;
     private boolean expanded;
     // Whether the content is a child: while expanded, and while it shrinks away
@@ -127,6 +128,33 @@ public final class ExpanderImpl extends BuiltInComposite<Expander> implements Ex
     @Override
     public Expander setTitle(final Text title) {
         this.title = Objects.requireNonNull(title, "title");
+        this.invalidateLayout();
+        return this;
+    }
+
+    @Override
+    public Optional<Component<?>> header() {
+        return Optional.ofNullable(this.headerComponent);
+    }
+
+    /**
+     * Puts a component in the header as content, first among the children so Tab reaches it before the content.
+     */
+    @Override
+    public Expander setHeader(final Component<?> header) {
+        if (header == this.headerComponent) {
+            return this;
+        }
+        if (header != null) {
+            Adoption.require(this.node(), this.nodeOf(header));
+        }
+        if (this.headerComponent != null) {
+            this.removeChild(this.headerComponent);
+        }
+        this.headerComponent = header;
+        if (header != null) {
+            this.insertContent(0, header);
+        }
         this.invalidateLayout();
         return this;
     }
@@ -238,10 +266,18 @@ public final class ExpanderImpl extends BuiltInComposite<Expander> implements Ex
         this.span = MnemonicLine.of(this.title, this.textStyle, metrics);
         this.disabledSpan = MnemonicLine.of(this.title, this.disabledTextStyle, metrics);
         this.lineHeight = Math.max(this.span.plain().height(), this.disabledSpan.plain().height());
-        this.headerHeight = this.lineHeight + this.headerPadding.vertical();
-        final float headerWidth = this.headerPadding.left() + Rings.ARROW_LONG + ARROW_GAP
-                + Math.max(this.span.plain().width(), this.disabledSpan.plain().width())
-                + this.headerPadding.right();
+        final float lead = this.headerPadding.left() + Rings.ARROW_LONG + ARROW_GAP;
+        final float headerWidth;
+        if (this.headerComponent != null) {
+            final Size head = context.measure(this.headerComponent,
+                    Math.max(0f, availableWidth - lead - this.headerPadding.right()), Float.POSITIVE_INFINITY);
+            this.headerHeight = Math.max(this.lineHeight, head.height()) + this.headerPadding.vertical();
+            headerWidth = lead + head.width() + this.headerPadding.right();
+        } else {
+            this.headerHeight = this.lineHeight + this.headerPadding.vertical();
+            headerWidth = lead + Math.max(this.span.plain().width(), this.disabledSpan.plain().width())
+                    + this.headerPadding.right();
+        }
         if (!this.shown || this.content == null) {
             return new Size(headerWidth, this.headerHeight);
         }
@@ -254,6 +290,13 @@ public final class ExpanderImpl extends BuiltInComposite<Expander> implements Ex
 
     @Override
     protected void arrange(final ArrangeContext context, final Rect bounds) {
+        if (this.headerComponent != null) {
+            final Insets padding = this.headerPadding;
+            final float lead = padding.left() + Rings.ARROW_LONG + ARROW_GAP;
+            context.arrange(this.headerComponent, new Rect(bounds.x() + lead, bounds.y() + padding.top(),
+                    Math.max(0f, bounds.width() - lead - padding.right()),
+                    Math.max(0f, this.headerHeight - padding.vertical())));
+        }
         if (this.shown && this.content != null) {
             final float room = Math.max(0f, bounds.height() - this.headerHeight);
             // While it grows or shrinks the content keeps its full height and is cut at the bottom
@@ -262,9 +305,16 @@ public final class ExpanderImpl extends BuiltInComposite<Expander> implements Ex
         }
     }
 
+    /**
+     * Clips below the header while the content grows or shrinks. With a header component, which is a child too, it
+     * clips to the whole bounds instead, which cuts the content in the same place, since it sits below the header.
+     */
     @Override
     protected Rect childClip() {
         final Rect bounds = this.bounds();
+        if (this.headerComponent != null) {
+            return bounds;
+        }
         return this.clipRect.at(bounds.x(), bounds.y() + this.headerHeight, bounds.width(),
                 Math.max(0f, bounds.height() - this.headerHeight));
     }
@@ -291,10 +341,13 @@ public final class ExpanderImpl extends BuiltInComposite<Expander> implements Ex
             this.arrow.right(painter, color, arrowX + (Rings.ARROW_LONG - Rings.ARROW_SHORT) * 0.5f,
                     innerY + (innerHeight - Rings.ARROW_LONG) * 0.5f);
         }
-        final TextLine title = (enabled ? this.span : this.disabledSpan)
-                .line(this.hostRoot() != null && this.hostRoot().showsMnemonics());
-        title.draw(painter, rightToLeft ? arrowX - ARROW_GAP - title.width() : arrowX + Rings.ARROW_LONG + ARROW_GAP,
-                innerY + (innerHeight - this.lineHeight) * 0.5f);
+        if (this.headerComponent == null) {
+            final TextLine title = (enabled ? this.span : this.disabledSpan)
+                    .line(this.hostRoot() != null && this.hostRoot().showsMnemonics());
+            title.draw(painter,
+                    rightToLeft ? arrowX - ARROW_GAP - title.width() : arrowX + Rings.ARROW_LONG + ARROW_GAP,
+                    innerY + (innerHeight - this.lineHeight) * 0.5f);
+        }
     }
 
     private boolean overHeader(final float y) {
@@ -309,7 +362,8 @@ public final class ExpanderImpl extends BuiltInComposite<Expander> implements Ex
 
     @Override
     protected void onClick(final PointerButtonEvent event) {
-        if (event.button() == MouseButton.LEFT && this.overHeader(event.y())) {
+        // A control in the header component that used the click keeps it
+        if (event.button() == MouseButton.LEFT && !event.isHandled() && this.overHeader(event.y())) {
             this.userToggle();
             event.consume();
         }
@@ -331,7 +385,7 @@ public final class ExpanderImpl extends BuiltInComposite<Expander> implements Ex
 
     @Override
     public boolean hasMnemonic(final int mnemonic) {
-        return this.span.mnemonic() == mnemonic;
+        return this.headerComponent == null && this.span.mnemonic() == mnemonic;
     }
 
     /**

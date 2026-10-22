@@ -17,6 +17,7 @@ package org.inspirenxe.strata.api.control.menu;
 
 /**
  * One entry of a {@link Menu}: a {@link MenuItem} that runs a command, a {@link CheckMenuItem} that flips a setting,
+ * a {@link RadioMenuItem} that is one choice of several,
  * a {@link SubmenuItem} that opens another menu, or a {@link MenuSeparator} line. A {@link MenuBar}'s titles are
  * {@link SubmenuItem}s too.
  *
@@ -27,5 +28,5 @@ package org.inspirenxe.strata.api.control.menu;
  *
  * <p>Call entries on the UI thread. Do not implement this interface.</p>
  */
-public sealed interface MenuEntry permits MenuItem, CheckMenuItem, SubmenuItem, MenuSeparator {
+public sealed interface MenuEntry permits MenuItem, CheckMenuItem, RadioMenuItem, SubmenuItem, MenuSeparator {
 }

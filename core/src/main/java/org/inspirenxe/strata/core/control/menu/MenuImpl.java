@@ -507,7 +507,7 @@ public final class MenuImpl extends BuiltInComponent<Menu> implements Menu, Core
     }
 
     /**
-     * Closes the chain, flips a check item, runs the entry's action, reports {@link #CHOSEN} and then runs an item's
+     * Closes the chain, flips a check item or selects a radio item, runs the entry's action, reports {@link #CHOSEN} and then runs an item's
      * command: what an accepted {@link #CHOOSE} request does. A check item's toggle command is flipped with the
      * item, not run again. Ignores an entry that is not this menu's, is disabled, or is a separator or a submenu
      * item, as a handler may have rewritten it.
@@ -526,6 +526,11 @@ public final class MenuImpl extends BuiltInComponent<Menu> implements Menu, Core
                 item.setSelected(!item.isSelected());
                 item.action().accept(item.isSelected());
             }
+            case RadioMenuItemImpl item -> {
+                this.top().close();
+                item.setSelected(true);
+                item.action().run();
+            }
             default -> {
                 return;
             }
@@ -533,6 +538,19 @@ public final class MenuImpl extends BuiltInComponent<Menu> implements Menu, Core
         this.report(CHOSEN, chosen, chosen);
         if (chosen instanceof MenuItemImpl item) {
             Commands.run(this.node().causes(), item.shownCommand());
+        }
+    }
+
+    /**
+     * Clears the radio items of this menu in the same group as one just selected.
+     *
+     * @param selected the item selected
+     */
+    void clearGroupBut(final RadioMenuItemImpl selected) {
+        for (final MenuEntryImpl entry : this.items) {
+            if (entry instanceof final RadioMenuItemImpl other && other != selected && other.sameGroup(selected)) {
+                other.clear();
+            }
         }
     }
 

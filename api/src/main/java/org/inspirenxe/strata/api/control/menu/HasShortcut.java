@@ -18,8 +18,8 @@ package org.inspirenxe.strata.api.control.menu;
 import org.inspirenxe.strata.api.text.Text;
 
 /**
- * A menu entry that shows a shortcut hint at its right, such as {@code "Ctrl+C"}: a {@link MenuItem} or a
- * {@link CheckMenuItem}. The hint is only text and binds no key.
+ * A menu entry that shows a shortcut hint at its right, such as {@code "Ctrl+C"}: a {@link MenuItem}, a
+ * {@link CheckMenuItem} or a {@link RadioMenuItem}. The hint is only text and binds no key.
  *
  * <p>Do not implement this interface.</p>
  *

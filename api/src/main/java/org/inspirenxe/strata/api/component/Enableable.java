@@ -18,6 +18,7 @@ package org.inspirenxe.strata.api.component;
 /**
  * Something the user can be kept from using: every {@link Component}, and the entries that controls hold, a
  * {@link org.inspirenxe.strata.api.control.menu.MenuItem}, {@link org.inspirenxe.strata.api.control.menu.CheckMenuItem},
+ * {@link org.inspirenxe.strata.api.control.menu.RadioMenuItem},
  * {@link org.inspirenxe.strata.api.control.menu.SubmenuItem}, {@link org.inspirenxe.strata.api.control.pane.Tab} or
  * {@link org.inspirenxe.strata.api.control.pane.NavigationItem}. Code that takes an {@code Enableable<?>} turns any
  * of them on and off without a branch for each.
