@@ -26,10 +26,8 @@ import org.inspirenxe.strata.api.control.attribute.item.RowView;
 import org.inspirenxe.strata.api.control.attribute.item.MultiSelection;
 import org.inspirenxe.strata.api.control.attribute.item.Selection;
 import org.inspirenxe.strata.api.control.attribute.item.SelectionMode;
-import org.inspirenxe.strata.api.text.Text;
 
 import java.util.List;
-import java.util.Optional;
 import java.util.function.Function;
 
 /**
@@ -209,13 +207,6 @@ public interface ListView<T> extends Component<ListView<T>>, Focusable<ListView<
     String STYLE_CELL_PADDING = "list.cell.padding";
 
     /**
-     * Returns the items.
-     *
-     * @return an unmodifiable copy of the items
-     */
-    List<T> items();
-
-    /**
      * Replaces the items and rebuilds the rows in view. Each selected item moves to the item with its key, as
      * {@link ItemSource} describes, or leaves the selection; {@link #SELECTED} fires if the selected item or its
      * index changed. The scroll offset is kept, clamped to the new length.
@@ -242,61 +233,6 @@ public interface ListView<T> extends Component<ListView<T>>, Focusable<ListView<
     ListView<T> setCellFactory(Function<? super T, ? extends Component<?>> cellFactory);
 
     /**
-     * Sets how items are told apart when {@link #setItems} keeps the selection. By default an item is its own key,
-     * compared with {@code equals}.
-     *
-     * @param keyFunction returns the key of an item; keys are compared with {@code equals}
-     * @return this list
-     */
-    ListView<T> setKeyFunction(Function<? super T, ?> keyFunction);
-
-    /**
-     * Returns the row height.
-     *
-     * @return the height of every row; {@value #DEFAULT_ROW_HEIGHT} by default
-     */
-    float rowHeight();
-
-    /**
-     * Sets the height of every row.
-     *
-     * @param height the height in UI units
-     * @return this list
-     * @throws IllegalArgumentException if the height is not greater than 0 or not finite
-     */
-    ListView<T> setRowHeight(float height);
-
-    /**
-     * Returns the row spacing.
-     *
-     * @return the space between rows; 0 by default
-     */
-    float rowSpacing();
-
-    /**
-     * Sets the space between rows. No background is drawn in it.
-     *
-     * @param spacing the space in UI units
-     * @return this list
-     * @throws IllegalArgumentException if the spacing is negative or not finite
-     */
-    ListView<T> setRowSpacing(float spacing);
-
-    /**
-     * Returns the selected index.
-     *
-     * @return the index of the selected item, or -1 when nothing is selected
-     */
-    int selectedIndex();
-
-    /**
-     * Returns the selected item.
-     *
-     * @return the selected item, or empty when nothing is selected
-     */
-    Optional<T> selected();
-
-    /**
      * Selects the item at an index and scrolls it into view.
      *
      * @param index the index, or -1 to clear the selection
@@ -312,35 +248,4 @@ public interface ListView<T> extends Component<ListView<T>>, Focusable<ListView<
      * @return this list
      */
     ListView<T> selectItem(T item);
-
-    /**
-     * Returns whether a press on the selected row deselects it.
-     *
-     * @return false by default
-     */
-    boolean isDeselectable();
-
-    /**
-     * Sets whether a press on the selected row deselects it.
-     *
-     * @param deselectable true to allow deselecting by pressing
-     * @return this list
-     */
-    ListView<T> setDeselectable(boolean deselectable);
-
-    /**
-     * Sets whether a single click activates a row, instead of a double click.
-     *
-     * @param onClick true to activate on every click
-     * @return this list
-     */
-    ListView<T> setActivateOnClick(boolean onClick);
-
-    /**
-     * Sets the text shown in the middle of the list while it has no items.
-     *
-     * @param placeholder the text, or {@code null} for none
-     * @return this list
-     */
-    ListView<T> setPlaceholder(Text placeholder);
 }

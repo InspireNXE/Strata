@@ -167,6 +167,7 @@ public final class ListViewImpl<T> extends BuiltInComposite<ListView<T>> impleme
         this.thumbHovered = Paint.NONE;
         this.track = Paint.NONE;
         this.placeholderStyle = TextStyle.DEFAULT;
+        this.placeholder = Text.empty();
     }
 
     // ------------------------------------------------------------------
@@ -509,8 +510,13 @@ public final class ListViewImpl<T> extends BuiltInComposite<ListView<T>> impleme
     }
 
     @Override
+    public Text placeholder() {
+        return this.placeholder;
+    }
+
+    @Override
     public ListView<T> setPlaceholder(final Text placeholder) {
-        this.placeholder = placeholder;
+        this.placeholder = placeholder == null ? Text.empty() : placeholder;
         this.invalidateLayout();
         return this;
     }
@@ -797,7 +803,7 @@ public final class ListViewImpl<T> extends BuiltInComposite<ListView<T>> impleme
 
     @Override
     protected Size measure(final MeasureContext context, final float availableWidth, final float availableHeight) {
-        this.placeholderLine = this.placeholder == null ? TextLine.EMPTY
+        this.placeholderLine = this.placeholder.isEmpty() ? TextLine.EMPTY
                 : TextLine.of(this.placeholder, this.placeholderStyle, context.text());
         final float insetWidth = this.border().widths().horizontal();
         final float insetHeight = this.border().widths().vertical();

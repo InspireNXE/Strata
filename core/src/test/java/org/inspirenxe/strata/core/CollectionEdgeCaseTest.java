@@ -35,6 +35,7 @@ import org.inspirenxe.strata.api.input.MouseButton;
 import org.inspirenxe.strata.api.layout.AbsolutePanel;
 import org.inspirenxe.strata.api.layout.GridLength;
 import org.inspirenxe.strata.api.layout.ScrollPanel;
+import org.inspirenxe.strata.api.text.Text;
 import org.inspirenxe.strata.api.theme.Paint;
 import org.inspirenxe.strata.api.theme.Themes;
 import org.junit.jupiter.api.Nested;
@@ -417,6 +418,41 @@ class CollectionEdgeCaseTest {
             assertThrows(NullPointerException.class, () -> ui.<String>treeView().setItems(holed));
             assertThrows(NullPointerException.class, () -> ui.<String>comboBox().setItems(holed));
             assertEquals(holed, ui.<String>gridView(ui::label).setItems(holed).items());
+        }
+    }
+
+    @Nested
+    class Getters {
+        @Test
+        void rowViewsReturnTheirPlaceholderAndNullMeansNone() {
+            final ComponentFactory ui = CollectionEdgeCaseTest.this.ui;
+            final ListView<String> list = ui.<String>listView();
+            assertEquals(Text.empty(), list.placeholder());
+            list.setPlaceholder("Nothing yet");
+            assertEquals(Text.of("Nothing yet"), list.placeholder());
+            list.setPlaceholder((Text) null);
+            assertEquals(Text.empty(), list.placeholder());
+            assertEquals(Text.of("No rows"), ui.<String>tableView().setPlaceholder("No rows").placeholder());
+            assertEquals(Text.of("No roots"), ui.<String>treeView().setPlaceholder("No roots").placeholder());
+        }
+
+        @Test
+        void aTreeRefusesAnIndentThatIsNotANumber() {
+            final TreeView<String> tree = CollectionEdgeCaseTest.this.ui.<String>treeView();
+            assertThrows(IllegalArgumentException.class, () -> tree.setIndent(Float.NaN));
+            assertEquals(TreeView.DEFAULT_INDENT, tree.indent());
+        }
+
+        @Test
+        void aGridsItemsStayACopyWhenOneCellChanges() {
+            final ComponentFactory ui = CollectionEdgeCaseTest.this.ui;
+            final GridView<String> grid = ui.<String>gridView(ui::label).setItems(Arrays.asList("Ana", null, "Ben"));
+            final List<String> before = grid.items();
+            grid.setItem(1, "Cleo");
+            assertEquals(Arrays.asList("Ana", null, "Ben"), before);
+            assertEquals(List.of("Ana", "Cleo", "Ben"), grid.items());
+            assertEquals("Cleo", grid.item(1));
+            assertThrows(UnsupportedOperationException.class, () -> grid.items().set(0, "Dev"));
         }
     }
 }

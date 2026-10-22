@@ -166,14 +166,6 @@ public interface TreeView<T> extends Component<TreeView<T>>, HasCursor<TreeView<
     TreeView<T> setCellFactory(Function<? super T, ? extends Component<?>> cellFactory);
 
     /**
-     * Sets what identifies an item.
-     *
-     * @param keyFunction returns an item's key, compared with {@link Object#equals}
-     * @return this tree
-     */
-    TreeView<T> setKeyFunction(Function<? super T, ?> keyFunction);
-
-    /**
      * Works out the rows again and builds them, for when the children of shown items changed.
      *
      * @return this tree
@@ -242,23 +234,14 @@ public interface TreeView<T> extends Component<TreeView<T>>, HasCursor<TreeView<
      *
      * @param indent the indent in UI units
      * @return this tree
-     * @throws IllegalArgumentException if {@code indent} is negative or infinite
+     * @throws IllegalArgumentException if {@code indent} is negative or not finite
      */
     TreeView<T> setIndent(float indent);
 
     /**
-     * Sets the height of every row.
-     *
-     * @param height the row height in UI units
-     * @return this tree
-     * @throws IllegalArgumentException if {@code height} is not greater than 0 or is infinite
-     */
-    TreeView<T> setRowHeight(float height);
-
-    /**
      * Sets the text shown while there are no roots.
      *
-     * @param placeholder the text, or null for none
+     * @param placeholder the text, or {@code null} or empty for none
      * @return this tree
      */
     TreeView<T> setPlaceholder(Text placeholder);

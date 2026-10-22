@@ -56,7 +56,9 @@ public final class GridViewImpl<T> extends BuiltInComposite<GridView<T>> impleme
 
     private final ComponentFactoryImpl ui;
     private final List<Slot<T>> slots;
-    private List<T> items;
+    // The items, changed in place by setItem, and the copy items() last handed out, or null once they changed
+    private final List<T> items;
+    private List<T> shown;
     private Function<? super T, ? extends Component<?>> cellFactory;
     private Function<? super T, ?> keyFunction;
     private boolean activateOnClick;
@@ -86,7 +88,7 @@ public final class GridViewImpl<T> extends BuiltInComposite<GridView<T>> impleme
         super(ui);
         this.ui = ui;
         this.slots = new ArrayList<>();
-        this.items = List.of();
+        this.items = new ArrayList<>();
         this.cellFactory = Objects.requireNonNull(cellFactory, "cellFactory");
         this.keyFunction = Function.identity();
         this.columns = DEFAULT_COLUMNS;
@@ -103,12 +105,18 @@ public final class GridViewImpl<T> extends BuiltInComposite<GridView<T>> impleme
 
     @Override
     public List<T> items() {
-        return this.items;
+        if (this.shown == null) {
+            this.shown = Collections.unmodifiableList(new ArrayList<>(this.items));
+        }
+        return this.shown;
     }
 
     @Override
     public GridView<T> setItems(final List<? extends T> items) {
-        this.items = Collections.unmodifiableList(new ArrayList<>(items));
+        final List<T> next = new ArrayList<>(items);
+        this.items.clear();
+        this.items.addAll(next);
+        this.shown = null;
         this.rebuild();
         if (this.selectedIndex >= this.items.size()) {
             this.select(-1);
@@ -124,9 +132,8 @@ public final class GridViewImpl<T> extends BuiltInComposite<GridView<T>> impleme
     @Override
     public GridView<T> setItem(final int index, final T item) {
         Objects.checkIndex(index, this.items.size());
-        final List<T> next = new ArrayList<>(this.items);
-        next.set(index, item);
-        this.items = Collections.unmodifiableList(next);
+        this.items.set(index, item);
+        this.shown = null;
         this.slots.get(index).fill(item);
         return this;
     }

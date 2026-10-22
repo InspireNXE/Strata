@@ -385,7 +385,7 @@ public final class TreeViewImpl<T> extends ListBackedControl<T, TreeViewImpl.Ent
 
     @Override
     public TreeView<T> setIndent(final float indent) {
-        if (indent < 0f || Float.isInfinite(indent)) {
+        if (!(indent >= 0f) || Float.isInfinite(indent)) {
             throw new IllegalArgumentException("Indent must be finite and not negative: " + indent);
         }
         this.indent = indent;

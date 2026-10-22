@@ -131,6 +131,11 @@ abstract class ListBackedControl<T, E, S extends Component<S> & RowView<S> & Mul
     }
 
     @Override
+    public Text placeholder() {
+        return this.list.placeholder();
+    }
+
+    @Override
     public S setPlaceholder(final Text placeholder) {
         this.list.setPlaceholder(placeholder);
         return this.self();

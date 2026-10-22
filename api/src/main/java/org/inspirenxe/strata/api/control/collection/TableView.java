@@ -292,43 +292,11 @@ public interface TableView<T> extends Component<TableView<T>>, HasCursor<TableVi
     TableView<T> refresh();
 
     /**
-     * Sets what identifies an item across {@link #setItems} calls, as {@link ListView#setKeyFunction} does.
-     *
-     * @param keyFunction returns an item's key
-     * @return this table
-     */
-    TableView<T> setKeyFunction(Function<? super T, ?> keyFunction);
-
-    /**
-     * Sets the height of every body row.
-     *
-     * @param height the row height in UI units
-     * @return this table
-     * @throws IllegalArgumentException if {@code height} is not greater than 0 or is infinite
-     */
-    TableView<T> setRowHeight(float height);
-
-    /**
-     * Sets the text shown in the body while there are no items.
-     *
-     * @param placeholder the text, or null for none
-     * @return this table
-     */
-    TableView<T> setPlaceholder(Text placeholder);
-
-    /**
      * Returns the index of the selected row in the shown order.
      *
      * @return the index, or -1 when nothing is selected
      */
     int selectedIndex();
-
-    /**
-     * Returns the selected item.
-     *
-     * @return the selected item, or empty when nothing is selected
-     */
-    Optional<T> selected();
 
     /**
      * Selects the row at an index in the shown order and scrolls it into view, as {@link ListView#select} does.

@@ -63,9 +63,16 @@ public interface RowView<S extends RowView<S>> {
     S setRowSpacing(float spacing);
 
     /**
+     * Returns the text shown in the middle of the rows while there are none.
+     *
+     * @return the placeholder; empty for none, which is the default
+     */
+    Text placeholder();
+
+    /**
      * Sets the text shown in the middle of the rows while there are none.
      *
-     * @param placeholder the text, or {@code null} for none
+     * @param placeholder the text, or {@code null} or empty for none
      * @return this control
      */
     S setPlaceholder(Text placeholder);
@@ -73,7 +80,7 @@ public interface RowView<S extends RowView<S>> {
     /**
      * Does the same as {@link #setPlaceholder(Text)} with literal text.
      *
-     * @param placeholder the text, or {@code null} for none
+     * @param placeholder the text, or {@code null} or empty for none
      * @return this control
      */
     default S setPlaceholder(final String placeholder) {
