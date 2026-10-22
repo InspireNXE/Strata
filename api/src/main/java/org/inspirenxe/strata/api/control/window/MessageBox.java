@@ -40,6 +40,9 @@ import java.util.List;
  * answers once: the box reports a {@link Result} through {@link #ANSWERED} and closes the overlay showing it. The
  * close button and Escape answer {@link Buttons#dismissResult()}.</p>
  *
+ * <p>A box that closes any other way before it answered, such as by its overlay's {@code close()}, reports the
+ * dismiss result through {@link #ANSWERED} without asking {@link #ANSWER} first.</p>
+ *
  * <p>The box is a composite: the events of its window and buttons reach handlers on those parts and on the box,
  * and nothing outside it. To hear the user's answer, handle {@link #ANSWER} and {@link #ANSWERED}.</p>
  *
@@ -121,7 +124,8 @@ public interface MessageBox extends Component<MessageBox>, HasCursor<MessageBox>
     /**
      * Reported once, when the box answers, before the overlay showing it closes. The value is the answer, and
      * {@link ValueEvent#previous()} is the same answer. Closing {@link #window()} from code answers
-     * {@link Buttons#dismissResult()} and reports it too, without an {@link #ANSWER} request.
+     * {@link Buttons#dismissResult()} and reports it too, without an {@link #ANSWER} request. So does a box that
+     * closes any other way before it answered, after the overlay closed.
      */
     EventType<ValueEvent<MessageBox, Result>> ANSWERED = EventType.valueReport("message_box.answered");
 

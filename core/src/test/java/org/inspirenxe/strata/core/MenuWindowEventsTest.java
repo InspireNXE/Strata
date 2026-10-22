@@ -622,6 +622,24 @@ class MenuWindowEventsTest {
         }
 
         @Test
+        void closingTheOverlayFromCodeReportsTheDismissResultOnce() {
+            this.show();
+            this.overlay.close();
+            assertEquals(List.of(), MenuWindowEventsTest.this.heard);
+            assertEquals(List.of(MessageBox.Result.CANCEL), this.results);
+            MenuWindowEventsTest.this.test.host().layout();
+            assertEquals(List.of(MessageBox.Result.CANCEL), this.results);
+        }
+
+        @Test
+        void anAnsweredBoxDoesNotAnswerAgainWhenItsOverlayCloses() {
+            this.show();
+            MenuWindowEventsTest.this.key(Key.ENTER);
+            assertEquals(List.of(MessageBox.Result.YES), this.results);
+            assertFalse(this.overlay.isOpen());
+        }
+
+        @Test
         void closingTheWindowFromCodeFiresNoRequestButReportsTheDismissResult() {
             this.show();
             this.box.window().close();

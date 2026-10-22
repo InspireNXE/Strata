@@ -47,7 +47,9 @@ import java.util.Objects;
  * of buttons, each {@link #BUTTON_WIDTH} units wide, 4 units apart, unless the theme's metrics say otherwise. With
  * a button width of 0 the message is given its whole wrap width and the buttons split it evenly, less the gaps, each
  * no wider than the theme's maximum, in a centered row. The box itself is centered and the window fills it. An Escape
- * press sent to the box itself, as when its dialog has nothing focused, counts as one on the window.
+ * press sent to the box itself, as when its dialog has nothing focused, counts as one on the window. A box the host
+ * lets go of before it answered, as when the overlay showing it closes from code, answers the dismiss result without
+ * a request.
  */
 public final class MessageBoxImpl extends BuiltInComposite<MessageBox> implements MessageBox {
     /**
@@ -273,5 +275,14 @@ public final class MessageBoxImpl extends BuiltInComposite<MessageBox> implement
     protected void onKey(final KeyEvent event) {
         // With nothing focused, as after a press on the window's background, a dialog's keys come to the box itself
         this.window.escape(event);
+    }
+
+    /**
+     * Answers the dismiss result without a request when the host let go of the box before it answered, as when the
+     * overlay showing it was closed from code.
+     */
+    @Override
+    protected void onReleased() {
+        this.finish(this.buttonSet.dismissResult());
     }
 }
