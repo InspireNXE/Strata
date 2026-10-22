@@ -24,6 +24,7 @@ import org.inspirenxe.strata.api.extension.Painter;
 import org.inspirenxe.strata.api.geometry.Rect;
 import org.inspirenxe.strata.api.geometry.Size;
 import org.inspirenxe.strata.api.theme.SpriteId;
+import org.inspirenxe.strata.api.visual.PixelBuffer;
 import org.inspirenxe.strata.api.visual.Visual;
 import org.inspirenxe.strata.core.control.RectCache;
 import org.inspirenxe.strata.core.node.BuiltInComponent;
@@ -34,13 +35,14 @@ import java.util.Optional;
 
 /**
  * The core {@link Image}. Its desired size is the image size, 16 by 16 by default or the visual's natural size. It
- * draws the sprite or visual stretched over its bounds, or, with {@link Image.Scaling#FIT}, at the largest size with
+ * draws the sprite, visual or pixel buffer stretched over its bounds, or, with {@link Image.Scaling#FIT}, at the largest size with
  * the image size's aspect ratio that fits, centered. An image size of zero on either axis draws nothing with
  * {@code FIT}.
  */
 public final class ImageImpl extends BuiltInComponent<Image> implements Image {
     private SpriteId sprite;
     private Visual visual;
+    private PixelBuffer pixels;
     private int tint;
     private float imageWidth;
     private float imageHeight;
@@ -104,6 +106,7 @@ public final class ImageImpl extends BuiltInComponent<Image> implements Image {
     public Image setSprite(final SpriteId sprite) {
         this.sprite = Objects.requireNonNull(sprite, "sprite");
         this.visual = null;
+        this.pixels = null;
         this.value = null;
         this.showValueTooltip();
         return this;
@@ -118,9 +121,25 @@ public final class ImageImpl extends BuiltInComponent<Image> implements Image {
     public Image setVisual(final Visual visual) {
         this.visual = Objects.requireNonNull(visual, "visual");
         this.sprite = null;
+        this.pixels = null;
         this.value = null;
         this.showValueTooltip();
         return this.setImageSize(visual.size().width(), visual.size().height());
+    }
+
+    @Override
+    public Optional<PixelBuffer> pixels() {
+        return Optional.ofNullable(this.pixels);
+    }
+
+    @Override
+    public Image setPixels(final PixelBuffer buffer) {
+        this.pixels = buffer;
+        this.sprite = null;
+        this.visual = null;
+        this.value = null;
+        this.showValueTooltip();
+        return this;
     }
 
     @Override
@@ -132,6 +151,7 @@ public final class ImageImpl extends BuiltInComponent<Image> implements Image {
     public Image setValue(final Object value) {
         final Visual icon = value == null ? null : Strata.appearances().iconOf(value).orElse(null);
         this.sprite = null;
+        this.pixels = null;
         this.visual = icon;
         if (icon != null) {
             this.setImageSize(icon.size().width(), icon.size().height());
@@ -236,11 +256,14 @@ public final class ImageImpl extends BuiltInComponent<Image> implements Image {
             painter.visual(this.visual, rect, this.tint);
         } else if (this.sprite != null) {
             painter.sprite(this.sprite, rect, this.tint);
+        } else if (this.pixels != null) {
+            painter.pixels(this.pixels, rect, this.tint);
         }
     }
 
     @Override
     protected Object snapshotState() {
-        return new Image.State(this.sprite, this.visual, this.tint, this.imageWidth, this.imageHeight, this.scaling);
+        return new Image.State(this.sprite, this.visual, this.tint, this.imageWidth, this.imageHeight, this.scaling,
+                this.pixels);
     }
 }

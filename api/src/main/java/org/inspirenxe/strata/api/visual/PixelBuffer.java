@@ -19,7 +19,8 @@ import java.util.Arrays;
 
 /**
  * A grid of ARGB pixels that a project writes and any engine draws, such as a heat map, a chart rendered by hand or
- * a picture decoded from bytes. Draw it with {@link org.inspirenxe.strata.api.extension.Painter#pixels}.
+ * a picture decoded from bytes. Draw it with {@link org.inspirenxe.strata.api.extension.Painter#pixels} or show it
+ * with {@link org.inspirenxe.strata.api.control.display.Image#setPixels}.
  *
  * <p>Write it on the UI thread, then call {@link #changed()}, which moves {@link #version()} on. An engine keeps its
  * own copy of the pixels, such as a texture, and copies them again when it draws a buffer whose version moved, so
