@@ -16,6 +16,7 @@
 package org.inspirenxe.strata.core;
 
 import org.inspirenxe.strata.api.ComponentFactory;
+import org.inspirenxe.strata.api.control.attribute.text.TextInput;
 import org.inspirenxe.strata.api.control.field.TextArea;
 import org.inspirenxe.strata.api.control.field.TextBox;
 import org.inspirenxe.strata.api.input.Key;
@@ -25,6 +26,9 @@ import org.inspirenxe.strata.api.input.Modifiers;
 import org.inspirenxe.strata.api.layout.Anchor;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+
+import java.util.ArrayList;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -43,6 +47,19 @@ class TextEditingTest {
         final boolean handled = this.test.host().key(key, KeyAction.PRESS, modifiers);
         this.test.host().key(key, KeyAction.RELEASE, modifiers);
         return handled;
+    }
+
+    private void type(final String text) {
+        text.codePoints().forEach(codePoint -> this.test.host().charTyped(codePoint, Modifiers.NONE));
+    }
+
+    /**
+     * Records each {@code EDITED} as "previous > value".
+     */
+    private static List<String> edits(final TextInput<?> field) {
+        final List<String> seen = new ArrayList<>();
+        field.onEvent(TextInput.EDITED, event -> seen.add(event.previous() + " > " + event.value()));
+        return seen;
     }
 
     private TextBox showBox(final String text) {
@@ -84,6 +101,59 @@ class TextEditingTest {
 
             assertEquals(5, area.caret());
             assertEquals("hello", area.text());
+        }
+    }
+
+    @Nested
+    class HandlersThatSetTheText {
+
+        @Test
+        void anEditAfterAHandlerSetTheTextReportsTheTextTheHandlerSet() {
+            final TextBox box = TextEditingTest.this.showBox("ab");
+            final List<String> seen = edits(box);
+            box.onEvent(TextInput.EDIT, event -> box.setText("X"));
+
+            TextEditingTest.this.type("c");
+
+            assertEquals(List.of("ab > X", "X > abc"), seen);
+            assertEquals("abc", box.text());
+        }
+
+        @Test
+        void aHandlerThatSetsTheEditsOwnTextLeavesNothingMoreToReport() {
+            final TextBox box = TextEditingTest.this.showBox("ab");
+            final List<String> seen = edits(box);
+            box.onEvent(TextInput.EDIT, event -> box.setText(event.value()));
+
+            TextEditingTest.this.type("c");
+
+            assertEquals(List.of("ab > abc"), seen);
+        }
+
+        @Test
+        void anEditRewrittenBackToTheOldTextStillReportsLeavingTheHandlersText() {
+            final TextBox box = TextEditingTest.this.showBox("ab");
+            final List<String> seen = edits(box);
+            box.onEvent(TextInput.EDIT, event -> {
+                box.setText("zz");
+                event.setValue("ab");
+            });
+
+            TextEditingTest.this.type("c");
+
+            assertEquals(List.of("ab > zz", "zz > ab"), seen);
+            assertEquals("ab", box.text());
+        }
+
+        @Test
+        void aTextAreaReportsFromTheTextAModifyHandlerSet() {
+            final TextArea area = TextEditingTest.this.showArea("ab");
+            final List<String> seen = edits(area);
+            area.onEvent(TextInput.MODIFY, event -> area.setText("X"));
+
+            TextEditingTest.this.type("c");
+
+            assertEquals(List.of("ab > X", "X > abc"), seen);
         }
     }
 }

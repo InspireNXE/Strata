@@ -30,19 +30,16 @@ import java.util.function.UnaryOperator;
  * {@code EDIT} with the edited text, and the final text is cleaned, cut to the limit and placed with the caret as many
  * chars from its end as the edit left it. Then the field's own filter, if it has one, gets the last word, and a
  * change is reported through {@link Field#userChanged}.</p>
+ *
+ * <p>Each edit keeps what it needs in locals, so a handler may set the text or edit again while it runs. The final
+ * text is compared with, and reported against, the text the field holds when the handlers are done, which is the
+ * text from before the edit unless a handler set another.</p>
  */
 final class PlainEdits {
     private final PlainBuffer buffer;
     private final TextBoundaries boundaries;
     private final TextEditor editor;
     private final Field field;
-
-    // The text and selection before the edit in progress, for a rejected edit to fall back to
-    private String beforeText;
-    private int beforeCaret;
-    private int beforeAnchor;
-    // Whether the edit in progress got past every request and filter
-    private boolean applied;
 
     PlainEdits(final PlainBuffer buffer, final TextBoundaries boundaries, final TextEditor editor, final Field field) {
         this.buffer = buffer;
@@ -53,7 +50,9 @@ final class PlainEdits {
 
     /**
      * Replaces a range with text as an edit by the user: the text is cut to the room the length limit leaves, and
-     * the caret goes after it. Does nothing while the field is read-only.
+     * the caret goes after it. Does nothing while the field is read-only. With a handler on the path, the field holds
+     * its old text and selection again while it asks {@code MODIFY} and then {@code EDIT}, which applies the final
+     * text through {@link #proceed} unless a handler cancels it.
      *
      * @param text the text, already cleaned for the field
      * @return true if the edit got past every request and filter, even when its final text equals the old one
@@ -62,71 +61,72 @@ final class PlainEdits {
         if (this.field.isReadOnly()) {
             return false;
         }
-        this.beforeText = this.buffer.toString();
-        this.beforeCaret = this.editor.caret();
-        this.beforeAnchor = this.editor.anchor();
-        this.applied = false;
+        final String before = this.buffer.toString();
+        final int beforeCaret = this.editor.caret();
+        final int beforeAnchor = this.editor.anchor();
         this.buffer.delete(start, end);
         final String fitted = truncate(text, this.field.maxLength() - this.codePoints());
         if (!fitted.isEmpty()) {
             this.buffer.insert(start, fitted);
         }
         this.editor.place(start + fitted.length());
-        this.edited();
-        return this.applied;
-    }
-
-    /**
-     * Ends a user edit: applies it at once, or puts the old text back and asks {@code MODIFY} and then {@code EDIT},
-     * which applies the final text through {@link #proceed} unless a handler cancels it.
-     */
-    private void edited() {
         this.editor.forgetGoal();
         if (!this.field.hearsEdits()) {
-            this.apply();
-            return;
+            return this.apply(before, beforeAnchor, beforeCaret);
         }
         final String candidate = this.buffer.toString();
-        if (candidate.equals(this.beforeText)) {
-            this.apply();
-            return;
+        if (candidate.equals(before)) {
+            return this.apply(before, beforeAnchor, beforeCaret);
         }
         final int fromEnd = candidate.length() - this.editor.caret();
-        this.buffer.set(this.beforeText);
-        this.editor.restore(this.beforeAnchor, this.beforeCaret);
+        this.buffer.set(before);
+        this.editor.restore(beforeAnchor, beforeCaret);
         this.editor.moved();
         if (!this.field.askModify()) {
-            return;
+            return false;
         }
-        this.field.askEdit(candidate, text -> this.proceed(text, fromEnd));
+        final boolean[] applied = new boolean[1];
+        this.field.askEdit(candidate, value -> applied[0] = this.proceed(value, fromEnd));
+        return applied[0];
     }
 
     /**
      * Applies the final text of an {@code EDIT} request: cleans it, cuts it to the length limit, and puts it in the
      * field with the caret {@code fromEnd} chars before its end and nothing selected. For the edited text itself that
      * is where the edit left the caret.
+     *
+     * @return whether the edit applied, as {@link #edit} returns it
      */
-    private void proceed(final String text, final int fromEnd) {
+    private boolean proceed(final String text, final int fromEnd) {
+        // What the handlers left, which a handler that set the text changed
+        final String current = this.buffer.toString();
+        final int currentCaret = this.editor.caret();
+        final int currentAnchor = this.editor.anchor();
         final String fitted = truncate(this.field.clean(Objects.requireNonNull(text, "text")), this.field.maxLength());
         this.buffer.set(fitted);
         this.editor.place(this.boundaries.snap(this.buffer.length() - fromEnd));
         this.editor.forgetGoal();
-        this.apply();
+        return this.apply(current, currentAnchor, currentCaret);
     }
 
     /**
      * Applies the edit the buffer holds: runs the field's filter, then reports the change if the text changed.
+     *
+     * @param previous the text before this change, which a rejected edit puts back
+     * @param previousAnchor the anchor that goes back with it
+     * @param previousCaret the caret that goes back with it
+     * @return false if the filter rejected the edit
      */
-    private void apply() {
+    private boolean apply(final String previous, final int previousAnchor, final int previousCaret) {
         final UnaryOperator<String> filter = this.field.filter();
         if (filter != null) {
             final String candidate = this.buffer.toString();
             final String result = filter.apply(candidate);
-            if (result == null || result.equals(this.beforeText)) {
-                this.buffer.set(this.beforeText);
-                this.editor.restore(this.beforeAnchor, this.beforeCaret);
+            if (result == null || result.equals(previous)) {
+                this.buffer.set(previous);
+                this.editor.restore(previousAnchor, previousCaret);
                 this.editor.moved();
-                return;
+                return false;
             }
             if (!result.equals(candidate)) {
                 final int fromEnd = this.buffer.length() - this.editor.caret();
@@ -134,12 +134,12 @@ final class PlainEdits {
                 this.editor.place(this.boundaries.snap(this.buffer.length() - fromEnd));
             }
         }
-        this.applied = true;
-        if (this.buffer.contentEquals(this.beforeText)) {
+        if (this.buffer.contentEquals(previous)) {
             this.editor.moved();
-            return;
+            return true;
         }
-        this.field.userChanged(this.beforeText);
+        this.field.userChanged(previous);
+        return true;
     }
 
     private int codePoints() {
