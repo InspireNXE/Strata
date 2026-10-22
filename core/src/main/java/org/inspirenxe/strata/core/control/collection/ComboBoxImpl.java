@@ -19,6 +19,7 @@ import org.inspirenxe.strata.api.component.CursorKind;
 import org.inspirenxe.strata.api.control.collection.ComboBox;
 import org.inspirenxe.strata.api.control.collection.ListView;
 import org.inspirenxe.strata.api.control.display.Label;
+import org.inspirenxe.strata.api.event.input.FocusEvent;
 import org.inspirenxe.strata.api.event.input.KeyEvent;
 import org.inspirenxe.strata.api.event.input.PointerButtonEvent;
 import org.inspirenxe.strata.api.extension.MeasureContext;
@@ -142,19 +143,19 @@ public final class ComboBoxImpl<T> extends BuiltInComponent<ComboBox<T>> impleme
 
     @Override
     public ComboBox<T> setItems(final List<? extends T> items) {
+        final List<T> next = List.copyOf(items);
+        // Closing first lets a CLOSED handler see the box as it was, with its index inside its options
+        this.close();
         final Optional<T> before = this.selected();
         final int beforeIndex = this.selectedIndex;
-        final boolean had = beforeIndex >= 0;
-        final T beforeItem = had ? this.options.get(beforeIndex) : null;
-        this.options = List.copyOf(items);
-        int index = this.options.isEmpty() ? -1 : 0;
-        if (had) {
-            final int found = this.indexOfKey(beforeItem);
+        int index = next.isEmpty() ? -1 : 0;
+        if (beforeIndex >= 0) {
+            final int found = this.indexOfKey(next, this.options.get(beforeIndex));
             if (found >= 0) {
                 index = found;
             }
         }
-        this.close();
+        this.options = next;
         this.selectedIndex = index;
         this.shownIndex = -2;
         this.invalidateLayout();
@@ -181,14 +182,14 @@ public final class ComboBoxImpl<T> extends BuiltInComponent<ComboBox<T>> impleme
     }
 
     /**
-     * Finds the first option with the same key as an item.
+     * Finds the first of some options with the same key as an item.
      *
      * @return the option's index, or -1 if none has the key
      */
-    private int indexOfKey(final T item) {
+    private int indexOfKey(final List<T> options, final T item) {
         final Object key = item == null ? null : this.keyFunction.apply(item);
-        for (int i = 0; i < this.options.size(); i++) {
-            final T option = this.options.get(i);
+        for (int i = 0; i < options.size(); i++) {
+            final T option = options.get(i);
             if (Objects.equals(key, option == null ? null : this.keyFunction.apply(option))) {
                 return i;
             }
@@ -229,7 +230,7 @@ public final class ComboBoxImpl<T> extends BuiltInComponent<ComboBox<T>> impleme
 
     @Override
     public ComboBox<T> selectItem(final T item) {
-        return this.select(this.indexOfKey(item));
+        return this.select(this.indexOfKey(this.options, item));
     }
 
     @Override
@@ -429,6 +430,14 @@ public final class ComboBoxImpl<T> extends BuiltInComponent<ComboBox<T>> impleme
                 this.userOpen();
             }
             event.consume();
+        }
+    }
+
+    @Override
+    protected void onFocusLost(final FocusEvent event) {
+        // A press on the open list may take focus first; keep the list open for it
+        if (this.list == null || !this.nodeOf(this.list).isHoverWithin()) {
+            this.close();
         }
     }
 

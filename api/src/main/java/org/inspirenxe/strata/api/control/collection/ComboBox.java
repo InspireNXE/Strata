@@ -32,8 +32,8 @@ import java.util.function.Function;
  * A drop-down: shows the selected option and opens a list of all options to pick from.
  *
  * <p>A left click opens the list as a popup below the box (above it if there is more room there), at least as wide as
- * the box. A click on an option selects it and closes the list; a click anywhere else, or Escape, closes it without
- * changing the selection. The list shows at most {@linkplain #setMaxVisibleOptions the maximum} rows and scrolls
+ * the box. A click on an option selects it and closes the list; a click anywhere else, Escape, or focus leaving the
+ * box, as Tab does, closes it without changing the selection. The list shows at most {@linkplain #setMaxVisibleOptions the maximum} rows and scrolls
  * the rest.</p>
  *
  * <p>While focused and closed: Up and Down select the previous and next option, Home and End the first and last,
@@ -151,8 +151,8 @@ public interface ComboBox<T> extends Component<ComboBox<T>>, Focusable<ComboBox<
     List<T> items();
 
     /**
-     * Replaces the options and closes the list. The selection moves to the option with the selected option's key, or
-     * to the first one. {@link SingleSelection#SELECTED} fires if the selected option or its index changed.
+     * Closes the list, then replaces the options, so a {@link Closable#CLOSED} handler sees the options and the
+     * selection from before. The selection moves to the option with the selected option's key, or to the first one. {@link SingleSelection#SELECTED} fires if the selected option or its index changed.
      *
      * @param items the options; the box keeps a copy
      * @return this box

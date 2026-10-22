@@ -19,6 +19,8 @@ import org.inspirenxe.strata.api.ComponentFactory;
 import org.inspirenxe.strata.api.control.attribute.item.MultiSelection;
 import org.inspirenxe.strata.api.control.attribute.item.Selection;
 import org.inspirenxe.strata.api.control.attribute.item.SelectionMode;
+import org.inspirenxe.strata.api.control.attribute.popup.Closable;
+import org.inspirenxe.strata.api.control.collection.ComboBox;
 import org.inspirenxe.strata.api.control.collection.ListView;
 import org.inspirenxe.strata.api.control.collection.TableView;
 import org.inspirenxe.strata.api.control.collection.TreeView;
@@ -33,9 +35,12 @@ import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.IntStream;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Edge cases of the collection controls: offsets set before a layout, selections across changed items, handlers that
@@ -140,6 +145,41 @@ class CollectionEdgeCaseTest {
             this.key(Key.RIGHT, Modifiers.of(Modifier.SHIFT));
             assertEquals(List.of(0, 1), this.tree.selectedIndexes());
             assertEquals(1, this.tree.selectedIndex());
+        }
+    }
+
+    @Nested
+    class ComboBoxes {
+        private ComboBox<String> combo;
+
+        private void show() {
+            final ComponentFactory ui = CollectionEdgeCaseTest.this.ui;
+            this.combo = ui.<String>comboBox().setItems(List.of("Ana", "Ben", "Cleo"));
+            CollectionEdgeCaseTest.this.test.show(CollectionEdgeCaseTest.this.panel
+                    .add(this.combo, 10, 10)
+                    .add(ui.button("Next"), 10, 200));
+        }
+
+        @Test
+        void aClosedHandlerSeesAConsistentBoxWhenNewItemsCloseIt() {
+            this.show();
+            this.combo.select(2).open();
+            final List<Optional<String>> seen = new ArrayList<>();
+            this.combo.onEvent(Closable.CLOSED, e -> seen.add(this.combo.selected()));
+            this.combo.setItems(List.of("Dev"));
+            assertEquals(List.of(Optional.of("Cleo")), seen);
+            assertTrue(this.combo.selectedIndex() < this.combo.items().size());
+        }
+
+        @Test
+        void tabbingAwayClosesTheList() {
+            this.show();
+            this.combo.requestFocus();
+            CollectionEdgeCaseTest.this.test.host().key(Key.SPACE, KeyAction.PRESS, Modifiers.NONE);
+            assertTrue(this.combo.isOpen());
+            CollectionEdgeCaseTest.this.test.host().key(Key.TAB, KeyAction.PRESS, Modifiers.NONE);
+            assertFalse(this.combo.isFocused());
+            assertFalse(this.combo.isOpen());
         }
     }
 }
