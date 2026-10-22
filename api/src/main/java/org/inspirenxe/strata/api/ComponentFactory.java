@@ -69,6 +69,7 @@ import org.inspirenxe.strata.api.control.pane.TabBar;
 import org.inspirenxe.strata.api.control.window.MessageBox;
 import org.inspirenxe.strata.api.control.window.Window;
 import org.inspirenxe.strata.api.animation.Animator;
+import org.inspirenxe.strata.api.event.Subscription;
 import org.inspirenxe.strata.api.event.cause.CauseStack;
 import org.inspirenxe.strata.api.extension.CustomComponent;
 import org.inspirenxe.strata.api.extension.peer.ComponentHooks;
@@ -83,6 +84,8 @@ import org.inspirenxe.strata.api.layout.Spacer;
 import org.inspirenxe.strata.api.layout.StackPanel;
 import org.inspirenxe.strata.api.layout.WrapPanel;
 import org.inspirenxe.strata.api.overlay.Overlays;
+import org.inspirenxe.strata.api.state.Source;
+import org.inspirenxe.strata.api.state.State;
 import org.inspirenxe.strata.api.text.Text;
 import org.inspirenxe.strata.api.theme.SpriteId;
 import org.inspirenxe.strata.api.theme.Theme;
@@ -92,6 +95,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.Optional;
+import java.util.function.Consumer;
 import java.util.function.Function;
 
 /**
@@ -162,6 +166,32 @@ public interface ComponentFactory {
      * @throws IllegalStateException if the factory has no host yet
      */
     Animator animator();
+
+    /**
+     * Calls a listener when a source's value changes, for screen code that acts on a change, such as saving a setting
+     * or sending it to a server. The source is tracked as a {@linkplain Component#bind binding's} is: every state it
+     * reads is followed, and when one of them changes, the source is read again before the next frame is laid out,
+     * on the UI thread, with the bindings. The listener gets the new value if it differs from the last one, as
+     * {@link java.util.Objects#equals} says, so a computed source that comes out the same calls nothing. Several
+     * changes in one frame cost one call.
+     *
+     * <pre>{@code
+     * ui.watch(model.volume, volume -> server.sendVolume(volume));
+     * }</pre>
+     *
+     * <p>The source is read once now, for the states it reads and the value to compare with, and the listener is not
+     * called for that value. A source must not set states or change components, as {@link Source} says; the listener
+     * may do both. The watch stops when the screen open in this factory's host closes or is built again, so screen
+     * code needs no cleanup; one made while no screen is open stops when the next screen closes. Close the
+     * subscription to stop it sooner.</p>
+     *
+     * @param <T> the type of the value
+     * @param source the source, a {@link State} or a lambda that computes from states
+     * @param listener called on the UI thread with each new value
+     * @return a subscription that stops the watch; close it on the UI thread
+     * @throws IllegalStateException if this factory has no host yet
+     */
+    <T> Subscription watch(Source<T> source, Consumer<? super T> listener);
 
     /**
      * Makes an {@link AnchorPanel}.

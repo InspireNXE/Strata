@@ -583,7 +583,7 @@ public interface Component<T extends Component<T>> extends EventTarget<T>, Enabl
      * <p>A binding lives as long as the component holds it. It follows its sources only while the component is
      * attached: it starts on attach and lets go of every state on detach, so a closed screen leaks nothing and there is
      * nothing to unsubscribe. A component holds one binding per {@linkplain PropertyKey#name() key name}; binding the
-     * same key again replaces the earlier binding. On attach a component sets its bound properties in the order they
+     * same key again replaces the earlier binding, and {@link #unbind} removes it. On attach a component sets its bound properties in the order they
      * were first bound, so bind a list's items before its selection.</p>
      *
      * @param <V> the type of the property's value
@@ -592,6 +592,23 @@ public interface Component<T extends Component<T>> extends EventTarget<T>, Enabl
      * @return this component
      */
     <V> T bind(PropertyKey<? super T, V> key, Source<V> source);
+
+    /**
+     * Removes the binding of a property, so it stops following its source and lets go of every state it read. The
+     * property keeps the value it has. Bindings are matched by {@linkplain PropertyKey#name() key name}.
+     *
+     * <pre>{@code
+     * if (custom) {
+     *     volume.unbind(Ranged.VALUE);                      // the slider keeps the default it showed
+     * } else {
+     *     volume.bind(Ranged.VALUE, defaults.volume);
+     * }
+     * }</pre>
+     *
+     * @param key the property
+     * @return this component; nothing changes when the property is not bound
+     */
+    T unbind(PropertyKey<? super T, ?> key);
 
     // Events
 }

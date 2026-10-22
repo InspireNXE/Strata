@@ -15,21 +15,27 @@
  */
 package org.inspirenxe.strata.core.state;
 
+import org.inspirenxe.strata.api.event.Subscription;
 import org.inspirenxe.strata.api.state.State;
 
+import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.function.Consumer;
 
 /**
  * Core's {@link State}. The value and a version that counts its changes are volatile, and {@link #set} stores both
- * under the state's lock, so any thread may read or set it. The bindings that read the state last time they were
- * evaluated are its dependents; {@code set} marks each of them dirty after storing, outside the lock.
+ * under the state's lock, so any thread may read or set it. The bindings and watches that read the state last time
+ * they were evaluated are its dependents; {@code set} marks each of them dirty after storing, outside the lock, and
+ * then calls the listeners {@link #subscribe} added, in order, on the setting thread.
  *
  * @param <T> the type of the value
  */
 public final class StateImpl<T> implements State<T> {
-    private final Set<Binding<?>> dependents;
+    private final Set<Dependent> dependents;
+    private final List<Consumer<? super T>> listeners;
     private volatile T value;
     private volatile long version;
 
@@ -40,6 +46,7 @@ public final class StateImpl<T> implements State<T> {
      */
     StateImpl(final T value) {
         this.dependents = ConcurrentHashMap.newKeySet();
+        this.listeners = new CopyOnWriteArrayList<>();
         this.value = value;
     }
 
@@ -61,9 +68,21 @@ public final class StateImpl<T> implements State<T> {
             this.value = value;
             this.version = this.version + 1;
         }
-        for (final Binding<?> dependent : this.dependents) {
+        for (final Dependent dependent : this.dependents) {
             dependent.invalidate();
         }
+        for (final Consumer<? super T> listener : this.listeners) {
+            listener.accept(value);
+        }
+    }
+
+    @Override
+    public Subscription subscribe(final Consumer<? super T> listener) {
+        Objects.requireNonNull(listener, "listener");
+        // A new object per subscription, so closing one never removes another of the same listener
+        final Consumer<T> entry = listener::accept;
+        this.listeners.add(entry);
+        return () -> this.listeners.remove(entry);
     }
 
     /**
@@ -84,18 +103,19 @@ public final class StateImpl<T> implements State<T> {
         return this.version;
     }
 
-    void addDependent(final Binding<?> binding) {
-        this.dependents.add(binding);
+    void addDependent(final Dependent dependent) {
+        this.dependents.add(dependent);
     }
 
-    void removeDependent(final Binding<?> binding) {
-        this.dependents.remove(binding);
+    void removeDependent(final Dependent dependent) {
+        this.dependents.remove(dependent);
     }
 
     /**
-     * Returns how many bindings follow this state, for tests that check a detached component let go of it.
+     * Returns how many bindings and watches follow this state, for tests that check a detached component or a closed
+     * screen let go of it.
      *
-     * @return the number of bindings that read it last time they were evaluated and are still attached
+     * @return the number of bindings and watches that read it last time they were evaluated and are still live
      */
     public int dependentCount() {
         return this.dependents.size();

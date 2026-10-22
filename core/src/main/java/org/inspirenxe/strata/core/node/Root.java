@@ -42,6 +42,7 @@ import org.inspirenxe.strata.api.input.ScrollKind;
 import org.inspirenxe.strata.api.screen.Screen;
 import org.inspirenxe.strata.api.overlay.Overlay;
 import org.inspirenxe.strata.api.overlay.Overlays;
+import org.inspirenxe.strata.api.state.Source;
 import org.inspirenxe.strata.api.text.Text;
 import org.inspirenxe.strata.api.theme.Paint;
 import org.inspirenxe.strata.api.theme.Theme;
@@ -65,6 +66,7 @@ import org.inspirenxe.strata.core.paint.CanvasPainter;
 import org.inspirenxe.strata.core.text.InlineMetrics;
 import org.inspirenxe.strata.core.state.Binding;
 import org.inspirenxe.strata.core.state.BindingQueue;
+import org.inspirenxe.strata.core.state.Watch;
 import org.inspirenxe.strata.spi.Canvas;
 import org.inspirenxe.strata.spi.Platform;
 
@@ -164,6 +166,8 @@ public final class Root {
     private final BindingQueue bindingQueue;
     // Bindings of nodes attached since attachTree last evaluated them
     private final List<Binding<?>> attachedBindings;
+    // Watches made through the factory, stopped when the screen closes or rebuilds
+    private final List<Watch<?>> watches;
     private final Origin.User user;
     private final UiThreadImpl uiThread;
     private final FrameRequests frames;
@@ -231,6 +235,7 @@ public final class Root {
         this.bindingQueue = new BindingQueue(this.frames::request);
         this.animator = new AnimatorImpl(platform::clock, ui::causes, this.frames, this.uiThread);
         this.attachedBindings = new ArrayList<>();
+        this.watches = new ArrayList<>();
         this.modifiers = Modifiers.NONE;
         this.layoutRequested = true;
         this.tooltipDelay = -1L;
@@ -604,6 +609,56 @@ public final class Root {
      */
     public boolean flushBindings() {
         return this.bindingQueue.flush();
+    }
+
+    /**
+     * Starts a watch over a source on this root's binding queue, as {@code ComponentFactory.watch} describes. The
+     * source is read once now. If that throws, the watch is dropped and the exception goes on to the caller.
+     *
+     * @param <T> the type of the value
+     * @param source the source
+     * @param listener called with each new value
+     * @return a subscription that stops the watch and forgets it
+     */
+    public <T> Subscription watch(final Source<T> source, final Consumer<? super T> listener) {
+        this.checkThread();
+        final Watch<T> watch = new Watch<>(source, listener);
+        this.watches.add(watch);
+        boolean started = false;
+        try {
+            watch.start(this.bindingQueue);
+            started = true;
+        } finally {
+            if (!started) {
+                watch.stop();
+                this.watches.remove(watch);
+            }
+        }
+        return () -> {
+            watch.stop();
+            this.watches.remove(watch);
+        };
+    }
+
+    /**
+     * Hands over the watches started so far and forgets them, so the host can stop them once a rebuilt screen has
+     * started its own.
+     *
+     * @return the watches, still running
+     */
+    public List<Watch<?>> takeWatches() {
+        final List<Watch<?>> taken = List.copyOf(this.watches);
+        this.watches.clear();
+        return taken;
+    }
+
+    /**
+     * Stops every watch and forgets them, when the screen closes.
+     */
+    public void stopWatches() {
+        for (final Watch<?> watch : this.takeWatches()) {
+            watch.stop();
+        }
     }
 
     /**

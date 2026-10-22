@@ -29,6 +29,11 @@
  * one flush, 100 in Strata's core, are taken for a cycle, logged as an error through {@link java.lang.System.Logger}, and dropped until one of
  * their states changes again.</p>
  *
+ * <p>Code that acts on a change rather than showing it hears it two ways.
+ * {@link org.inspirenxe.strata.api.ComponentFactory#watch} follows a source the way a binding does and calls on the UI
+ * thread with the bindings, until its screen closes. {@link org.inspirenxe.strata.api.state.State#subscribe} calls at
+ * once on the thread that set the state, for code outside any screen.</p>
+ *
  * <p>{@link org.inspirenxe.strata.api.state.State#of} makes states through the
  * {@link org.inspirenxe.strata.api.state.StateFactory} that Strata's core provides.</p>
  */

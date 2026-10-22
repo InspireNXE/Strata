@@ -695,6 +695,24 @@ public class Node implements ComponentPeer {
         }
     }
 
+    /**
+     * Removes the binding with the key's name, detaching it so no state refers to it. The property keeps its value.
+     * Does nothing when no binding has that name.
+     *
+     * @param key the property
+     */
+    @Override
+    public final void unbind(final PropertyKey<?, ?> key) {
+        this.checkThread();
+        if (this.bindings == null) {
+            return;
+        }
+        final Binding<?> removed = this.bindings.remove(key.name());
+        if (removed != null) {
+            removed.detach();
+        }
+    }
+
     @Override
     public final boolean isHandled(final EventType<?> type) {
         // Control events stop at the first composite above, as EventRouter.next does

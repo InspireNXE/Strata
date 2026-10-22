@@ -28,14 +28,9 @@ import org.inspirenxe.strata.api.state.PropertyKey;
 import org.inspirenxe.strata.api.state.Source;
 
 import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.Set;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Supplier;
 
 /**
@@ -62,20 +57,16 @@ import java.util.function.Supplier;
  *
  * @param <V> the type of the property's value
  */
-public final class Binding<V> {
+public final class Binding<V> extends Dependent {
     /**
      * Put by every step of an animation but its last, with the animation as the value, so bindings leave its
      * reports until it ends.
      */
     public static final CauseKey<Deferral> IN_MOTION = CauseKey.of("strata:in_motion", Deferral.class);
-
     private final Component<?> component;
     private final PropertyKey<Object, V> key;
     private final Source<V> source;
     private final StateImpl<V> writable;
-    private final AtomicBoolean dirty;
-    private final Set<StateImpl<?>> dependencies;
-    private volatile BindingQueue queue;
     private final List<Subscription> reportSubscriptions;
     private final Supplier<CauseStack> causes;
     private final Origin.Binding origin;
@@ -100,8 +91,6 @@ public final class Binding<V> {
         this.origin = new Origin.Binding(source);
         this.writable = source instanceof StateImpl<V> state && !key.reports().isEmpty() ? state : null;
         this.reportSubscriptions = new ArrayList<>(key.reports().size());
-        this.dirty = new AtomicBoolean();
-        this.dependencies = new HashSet<>();
     }
 
     /**
@@ -119,7 +108,7 @@ public final class Binding<V> {
      * @return true between {@link #attach} and {@link #detach}
      */
     public boolean isAttached() {
-        return this.queue != null;
+        return this.isLive();
     }
 
     /**
@@ -130,17 +119,16 @@ public final class Binding<V> {
      * @param queue the queue of the root the component joined
      */
     public void attach(final BindingQueue queue) {
-        if (this.queue != null) {
+        if (this.isLive()) {
             return;
         }
-        this.queue = Objects.requireNonNull(queue, "queue");
         this.evaluated = false;
         if (this.writable != null) {
             for (final EventType<? extends ControlEvent<?>> report : this.key.reports()) {
                 this.reportSubscriptions.add(this.subscribe(report));
             }
         }
-        this.invalidate();
+        this.join(queue);
     }
 
     private <E extends ControlEvent<?>> Subscription subscribe(final EventType<E> report) {
@@ -153,36 +141,13 @@ public final class Binding<V> {
      * binding any more. Does nothing if not attached. Call on the UI thread.
      */
     public void detach() {
-        if (this.queue == null) {
+        if (!this.leave()) {
             return;
         }
-        this.queue = null;
         for (final Subscription subscription : this.reportSubscriptions) {
             subscription.unsubscribe();
         }
         this.reportSubscriptions.clear();
-        for (final StateImpl<?> dependency : this.dependencies) {
-            dependency.removeDependent(this);
-        }
-        this.dependencies.clear();
-        this.dirty.set(false);
-    }
-
-    /**
-     * Marks the binding dirty and queues it, unless it is detached or already dirty. Any thread may call this.
-     */
-    void invalidate() {
-        final BindingQueue queue = this.queue;
-        if (queue != null && this.dirty.compareAndSet(false, true)) {
-            queue.enqueue(this);
-        }
-    }
-
-    /**
-     * Forgets that the binding is dirty without evaluating it, when a flush gives up on a cycle.
-     */
-    void discard() {
-        this.dirty.set(false);
     }
 
     /**
@@ -190,48 +155,14 @@ public final class Binding<V> {
      * source throws, the binding still follows the states it read before throwing, so a change to one of them
      * evaluates it again, and the exception goes on to the caller.
      */
+    @Override
     public void evaluate() {
-        if (this.queue == null || !this.dirty.compareAndSet(true, false)) {
+        if (!this.takeDirty()) {
             return;
         }
-        final Tracking.Frame frame = Tracking.begin();
-        final V value;
-        boolean done = false;
-        try {
-            value = this.source.get();
-            done = true;
-        } finally {
-            Tracking.end(frame);
-            if (!done) {
-                this.follow(frame.reads());
-            }
-        }
+        final V value = this.read(this.source);
         this.evaluated = true;
-        this.follow(frame.reads());
         this.write(value);
-    }
-
-    /**
-     * Replaces the dependencies with the states the source just read. A state that changed after the source read
-     * it, before this binding was its dependent, marks the binding dirty again, so no change is missed.
-     */
-    private void follow(final Map<StateImpl<?>, Long> reads) {
-        for (final Iterator<StateImpl<?>> it = this.dependencies.iterator(); it.hasNext(); ) {
-            final StateImpl<?> dependency = it.next();
-            if (!reads.containsKey(dependency)) {
-                dependency.removeDependent(this);
-                it.remove();
-            }
-        }
-        for (final Map.Entry<StateImpl<?>, Long> read : reads.entrySet()) {
-            final StateImpl<?> state = read.getKey();
-            if (this.dependencies.add(state)) {
-                state.addDependent(this);
-            }
-            if (state.version() != read.getValue()) {
-                this.invalidate();
-            }
-        }
     }
 
     private void write(final V value) {
@@ -245,7 +176,7 @@ public final class Binding<V> {
     }
 
     private void reported(final ControlEvent<?> event) {
-        if (!this.evaluated || this.queue == null || event.target() != this.component
+        if (!this.evaluated || !this.isLive() || event.target() != this.component
                 || event.origin() instanceof Origin.Binding(final Object written) && written == this.source) {
             return;
         }
@@ -263,7 +194,7 @@ public final class Binding<V> {
      * the UI thread.
      */
     public void writeBack() {
-        if (this.writable == null || !this.evaluated || this.queue == null) {
+        if (this.writable == null || !this.evaluated || !this.isLive()) {
             return;
         }
         final V value = this.key.reader().apply(this.component);

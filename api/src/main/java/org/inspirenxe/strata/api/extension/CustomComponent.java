@@ -1152,6 +1152,12 @@ public abstract class CustomComponent<T extends Component<T>> implements Compone
         return this.self();
     }
 
+    @Override
+    public final T unbind(final PropertyKey<? super T, ?> key) {
+        this.peer.unbind(key);
+        return this.self();
+    }
+
     /**
      * Asks whether the user may do something this component is about to do, by firing one of its request events
      * (a type made with {@link EventType#request}) through its path. Call it for the user's actions, from the

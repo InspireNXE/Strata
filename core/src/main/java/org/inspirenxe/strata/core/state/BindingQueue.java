@@ -22,7 +22,7 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.stream.Collectors;
 
 /**
- * The dirty bindings of one root. Any thread may queue a binding; {@link #flush} evaluates them on the UI thread, in
+ * The dirty bindings and watches of one root. Any thread may queue a binding; {@link #flush} evaluates them on the UI thread, in
  * rounds: a round evaluates every binding queued when it starts, and bindings those evaluations mark dirty wait for
  * the next round. Flushing stops when a round finds nothing queued.
  *
@@ -38,8 +38,8 @@ public final class BindingQueue {
 
     private static final System.Logger LOGGER = System.getLogger(BindingQueue.class.getName());
 
-    private final Queue<Binding<?>> dirty;
-    private final List<Binding<?>> round;
+    private final Queue<Dependent> dirty;
+    private final List<Dependent> round;
     private final Runnable queued;
     private boolean flushing;
 
@@ -61,7 +61,7 @@ public final class BindingQueue {
         this.queued = queued;
     }
 
-    void enqueue(final Binding<?> binding) {
+    void enqueue(final Dependent binding) {
         this.dirty.add(binding);
         this.queued.run();
     }
@@ -89,7 +89,7 @@ public final class BindingQueue {
         this.flushing = true;
         try {
             for (int rounds = 0; ; rounds++) {
-                Binding<?> binding;
+                Dependent binding;
                 while ((binding = this.dirty.poll()) != null) {
                     this.round.add(binding);
                 }
@@ -122,8 +122,8 @@ public final class BindingQueue {
     }
 
     private void giveUp() {
-        final String names = this.round.stream().distinct().map(Binding::toString).collect(Collectors.joining(", "));
-        for (final Binding<?> binding : this.round) {
+        final String names = this.round.stream().distinct().map(Object::toString).collect(Collectors.joining(", "));
+        for (final Dependent binding : this.round) {
             binding.discard();
         }
         this.round.clear();

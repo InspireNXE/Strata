@@ -34,6 +34,7 @@ import org.inspirenxe.strata.core.frame.UiThreadImpl;
 import org.inspirenxe.strata.core.node.ComponentFactoryImpl;
 import org.inspirenxe.strata.core.node.Node;
 import org.inspirenxe.strata.core.node.Root;
+import org.inspirenxe.strata.core.state.Watch;
 import org.inspirenxe.strata.core.text.Translations;
 import org.inspirenxe.strata.core.theme.ThemeRegistryImpl;
 import org.inspirenxe.strata.core.theme.ThemeResolver;
@@ -42,6 +43,7 @@ import org.inspirenxe.strata.spi.Platform;
 import org.inspirenxe.strata.spi.ScreenHost;
 import org.inspirenxe.strata.spi.ThemeSource;
 
+import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 
@@ -187,8 +189,12 @@ public final class ScreenHostImpl implements ScreenHost {
         try {
             closing.closed();
         } finally {
-            this.root.setContent(null);
-            this.root.setScreen(null);
+            try {
+                this.root.setContent(null);
+                this.root.setScreen(null);
+            } finally {
+                this.root.stopWatches();
+            }
         }
     }
 
@@ -385,7 +391,15 @@ public final class ScreenHostImpl implements ScreenHost {
     private void rebuildIfNeeded() {
         if (this.rebuild && this.screen != null) {
             this.rebuild = false;
-            this.root.setContent(this.ui.nodeOf(this.screen.build(this.ui)));
+            // The old build's watches stop once the new build has started its own
+            final List<Watch<?>> old = this.root.takeWatches();
+            try {
+                this.root.setContent(this.ui.nodeOf(this.screen.build(this.ui)));
+            } finally {
+                for (final Watch<?> watch : old) {
+                    watch.stop();
+                }
+            }
         }
     }
 

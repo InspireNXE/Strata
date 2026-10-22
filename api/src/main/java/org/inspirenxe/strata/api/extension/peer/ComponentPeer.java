@@ -477,6 +477,13 @@ public interface ComponentPeer {
     <V> void bind(PropertyKey<?, V> key, Source<V> source);
 
     /**
+     * See {@link Component#unbind}. Removes the binding whose key has the same name, if there is one.
+     *
+     * @param key the property
+     */
+    void unbind(PropertyKey<?, ?> key);
+
+    /**
      * Fires a request without a value. See {@code CustomComponent.request(EventType)}.
      *
      * @param type the request type

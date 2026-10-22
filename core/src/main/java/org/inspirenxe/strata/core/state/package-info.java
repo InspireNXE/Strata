@@ -16,8 +16,9 @@
 /**
  * States, dependency tracking and bindings.
  *
- * <p>{@link org.inspirenxe.strata.core.state.StateImpl} holds a value and the bindings that depend on it. A
- * {@link org.inspirenxe.strata.core.state.Binding} records the states its source reads, and a root's
+ * <p>{@link org.inspirenxe.strata.core.state.StateImpl} holds a value, the bindings and watches that depend on it and
+ * the listeners subscribed to it. A {@link org.inspirenxe.strata.core.state.Binding} or a
+ * {@link org.inspirenxe.strata.core.state.Watch} records the states its source reads, and a root's
  * {@link org.inspirenxe.strata.core.state.BindingQueue} evaluates the dirty ones on the UI thread before layout.</p>
  */
 package org.inspirenxe.strata.core.state;

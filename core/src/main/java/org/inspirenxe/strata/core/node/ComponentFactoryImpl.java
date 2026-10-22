@@ -19,6 +19,7 @@ import org.inspirenxe.strata.api.ComponentFactory;
 import org.inspirenxe.strata.api.UiThread;
 import org.inspirenxe.strata.core.animation.AnimatorImpl;
 import org.inspirenxe.strata.core.frame.UiThreadImpl;
+import org.inspirenxe.strata.api.event.Subscription;
 import org.inspirenxe.strata.api.event.cause.CauseStack;
 import org.inspirenxe.strata.core.event.CauseStackImpl;
 import org.inspirenxe.strata.api.appearance.Appearances;
@@ -73,6 +74,7 @@ import org.inspirenxe.strata.api.control.pane.TabBar;
 import org.inspirenxe.strata.api.control.window.MessageBox;
 import org.inspirenxe.strata.api.control.window.Window;
 import org.inspirenxe.strata.api.event.input.InputEvents;
+import org.inspirenxe.strata.api.state.Source;
 import org.inspirenxe.strata.api.extension.CustomComponent;
 import org.inspirenxe.strata.api.extension.CustomComposite;
 import org.inspirenxe.strata.api.extension.CustomContainer;
@@ -155,6 +157,7 @@ import org.inspirenxe.strata.spi.Platform;
 
 import java.util.Objects;
 import java.util.Optional;
+import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
@@ -270,6 +273,16 @@ public final class ComponentFactoryImpl implements ComponentFactory {
             throw new IllegalStateException("This factory has no host yet");
         }
         return this.root.animator();
+    }
+
+    @Override
+    public <T> Subscription watch(final Source<T> source, final Consumer<? super T> listener) {
+        Objects.requireNonNull(source, "source");
+        Objects.requireNonNull(listener, "listener");
+        if (this.root == null) {
+            throw new IllegalStateException("This factory has no host yet");
+        }
+        return this.root.watch(source, listener);
     }
 
     @Override

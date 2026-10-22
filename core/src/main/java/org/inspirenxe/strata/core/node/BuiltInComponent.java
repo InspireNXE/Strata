@@ -805,6 +805,12 @@ public abstract class BuiltInComponent<T extends Component<T>> implements Compon
         return this.self();
     }
 
+    @Override
+    public final T unbind(final PropertyKey<? super T, ?> key) {
+        this.node.unbind(key);
+        return this.self();
+    }
+
     // ------------------------------------------------------------------
     // Focusable, HasCursor and HasTooltip, for subclasses that declare them. The node ignores these on the rest.
     // ------------------------------------------------------------------
