@@ -251,7 +251,9 @@ public final class ComboBoxImpl<T> extends BuiltInComponent<ComboBox<T>> impleme
      */
     private String typeAheadName(final int index) {
         final T option = this.options.get(index);
-        final Object name = this.typeAheadName != null ? this.typeAheadName.apply(option) : this.labelFunction.apply(option);
+        final Object name = this.typeAheadName != null
+                ? this.typeAheadName.apply(option)
+                : this.labelFunction.apply(option);
         return this.ui.appearances().nameOf(name).plain();
     }
 

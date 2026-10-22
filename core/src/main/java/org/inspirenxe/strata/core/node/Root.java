@@ -1849,7 +1849,8 @@ public final class Root {
                 // The control a delegate takes focus for hears it too
                 final Node owner = lost.focusOwner();
                 if (owner != null) {
-                    owner.fire(Focusable.FOCUS_LOST, new FocusEventImpl(owner.facade(), next == null ? null : next.facade()));
+                    owner.fire(Focusable.FOCUS_LOST,
+                            new FocusEventImpl(owner.facade(), next == null ? null : next.facade()));
                 }
             }
         } finally {

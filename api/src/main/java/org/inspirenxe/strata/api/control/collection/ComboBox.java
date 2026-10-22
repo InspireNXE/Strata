@@ -70,10 +70,10 @@ import java.util.function.Function;
  *     <li>{@link Openable#OPENED}: Told after the list opened. Fires for {@link #open()} called from code too.</li>
  *     <li>{@link SingleSelection#SELECT}: Asked before the user changes the selection: a click on a row of the open
  *     list, Enter or Space on the highlighted row of the open list, or the Up, Down, Home and End keys and
- *     type-ahead on the closed box. A choice from the open list closes it before this fires. Moving the highlight in the open list does not fire
- *     it, and neither does a choice of the option already selected. The value is the index of the option about to be
- *     selected. A handler may rewrite it to another option's index; an index outside the options is ignored. Fires only
- *     for the user's actions.</li>
+ *     type-ahead on the closed box. A choice from the open list closes it before this fires. Moving the highlight in
+ *     the open list does not fire it, and neither does a choice of the option already selected. The value is the index
+ *     of the option about to be selected. A handler may rewrite it to another option's index; an index outside the
+ *     options is ignored. Fires only for the user's actions.</li>
  *     <li>{@link SingleSelection#SELECTED}: Told after the selection changed. The value is the selected index, -1 once
  *     nothing is selected, and the previous value is the index before. It also fires when {@link #setItems} keeps
  *     the index but the option there is no longer equal to the one before, so the value can equal the previous value.

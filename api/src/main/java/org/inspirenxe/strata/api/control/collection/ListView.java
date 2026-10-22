@@ -47,8 +47,8 @@ import java.util.function.Function;
  * <h2>Selection and input</h2>
  * <ul>
  *     <li>In the default {@link SelectionMode#SINGLE} mode at most one item is selected. A left press on a row
- *     selects it; a press on the selected row deselects it only when the list {@linkplain #setDeselectable is deselectable}.
- *     A cell that consumes the press, such as a button, keeps the row from being selected.</li>
+ *     selects it; a press on the selected row deselects it only when the list {@linkplain #setDeselectable is
+ *     deselectable}. A cell that consumes the press, such as a button, keeps the row from being selected.</li>
  *     <li>In {@link SelectionMode#MULTIPLE} mode Control, Shift and Control+A select several rows, as that mode
  *     describes. Those changes ask {@link MultiSelection#SELECT_MANY} in place of
  *     {@link Selection#SELECT}, and every change of the selected rows reports
@@ -83,10 +83,11 @@ import java.util.function.Function;
  * <ul>
  *     <li>{@link Selection#SELECT}: Asked before the user changes the selection: a press on a row, a press on the
  *     selected row of a {@linkplain #setDeselectable deselectable} list, which clears it, the Up, Down, Page Up,
- *     Page Down, Home and End keys while the list has focus, or {@linkplain #setTypeAhead type-ahead}. It fires only when the selection would change. The value
- *     is the index of the row about to be selected, or -1 when the user clears the selection. A handler may rewrite it
- *     to another index or to -1; the list then selects that row and scrolls it into view, as {@link #select} does, and
- *     ignores any other index outside the items. Fires only for the user's actions.</li>
+ *     Page Down, Home and End keys while the list has focus, or {@linkplain #setTypeAhead type-ahead}. It fires only
+ *     when the selection would change. The value is the index of the row about to be selected, or -1 when the user
+ *     clears the selection. A handler may rewrite it to another index or to -1; the list then selects that row and
+ *     scrolls it into view, as {@link #select} does, and ignores any other index outside the items. Fires only for the
+ *     user's actions.</li>
  *     <li>{@link Selection#SELECTED}: Told after the selection changed. The value is the selected index, or -1
  *     when nothing is selected, and the previous value is the index before. It also fires when {@link #setItems} keeps
  *     the selection at the same index but on an item that is no longer equal to the one before, so the value can equal

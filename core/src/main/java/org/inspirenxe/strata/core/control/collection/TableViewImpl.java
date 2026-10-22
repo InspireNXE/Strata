@@ -983,7 +983,8 @@ public final class TableViewImpl<T> extends ListBackedControl<T, T, TableView<T>
             x += this.columnWidth[i];
             final float room = this.columnWidth[i] - this.headerPadding.horizontal()
                     - (column.isSortable() ? ARROW_ROOM : 0f);
-            this.titles[i] = TextLine.of(column.title(), this.headerText, metrics).ellipsize(room, this.headerText, metrics);
+            this.titles[i] = TextLine.of(column.title(), this.headerText, metrics)
+                    .ellipsize(room, this.headerText, metrics);
         }
         return x;
     }

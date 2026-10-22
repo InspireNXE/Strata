@@ -34,7 +34,7 @@ import java.util.function.Function;
  * item moves to the new item with the same {@linkplain #setKeyFunction key}. Items with equal keys are matched in
  * order, so the second item with a key moves to the second new one, or to the last when there are fewer. A selected
  * item that no new item matches leaves the selection, and nothing is selected in its place. Three controls depart
- * from this, as each describes. A grid is positional: it keeps the selected index while that cell exists. A combo box
+ * from this, as each describes. A grid is positional: it keeps the selected cells that still exist. A combo box
  * that has never had a selection selects its first option when it gets options. A cycle button, which always shows
  * a value, selects its first item when its selected item is gone or nothing is selected.</p>
  *

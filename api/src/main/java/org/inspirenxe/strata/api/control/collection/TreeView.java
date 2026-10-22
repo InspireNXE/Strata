@@ -41,8 +41,9 @@ import java.util.function.Predicate;
  * Items in a hierarchy, each row indented under its parent, with an arrow to show or hide an item's children.
  *
  * <p>The tree asks a children function for an item's children when it needs them, so a large hierarchy costs only
- * what is expanded. With {@link #setHasChildren} it asks only when an item opens, and keeps what it got. The rows shown are the roots and, under each expanded item, its children, depth first. They live
- * in a {@link ListView}, which builds only the rows in view and scrolls, selects and activates the same way.</p>
+ * what is expanded. With {@link #setHasChildren} it asks only when an item opens, and keeps what it got. The rows shown
+ * are the roots and, under each expanded item, its children, depth first. They live in a {@link ListView}, which builds
+ * only the rows in view and scrolls, selects and activates the same way.</p>
  *
  * <p>Each row starts {@linkplain #setIndent indented} by its depth, then shows a 12-unit arrow column, then the cell.
  * The arrow points right for a collapsed item and down for an expanded one, and is missing for an item with no

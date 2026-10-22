@@ -308,7 +308,8 @@ public final class GridViewImpl<T> extends BuiltInComposite<GridView<T>> impleme
             if (slot == null) {
                 return;
             }
-            slot.edit(this.session.begin(editor, item, edited -> this.report(CELL_EDITED, (Object) edited, (Object) item),
+            slot.edit(this.session.begin(editor, item,
+                    edited -> this.report(CELL_EDITED, (Object) edited, (Object) item),
                     () -> this.restore(index), this::requestFocus));
             this.pinned = index;
             this.session.focus(codePoint, modifiers);

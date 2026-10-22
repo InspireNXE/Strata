@@ -167,7 +167,8 @@ public final class TreeViewImpl<T> extends ListBackedControl<T, TreeViewImpl.Ent
                 return;
             }
             @SuppressWarnings("unchecked") final Row<T> target = (Row<T>) built;
-            target.edit(this.session.begin(editor, item, edited -> this.report(CELL_EDITED, (Object) edited, (Object) item),
+            target.edit(this.session.begin(editor, item,
+                    edited -> this.report(CELL_EDITED, (Object) edited, (Object) item),
                     () -> this.list.dropRow(row), this::requestFocus));
             this.list.pin(row);
             this.session.focus(codePoint, modifiers);
