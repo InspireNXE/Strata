@@ -19,7 +19,6 @@ import org.inspirenxe.strata.api.ComponentFactory;
 import org.inspirenxe.strata.api.component.Component;
 import org.inspirenxe.strata.api.component.CursorKind;
 import org.inspirenxe.strata.api.component.HasCursor;
-import org.inspirenxe.strata.api.control.attribute.item.SelectionMode;
 import org.inspirenxe.strata.api.control.collection.ListView;
 import org.inspirenxe.strata.api.control.collection.TableColumn;
 import org.inspirenxe.strata.api.control.collection.TableView;
@@ -64,7 +63,7 @@ import java.util.function.IntUnaryOperator;
  *
  * @param <T> the type of the items
  */
-public final class TableViewImpl<T> extends BuiltInComposite<TableView<T>> implements TableView<T> {
+public final class TableViewImpl<T> extends ListBackedControl<T, T, TableView<T>> implements TableView<T> {
     /**
      * The space between a title and its column's edges when the theme sets no {@value #STYLE_HEADER_PADDING}:
      * {@value ComponentFactory#CELL_PADDING} at the sides.
@@ -80,7 +79,6 @@ public final class TableViewImpl<T> extends BuiltInComposite<TableView<T>> imple
     private final ComponentFactoryImpl ui;
     private Insets headerPadding = DEFAULT_HEADER_PADDING;
     private final List<TableColumnImpl<T>> columns;
-    private final ListViewImpl<T> list;
     private final Header header;
     private List<T> items;
     private List<T> shown;
@@ -123,11 +121,6 @@ public final class TableViewImpl<T> extends BuiltInComposite<TableView<T>> imple
         this.grid = Paint.NONE;
         this.headerText = TextStyle.DEFAULT;
         this.header = new Header(ui, this);
-        this.list = new ListViewImpl<>(ui, item -> new Row<>(this.ui, this, item));
-        this.list.setAnchor(Anchor.FILL);
-        this.list.route(this::userSelect, this::userActivate, (index, previous) -> this.report(SELECTED, index, previous));
-        this.list.routeMany((indexes, current) -> this.request(SELECT_MANY, indexes, set -> this.list.applyMany(set, current)),
-                (indexes, previous) -> this.report(SELECTED_MANY, indexes, previous));
         this.addChild(this.header);
         this.addChild(this.list);
     }
@@ -342,31 +335,13 @@ public final class TableViewImpl<T> extends BuiltInComposite<TableView<T>> imple
         }
     }
 
-    /**
-     * Asks to select a row the user chose in the list.
-     */
-    private void userSelect(final int index) {
-        this.request(SELECT, index, this.list::applySelect);
-    }
-
-    /**
-     * Asks to activate a row the user activated in the list.
-     */
-    private void userActivate(final int index) {
-        this.request(ACTIVATE, index, this::applyActivate);
-    }
-
-    /**
-     * Reports the row a request ended with as activated. A null or an index outside the rows is ignored.
-     */
-    private void applyActivate(final Integer index) {
-        if (index != null && index >= 0 && index < this.shown.size()) {
-            this.report(ACTIVATED, index, index);
-        }
-    }
-
     boolean isSortable(final int column) {
         return this.columns.get(column).isSortable();
+    }
+
+    @Override
+    Component<?> row(final T item) {
+        return new Row<>(this.ui, this, item);
     }
 
     // ------------------------------------------------------------------
@@ -410,81 +385,8 @@ public final class TableViewImpl<T> extends BuiltInComposite<TableView<T>> imple
     }
 
     @Override
-    public TableView<T> setRowHeight(final float height) {
-        this.list.setRowHeight(height);
-        return this;
-    }
-
-    @Override
-    public TableView<T> setPlaceholder(final Text placeholder) {
-        this.list.setPlaceholder(placeholder);
-        return this;
-    }
-
-    @Override
-    public float rowHeight() {
-        return this.list.rowHeight();
-    }
-
-    @Override
-    public float rowSpacing() {
-        return this.list.rowSpacing();
-    }
-
-    @Override
-    public TableView<T> setRowSpacing(final float spacing) {
-        this.list.setRowSpacing(spacing);
-        return this;
-    }
-
-    @Override
-    public float scrollY() {
-        return this.list.scrollY();
-    }
-
-    @Override
-    public TableView<T> setScrollY(final float scrollY) {
-        this.list.setScrollY(scrollY);
-        return this;
-    }
-
-    @Override
-    public TableView<T> scrollToIndex(final int index) {
-        this.list.scrollToIndex(index);
-        return this;
-    }
-
-    @Override
-    public boolean isDeselectable() {
-        return this.list.isDeselectable();
-    }
-
-    @Override
-    public TableView<T> setDeselectable(final boolean deselectable) {
-        this.list.setDeselectable(deselectable);
-        return this;
-    }
-
-    @Override
-    public TableView<T> setActivateOnClick(final boolean onClick) {
-        this.list.setActivateOnClick(onClick);
-        return this;
-    }
-
-    @Override
-    public int selectedIndex() {
-        return this.list.selectedIndex();
-    }
-
-    @Override
     public Optional<T> selected() {
         return this.list.selected();
-    }
-
-    @Override
-    public TableView<T> select(final int index) {
-        this.list.select(index);
-        return this;
     }
 
     @Override
@@ -499,36 +401,8 @@ public final class TableViewImpl<T> extends BuiltInComposite<TableView<T>> imple
     }
 
     @Override
-    public SelectionMode selectionMode() {
-        return this.list.selectionMode();
-    }
-
-    @Override
-    public TableView<T> setSelectionMode(final SelectionMode mode) {
-        this.list.setSelectionMode(mode);
-        return this;
-    }
-
-    @Override
-    public List<Integer> selectedIndexes() {
-        return this.list.selectedIndexes();
-    }
-
-    @Override
-    public TableView<T> selectIndexes(final Collection<Integer> indexes) {
-        this.list.selectIndexes(indexes);
-        return this;
-    }
-
-    @Override
     public TableView<T> selectItems(final Collection<? extends T> items) {
         this.list.selectItems(items);
-        return this;
-    }
-
-    @Override
-    public TableView<T> selectAll() {
-        this.list.selectAll();
         return this;
     }
 

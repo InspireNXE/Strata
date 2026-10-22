@@ -31,6 +31,11 @@ import org.inspirenxe.strata.api.theme.Paint;
  *
  * <p>The last thumb is kept and made again only when the track, the fractions or the offset change, so painting an
  * unchanged bar allocates nothing.</p>
+ *
+ * <p>It can also follow the pointer for its host: {@link #press} pages or starts a drag of the thumb,
+ * {@link #drag} gives the offset for the pointer during the drag, and {@link #release} ends it. A host that paints
+ * the thumb hovered while {@link #isDragging()} calls {@code release} on every release of the button, since a press
+ * that never moved ends with no drag end.</p>
  */
 public final class ScrollTrack {
     private final boolean vertical;
@@ -42,6 +47,8 @@ public final class ScrollTrack {
     private Rect thumb;
     private float thumbOffset;
     private float thumbMaxOffset;
+    private boolean dragging;
+    private float grab;
 
     /**
      * Creates a bar with an empty track and a thumb at least {@link ScrollPanel#MIN_THUMB_LENGTH} long.
@@ -142,6 +149,62 @@ public final class ScrollTrack {
         }
         final float start = this.vertical ? this.track.y() : this.track.x();
         return (thumbStart - start) / travel * maxOffset;
+    }
+
+    /**
+     * Handles a press at a point, in the host's coordinates. A press on the thumb starts a drag; a press on the track
+     * beside the thumb moves one page toward the point. A press anywhere else ends any drag and does nothing more.
+     *
+     * @param x the pointer's x
+     * @param y the pointer's y
+     * @param offset the offset along the bar
+     * @param maxOffset the largest offset
+     * @param page how far one page moves, in the offset's units
+     * @return the offset after the press, not clamped: the same offset on the thumb, one page before or after it on
+     *     the track; or NaN when the point is not on the track
+     */
+    public float press(final float x, final float y, final float offset, final float maxOffset, final float page) {
+        this.dragging = false;
+        if (!this.track.contains(x, y)) {
+            return Float.NaN;
+        }
+        final Rect thumb = this.thumb(offset, maxOffset);
+        final float along = this.vertical ? y : x;
+        final float thumbStart = this.vertical ? thumb.y() : thumb.x();
+        if (thumb.contains(x, y)) {
+            this.dragging = true;
+            this.grab = along - thumbStart;
+            return offset;
+        }
+        return offset + (along < thumbStart ? -page : page);
+    }
+
+    /**
+     * Returns whether a press on the thumb started a drag that has not been released.
+     *
+     * @return true while the thumb is dragged
+     */
+    public boolean isDragging() {
+        return this.dragging;
+    }
+
+    /**
+     * Returns the offset that keeps the point of the thumb that was pressed under the pointer.
+     *
+     * @param x the pointer's x, in the host's coordinates
+     * @param y the pointer's y, in the host's coordinates
+     * @param maxOffset the largest offset
+     * @return the offset, not clamped; meaningful only while {@link #isDragging()}
+     */
+    public float drag(final float x, final float y, final float maxOffset) {
+        return this.offsetForThumbAt((this.vertical ? y : x) - this.grab, maxOffset);
+    }
+
+    /**
+     * Ends a drag of the thumb, if one is going on.
+     */
+    public void release() {
+        this.dragging = false;
     }
 
     /**

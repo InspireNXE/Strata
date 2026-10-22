@@ -107,8 +107,6 @@ public final class ListViewImpl<T> extends BuiltInComposite<ListView<T>> impleme
 
     // Pointer
     private float pointerY;
-    private boolean dragging;
-    private float dragGrab;
 
     // Theme
     private Paint background;
@@ -361,10 +359,7 @@ public final class ListViewImpl<T> extends BuiltInComposite<ListView<T>> impleme
     @Override
     public ListView<T> selectItems(final Collection<? extends T> items) {
         // The first row of each key, as selectItem finds it
-        final Map<Object, Integer> rows = new HashMap<>();
-        for (int i = 0; i < this.items.size(); i++) {
-            rows.putIfAbsent(this.keyFunction.apply(this.items.get(i)), i);
-        }
+        final Map<Object, Integer> rows = Items.firstIndexes(this.items, this.keyFunction);
         final List<Integer> indexes = new ArrayList<>(items.size());
         for (final T item : items) {
             final Integer index = item == null ? null : rows.get(this.keyFunction.apply(item));
@@ -426,13 +421,13 @@ public final class ListViewImpl<T> extends BuiltInComposite<ListView<T>> impleme
      * @param indexes the rows to select, or null
      * @param wanted the row the user's action made current
      */
-    public void applyMany(final List<Integer> indexes, final int wanted) {
+    void applyMany(final List<Integer> indexes, final int wanted) {
         if (indexes == null) {
             return;
         }
         final TreeSet<Integer> set = new TreeSet<>();
         for (final Integer index : indexes) {
-            if (index != null && index >= 0 && index < this.items.size()) {
+            if (Items.isIndex(index, this.items.size())) {
                 set.add(index);
             }
         }
@@ -493,13 +488,7 @@ public final class ListViewImpl<T> extends BuiltInComposite<ListView<T>> impleme
 
     @Override
     public ListView<T> selectItem(final T item) {
-        final Object key = this.keyFunction.apply(item);
-        for (int i = 0; i < this.items.size(); i++) {
-            if (Objects.equals(key, this.keyFunction.apply(this.items.get(i)))) {
-                return this.select(i);
-            }
-        }
-        return this.select(-1);
+        return this.select(Items.indexOf(this.items, this.keyFunction, item));
     }
 
     @Override
@@ -581,7 +570,7 @@ public final class ListViewImpl<T> extends BuiltInComposite<ListView<T>> impleme
      *               it with {@link #applyMany}
      * @param selected told the new and previous set after every change
      */
-    public void routeMany(final ManyRequest select, final ManyReport selected) {
+    void routeMany(final ManyRequest select, final ManyReport selected) {
         this.selectManyRoute = Objects.requireNonNull(select, "select");
         this.selectedManyRoute = Objects.requireNonNull(selected, "selected");
     }
@@ -589,7 +578,8 @@ public final class ListViewImpl<T> extends BuiltInComposite<ListView<T>> impleme
     /**
      * Makes this list a private part of the control that owns it. The list then fires none of its own events: each
      * selection and activation by the user goes to the owner, which applies a selection with {@link #applySelect},
-     * and every change of selection, from any source, is told to the owner instead of being reported.
+     * and every change of selection, from any source, is told to the owner instead of being reported. Only core
+     * controls that hold a list as a private part call it; it is public for the ones outside this package.
      *
      * @param select takes a row the user is about to select, or -1
      * @param activate takes a row the user activated
@@ -608,7 +598,7 @@ public final class ListViewImpl<T> extends BuiltInComposite<ListView<T>> impleme
      * @param index the row to select, -1 for none, or null
      */
     public void applySelect(final Integer index) {
-        if (index != null && index >= -1 && index < this.items.size()) {
+        if (Items.isIndexOrNone(index, this.items.size())) {
             this.select(index);
         }
     }
@@ -617,7 +607,7 @@ public final class ListViewImpl<T> extends BuiltInComposite<ListView<T>> impleme
      * Reports the row a request ended with as activated. A null or an index outside the items is ignored.
      */
     private void applyActivate(final Integer index) {
-        if (index != null && index >= 0 && index < this.items.size()) {
+        if (Items.isIndex(index, this.items.size())) {
             this.report(ACTIVATED, index, index);
         }
     }
@@ -737,7 +727,7 @@ public final class ListViewImpl<T> extends BuiltInComposite<ListView<T>> impleme
      * Asked before the user changes the selected set of a routed list.
      */
     @FunctionalInterface
-    public interface ManyRequest {
+    interface ManyRequest {
         /**
          * Asked before the user changes the selected set.
          *
@@ -751,7 +741,7 @@ public final class ListViewImpl<T> extends BuiltInComposite<ListView<T>> impleme
      * Told after the selected set of a routed list changed.
      */
     @FunctionalInterface
-    public interface ManyReport {
+    interface ManyReport {
         /**
          * Told after the selected set changed.
          *
@@ -944,7 +934,7 @@ public final class ListViewImpl<T> extends BuiltInComposite<ListView<T>> impleme
     @Override
     protected void paintOverChildren(final Painter painter, final Rect bounds) {
         if (this.barShown) {
-            this.bar.paint(painter, this.scrollY, this.maxScrollY, this.track, this.dragging ? this.thumbHovered : this.thumb);
+            this.bar.paint(painter, this.scrollY, this.maxScrollY, this.track, this.bar.isDragging() ? this.thumbHovered : this.thumb);
         }
     }
 
@@ -960,21 +950,18 @@ public final class ListViewImpl<T> extends BuiltInComposite<ListView<T>> impleme
     @Override
     protected void onPointerPress(final PointerButtonEvent event) {
         this.pointerY = event.y();
-        this.dragging = false;
+        this.bar.release();
         if (event.button() != MouseButton.LEFT) {
             return;
         }
-        if (this.barShown && this.bar.track().contains(event.x(), event.y())) {
-            final Rect thumbRect = this.bar.thumb(this.scrollY, this.maxScrollY);
-            if (thumbRect.contains(event.x(), event.y())) {
-                this.dragging = true;
-                this.dragGrab = event.y() - thumbRect.y();
-            } else {
-                final float page = Math.max(this.step(), this.viewport.height() - this.step());
-                this.scrollTo(this.scrollY + (event.y() < thumbRect.y() ? -page : page));
+        if (this.barShown) {
+            final float page = Math.max(this.step(), this.viewport.height() - this.step());
+            final float next = this.bar.press(event.x(), event.y(), this.scrollY, this.maxScrollY, page);
+            if (!Float.isNaN(next)) {
+                this.scrollTo(next);
+                event.consume();
+                return;
             }
-            event.consume();
-            return;
         }
         final int index = this.rowAt(event.y());
         if (index < 0) {
@@ -1011,22 +998,22 @@ public final class ListViewImpl<T> extends BuiltInComposite<ListView<T>> impleme
 
     @Override
     protected void onDrag(final DragEvent event) {
-        if (this.dragging) {
-            this.scrollTo(this.bar.offsetForThumbAt(event.y() - this.dragGrab, this.maxScrollY));
+        if (this.bar.isDragging()) {
+            this.scrollTo(this.bar.drag(event.x(), event.y(), this.maxScrollY));
             event.consume();
         }
     }
 
     @Override
     protected void onDragEnd(final DragEvent event) {
-        this.dragging = false;
+        this.bar.release();
     }
 
     @Override
     protected void onPointerRelease(final PointerButtonEvent event) {
         // A press on the thumb that never became a drag ends here, with no drag end
         if (event.button() == MouseButton.LEFT) {
-            this.dragging = false;
+            this.bar.release();
         }
     }
 

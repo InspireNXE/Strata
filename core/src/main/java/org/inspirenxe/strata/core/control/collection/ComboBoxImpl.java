@@ -150,7 +150,7 @@ public final class ComboBoxImpl<T> extends BuiltInComponent<ComboBox<T>> impleme
         final int beforeIndex = this.selectedIndex;
         int index = next.isEmpty() ? -1 : 0;
         if (beforeIndex >= 0) {
-            final int found = this.indexOfKey(next, this.options.get(beforeIndex));
+            final int found = Items.indexOf(next, this.keyFunction, this.options.get(beforeIndex));
             if (found >= 0) {
                 index = found;
             }
@@ -179,22 +179,6 @@ public final class ComboBoxImpl<T> extends BuiltInComponent<ComboBox<T>> impleme
     public ComboBox<T> setKeyFunction(final Function<? super T, ?> keyFunction) {
         this.keyFunction = Objects.requireNonNull(keyFunction, "keyFunction");
         return this;
-    }
-
-    /**
-     * Finds the first of some options with the same key as an item.
-     *
-     * @return the option's index, or -1 if none has the key
-     */
-    private int indexOfKey(final List<T> options, final T item) {
-        final Object key = item == null ? null : this.keyFunction.apply(item);
-        for (int i = 0; i < options.size(); i++) {
-            final T option = options.get(i);
-            if (Objects.equals(key, option == null ? null : this.keyFunction.apply(option))) {
-                return i;
-            }
-        }
-        return -1;
     }
 
     @Override
@@ -230,7 +214,7 @@ public final class ComboBoxImpl<T> extends BuiltInComponent<ComboBox<T>> impleme
 
     @Override
     public ComboBox<T> selectItem(final T item) {
-        return this.select(this.indexOfKey(this.options, item));
+        return this.select(Items.indexOf(this.options, this.keyFunction, item));
     }
 
     @Override
@@ -316,7 +300,7 @@ public final class ComboBoxImpl<T> extends BuiltInComponent<ComboBox<T>> impleme
      * Selects the option a request ended with. A null or an index outside the options is ignored.
      */
     private void applySelect(final Integer index) {
-        if (index != null && index >= 0 && index < this.options.size()) {
+        if (Items.isIndex(index, this.options.size())) {
             this.select(index);
         }
     }

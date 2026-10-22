@@ -254,14 +254,7 @@ public final class GridViewImpl<T> extends BuiltInComposite<GridView<T>> impleme
 
     @Override
     public GridView<T> selectItem(final T item) {
-        final Object key = item == null ? null : this.keyFunction.apply(item);
-        for (int i = 0; i < this.items.size(); i++) {
-            final T candidate = this.items.get(i);
-            if (Objects.equals(key, candidate == null ? null : this.keyFunction.apply(candidate))) {
-                return this.select(i);
-            }
-        }
-        return this.select(-1);
+        return this.select(Items.indexOf(this.items, this.keyFunction, item));
     }
 
     @Override
@@ -305,7 +298,7 @@ public final class GridViewImpl<T> extends BuiltInComposite<GridView<T>> impleme
      * Reports the activation a request ended with. A null or an index outside the cells is ignored.
      */
     private void applyActivate(final Integer index) {
-        if (index != null && index >= 0 && index < this.items.size()) {
+        if (Items.isIndex(index, this.items.size())) {
             this.report(ACTIVATED, index, index);
         }
     }
@@ -315,7 +308,7 @@ public final class GridViewImpl<T> extends BuiltInComposite<GridView<T>> impleme
      * slots is ignored.
      */
     private void applySelect(final Integer index) {
-        if (index != null && index >= -1 && index < this.items.size()) {
+        if (Items.isIndexOrNone(index, this.items.size())) {
             this.select(index);
         }
     }

@@ -28,7 +28,6 @@ import org.inspirenxe.strata.api.geometry.Rect;
 import org.inspirenxe.strata.api.geometry.Size;
 import org.inspirenxe.strata.api.input.MouseButton;
 import org.inspirenxe.strata.api.layout.Anchor;
-import org.inspirenxe.strata.api.text.Text;
 import org.inspirenxe.strata.api.theme.Paint;
 import org.inspirenxe.strata.api.theme.Theme;
 import org.inspirenxe.strata.core.control.Rings;
@@ -55,11 +54,11 @@ import java.util.function.IntUnaryOperator;
  *
  * @param <T> the type of the items
  */
-public final class TreeViewImpl<T> extends BuiltInComposite<TreeView<T>> implements TreeView<T> {
+public final class TreeViewImpl<T> extends ListBackedControl<T, TreeViewImpl.Entry<T>, TreeView<T>>
+        implements TreeView<T> {
     private static final Paint DEFAULT_ARROW = Paint.solid(0xFFA0A0A0);
 
     private final ComponentFactoryImpl ui;
-    private final ListViewImpl<Entry<T>> list;
     private final Set<Object> expanded;
     private List<T> roots;
     private List<Entry<T>> entries;
@@ -90,20 +89,7 @@ public final class TreeViewImpl<T> extends BuiltInComposite<TreeView<T>> impleme
         this.keyFunction = Function.identity();
         this.indent = DEFAULT_INDENT;
         this.arrow = DEFAULT_ARROW;
-        this.list = new ListViewImpl<>(ui, entry -> new Row<>(this.ui, this, entry));
-        this.list.setAnchor(Anchor.FILL);
         this.list.setKeyFunction(entry -> this.keyFunction.apply(entry.item));
-        this.list.route(this::userSelect, this::userActivate, (index, previous) -> {
-            if (!this.quiet) {
-                this.report(SELECTED, index, previous);
-            }
-        });
-        this.list.routeMany((indexes, current) -> this.request(SELECT_MANY, indexes, set -> this.list.applyMany(set, current)),
-                (indexes, previous) -> {
-                    if (!this.quiet) {
-                        this.report(SELECTED_MANY, indexes, previous);
-                    }
-                });
         this.addChild(this.list);
     }
 
@@ -165,6 +151,19 @@ public final class TreeViewImpl<T> extends BuiltInComposite<TreeView<T>> impleme
 
     private Object key(final T item) {
         return this.keyFunction.apply(item);
+    }
+
+    @Override
+    Component<?> row(final Entry<T> entry) {
+        return new Row<>(this.ui, this, entry);
+    }
+
+    /**
+     * Holds the list's reports back while one change moves the selection several times.
+     */
+    @Override
+    boolean reportsSelection() {
+        return !this.quiet;
     }
 
     private List<? extends T> childrenOf(final T item) {
@@ -304,12 +303,7 @@ public final class TreeViewImpl<T> extends BuiltInComposite<TreeView<T>> impleme
     }
 
     private int indexOf(final Object key) {
-        for (int i = 0; i < this.entries.size(); i++) {
-            if (Objects.equals(key, this.key(this.entries.get(i).item))) {
-                return i;
-            }
-        }
-        return -1;
+        return Items.indexOfKey(this.shown, this.keyFunction, key);
     }
 
     @Override
@@ -399,68 +393,6 @@ public final class TreeViewImpl<T> extends BuiltInComposite<TreeView<T>> impleme
         return this;
     }
 
-    @Override
-    public TreeView<T> setRowHeight(final float height) {
-        this.list.setRowHeight(height);
-        return this;
-    }
-
-    @Override
-    public TreeView<T> setPlaceholder(final Text placeholder) {
-        this.list.setPlaceholder(placeholder);
-        return this;
-    }
-
-    @Override
-    public float rowHeight() {
-        return this.list.rowHeight();
-    }
-
-    @Override
-    public float rowSpacing() {
-        return this.list.rowSpacing();
-    }
-
-    @Override
-    public TreeView<T> setRowSpacing(final float spacing) {
-        this.list.setRowSpacing(spacing);
-        return this;
-    }
-
-    @Override
-    public float scrollY() {
-        return this.list.scrollY();
-    }
-
-    @Override
-    public TreeView<T> setScrollY(final float scrollY) {
-        this.list.setScrollY(scrollY);
-        return this;
-    }
-
-    @Override
-    public TreeView<T> scrollToIndex(final int index) {
-        this.list.scrollToIndex(index);
-        return this;
-    }
-
-    @Override
-    public boolean isDeselectable() {
-        return this.list.isDeselectable();
-    }
-
-    @Override
-    public TreeView<T> setDeselectable(final boolean deselectable) {
-        this.list.setDeselectable(deselectable);
-        return this;
-    }
-
-    @Override
-    public TreeView<T> setActivateOnClick(final boolean onClick) {
-        this.list.setActivateOnClick(onClick);
-        return this;
-    }
-
     // ------------------------------------------------------------------
     // Selection
     // ------------------------------------------------------------------
@@ -471,39 +403,12 @@ public final class TreeViewImpl<T> extends BuiltInComposite<TreeView<T>> impleme
     }
 
     @Override
-    public int selectedIndex() {
-        return this.list.selectedIndex();
-    }
-
-    @Override
     public List<T> selectedItems() {
         final List<T> items = new ArrayList<>();
         for (final Entry<T> entry : this.list.selectedItems()) {
             items.add(entry.item);
         }
         return items;
-    }
-
-    @Override
-    public SelectionMode selectionMode() {
-        return this.list.selectionMode();
-    }
-
-    @Override
-    public TreeView<T> setSelectionMode(final SelectionMode mode) {
-        this.list.setSelectionMode(mode);
-        return this;
-    }
-
-    @Override
-    public List<Integer> selectedIndexes() {
-        return this.list.selectedIndexes();
-    }
-
-    @Override
-    public TreeView<T> selectIndexes(final Collection<Integer> indexes) {
-        this.list.selectIndexes(indexes);
-        return this;
     }
 
     @Override
@@ -543,18 +448,6 @@ public final class TreeViewImpl<T> extends BuiltInComposite<TreeView<T>> impleme
             }
             this.list.selectIndexes(indexes);
         });
-        return this;
-    }
-
-    @Override
-    public TreeView<T> selectAll() {
-        this.list.selectAll();
-        return this;
-    }
-
-    @Override
-    public TreeView<T> select(final int index) {
-        this.list.select(index);
         return this;
     }
 
@@ -625,30 +518,6 @@ public final class TreeViewImpl<T> extends BuiltInComposite<TreeView<T>> impleme
     private void applyExpansion(final Expansion<?> expansion) {
         if (expansion != null && expansion.item() != null) {
             this.setExpanded((T) expansion.item(), expansion.expanded());
-        }
-    }
-
-    /**
-     * Asks to select a row for the user. The list routes its own selections here, and Left and Right move through
-     * the list as Up and Down do.
-     */
-    private void userSelect(final int index) {
-        this.request(SELECT, index, this.list::applySelect);
-    }
-
-    /**
-     * Asks to activate a row the user activated in the list.
-     */
-    private void userActivate(final int index) {
-        this.request(ACTIVATE, index, this::applyActivate);
-    }
-
-    /**
-     * Reports the row a request ended with as activated. A null or an index outside the rows is ignored.
-     */
-    private void applyActivate(final Integer index) {
-        if (index != null && index >= 0 && index < this.entries.size()) {
-            this.report(ACTIVATED, index, index);
         }
     }
 
