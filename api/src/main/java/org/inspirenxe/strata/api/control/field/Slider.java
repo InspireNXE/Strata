@@ -23,7 +23,10 @@ import org.inspirenxe.strata.api.component.HasTooltip;
 import org.inspirenxe.strata.api.control.attribute.value.Ranged;
 import org.inspirenxe.strata.api.control.attribute.value.Stepped;
 import org.inspirenxe.strata.api.control.attribute.value.Validatable;
+import org.inspirenxe.strata.api.event.EventType;
+import org.inspirenxe.strata.api.event.control.ValueEvent;
 import org.inspirenxe.strata.api.layout.Orientation;
+import org.inspirenxe.strata.api.state.PropertyKey;
 
 import java.util.function.DoubleFunction;
 
@@ -33,7 +36,8 @@ import java.util.function.DoubleFunction;
  *
  * <h2>Values</h2>
  * <p>The value lies between {@link #min()} and {@link #max()}, 0 and 1 by default. With a {@linkplain #setStep
- * step}, values snap to {@code min + k * step}; the maximum is always reachable even when it is not on that grid.
+ * step}, values snap to {@code min + k * step}, and while it {@linkplain #setSnapToTicks snaps to ticks}, to the
+ * nearest tick instead; the maximum is always reachable even when it is not on that grid.
  * Every way of changing the value clamps and snaps it, and {@link #CHANGED} fires only when the result differs from
  * the current value.</p>
  *
@@ -69,7 +73,18 @@ import java.util.function.DoubleFunction;
  *     <li>{@link Ranged#CHANGED}: Fired after the value changed: by the user, by {@link #setValue}, or by
  *     {@link #setRange} or {@link #setStep} moving it. The value is the new value and {@code previous()} the value
  *     before; neither is null. During a drag it fires for each move that changes the value.</li>
+ *     <li>{@link #COMMITTED}: Fired once the user is done: when the left button that pressed the slider is released,
+ *     after each key that changed the value, and after each change from code made while no press is under way. Its
+ *     value is the value then, and {@code previous()} the value the last {@code COMMITTED} reported, or the value
+ *     the slider started with. A press and drag that end where they began report nothing. Work that should run once
+ *     per drag, such as sending the value to a server, belongs here.</li>
  * </ul>
+ *
+ * <h2>Ticks</h2>
+ * <p>{@link #setTicks} draws a mark across the bottom of a horizontal slider, or the left of a vertical one, at each
+ * major tick, {@code min + k * major}, 4 units long, and a mark 2 units long at each minor tick between them, all
+ * one unit wide and centered where the thumb's center would be at that value. Ticks closer together than 3 units
+ * are left out.</p>
  *
  * <h2>Theme keys</h2>
  * <ul>
@@ -88,6 +103,9 @@ import java.util.function.DoubleFunction;
  *     {@value #STYLE_TEXT}.</li>
  *     <li>{@value #STYLE_PADDING} (insets, optional): the space between the slider's edges and its label, which
  *     centers inside it and is cut to it. Defaults to none.</li>
+ *     <li>{@value #STYLE_TICK} (paint, optional): the major ticks. Falls back to {@value #STYLE_THUMB}, since the
+ *     track covers the whole slider and ticks in its color would not show.</li>
+ *     <li>{@value #STYLE_TICK_MINOR} (paint, optional): the minor ticks. Falls back to {@value #STYLE_TICK}.</li>
  * </ul>
  *
  * <pre>{@code
@@ -163,11 +181,83 @@ public interface Slider extends Component<Slider>, Focusable<Slider>, HasCursor<
     String STYLE_KEY_TRAVEL = "slider.key.travel";
 
     /**
+     * Style key for the major ticks (paint, optional).
+     */
+    String STYLE_TICK = "slider.tick";
+    /**
+     * Style key for the minor ticks (paint, optional).
+     */
+    String STYLE_TICK_MINOR = "slider.tick.minor";
+
+    /**
+     * Told once the user is done changing the value: on the release that ends a press or drag, after each key that
+     * changed it, and after each change from code while no press is under way. The value is the value then and the
+     * previous value the last committed one. Never fires while {@link #isAdjusting()} is true.
+     */
+    EventType<ValueEvent<Slider, Double>> COMMITTED = EventType.valueReport("slider.committed");
+    /**
+     * The value, as {@link #value()} and {@link #setValue} say, but told only through {@link #COMMITTED}, so a
+     * binding writes its state once per drag rather than on every move.
+     */
+    PropertyKey<Slider, Double> COMMITTED_VALUE = PropertyKey.of("slider.committed_value", Slider::value,
+            Slider::setValue, COMMITTED);
+
+    /**
      * Returns the value.
      *
      * @return the current value, between {@link #min()} and {@link #max()}
      */
     double value();
+
+    /**
+     * Returns whether the user is changing the value with the pointer: from the left press on the slider to the
+     * release of that button.
+     *
+     * @return true while a press or drag is under way
+     */
+    boolean isAdjusting();
+
+    /**
+     * Sets the ticks drawn along the track. A new frame is drawn.
+     *
+     * @param major the distance between major ticks in values, measured from the minimum, or 0 for no ticks
+     * @param minorPerMajor how many minor ticks sit between two major ones, evenly spaced; 0 for none
+     * @return this slider
+     * @throws IllegalArgumentException if {@code major} is negative or not finite, or {@code minorPerMajor} is
+     *     negative
+     */
+    Slider setTicks(double major, int minorPerMajor);
+
+    /**
+     * Returns the distance between major ticks.
+     *
+     * @return the distance in values, or 0 for no ticks, as for a new slider
+     */
+    double majorTicks();
+
+    /**
+     * Returns how many minor ticks sit between two major ones.
+     *
+     * @return the count; 0 for a new slider
+     */
+    int minorTicks();
+
+    /**
+     * Makes values snap to the nearest tick, minor ones included, in place of the step, or to the step again. The
+     * current value is snapped, and {@link #CHANGED} fires if that changes it. Snapping does nothing while there are
+     * no ticks.
+     *
+     * @param snap true to snap to the ticks
+     * @return this slider
+     */
+    Slider setSnapToTicks(boolean snap);
+
+    /**
+     * Returns whether values snap to the ticks.
+     *
+     * @return true after {@code setSnapToTicks(true)}; false for a new slider
+     */
+    boolean snapsToTicks();
 
     /**
      * Sets the value, clamped to the range and snapped to the step. {@link #CHANGED} fires if the result differs
@@ -225,7 +315,8 @@ public interface Slider extends Component<Slider>, Focusable<Slider>, HasCursor<
     /**
      * Returns how far one press of an arrow key moves the value.
      *
-     * @return the step; with no step, the value that moves the thumb {@value #STYLE_KEY_TRAVEL} units when the
+     * @return the distance between ticks while values snap to them; otherwise the step; with no step, the value that
+     *     moves the thumb {@value #STYLE_KEY_TRAVEL} units when the
      *     theme sets that above 0 and the slider has been laid out longer than its thumb, and otherwise a
      *     hundredth of the range
      */

@@ -109,6 +109,8 @@ public final class Themes {
                 .paint(Slider.STYLE_THUMB, Paint.solid(0xFF5A5E66))
                 .paint(Slider.STYLE_THUMB_HOVERED, Paint.solid(0xFF6A9FFF))
                 .paint(Slider.STYLE_THUMB_DISABLED, Paint.solid(0xFF3A3A3A))
+                .paint(Slider.STYLE_TICK, Paint.solid(0xFF8A8F98))
+                .paint(Slider.STYLE_TICK_MINOR, Paint.solid(0xFF4E525A))
                 // The label sits over the thumb as well as the track, so it gets a shadow to stay readable on both
                 .textStyle(Slider.STYLE_TEXT, TextStyle.DEFAULT.withColor(0xFFF0F0F0).withShadow(true))
                 .textStyle(Slider.STYLE_TEXT_DISABLED, TextStyle.DEFAULT.withColor(0xFF707070))
