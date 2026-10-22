@@ -60,7 +60,7 @@ public interface ScreenStack extends InputSink, ScreenController {
      * in the stack.
      *
      * <p>Called off the UI thread, it hands the opening to the UI thread and returns a handle at once, as an engine
-     * adapter's controller does (design section 4.19). The handle's methods hand themselves over too and reach
+     * adapter's controller does. The handle's methods hand themselves over too and reach
      * the screen once it has opened; closing it before then cancels the opening, and its {@code factory()} throws
      * {@link IllegalStateException} until then. An opening that throws on the UI thread is logged, and the handle
      * then counts as closed.</p>

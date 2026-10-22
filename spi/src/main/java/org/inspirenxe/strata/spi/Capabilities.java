@@ -52,7 +52,7 @@ package org.inspirenxe.strata.spi;
  *                          {@link Canvas#text(org.inspirenxe.strata.api.text.TextSpan, float, float)} with its
  *                          characters in reverse order and its brackets mirrored, which reads correctly for Hebrew
  *                          and draws Arabic unjoined. Either way core runs the bidirectional algorithm and places the
- *                          runs of a line in visual order (design 4.49).
+ *                          runs of a line in visual order.
  */
 public record Capabilities(boolean sendsKeyRepeat, boolean monospaceFont, boolean slicesSprites,
                            boolean drawsShapes, boolean shapesRightToLeft) {
