@@ -26,7 +26,10 @@ import java.util.Objects;
  * method is named for in snake case: {@code strata:button}, {@code strata:list_view},
  * {@code strata:anchor_panel}.</p>
  *
- * @param namespace the owner, usually a library or application id; not empty
+ * <p>The namespace is one or more characters with no colon, and the path one or more characters of any kind, so
+ * {@link #toString()} and {@link #parse} give back the same id.</p>
+ *
+ * @param namespace the owner, usually a library or application id; not empty, and without a colon
  * @param path the component's name within the namespace; not empty
  */
 public record ComponentId(String namespace, String path) {
@@ -38,13 +41,14 @@ public record ComponentId(String namespace, String path) {
     /**
      * Checks the parts.
      *
-     * @throws IllegalArgumentException if either part is empty
+     * @throws IllegalArgumentException if either part is empty, or the namespace holds a colon
      */
     public ComponentId {
         Objects.requireNonNull(namespace, "namespace");
         Objects.requireNonNull(path, "path");
-        if (namespace.isEmpty() || path.isEmpty()) {
-            throw new IllegalArgumentException("Component id needs a namespace and a path: " + namespace + ":" + path);
+        if (namespace.isEmpty() || path.isEmpty() || namespace.indexOf(':') >= 0) {
+            throw new IllegalArgumentException("Component id needs a namespace without a colon and a path: "
+                    + namespace + ":" + path);
         }
     }
 
@@ -54,7 +58,7 @@ public record ComponentId(String namespace, String path) {
      * @param namespace the owner
      * @param path the component's name within the namespace
      * @return the id
-     * @throws IllegalArgumentException if either part is empty
+     * @throws IllegalArgumentException if either part is empty, or the namespace holds a colon
      */
     public static ComponentId of(final String namespace, final String path) {
         return new ComponentId(namespace, path);

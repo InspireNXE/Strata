@@ -22,29 +22,34 @@ import java.util.Objects;
  * adapter reads the class path resource {@code assets/<namespace>/sprites/<path>.png} by default, and takes a
  * resolver for any other layout. A missing image draws as magenta.
  *
- * @param namespace the owner, usually a mod id; not empty
+ * <p>The namespace is one or more characters with no colon, and the path one or more characters of any kind, so
+ * {@link #toString()} and {@link #parse} give back the same id.</p>
+ *
+ * @param namespace the owner, usually the id of the application or library; not empty, and without a colon
  * @param path the path inside the namespace, without extension; not empty
  */
 public record SpriteId(String namespace, String path) {
     /**
      * Checks the parts.
      *
-     * @throws IllegalArgumentException if either part is empty
+     * @throws IllegalArgumentException if either part is empty, or the namespace holds a colon
      */
     public SpriteId {
         Objects.requireNonNull(namespace, "namespace");
         Objects.requireNonNull(path, "path");
-        if (namespace.isEmpty() || path.isEmpty()) {
-            throw new IllegalArgumentException("Sprite id needs a namespace and a path: " + namespace + ":" + path);
+        if (namespace.isEmpty() || path.isEmpty() || namespace.indexOf(':') >= 0) {
+            throw new IllegalArgumentException("Sprite id needs a namespace without a colon and a path: "
+                    + namespace + ":" + path);
         }
     }
 
     /**
      * Creates a sprite id.
      *
-     * @param namespace the owner, usually a mod id
+     * @param namespace the owner, usually the id of the application or library
      * @param path the path inside the namespace
      * @return the sprite id
+     * @throws IllegalArgumentException if either part is empty, or the namespace holds a colon
      */
     public static SpriteId of(final String namespace, final String path) {
         return new SpriteId(namespace, path);

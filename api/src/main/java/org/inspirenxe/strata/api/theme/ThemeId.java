@@ -25,20 +25,24 @@ import java.util.Objects;
  * own, and code can define more with {@link ThemeRegistry#define}. Any other id names a theme made only from theme
  * files, which the adapter finds in its asset roots.</p>
  *
- * @param namespace the owner, usually the id of the application, mod or plugin; not empty
+ * <p>The namespace is one or more characters with no colon, and the path one or more characters of any kind, so
+ * {@link #toString()} and {@link #parse} give back the same id.</p>
+ *
+ * @param namespace the owner, usually the id of the application, library or plugin; not empty, and without a colon
  * @param path the theme's name within the namespace; not empty
  */
 public record ThemeId(String namespace, String path) {
     /**
      * Checks the parts.
      *
-     * @throws IllegalArgumentException if either part is empty
+     * @throws IllegalArgumentException if either part is empty, or the namespace holds a colon
      */
     public ThemeId {
         Objects.requireNonNull(namespace, "namespace");
         Objects.requireNonNull(path, "path");
-        if (namespace.isEmpty() || path.isEmpty()) {
-            throw new IllegalArgumentException("Theme id needs a namespace and a path: " + namespace + ":" + path);
+        if (namespace.isEmpty() || path.isEmpty() || namespace.indexOf(':') >= 0) {
+            throw new IllegalArgumentException("Theme id needs a namespace without a colon and a path: "
+                    + namespace + ":" + path);
         }
     }
 
@@ -48,7 +52,7 @@ public record ThemeId(String namespace, String path) {
      * @param namespace the owner
      * @param path the theme's name within the namespace
      * @return the id
-     * @throws IllegalArgumentException if either part is empty
+     * @throws IllegalArgumentException if either part is empty, or the namespace holds a colon
      */
     public static ThemeId of(final String namespace, final String path) {
         return new ThemeId(namespace, path);
