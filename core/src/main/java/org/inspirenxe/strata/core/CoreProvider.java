@@ -20,12 +20,14 @@ import org.inspirenxe.strata.api.UiThread;
 import org.inspirenxe.strata.api.appearance.Appearances;
 import org.inspirenxe.strata.api.component.registry.ComponentRegistry;
 import org.inspirenxe.strata.api.screen.ScreenController;
+import org.inspirenxe.strata.api.state.ConverterFactory;
 import org.inspirenxe.strata.api.state.StateFactory;
 import org.inspirenxe.strata.api.text.TextFactory;
 import org.inspirenxe.strata.api.theme.ThemeRegistry;
 import org.inspirenxe.strata.core.appearance.AppearancesImpl;
 import org.inspirenxe.strata.core.host.PlatformScreens;
 import org.inspirenxe.strata.core.registry.ComponentRegistryImpl;
+import org.inspirenxe.strata.core.state.ConverterFactoryImpl;
 import org.inspirenxe.strata.core.state.StateFactoryImpl;
 import org.inspirenxe.strata.core.text.TextFactoryImpl;
 import org.inspirenxe.strata.core.theme.ThemeRegistryImpl;
@@ -60,6 +62,11 @@ public final class CoreProvider implements Strata.Provider {
     @Override
     public StateFactory states() {
         return StateFactoryImpl.INSTANCE;
+    }
+
+    @Override
+    public ConverterFactory converters() {
+        return ConverterFactoryImpl.INSTANCE;
     }
 
     @Override

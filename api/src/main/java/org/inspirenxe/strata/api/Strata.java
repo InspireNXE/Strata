@@ -18,6 +18,7 @@ package org.inspirenxe.strata.api;
 import org.inspirenxe.strata.api.appearance.Appearances;
 import org.inspirenxe.strata.api.screen.ScreenController;
 import org.inspirenxe.strata.api.component.registry.ComponentRegistry;
+import org.inspirenxe.strata.api.state.ConverterFactory;
 import org.inspirenxe.strata.api.state.StateFactory;
 import org.inspirenxe.strata.api.text.TextFactory;
 import org.inspirenxe.strata.api.theme.ThemeRegistry;
@@ -75,6 +76,17 @@ public final class Strata {
      */
     public static StateFactory states() {
         return Strata.provider().states();
+    }
+
+    /**
+     * Returns the factory that makes the number {@linkplain org.inspirenxe.strata.api.state.Converter converters}
+     * that {@link org.inspirenxe.strata.api.state.Converters} hands out.
+     *
+     * @return the factory
+     * @throws IllegalStateException if Strata's core is not on the class path, or more than one provider is
+     */
+    public static ConverterFactory converters() {
+        return Strata.provider().converters();
     }
 
     /**
@@ -148,6 +160,13 @@ public final class Strata {
          * @return the factory, the same one every time
          */
         StateFactory states();
+
+        /**
+         * Returns the converter factory.
+         *
+         * @return the factory, the same one every time
+         */
+        ConverterFactory converters();
 
         /**
          * Returns the component registry.

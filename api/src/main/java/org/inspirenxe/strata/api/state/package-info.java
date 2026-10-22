@@ -29,6 +29,11 @@
  * one flush, 100 in Strata's core, are taken for a cycle, logged as an error through {@link java.lang.System.Logger}, and dropped until one of
  * their states changes again.</p>
  *
+ * <p>A {@link org.inspirenxe.strata.api.state.Converter} binds a property to a state of another type through
+ * {@link org.inspirenxe.strata.api.state.PropertyKey#convert}, such as a text box's text to a number. Converting the
+ * control's value back gives a {@link org.inspirenxe.strata.api.state.Conversion}, which says why when the value has
+ * no model value. {@link org.inspirenxe.strata.api.state.Converters} has converters for numbers.</p>
+ *
  * <p>Code that acts on a change rather than showing it hears it two ways.
  * {@link org.inspirenxe.strata.api.ComponentFactory#watch} follows a source the way a binding does and calls on the UI
  * thread with the bindings, until its screen closes. {@link org.inspirenxe.strata.api.state.State#subscribe} calls at

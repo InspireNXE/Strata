@@ -595,7 +595,8 @@ public interface Component<T extends Component<T>> extends EventTarget<T>, Enabl
 
     /**
      * Removes the binding of a property, so it stops following its source and lets go of every state it read. The
-     * property keeps the value it has. Bindings are matched by {@linkplain PropertyKey#name() key name}.
+     * property keeps the value it has. Bindings are matched by {@linkplain PropertyKey#name() key name}, so a
+     * {@linkplain PropertyKey#convert converted} key removes a binding of the plain key, and the other way round.
      *
      * <pre>{@code
      * if (custom) {

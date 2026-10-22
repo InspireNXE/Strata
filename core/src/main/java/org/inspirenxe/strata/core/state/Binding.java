@@ -24,6 +24,7 @@ import org.inspirenxe.strata.api.event.cause.CauseKeys;
 import org.inspirenxe.strata.api.event.cause.CauseStack;
 import org.inspirenxe.strata.api.event.cause.Origin;
 import org.inspirenxe.strata.api.event.control.ControlEvent;
+import org.inspirenxe.strata.api.state.Conversion;
 import org.inspirenxe.strata.api.state.PropertyKey;
 import org.inspirenxe.strata.api.state.Source;
 
@@ -42,6 +43,10 @@ import java.util.function.Supplier;
  * {@link BindingQueue}, which evaluates it on the UI thread: the source runs inside a {@link Tracking} frame, the
  * dependencies are replaced by what it read, and the value is written to the property unless the property already
  * equals it.</p>
+ *
+ * <p>The binding reads the property through the key's {@link PropertyKey#check() check}, so a
+ * {@linkplain PropertyKey#convert converted} key compares and writes back the model's value, and writes nothing back
+ * while the property's value does not convert.</p>
  *
  * <p>When the source is a state and the key has reports, the binding also handles each report on the component,
  * at the highest priority, so after the component's other handlers and before the handlers of the ancestors the
@@ -166,7 +171,9 @@ public final class Binding<V> extends Dependent {
     }
 
     private void write(final V value) {
-        if (Objects.equals(this.key.reader().apply(this.component), value)) {
+        // A converted key compares in the model's terms, so "05" in a field bound to 5 is left as the user typed it
+        if (this.key.check().apply(this.component) instanceof Conversion.Valid<? extends V> current
+                && Objects.equals(current.value(), value)) {
             return;
         }
         // Its own reports carry this origin, so reported() leaves them alone, and the control's requests do not fire
@@ -190,16 +197,16 @@ public final class Binding<V> extends Dependent {
 
     /**
      * Writes the property's value to the state unless they are equal, as a report does, for a report an animation
-     * deferred. Does nothing for a one-way binding, or one that is detached or not evaluated since it attached. Call on
-     * the UI thread.
+     * deferred. A value that does not convert is not written, so the state keeps its last valid value. Does nothing
+     * for a one-way binding, or one that is detached or not evaluated since it attached. Call on the UI thread.
      */
     public void writeBack() {
         if (this.writable == null || !this.evaluated || !this.isLive()) {
             return;
         }
-        final V value = this.key.reader().apply(this.component);
-        if (!Objects.equals(this.writable.peek(), value)) {
-            this.writable.set(value);
+        if (this.key.check().apply(this.component) instanceof Conversion.Valid<? extends V> valid
+                && !Objects.equals(this.writable.peek(), valid.value())) {
+            this.writable.set(valid.value());
         }
     }
 

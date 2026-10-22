@@ -46,7 +46,11 @@ public final class Translations {
             Map.entry("strata.time.placeholder", "Pick a time"),
             Map.entry("strata.datetime.placeholder", "Pick a date and time"),
             Map.entry("strata.calendar.title", "%1$s %2$s"),
-            Map.entry("strata.calendar.decade", "%1$s - %2$s"));
+            Map.entry("strata.calendar.decade", "%1$s - %2$s"),
+            Map.entry("strata.validation.integer", "Enter a whole number"),
+            Map.entry("strata.validation.integer_range", "Enter a whole number from %1$s to %2$s"),
+            Map.entry("strata.validation.decimal", "Enter a number"),
+            Map.entry("strata.validation.decimal_range", "Enter a number from %1$s to %2$s"));
 
     private static final System.Logger LOGGER = System.getLogger(Translations.class.getName());
     private static final Set<String> MISSING = ConcurrentHashMap.newKeySet();
