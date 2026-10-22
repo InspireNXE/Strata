@@ -36,14 +36,26 @@ import org.inspirenxe.strata.spi.Canvas;
  * <p>Sized nine-slices and tiled sprites go to the canvas as they are when the engine
  * {@linkplain org.inspirenxe.strata.spi.Capabilities#slicesSprites() slices sprites} itself. Otherwise the painter
  * draws them from pieces, each one {@link Canvas#spriteRegion} call for the part of the image it shows. A row or
- * column holds at most {@value #MAX_COPIES} copies; past that, the part is stretched instead.</p>
+ * column holds at most {@value #MAX_COPIES} copies, and a tiled sprite or tiled part at most {@value #MAX_TILES} in
+ * all; past either, the sprite or part is stretched instead.</p>
+ *
+ * <p>Drawing a sized nine-slice allocates only the rectangle of each of its nine parts, and drawing tiles only the
+ * rectangle of each copy, since the canvas takes rectangles; the slice edges are kept in arrays the painter
+ * reuses.</p>
  */
 public final class CanvasPainter implements Painter {
     /** The most copies of a tile in one row or column, so a tiny tile cannot flood the canvas with calls. */
     static final int MAX_COPIES = 1024;
+    /** The most copies of a tile in all, so a tile that fits under {@link #MAX_COPIES} on each axis cannot either. */
+    static final int MAX_TILES = 16384;
     private static final int WHITE = 0xFFFFFFFF;
 
     private final InlineMetrics metrics;
+    // The edges of a nine-slice's parts, in the rectangle and in the image, reused by every nine-slice
+    private final float[] destX = new float[4];
+    private final float[] destY = new float[4];
+    private final float[] sourceX = new float[4];
+    private final float[] sourceY = new float[4];
     private Canvas canvas;
     private boolean slicesSprites;
 
@@ -137,12 +149,26 @@ public final class CanvasPainter implements Painter {
                 ? rect.width() / (border.left() + border.right()) : 1f;
         final float vertical = border.top() + border.bottom() > rect.height()
                 ? rect.height() / (border.top() + border.bottom()) : 1f;
-        final float[] dx = {rect.x(), rect.x() + border.left() * horizontal,
-            rect.right() - border.right() * horizontal, rect.right()};
-        final float[] dy = {rect.y(), rect.y() + border.top() * vertical,
-            rect.bottom() - border.bottom() * vertical, rect.bottom()};
-        final float[] sx = {0f, border.left(), size.width() - border.right(), size.width()};
-        final float[] sy = {0f, border.top(), size.height() - border.bottom(), size.height()};
+        final float[] dx = this.destX;
+        dx[0] = rect.x();
+        dx[1] = rect.x() + border.left() * horizontal;
+        dx[2] = rect.right() - border.right() * horizontal;
+        dx[3] = rect.right();
+        final float[] dy = this.destY;
+        dy[0] = rect.y();
+        dy[1] = rect.y() + border.top() * vertical;
+        dy[2] = rect.bottom() - border.bottom() * vertical;
+        dy[3] = rect.bottom();
+        final float[] sx = this.sourceX;
+        sx[0] = 0f;
+        sx[1] = border.left();
+        sx[2] = size.width() - border.right();
+        sx[3] = size.width();
+        final float[] sy = this.sourceY;
+        sy[0] = 0f;
+        sy[1] = border.top();
+        sy[2] = size.height() - border.bottom();
+        sy[3] = size.height();
         for (int row = 0; row < 3; row++) {
             for (int column = 0; column < 3; column++) {
                 this.part(sprite, size, tint,
@@ -165,7 +191,7 @@ public final class CanvasPainter implements Painter {
         }
         final int columns = CanvasPainter.copies(rect.width(), size.width());
         final int rows = CanvasPainter.copies(rect.height(), size.height());
-        if (columns > MAX_COPIES || rows > MAX_COPIES) {
+        if (columns > MAX_COPIES || rows > MAX_COPIES || (long) columns * rows > MAX_TILES) {
             this.canvas.sprite(sprite, rect, tint);
             return;
         }
@@ -193,20 +219,27 @@ public final class CanvasPainter implements Painter {
         }
         int columns = tileX ? CanvasPainter.copies(dest.width(), sw) : 1;
         int rows = tileY ? CanvasPainter.copies(dest.height(), sh) : 1;
-        final float stepX = columns > MAX_COPIES || !tileX ? dest.width() : sw;
-        final float stepY = rows > MAX_COPIES || !tileY ? dest.height() : sh;
+        // Too many copies in all stretch the part both ways
+        final boolean tooMany = (long) columns * rows > MAX_TILES;
+        final float stepX = columns > MAX_COPIES || tooMany || !tileX ? dest.width() : sw;
+        final float stepY = rows > MAX_COPIES || tooMany || !tileY ? dest.height() : sh;
         columns = stepX == dest.width() ? 1 : columns;
         rows = stepY == dest.height() ? 1 : rows;
         final float scaleX = stepX / sw;
         final float scaleY = stepY / sh;
+        final float u0 = sx / size.width();
+        final float v0 = sy / size.height();
+        if (columns == 1 && rows == 1) {
+            // One copy covers the whole part, so the part's own rectangle will do
+            this.canvas.spriteRegion(sprite, dest, u0, v0, (sx + sw) / size.width(), (sy + sh) / size.height(), tint);
+            return;
+        }
         for (int row = 0; row < rows; row++) {
             for (int column = 0; column < columns; column++) {
                 final float x = dest.x() + column * stepX;
                 final float y = dest.y() + row * stepY;
                 final Rect copy = Rect.ofEdges(x, y, Math.min(x + stepX, dest.right()), Math.min(y + stepY, dest.bottom()));
                 // A cropped copy shows only the start of the region
-                final float u0 = sx / size.width();
-                final float v0 = sy / size.height();
                 final float u1 = (sx + copy.width() / scaleX) / size.width();
                 final float v1 = (sy + copy.height() / scaleY) / size.height();
                 this.canvas.spriteRegion(sprite, copy, u0, v0, u1, v1, tint);

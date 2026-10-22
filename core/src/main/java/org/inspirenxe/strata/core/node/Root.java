@@ -161,6 +161,8 @@ public final class Root {
     private Node content;
     private float width;
     private float height;
+    // The whole host, kept so neither layout nor painting allocates it
+    private Rect area = Rect.ZERO;
     private boolean layoutRequested;
 
     private Node hovered;
@@ -598,6 +600,7 @@ public final class Root {
         if (this.width != width || this.height != height) {
             this.width = width;
             this.height = height;
+            this.area = new Rect(0, 0, width, height);
             this.requestLayout();
         }
     }
@@ -635,7 +638,7 @@ public final class Root {
     }
 
     private void layoutLayers() {
-        final Rect area = new Rect(0, 0, this.width, this.height);
+        final Rect area = this.area;
         if (this.content != null) {
             this.content.measure(this.layoutPass, this.width, this.height);
             this.content.arrange(this.layoutPass, area);
@@ -740,7 +743,7 @@ public final class Root {
             this.content.paint(frame);
         }
         if (!this.layers.isEmpty()) {
-            final Rect area = new Rect(0, 0, this.width, this.height);
+            final Rect area = this.area;
             final Paint backdrop = this.theme.paintOr(Overlays.STYLE_BACKDROP, Paint.NONE);
             final List<Layer> painting = this.paintLayers;
             for (int i = 0; i < this.layers.size(); i++) {
@@ -774,6 +777,15 @@ public final class Root {
             return;
         }
         final long now = this.platform.clock().millis();
+        // Copied only when a toast is due, so a frame with overlays open allocates nothing here
+        boolean due = false;
+        for (int i = 0; i < this.layers.size() && !due; i++) {
+            final Layer layer = this.layers.get(i);
+            due = layer.isToast() && now >= layer.expiresAt;
+        }
+        if (!due) {
+            return;
+        }
         for (final Layer layer : List.copyOf(this.layers)) {
             if (layer.isToast() && now >= layer.expiresAt) {
                 layer.close();
