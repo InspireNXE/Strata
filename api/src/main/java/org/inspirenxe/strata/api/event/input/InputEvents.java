@@ -56,7 +56,9 @@ public final class InputEvents {
     public static final EventType<PointerButtonEvent> CLICK = EventType.bubbling("click", PointerButtonEvent.class);
     /**
      * The pointer moved more than 4 units with a button held that went down on the target. Bubbles. Positions are
-     * those of the original press.
+     * those of the original press. A handler may make the drag carry a payload with {@link DragEvent#startTransfer}.
+     * Default behavior: a list with a drag transfer drags its rows, and a text box pressed inside its selection drags
+     * the selected text.
      */
     public static final EventType<DragEvent> DRAG_START = EventType.bubbling("drag_start", DragEvent.class);
     /**
@@ -77,7 +79,8 @@ public final class InputEvents {
      * A drag that carries a transfer moved over the target. Bubbles from the component {@link #DRAG_ENTER} reached
      * until a handler {@linkplain TransferEvent#accept accepts} or {@linkplain TransferEvent#reject rejects} it.
      * Fired on every move, after any {@link #DRAG_EXIT} and {@link #DRAG_ENTER} for it. Default behavior: a list
-     * whose rows are being dragged accepts them over itself, to reorder them.
+     * whose rows are being dragged accepts them over itself, to reorder them, and an editable text box accepts
+     * text.
      */
     public static final EventType<TransferEvent> DRAG_OVER = EventType.bubbling("drag_over", TransferEvent.class);
     /**
@@ -88,7 +91,7 @@ public final class InputEvents {
     /**
      * The drag was released over the component that accepted it last, which is the target. Bubbles. The drop takes
      * the event's {@linkplain TransferEvent#effect() effect} unless a handler
-     * {@linkplain TransferEvent#reject() rejects} it. Default behavior: a list moves its own dragged rows there.
+     * {@linkplain TransferEvent#reject() rejects} it. Default behavior: a list moves its own dragged rows there, and a text box inserts the text.
      */
     public static final EventType<TransferEvent> DROP = EventType.bubbling("drop", TransferEvent.class);
     /**

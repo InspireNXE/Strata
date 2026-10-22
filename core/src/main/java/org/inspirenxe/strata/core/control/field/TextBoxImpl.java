@@ -24,6 +24,7 @@ import org.inspirenxe.strata.api.event.input.DragEvent;
 import org.inspirenxe.strata.api.event.input.FocusEvent;
 import org.inspirenxe.strata.api.event.input.KeyEvent;
 import org.inspirenxe.strata.api.event.input.PointerButtonEvent;
+import org.inspirenxe.strata.api.event.input.TransferEvent;
 import org.inspirenxe.strata.api.extension.Environment;
 import org.inspirenxe.strata.api.extension.MeasureContext;
 import org.inspirenxe.strata.api.extension.Painter;
@@ -45,6 +46,9 @@ import org.inspirenxe.strata.api.text.TextSpan;
 import org.inspirenxe.strata.api.text.TextStyle;
 import org.inspirenxe.strata.api.theme.Paint;
 import org.inspirenxe.strata.api.theme.Theme;
+import org.inspirenxe.strata.api.transfer.DataFormat;
+import org.inspirenxe.strata.api.transfer.DropEffect;
+import org.inspirenxe.strata.api.transfer.Transfer;
 import org.inspirenxe.strata.core.control.collection.ListViewImpl;
 import org.inspirenxe.strata.core.control.button.ButtonImpl;
 import org.inspirenxe.strata.core.node.BuiltInComponent;
@@ -52,8 +56,10 @@ import org.inspirenxe.strata.core.node.ComponentFactoryImpl;
 import org.inspirenxe.strata.core.text.StyledText;
 import org.inspirenxe.strata.core.text.TextLine;
 
+import java.util.EnumSet;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import java.util.function.Consumer;
 import java.util.function.UnaryOperator;
@@ -130,6 +136,8 @@ public final class TextBoxImpl extends BuiltInComponent<TextBox> implements Text
     private Insets themePadding;
     private UnaryOperator<String> filter;
     private boolean readOnly;
+    // Whether the text a drag carried out was moved inside the box, so its end removes nothing
+    private boolean movedWithin;
     private boolean selectAllOnFocus;
     private HorizontalAlignment textAlignment;
 
@@ -800,7 +808,95 @@ public final class TextBoxImpl extends BuiltInComponent<TextBox> implements Text
 
     @Override
     protected void onDragStart(final DragEvent event) {
+        if (event.button() == MouseButton.LEFT && this.isEnabled()) {
+            final TextEditor text = this.editor.editor();
+            if (text.startDrag()) {
+                this.movedWithin = false;
+                event.startTransfer(Transfer.text(this.buffer.substring(text.dragFrom(), text.dragTo())),
+                        this.readOnly ? EnumSet.of(DropEffect.COPY)
+                        : EnumSet.of(DropEffect.COPY, DropEffect.MOVE));
+                return;
+            }
+        }
         this.dragTo(event);
+    }
+
+    @Override
+    protected void onPointerRelease(final PointerButtonEvent event) {
+        if (event.button() == MouseButton.LEFT) {
+            this.editor.editor().release();
+            this.editor.settle();
+        }
+    }
+
+    @Override
+    protected void onDragOver(final TransferEvent event) {
+        if (!this.isEnabled() || this.readOnly || !event.transfer().has(DataFormat.TEXT)) {
+            return;
+        }
+        final int index = this.dropIndexAt(event);
+        if (event.source().orElse(null) == this && this.editor.editor().insideDrag(index)) {
+            this.editor.editor().showDrop(-1);
+            event.reject();
+            return;
+        }
+        this.editor.editor().showDrop(index);
+        event.accept();
+    }
+
+    @Override
+    protected void onDragExit(final TransferEvent event) {
+        this.editor.editor().showDrop(-1);
+    }
+
+    @Override
+    protected void onDrop(final TransferEvent event) {
+        final TextEditor text = this.editor.editor();
+        text.showDrop(-1);
+        final Optional<DropEffect> effect = event.effect();
+        final Optional<String> dropped = event.transfer().get(DataFormat.TEXT).map(FieldText::singleLine);
+        if (effect.isEmpty() || dropped.isEmpty() || this.readOnly || !this.isEnabled()) {
+            return;
+        }
+        final int index = this.dropIndexAt(event);
+        final int from = text.dragFrom();
+        final int to = text.dragTo();
+        if (event.source().orElse(null) == this && effect.get() == DropEffect.MOVE && from >= 0
+                && to <= this.buffer.length()) {
+            if (index >= from && index <= to) {
+                return;
+            }
+            // A move inside the box is one edit over the span from the moved text to where it lands
+            final String moved = this.buffer.substring(from, to);
+            this.movedWithin = true;
+            if (index < from) {
+                this.edits.edit(index, to, moved + this.buffer.substring(index, from), EditHistory.Kind.OTHER);
+            } else {
+                this.edits.edit(from, index, this.buffer.substring(to, index) + moved, EditHistory.Kind.OTHER);
+            }
+        } else {
+            this.edits.edit(index, index, dropped.get(), EditHistory.Kind.OTHER);
+        }
+        this.editor.settle();
+    }
+
+    @Override
+    protected void onTransferDone(final TransferEvent event) {
+        final TextEditor text = this.editor.editor();
+        final int from = text.dragFrom();
+        final int to = text.dragTo();
+        text.dragEnded();
+        // Text moved to another component leaves this one, as an edit of the user's
+        if (event.effect().orElse(null) == DropEffect.MOVE && !this.movedWithin && !this.readOnly && from >= 0
+                && to <= this.buffer.length()) {
+            this.edits.edit(from, to, "", EditHistory.Kind.OTHER);
+            this.editor.settle();
+        }
+        this.movedWithin = false;
+    }
+
+    private int dropIndexAt(final TransferEvent event) {
+        return this.editor.indexAt(event.localX() - this.textPadding.left());
     }
 
     @Override
@@ -970,6 +1066,11 @@ public final class TextBoxImpl extends BuiltInComponent<TextBox> implements Text
 
         @Override
         public boolean allowsCopy() {
+            return true;
+        }
+
+        @Override
+        public boolean dragsText() {
             return true;
         }
 

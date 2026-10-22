@@ -55,6 +55,13 @@ import java.util.Objects;
  *     decimal point inside a word stays in it.</li>
  *     <li>Ctrl+A selects all. Ctrl+C copies, Ctrl+X cuts and Ctrl+V pastes, through the host's clipboard. Pasted
  *     line breaks and other control characters, such as tabs, are removed, as typing never inserts them.</li>
+ *     <li>A drag that starts with a plain press inside the selection carries the selected text out as
+ *     {@code DataFormat.TEXT}, allowing a move and a copy, or only a copy from a read-only box; the press then
+ *     places the caret only on a release that started no drag. A box that is enabled and editable takes text dropped
+ *     on it at the boundary under the pointer, which shows a caret there while the drag is over it, as one edit
+ *     through {@link #EDIT}, with its line breaks removed. A move inside the box itself is one edit that undoes in
+ *     one step, and a drop inside the dragged text changes nothing. After a move to another component the box
+ *     removes the text it gave away, as an edit too.</li>
  *     <li>Typing replaces the selection. Text past {@link #maxLength()} is dropped.</li>
  *     <li>A handler for {@link #EDIT} sees the text each edit would produce and may cancel or rewrite it, so a box
  *     can take only digits. {@link #EDITED} reports every change of the text.</li>

@@ -80,6 +80,7 @@ final class LineEditor {
     // Drawn last frame, made again only when they move
     private Rect clipRect;
     private Rect caretRect;
+    private Rect dropRect;
     private Rect selectedRect;
     private Rect beforeClip;
     private Rect afterClip;
@@ -237,7 +238,12 @@ final class LineEditor {
         this.editor.drag(event, this.indexAt(textX));
     }
 
-    private int indexAt(final float textX) {
+    /**
+     * Returns the boundary nearest a point of the line.
+     *
+     * @param textX the point relative to where the text starts when not scrolled
+     */
+    int indexAt(final float textX) {
         final TextMetrics metrics = this.owner.environment().text();
         this.updateVisuals(metrics);
         final float x = textX + this.scrollX - this.shift;
@@ -316,6 +322,15 @@ final class LineEditor {
             this.painter = null;
         }
 
+        if (this.editor.dropIndex() >= 0) {
+            // Where a drop would go, drawn as a caret that does not blink
+            final float atX = contentBox.x() + this.shift
+                    + this.owner.xForIndex(this.owner.environment().text(), this.editor.dropIndex()) - this.scrollX;
+            final float x = Math.max(contentBox.x(), Math.min(contentBox.right() - 1f, atX));
+            final float reach = look.caretExtend();
+            this.dropRect = Rects.reuse(this.dropRect, x, textY - reach, 1f, lineHeight + reach * 2f);
+            look.caret().paint(painter, this.dropRect);
+        }
         if (showCaret) {
             this.owner.repaintAfter(this.editor.untilBlink(look.blinkMillis()));
         }

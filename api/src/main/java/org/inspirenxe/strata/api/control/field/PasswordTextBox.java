@@ -39,9 +39,10 @@ import java.util.function.IntPredicate;
  *
  * <p>It edits like a {@link TextBox}, but keeps its text from showing up where nobody meant it to. It holds the text
  * in a {@code char[]} that Strata zeroes, gives it to code only as a {@code char[]}, and never puts it in an event, a
- * snapshot, the clipboard or a {@code toString}. It cannot keep the text from code in the same process that sets out
- * to read it: a {@link org.inspirenxe.strata.api.event.input.InputEvents#CHAR} handler on the box sees each typed
- * code point, and the engine delivers them.</p>
+ * snapshot, the clipboard, a drag or a {@code toString}, and takes no text dropped on it. It cannot keep the text
+ * from code in the same process that sets out to read it: a
+ * {@link org.inspirenxe.strata.api.event.input.InputEvents#CHAR} handler on the box sees each typed code point, and
+ * the engine delivers them.</p>
  *
  * <pre>{@code
  * PasswordTextBox password = factory.passwordTextBox().setPlaceholder("Password").setMaxLength(64);

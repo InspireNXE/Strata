@@ -58,6 +58,14 @@ final class TextEditor {
     // Set while a press keeps everything selected; a drag from it selects from where the press landed instead
     private boolean allFromPress;
     private int pressIndex;
+    // Set by a plain press inside the selection of a field that drags text: the caret goes there only on a release
+    // that started no drag, so a drag can carry the selection out
+    private boolean pressInSelection;
+    // The range a drag carries out, while it lasts, or -1
+    private int dragFrom = -1;
+    private int dragTo = -1;
+    // Where a drop would go, or -1
+    private int dropIndex = -1;
 
     /**
      * Creates an editor with the caret at the start.
@@ -251,6 +259,16 @@ final class TextEditor {
      */
     void press(final PointerButtonEvent event, final int index) {
         this.wordDrag = false;
+        this.pressInSelection = false;
+        if (event.clicks() == 1 && !event.modifiers().shift() && !this.pressSelectsAll && this.host.dragsText()
+                && this.hasSelection() && index > this.selectionStart() && index < this.selectionEnd()) {
+            // The caret goes here on the release, unless the press starts a drag of the selection
+            this.pressInSelection = true;
+            this.pressIndex = index;
+            this.goal = Float.NaN;
+            event.consume();
+            return;
+        }
         this.allFromPress = this.pressSelectsAll && event.clicks() == 1 && !event.modifiers().shift();
         this.pressSelectsAll = false;
         this.pressIndex = index;
@@ -310,6 +328,81 @@ final class TextEditor {
         this.goal = Float.NaN;
         this.moved();
         event.consume();
+    }
+
+    /**
+     * Starts dragging the selection out, for a drag that began with a plain press inside it. The range is then
+     * {@link #dragFrom()} to {@link #dragTo()}.
+     *
+     * @return false when the drag did not start inside the selection
+     */
+    boolean startDrag() {
+        if (!this.pressInSelection) {
+            return false;
+        }
+        this.pressInSelection = false;
+        this.dragFrom = this.selectionStart();
+        this.dragTo = this.selectionEnd();
+        return true;
+    }
+
+    /**
+     * Handles a left release: a press inside the selection that started no drag places the caret where it landed.
+     */
+    void release() {
+        if (this.pressInSelection) {
+            this.pressInSelection = false;
+            this.anchor = this.pressIndex;
+            this.caret = this.pressIndex;
+            this.goal = Float.NaN;
+            this.moved();
+        }
+    }
+
+    /**
+     * Returns where the range being dragged out starts, or -1 while none is.
+     */
+    int dragFrom() {
+        return this.dragFrom;
+    }
+
+    /**
+     * Returns where the range being dragged out ends, or -1 while none is.
+     */
+    int dragTo() {
+        return this.dragTo;
+    }
+
+    /**
+     * Forgets the range dragged out, once its drag ended.
+     */
+    void dragEnded() {
+        this.dragFrom = -1;
+        this.dragTo = -1;
+    }
+
+    /**
+     * Returns whether an index lies strictly inside the range being dragged out, where a drop changes nothing.
+     */
+    boolean insideDrag(final int index) {
+        return this.dragFrom >= 0 && index > this.dragFrom && index < this.dragTo;
+    }
+
+    /**
+     * Returns where a drop would go, or -1 while no drop is over the field.
+     */
+    int dropIndex() {
+        return this.dropIndex;
+    }
+
+    /**
+     * Shows where a drop would go, or nothing for -1.
+     */
+    void showDrop(final int index) {
+        if (index != this.dropIndex) {
+            this.dropIndex = index;
+            this.onMoved.run();
+        }
     }
 
     // ------------------------------------------------------------------
@@ -597,6 +690,14 @@ final class TextEditor {
          * Whether Ctrl+C and Ctrl+X may put the selection on the clipboard.
          */
         boolean allowsCopy();
+
+        /**
+         * Whether a plain press inside the selection may start dragging it out, so the editor places the caret only
+         * on the release. False unless the field drags text.
+         */
+        default boolean dragsText() {
+            return false;
+        }
 
         /**
          * Selects everything, for Ctrl+A.
