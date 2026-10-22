@@ -18,10 +18,12 @@ package org.inspirenxe.strata.spi.testing;
 import org.inspirenxe.strata.api.component.CursorKind;
 import org.inspirenxe.strata.api.geometry.Insets;
 import org.inspirenxe.strata.api.geometry.Rect;
+import org.inspirenxe.strata.api.geometry.Size;
 import org.inspirenxe.strata.api.text.TextMetrics;
 import org.inspirenxe.strata.api.text.TextSpan;
 import org.inspirenxe.strata.api.text.TextStyle;
 import org.inspirenxe.strata.api.theme.SpriteId;
+import org.inspirenxe.strata.api.visual.Visual;
 import org.inspirenxe.strata.spi.Canvas;
 import org.junit.jupiter.api.Test;
 
@@ -36,10 +38,12 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
  * implement {@link #surface(int, int)}.
  *
  * <p>Every canvas runs the checks that need no pixels: each call is accepted with ordinary and edge-case arguments,
- * and deep clip and transform stacks unwind. A canvas that draws to readable pixels (a Swing image, an offscreen
- * buffer) also returns a {@linkplain Surface#readable() readable} surface; then the checks also verify what was
- * drawn: fills cover their rectangle and nothing more, alpha 0 draws nothing, clips and translations apply and
- * restore, gradients run top to bottom, missing sprites stay visible, and text stays within its measured width.</p>
+ * and deep clip and transform stacks, scales among them, unwind. A canvas that draws to readable pixels (a Swing
+ * image, an offscreen buffer) also returns a {@linkplain Surface#readable() readable} surface; then the checks also
+ * verify what was drawn: fills cover their rectangle and nothing more, alpha 0 draws nothing and partial alpha blends,
+ * clips, translations and scales apply and restore, gradients run top to bottom, missing sprites and parts of them
+ * stay visible and inside their rectangle, a visual the adapter did not make draws a placeholder inside its
+ * rectangle, and text stays within its measured width.</p>
  *
  * <p>Surfaces use one UI unit per pixel, with the background transparent black ({@code 0x00000000}).</p>
  */
@@ -54,6 +58,8 @@ public abstract class CanvasContract {
     protected static final int CLEAR = 0x00000000;
     /** A sprite no adapter can find. */
     protected static final SpriteId MISSING_SPRITE = SpriteId.of("strata_contract", "does/not/exist");
+    /** A visual no adapter made, 8 by 8 units. */
+    protected static final Visual FOREIGN_VISUAL = () -> new Size(8, 8);
 
     /**
      * A blank area to draw on, with the canvas that draws to it.
@@ -138,7 +144,14 @@ public abstract class CanvasContract {
             canvas.fill(new Rect(1, 1, 10, 10), RED);
             canvas.fillGradient(new Rect(1, 1, 10, 10), RED, BLUE);
             canvas.sprite(MISSING_SPRITE, new Rect(1, 1, 10, 10), 0xFFFFFFFF);
+            canvas.spriteRegion(MISSING_SPRITE, new Rect(1, 1, 10, 10), 0.25f, 0.25f, 0.75f, 0.75f, 0xFFFFFFFF);
             canvas.nineSlice(MISSING_SPRITE, new Rect(1, 1, 30, 20), Insets.of(3), 0xFFFFFFFF);
+            canvas.visual(FOREIGN_VISUAL, new Rect(1, 1, 8, 8), 0xFFFFFFFF);
+            canvas.visual(FOREIGN_VISUAL, new Rect(1, 1, 8, 8), 0x80FF0000);
+            canvas.pushScale(2f);
+            canvas.fill(new Rect(1, 1, 4, 4), RED);
+            canvas.text(TextSpan.of("Scaled"), 2, 2);
+            canvas.popTransform();
             canvas.text(TextSpan.of("Strata"), 2, 2);
             canvas.text(new TextSpan("Styled", TextStyle.DEFAULT.withBold(true).withItalic(true).withUnderline(true)
                     .withStrikethrough(true).withShadow(true)), 2, 20);
@@ -172,9 +185,11 @@ public abstract class CanvasContract {
             for (int i = 0; i < 32; i++) {
                 canvas.pushClip(new Rect(i * 0.5f, i * 0.5f, 32, 32));
                 canvas.pushTranslation(0.5f, 0.5f);
+                canvas.pushScale(i % 2 == 0 ? 1.5f : 0.75f);
             }
             canvas.fill(new Rect(0, 0, 4, 4), RED);
             for (int i = 0; i < 32; i++) {
+                canvas.popTransform();
                 canvas.popTransform();
                 canvas.popClip();
             }
@@ -259,6 +274,55 @@ public abstract class CanvasContract {
         assertEquals(GREEN, surface.argb(11, 11), "a clip pushed under a translation is translated");
         assertEquals(CLEAR, surface.argb(13, 13), "and still clips");
         assertEquals(BLUE, surface.argb(0, 0), "popTransform restores the origin");
+    }
+
+    @Test
+    void scaleMultipliesCoordinatesAndRestores() {
+        final Surface surface = this.readable(30, 30, canvas -> {
+            canvas.pushTranslation(10, 0);
+            canvas.pushScale(2f);
+            canvas.fill(new Rect(1, 1, 2, 2), RED);
+            canvas.popTransform();
+            canvas.popTransform();
+            canvas.fill(new Rect(20, 20, 2, 2), BLUE);
+        });
+        assertEquals(RED, surface.argb(12, 2), "the scaled rectangle's top-left corner");
+        assertEquals(RED, surface.argb(15, 5), "the scaled rectangle's bottom-right corner");
+        assertEquals(CLEAR, surface.argb(11, 1), "outside the scaled rectangle");
+        assertEquals(CLEAR, surface.argb(16, 6), "outside the scaled rectangle");
+        assertEquals(BLUE, surface.argb(21, 21), "popTransform restores the scale");
+        assertEquals(CLEAR, surface.argb(22, 22), "popTransform restores the scale");
+    }
+
+    @Test
+    void partialAlphaBlendsOverWhatIsDrawn() {
+        final Surface surface = this.readable(10, 10, canvas -> {
+            canvas.fill(new Rect(0, 0, 10, 10), BLUE);
+            canvas.fill(new Rect(0, 0, 10, 10), 0x80FF0000);
+        });
+        final int blended = surface.argb(5, 5);
+        final String hex = Integer.toHexString(blended);
+        assertEquals(0xFF, blended >>> 24, "blending over an opaque color stays opaque: " + hex);
+        assertTrue(red(blended) > 0x50 && red(blended) < 0xB0, "about half the red: " + hex);
+        assertTrue(blue(blended) > 0x50 && blue(blended) < 0xB0, "about half the blue below: " + hex);
+    }
+
+    @Test
+    void missingSpriteRegionStaysVisibleAndInside() {
+        final Surface surface = this.readable(20, 20, canvas -> canvas.spriteRegion(MISSING_SPRITE,
+                new Rect(5, 5, 6, 6), 0.5f, 0.5f, 1f, 1f, 0xFFFFFFFF));
+        assertNotEquals(CLEAR, surface.argb(7, 7), "a part of a missing sprite must still show up");
+        assertEquals(CLEAR, surface.argb(3, 3), "and only inside its rectangle");
+        assertEquals(CLEAR, surface.argb(12, 12), "and only inside its rectangle");
+    }
+
+    @Test
+    void foreignVisualDrawsAPlaceholderInside() {
+        final Surface surface = this.readable(20, 20, canvas -> canvas.visual(FOREIGN_VISUAL, new Rect(5, 5, 6, 6),
+                0xFFFFFFFF));
+        assertNotEquals(CLEAR, surface.argb(7, 7), "a visual the adapter did not make draws a placeholder");
+        assertEquals(CLEAR, surface.argb(3, 3), "and only inside its rectangle");
+        assertEquals(CLEAR, surface.argb(12, 12), "and only inside its rectangle");
     }
 
     @Test

@@ -16,11 +16,15 @@
 package org.inspirenxe.strata.core;
 
 import org.inspirenxe.strata.api.text.TextMetrics;
+import org.inspirenxe.strata.core.event.CauseStackImpl;
 import org.inspirenxe.strata.spi.Platform;
+import org.inspirenxe.strata.spi.Translator;
 import org.inspirenxe.strata.spi.testing.CanvasContract;
 import org.inspirenxe.strata.spi.testing.PlatformContract;
 import org.inspirenxe.strata.spi.testing.TextMetricsContract;
 import org.junit.jupiter.api.Nested;
+
+import java.util.Locale;
 
 /**
  * Runs the SPI contracts against the test doubles core's tests use, so a core test that passes with these doubles
@@ -34,6 +38,29 @@ class TestPlatformContractTests {
         @Override
         protected Platform platform() {
             return new TestPlatform();
+        }
+
+        @Override
+        protected boolean clockRunsOnItsOwn() {
+            return false;
+        }
+
+        @Override
+        protected Translator translator() {
+            return new LocaleTranslator(Locale.ROOT);
+        }
+    }
+
+    /**
+     * The platform again with a cause stack of its own, core's, so the cause stack checks run too.
+     */
+    @Nested
+    class PlatformWithCausesTest extends PlatformContract {
+        @Override
+        protected Platform platform() {
+            final TestPlatform platform = new TestPlatform();
+            platform.setCauses(CauseStackImpl.forThread());
+            return platform;
         }
 
         @Override
