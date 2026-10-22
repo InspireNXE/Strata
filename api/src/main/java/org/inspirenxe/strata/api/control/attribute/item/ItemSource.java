@@ -27,7 +27,8 @@ import java.util.function.Function;
  * {@link #refresh} when the items themselves changed inside.</p>
  *
  * <p>Items are not null, except in a grid, where a null item is an empty cell. Every other control refuses a null
- * item in {@link #setItems}, and {@link Selection#selectItem} with null clears its selection, a grid's too.</p>
+ * item in {@link #setItems}. On all of them, a grid included, {@link Selection#selectItem} with null clears the
+ * selection.</p>
  *
  * <p>A control with a {@linkplain Selection selection} keeps it on the same items when they change: each selected
  * item moves to the new item with the same {@linkplain #setKeyFunction key}. Items with equal keys are matched in
@@ -35,7 +36,7 @@ import java.util.function.Function;
  * item that no new item matches leaves the selection, and nothing is selected in its place. Three controls depart
  * from this, as each describes. A grid is positional: it keeps the selected index while that cell exists. A combo box
  * that has never had a selection selects its first option when it gets options. A cycle button, which always shows
- * a value, selects its first item when its selected item is gone.</p>
+ * a value, selects its first item when its selected item is gone or nothing is selected.</p>
  *
  * <p>Do not implement this interface.</p>
  *

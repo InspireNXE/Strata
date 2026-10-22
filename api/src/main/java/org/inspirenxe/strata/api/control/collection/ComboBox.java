@@ -33,8 +33,8 @@ import java.util.function.Function;
  *
  * <p>A left click opens the list as a popup below the box (above it if there is more room there), at least as wide as
  * the box. A click on an option selects it and closes the list; a click anywhere else, Escape, or focus leaving the
- * box, as Tab does, closes it without changing the selection. The list shows at most {@linkplain #setMaxVisibleOptions the maximum} rows and scrolls
- * the rest.</p>
+ * box, as Tab does, closes it without changing the selection. The list shows at most
+ * {@linkplain #setMaxVisibleOptions the maximum} rows and scrolls the rest.</p>
  *
  * <p>While focused and closed: Up and Down select the previous and next option, Home and End the first and last,
  * and Enter, keypad Enter, Space or Alt+Down open the list. The open list takes no focus, so the keys stay with the
