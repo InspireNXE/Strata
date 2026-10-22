@@ -15,6 +15,7 @@
  */
 package org.inspirenxe.strata.api.control.pane;
 
+import org.inspirenxe.strata.api.component.Enableable;
 import org.inspirenxe.strata.api.component.Tooltip;
 import org.inspirenxe.strata.api.control.attribute.text.HasText;
 
@@ -38,13 +39,14 @@ import java.util.Optional;
  * <p>Get one from {@link org.inspirenxe.strata.api.ComponentFactory#tab(String)}. Call tabs on the UI thread. Do not
  * implement this interface.</p>
  */
-public interface Tab extends HasText<Tab> {
+public interface Tab extends HasText<Tab>, Enableable<Tab> {
 
     /**
      * Returns whether the user can select the tab.
      *
      * @return true by default
      */
+    @Override
     boolean isEnabled();
 
     /**
@@ -54,6 +56,7 @@ public interface Tab extends HasText<Tab> {
      * @param enabled false to keep clicks and keys from selecting it
      * @return this tab
      */
+    @Override
     Tab setEnabled(boolean enabled);
 
     /**

@@ -80,7 +80,7 @@ import java.util.Optional;
  *
  * @param <T> the type callers see the component as, so setters can return it for chaining
  */
-public interface Component<T extends Component<T>> extends EventTarget<T> {
+public interface Component<T extends Component<T>> extends EventTarget<T>, Enableable<T> {
 
     /**
      * Fired before the component draws itself. Canceling it skips the component's own drawing; its
@@ -178,6 +178,7 @@ public interface Component<T extends Component<T>> extends EventTarget<T> {
      *
      * @return true unless disabled with {@code setEnabled(false)}
      */
+    @Override
     boolean isEnabled();
 
     /**
@@ -191,6 +192,7 @@ public interface Component<T extends Component<T>> extends EventTarget<T> {
      * @param enabled false to disable
      * @return this component
      */
+    @Override
     T setEnabled(boolean enabled);
 
     /**

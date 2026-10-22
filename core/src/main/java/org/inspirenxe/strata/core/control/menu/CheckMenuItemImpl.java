@@ -23,10 +23,11 @@ import java.util.Objects;
 import java.util.function.Consumer;
 
 /**
- * The core {@link CheckMenuItem}: enabled and unchecked, with an action that does nothing until set.
+ * The core {@link CheckMenuItem}: enabled and unchecked, with no shortcut and an action that does nothing until set.
  */
 public final class CheckMenuItemImpl extends MenuEntryImpl implements CheckMenuItem {
     private Text text;
+    private Text shortcut;
     private boolean selected;
     private boolean enabled;
     private Consumer<Boolean> action;
@@ -38,6 +39,7 @@ public final class CheckMenuItemImpl extends MenuEntryImpl implements CheckMenuI
      */
     public CheckMenuItemImpl(final Text text) {
         this.text = Objects.requireNonNull(text, "text");
+        this.shortcut = Text.empty();
         this.enabled = true;
         this.action = selected -> { };
     }
@@ -50,6 +52,11 @@ public final class CheckMenuItemImpl extends MenuEntryImpl implements CheckMenuI
     @Override
     Text label() {
         return this.text;
+    }
+
+    @Override
+    Text hint() {
+        return this.shortcut;
     }
 
     @Override
@@ -70,6 +77,18 @@ public final class CheckMenuItemImpl extends MenuEntryImpl implements CheckMenuI
     @Override
     public CheckMenuItem setText(final Text text) {
         this.text = Objects.requireNonNull(text, "text");
+        this.changed();
+        return this;
+    }
+
+    @Override
+    public Text shortcut() {
+        return this.shortcut;
+    }
+
+    @Override
+    public CheckMenuItem setShortcut(final Text shortcut) {
+        this.shortcut = Objects.requireNonNull(shortcut, "shortcut");
         this.changed();
         return this;
     }

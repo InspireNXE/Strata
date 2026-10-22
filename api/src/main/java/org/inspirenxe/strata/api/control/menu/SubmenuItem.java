@@ -15,6 +15,7 @@
  */
 package org.inspirenxe.strata.api.control.menu;
 
+import org.inspirenxe.strata.api.component.Enableable;
 import org.inspirenxe.strata.api.control.attribute.text.HasText;
 
 import java.util.Optional;
@@ -32,7 +33,7 @@ import java.util.Optional;
  * <p>Get one from {@link org.inspirenxe.strata.api.ComponentFactory#submenuItem(String)} or make one with
  * {@link Menu#addSubmenu} or {@link MenuBar#addMenu(String, Menu)}. Do not implement this interface.</p>
  */
-public non-sealed interface SubmenuItem extends MenuEntry, HasText<SubmenuItem> {
+public non-sealed interface SubmenuItem extends MenuEntry, HasText<SubmenuItem>, Enableable<SubmenuItem> {
 
     /**
      * Returns the menu it opens.
@@ -58,6 +59,7 @@ public non-sealed interface SubmenuItem extends MenuEntry, HasText<SubmenuItem> 
      *
      * @return true by default
      */
+    @Override
     boolean isEnabled();
 
     /**
@@ -66,5 +68,6 @@ public non-sealed interface SubmenuItem extends MenuEntry, HasText<SubmenuItem> 
      * @param enabled true to enable it
      * @return this item
      */
+    @Override
     SubmenuItem setEnabled(boolean enabled);
 }

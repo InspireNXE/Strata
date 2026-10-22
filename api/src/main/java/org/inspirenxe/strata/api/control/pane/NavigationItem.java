@@ -17,6 +17,7 @@ package org.inspirenxe.strata.api.control.pane;
 
 import org.inspirenxe.strata.api.ComponentFactory;
 import org.inspirenxe.strata.api.component.Component;
+import org.inspirenxe.strata.api.component.Enableable;
 import org.inspirenxe.strata.api.component.Tooltip;
 import org.inspirenxe.strata.api.control.attribute.text.HasText;
 import org.inspirenxe.strata.api.theme.SpriteId;
@@ -45,7 +46,8 @@ import java.util.function.Function;
  * <p>Get one from {@link org.inspirenxe.strata.api.ComponentFactory#navigationItem(String)}. Do not implement this
  * interface.</p>
  */
-public non-sealed interface NavigationItem extends NavigationEntry, HasText<NavigationItem> {
+public non-sealed interface NavigationItem extends NavigationEntry, HasText<NavigationItem>,
+        Enableable<NavigationItem> {
 
     /**
      * Returns the sprite drawn as the icon.
@@ -90,6 +92,7 @@ public non-sealed interface NavigationItem extends NavigationEntry, HasText<Navi
      *
      * @return true by default
      */
+    @Override
     boolean isEnabled();
 
     /**
@@ -99,6 +102,7 @@ public non-sealed interface NavigationItem extends NavigationEntry, HasText<Navi
      * @param enabled false to keep the user from picking it
      * @return this item
      */
+    @Override
     NavigationItem setEnabled(boolean enabled);
 
     /**

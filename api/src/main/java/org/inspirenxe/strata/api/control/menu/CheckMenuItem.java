@@ -15,6 +15,7 @@
  */
 package org.inspirenxe.strata.api.control.menu;
 
+import org.inspirenxe.strata.api.component.Enableable;
 import org.inspirenxe.strata.api.control.attribute.text.HasText;
 
 import java.util.function.Consumer;
@@ -23,7 +24,9 @@ import java.util.function.Consumer;
  * A menu entry with a check mark that flips each time it is chosen, for a setting that is on or off.
  *
  * <p>It names its state as {@link org.inspirenxe.strata.api.control.attribute.value.Toggle} does, but is not one:
- * an entry has no events of its own. Choosing it flips the state and then runs its action with the new state.</p>
+ * an entry has no events of its own. Choosing it flips the state and then runs its action with the new state. Like a
+ * {@link MenuItem}, it can show a {@linkplain #setShortcut(org.inspirenxe.strata.api.text.Text) shortcut hint} at its
+ * right.</p>
  *
  * <pre>{@code
  * menu.addItem(factory.checkMenuItem("Show prices")
@@ -34,7 +37,8 @@ import java.util.function.Consumer;
  * <p>Get one from {@link org.inspirenxe.strata.api.ComponentFactory#checkMenuItem(String)} or make one with
  * {@link Menu#addCheckItem}. Do not implement this interface.</p>
  */
-public non-sealed interface CheckMenuItem extends MenuEntry, HasText<CheckMenuItem> {
+public non-sealed interface CheckMenuItem extends MenuEntry, HasText<CheckMenuItem>, HasShortcut<CheckMenuItem>,
+        Enableable<CheckMenuItem> {
 
     /**
      * Returns whether the item is checked.
@@ -56,6 +60,7 @@ public non-sealed interface CheckMenuItem extends MenuEntry, HasText<CheckMenuIt
      *
      * @return true by default
      */
+    @Override
     boolean isEnabled();
 
     /**
@@ -64,6 +69,7 @@ public non-sealed interface CheckMenuItem extends MenuEntry, HasText<CheckMenuIt
      * @param enabled true to enable it
      * @return this item
      */
+    @Override
     CheckMenuItem setEnabled(boolean enabled);
 
     /**

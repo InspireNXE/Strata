@@ -16,6 +16,7 @@
 package org.inspirenxe.strata.core;
 
 import org.inspirenxe.strata.api.ComponentFactory;
+import org.inspirenxe.strata.api.component.Enableable;
 import org.inspirenxe.strata.api.component.Tooltip;
 import org.inspirenxe.strata.api.control.attribute.item.SingleSelection;
 import org.inspirenxe.strata.api.control.collection.ListView;
@@ -90,6 +91,38 @@ class EntriesTest {
             assertEquals("Ctrl+C", copy.shortcut().plain());
             assertTrue(((CheckMenuItem) items.get(2)).isSelected());
             assertSame(submenu, ((SubmenuItem) items.get(3)).menu().orElseThrow());
+        }
+
+        @Test
+        void aCheckItemDrawsItsShortcutHintAsACommandDoes() {
+            final ComponentFactory ui = EntriesTest.this.ui;
+            final CheckMenuItem prices = ui.checkMenuItem("Prices").setShortcut("Ctrl+P");
+            final Menu menu = ui.menu().addItem("Copy", "Ctrl+C", () -> { }).addItem(prices);
+            EntriesTest.this.test.show(ui.absolutePanel());
+            menu.openAt(10, 10);
+            EntriesTest.this.test.host().layout();
+            final DrawLog log = new DrawLog();
+            EntriesTest.this.test.host().render(log);
+
+            assertEquals("Ctrl+P", prices.shortcut().plain());
+            assertEquals(1, log.lines("text Ctrl+P ").size(), log.lines().toString());
+            final String copyHint = log.lines("text Ctrl+C ").getFirst().split(" ")[2].split(",")[0];
+            final String pricesHint = log.lines("text Ctrl+P ").getFirst().split(" ")[2].split(",")[0];
+            assertEquals(copyHint, pricesHint, "both hints end at the menu's right");
+        }
+
+        @Test
+        void oneLoopEnablesComponentsAndEntriesAlike() {
+            final ComponentFactory ui = EntriesTest.this.ui;
+            final List<Enableable<?>> all = List.of(ui.button("Ana"), ui.menuItem("Copy"), ui.checkMenuItem("Prices"),
+                    ui.submenuItem("More"), ui.tab("Sell"), ui.navigationItem("Market"));
+
+            for (final Enableable<?> each : all) {
+                assertTrue(each.isEnabled(), each + " starts enabled");
+                each.setEnabled(false);
+            }
+
+            assertTrue(all.stream().noneMatch(Enableable::isEnabled));
         }
 
         @Test

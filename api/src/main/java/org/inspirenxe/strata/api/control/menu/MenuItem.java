@@ -15,8 +15,8 @@
  */
 package org.inspirenxe.strata.api.control.menu;
 
+import org.inspirenxe.strata.api.component.Enableable;
 import org.inspirenxe.strata.api.control.attribute.text.HasText;
-import org.inspirenxe.strata.api.text.Text;
 
 /**
  * A menu entry that runs a command when chosen, with an optional shortcut hint drawn at its right.
@@ -32,38 +32,15 @@ import org.inspirenxe.strata.api.text.Text;
  * <p>Get one from {@link org.inspirenxe.strata.api.ComponentFactory#menuItem(String)} or make one with
  * {@link Menu#addItem(String, Runnable)}. Do not implement this interface.</p>
  */
-public non-sealed interface MenuItem extends MenuEntry, HasText<MenuItem> {
-
-    /**
-     * Returns the shortcut hint.
-     *
-     * @return the hint, never null; empty when there is none
-     */
-    Text shortcut();
-
-    /**
-     * Sets the hint drawn at the right of the item, such as {@code "Ctrl+C"}. It is only text and binds no key.
-     *
-     * @param shortcut the hint, or empty text for none
-     * @return this item
-     */
-    MenuItem setShortcut(Text shortcut);
-
-    /**
-     * Does the same as {@link #setShortcut(Text)} with literal text.
-     *
-     * @param shortcut the hint, or an empty string for none
-     * @return this item
-     */
-    default MenuItem setShortcut(final String shortcut) {
-        return this.setShortcut(Text.of(shortcut));
-    }
+public non-sealed interface MenuItem extends MenuEntry, HasText<MenuItem>, HasShortcut<MenuItem>,
+        Enableable<MenuItem> {
 
     /**
      * Returns whether the item can be chosen.
      *
      * @return true by default
      */
+    @Override
     boolean isEnabled();
 
     /**
@@ -72,6 +49,7 @@ public non-sealed interface MenuItem extends MenuEntry, HasText<MenuItem> {
      * @param enabled true to enable it
      * @return this item
      */
+    @Override
     MenuItem setEnabled(boolean enabled);
 
     /**
