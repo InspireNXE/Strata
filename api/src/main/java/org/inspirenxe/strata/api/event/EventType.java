@@ -25,21 +25,25 @@ import java.util.Objects;
 
 /**
  * A typed key for one kind of event, used to register handlers with {@link EventTarget#onEvent}. Input types are in
- * {@link InputEvents}, and each control declares its own as constants on its interface. Strata picks a component's
- * default behavior by comparing types by identity, so always use the constants rather than creating equal copies.
+ * {@link InputEvents}, and each control declares its own as constants on its interface.
+ *
+ * <p>Types compare by identity: each call to a factory makes a type equal only to itself, even when another has the
+ * same name and event class. Keep each type in a constant, and register handlers and fire events with that
+ * constant. Two libraries that both declare {@code valueReport("changed")} get two types, and a handler for one
+ * never hears the other. The name is only for debugging and need not be unique, though a prefixed name such as
+ * {@code "gauge.changed"} reads better in logs.</p>
  *
  * @param <E> the event interface handlers receive
- * @param name a readable name, for debugging
- * @param eventClass the event interface handlers receive
- * @param bubbles whether the event travels up through the target's ancestors
  */
-public record EventType<E extends Event>(String name, Class<E> eventClass, boolean bubbles) {
-    /**
-     * Checks the arguments.
-     */
-    public EventType {
-        Objects.requireNonNull(name, "name");
-        Objects.requireNonNull(eventClass, "eventClass");
+public final class EventType<E extends Event> {
+    private final String name;
+    private final Class<E> eventClass;
+    private final boolean bubbles;
+
+    private EventType(final String name, final Class<E> eventClass, final boolean bubbles) {
+        this.name = Objects.requireNonNull(name, "name");
+        this.eventClass = Objects.requireNonNull(eventClass, "eventClass");
+        this.bubbles = bubbles;
     }
 
     /**
@@ -122,6 +126,54 @@ public record EventType<E extends Event>(String name, Class<E> eventClass, boole
     @SuppressWarnings({"unchecked", "rawtypes"})
     public static <C, V> EventType<ValueEvent<C, V>> valueReport(final String name) {
         return new EventType<>(name, (Class) ValueEvent.class, true);
+    }
+
+    /**
+     * Returns the type's name.
+     *
+     * @return the name given to the factory, for debugging
+     */
+    public String name() {
+        return this.name;
+    }
+
+    /**
+     * Returns the event interface handlers of this type receive.
+     *
+     * @return the event interface
+     */
+    public Class<E> eventClass() {
+        return this.eventClass;
+    }
+
+    /**
+     * Returns whether events of this type travel up through the target's ancestors.
+     *
+     * @return true for a bubbling type, false for a direct one
+     */
+    public boolean bubbles() {
+        return this.bubbles;
+    }
+
+    /**
+     * Compares by identity.
+     *
+     * @param other the object to compare with
+     * @return true only if {@code other} is this type
+     */
+    @Override
+    public boolean equals(final Object other) {
+        return this == other;
+    }
+
+    /**
+     * Returns the identity hash code, to match {@link #equals}.
+     *
+     * @return the identity hash code
+     */
+    @Override
+    public int hashCode() {
+        return System.identityHashCode(this);
     }
 
     /**
