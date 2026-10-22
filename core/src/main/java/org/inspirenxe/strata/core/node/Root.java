@@ -2334,6 +2334,7 @@ public final class Root {
                     owner.fire(Focusable.FOCUS_LOST,
                             new FocusEventImpl(owner.facade(), next == null ? null : next.facade()));
                 }
+                this.focusExits(lost, this.focused);
             }
         } finally {
             if (this.focused == next) {
@@ -2350,6 +2351,10 @@ public final class Root {
         if (next.acceptsTextInput()) {
             this.platform.textInput().start(next.bounds(), next.textInputKind());
         }
+        this.focusEnters(next, lost);
+        if (this.focused != next) {
+            return;
+        }
         next.fire(Focusable.FOCUS_GAINED, new FocusEventImpl(next.facade(), lost == null ? null : lost.facade()));
         final Node owner = next.focusOwner();
         if (owner != null && this.focused == next) {
@@ -2358,6 +2363,68 @@ public final class Root {
         for (Node ancestor = next.parentNode(); ancestor != null && this.focused == next; ancestor = ancestor.parentNode()) {
             ancestor.hooks().descendantFocused(next.facade());
         }
+    }
+
+    /**
+     * Fires {@link InputEvents#FOCUS_EXIT} on each ancestor of the node that lost focus that is not an ancestor of
+     * the node that has it now, innermost first, on those with a handler.
+     */
+    private void focusExits(final Node lost, final Node now) {
+        for (Node ancestor = lost.parentNode(); ancestor != null; ancestor = ancestor.parentNode()) {
+            if (now != null && isAncestorOrSelf(ancestor, now)) {
+                return;
+            }
+            if (ancestor.isHandled(InputEvents.FOCUS_EXIT)) {
+                ancestor.fire(InputEvents.FOCUS_EXIT, new FocusEventImpl(ancestor.facade(),
+                        now == null ? null : now.facade()));
+            }
+        }
+    }
+
+    /**
+     * Fires {@link InputEvents#FOCUS_ENTER} on each ancestor of the node that gained focus that is not an ancestor of
+     * the node that lost it, outermost first, on those with a handler. Allocates nothing when none has one.
+     */
+    private void focusEnters(final Node next, final Node lost) {
+        List<Node> entered = null;
+        for (Node ancestor = next.parentNode(); ancestor != null; ancestor = ancestor.parentNode()) {
+            if (lost != null && isAncestorOrSelf(ancestor, lost)) {
+                break;
+            }
+            if (ancestor.isHandled(InputEvents.FOCUS_ENTER)) {
+                if (entered == null) {
+                    entered = new ArrayList<>();
+                }
+                entered.add(ancestor);
+            }
+        }
+        if (entered == null) {
+            return;
+        }
+        for (int i = entered.size() - 1; i >= 0 && this.focused == next; i--) {
+            final Node ancestor = entered.get(i);
+            ancestor.fire(InputEvents.FOCUS_ENTER, new FocusEventImpl(ancestor.facade(),
+                    lost == null ? null : lost.facade()));
+        }
+    }
+
+    private static boolean isAncestorOrSelf(final Node ancestor, final Node node) {
+        for (Node candidate = node; candidate != null; candidate = candidate.parentNode()) {
+            if (candidate == ancestor) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Returns whether the focused node is a node or one of its descendants.
+     *
+     * @param node the node
+     * @return true if focus is on the node or inside it
+     */
+    public boolean isFocusWithin(final Node node) {
+        return this.focused != null && isAncestorOrSelf(node, this.focused);
     }
 
     /**

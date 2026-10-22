@@ -659,6 +659,11 @@ public abstract class BuiltInComponent<T extends Component<T>> implements Compon
     }
 
     @Override
+    public final boolean isFocusWithin() {
+        return this.node.isFocusWithin();
+    }
+
+    @Override
     public final boolean isVisible() {
         return this.node.isVisible();
     }

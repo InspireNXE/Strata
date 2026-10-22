@@ -112,6 +112,7 @@ public final class SpinnerImpl extends BuiltInComposite<Spinner> implements Spin
         this.field.setInternalFilter(text -> this.accepted.matcher(text).matches() ? text : null);
         this.field.onEvent(TextBox.SUBMITTED, event -> this.commit(true));
         this.field.onEvent(Focusable.FOCUS_LOST, event -> this.commit(true));
+        this.setFocusDelegate(this.field);
         this.addChild(this.field);
         this.updatePattern();
         this.show();

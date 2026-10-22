@@ -91,6 +91,22 @@ public final class InputEvents {
      */
     public static final EventType<CharEvent> CHAR = EventType.bubbling("char", CharEvent.class);
     /**
+     * Focus entered the target's subtree: the target is an ancestor of the component that gained focus and was not
+     * an ancestor of the one that lost it. Direct. See {@link #FOCUS_EXIT} for the order of the four focus events.
+     * The event's {@code other()} is the component that lost focus. Fired on any component, panels included, and
+     * only on one with a handler for it. No default behavior.
+     */
+    public static final EventType<FocusEvent> FOCUS_ENTER = EventType.direct("focus_enter", FocusEvent.class);
+    /**
+     * Focus left the target's subtree: the target is an ancestor of the component that lost focus and not an
+     * ancestor of the one that gained it. Direct. When focus moves from A to B, {@code FOCUS_LOST} fires on A, then
+     * this on each ancestor of A that is not an ancestor of B, innermost first, then {@link #FOCUS_ENTER} on each
+     * ancestor of B that is not an ancestor of A, outermost first, then {@code FOCUS_GAINED} on B. The event's
+     * {@code other()} is the component that gained focus. Fired on any component, panels included, and only on one
+     * with a handler for it, so a focus change costs nothing more without handlers. No default behavior.
+     */
+    public static final EventType<FocusEvent> FOCUS_EXIT = EventType.direct("focus_exit", FocusEvent.class);
+    /**
      * The held modifier keys changed, by a modifier key going down or up or by input arriving with different
      * modifiers. Fired at the screen's content and at the content of each open overlay. Direct. No default
      * behavior.

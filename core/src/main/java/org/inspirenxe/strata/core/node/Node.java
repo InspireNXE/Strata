@@ -1144,6 +1144,11 @@ public class Node implements ComponentPeer {
     }
 
     @Override
+    public final boolean isFocusWithin() {
+        return this.root != null && this.root.isFocusWithin(this);
+    }
+
+    @Override
     public final boolean isPressed() {
         return this.pressed;
     }

@@ -635,6 +635,11 @@ public abstract class CustomComponent<T extends Component<T>> implements Compone
     }
 
     @Override
+    public final boolean isFocusWithin() {
+        return this.peer.isFocusWithin();
+    }
+
+    @Override
     public final boolean isVisible() {
         return this.peer.isVisible();
     }

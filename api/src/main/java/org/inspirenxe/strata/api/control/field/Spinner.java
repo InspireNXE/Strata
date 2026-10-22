@@ -16,6 +16,7 @@
 package org.inspirenxe.strata.api.control.field;
 
 import org.inspirenxe.strata.api.component.Component;
+import org.inspirenxe.strata.api.component.Focusable;
 import org.inspirenxe.strata.api.component.HasContextMenu;
 import org.inspirenxe.strata.api.component.HasCursor;
 import org.inspirenxe.strata.api.component.HasTooltip;
@@ -77,11 +78,16 @@ import org.inspirenxe.strata.api.layout.HorizontalAlignment;
  *         .onEvent(Spinner.CHANGED, event -> this.amount = event.value().intValue());
  * }</pre>
  *
+ * <p>The spinner takes focus through its field: {@link #requestFocus()} and a press on a step button focus the
+ * field, {@link #isFocused()} is true while the field has focus, and {@link Focusable#FOCUS_GAINED} and
+ * {@link Focusable#FOCUS_LOST} fire on the spinner after they fire on the field. It is one tab stop, at the field,
+ * with the spinner's tab index.</p>
+ *
  * <p>Get one from {@link org.inspirenxe.strata.api.ComponentFactory#spinner()}. Do not implement this
  * interface.</p>
  */
-public interface Spinner extends Component<Spinner>, HasCursor<Spinner>, HasTooltip<Spinner>, HasContextMenu<Spinner>,
-        Stepped<Spinner>, Validatable<Spinner> {
+public interface Spinner extends Component<Spinner>, Focusable<Spinner>, HasCursor<Spinner>, HasTooltip<Spinner>,
+        HasContextMenu<Spinner>, Stepped<Spinner>, Validatable<Spinner> {
     /**
      * Style key for each step button (paint, optional).
      */

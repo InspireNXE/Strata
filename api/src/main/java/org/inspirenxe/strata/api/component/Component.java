@@ -247,6 +247,16 @@ public interface Component<T extends Component<T>> extends EventTarget<T>, Enabl
         });
     }
 
+    /**
+     * Returns whether this component or one of its descendants has keyboard focus, such as a form section whose
+     * field is being typed in. Containers and panels answer too, though they never take focus themselves. Handle
+     * {@link org.inspirenxe.strata.api.event.input.InputEvents#FOCUS_ENTER} and
+     * {@link org.inspirenxe.strata.api.event.input.InputEvents#FOCUS_EXIT} to hear when this changes.
+     *
+     * @return true while focus is on this component or inside it; false while detached
+     */
+    boolean isFocusWithin();
+
     // State
 
     /**

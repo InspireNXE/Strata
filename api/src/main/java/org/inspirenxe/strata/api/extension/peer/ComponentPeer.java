@@ -208,6 +208,13 @@ public interface ComponentPeer {
     boolean isHoverWithin();
 
     /**
+     * See {@link org.inspirenxe.strata.api.component.Component#isFocusWithin()}.
+     *
+     * @return true while this component or a descendant has focus
+     */
+    boolean isFocusWithin();
+
+    /**
      * See {@link org.inspirenxe.strata.api.extension.CustomComponent#isPressed()}.
      *
      * @return true while pressed
