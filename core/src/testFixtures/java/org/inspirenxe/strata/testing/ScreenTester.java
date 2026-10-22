@@ -59,7 +59,8 @@ import java.util.function.Predicate;
  * <h2>The platform</h2>
  * <p>Text is measured as if monospaced: {@value #CHAR_WIDTH} units wide per code point, {@value #MONO_CHAR_WIDTH} in a
  * monospaced style, and {@value #LINE_HEIGHT} units per line. The clock stands still until {@link #advance} moves it,
- * so delays such as a tooltip's never pass on their own, and the wall clock always reads
+ * so delays such as a tooltip's never pass on their own and animations move only as it does ({@link #settle()} runs
+ * them to their end), and the wall clock always reads
  * {@link TesterOptions#now()}. The clipboard is held in memory, and the engine sends its own key repeats, so a key
  * repeats only when the test presses it again.</p>
  *
@@ -94,6 +95,15 @@ public final class ScreenTester implements AutoCloseable {
      * How tall the tester measures a line of text, in UI units.
      */
     public static final float LINE_HEIGHT = 9f;
+
+    /**
+     * How far apart {@link #settle()} runs its frames, in milliseconds: an animation's frame (design 4.47).
+     */
+    public static final long SETTLE_STEP_MILLIS = 16L;
+    /**
+     * How long {@link #settle()} lets animations run before it fails, in milliseconds.
+     */
+    public static final long SETTLE_LIMIT_MILLIS = 60_000L;
 
     private final TesterPlatform platform;
     private final ScreenHostImpl host;
@@ -409,6 +419,27 @@ public final class ScreenTester implements AutoCloseable {
         this.requireOpen();
         this.platform.advance(millis);
         return this.frame();
+    }
+
+    /**
+     * Runs frames {@value #SETTLE_STEP_MILLIS} milliseconds apart until no animation of the screen runs, so motion a
+     * theme turns on, a toast's fade or the screen's own animations come to rest (design 4.51). With nothing animating
+     * it runs no frame and leaves the clock alone.
+     *
+     * @return this tester
+     * @throws AssertionError if animations still run after {@value #SETTLE_LIMIT_MILLIS} milliseconds, as when one
+     *     keeps starting another
+     */
+    public ScreenTester settle() {
+        this.requireOpen();
+        final Root root = this.host.root();
+        for (long waited = 0L; root.animator().isAnimating(); waited += SETTLE_STEP_MILLIS) {
+            if (waited >= SETTLE_LIMIT_MILLIS) {
+                throw new AssertionError("Animations were still running after " + SETTLE_LIMIT_MILLIS + " ms");
+            }
+            this.advance(SETTLE_STEP_MILLIS);
+        }
+        return this;
     }
 
     /**
