@@ -1529,13 +1529,13 @@ public final class Root {
         Node owner = null;
         if (this.presses.values().stream().noneMatch(press -> press.dragging)) {
             for (Node node = this.hovered; node != null; node = node.parentNode()) {
-                if (node.tooltip() != null) {
+                if (node.shownTooltip() != null) {
                     owner = node;
                     break;
                 }
             }
         }
-        if (owner == this.tooltipOwner && (owner == null || owner.tooltip() == this.tooltipShown)) {
+        if (owner == this.tooltipOwner && (owner == null || owner.shownTooltip() == this.tooltipShown)) {
             if (this.tooltipNode != null) {
                 // Follow the pointer
                 this.requestLayout();
@@ -1567,7 +1567,7 @@ public final class Root {
      */
     private void showPendingTooltip() {
         final Node owner = this.tooltipPending;
-        if (owner != null && owner.tooltip() != null
+        if (owner != null && owner.shownTooltip() != null
                 && this.platform.clock().millis() - this.tooltipPendingSince >= this.tooltipDelay()) {
             this.showTooltip(owner);
         }
@@ -1575,7 +1575,7 @@ public final class Root {
 
     private void showTooltip(final Node owner) {
         this.tooltipPending = null;
-        final Tooltip tooltip = owner.tooltip();
+        final Tooltip tooltip = owner.shownTooltip();
         final Node node = switch (tooltip) {
             case Tooltip.Lines lines -> this.ui.nodeOf(new TooltipView(this.ui, lines));
             case Tooltip.Custom custom -> this.ui.nodeOf(custom.builder().apply(this.ui));

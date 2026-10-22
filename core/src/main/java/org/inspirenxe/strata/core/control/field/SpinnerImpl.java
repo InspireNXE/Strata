@@ -43,6 +43,11 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.Locale;
 import java.util.regex.Pattern;
+import org.inspirenxe.strata.api.component.Validation;
+import org.inspirenxe.strata.api.text.Text;
+import org.inspirenxe.strata.core.control.Validity;
+import org.inspirenxe.strata.core.state.ConversionTarget;
+import java.util.function.Function;
 
 /**
  * The core {@link Spinner}: a {@link TextBoxImpl} child with the two step buttons painted in a column at the right.
@@ -63,7 +68,8 @@ import java.util.regex.Pattern;
  * the number to the range. The spinner is a composite and not a container, so the field's {@link TextBox} events stop
  * at the spinner.</p>
  */
-public final class SpinnerImpl extends BuiltInComposite<Spinner> implements Spinner {
+public final class SpinnerImpl extends BuiltInComposite<Spinner> implements Spinner, ConversionTarget {
+    private final Validity validity;
     private final TextBoxImpl field;
     private double value;
     private double min;
@@ -92,6 +98,7 @@ public final class SpinnerImpl extends BuiltInComposite<Spinner> implements Spin
     @SuppressWarnings("this-escape")
     public SpinnerImpl(final ComponentFactoryImpl ui) {
         super(ui);
+        this.validity = new Validity(this.node(), this::validated);
         this.max = 100.0;
         this.step = 1.0;
         this.buttons = Rect.ZERO;
@@ -127,6 +134,7 @@ public final class SpinnerImpl extends BuiltInComposite<Spinner> implements Spin
         this.show();
         if (next != previous) {
             this.report(CHANGED, next, previous);
+            this.validity.check();
         }
         return this;
     }
@@ -304,8 +312,39 @@ public final class SpinnerImpl extends BuiltInComposite<Spinner> implements Spin
     // Theme, layout and painting
     // ------------------------------------------------------------------
 
+    // ------------------------------------------------------------------
+    // Validatable
+    // ------------------------------------------------------------------
+
+    @Override
+    public Validation validation() {
+        return this.validity.validation();
+    }
+
+    @Override
+    public Spinner setValidation(final Validation validation) {
+        this.validity.set(validation);
+        return this;
+    }
+
+    @Override
+    public Spinner setValidator(final Function<? super Spinner, Validation> validator) {
+        this.validity.setValidator(validator == null ? null : () -> validator.apply(this));
+        return this;
+    }
+
+    @Override
+    public void setConversionError(final Text message) {
+        this.validity.setConversionError(message);
+    }
+
+    private void validated(final Validation validation, final Validation previous) {
+        this.report(VALIDATED, validation, previous);
+    }
+
     @Override
     protected void onApplyTheme(final Theme theme) {
+        this.validity.applyTheme(theme, null);
         this.button = theme.paintOr(STYLE_BUTTON, theme.paintOr(Button.STYLE_NORMAL, Paint.NONE));
         this.buttonHovered = theme.paintOr(STYLE_BUTTON_HOVERED, theme.paintOr(Button.STYLE_HOVERED, this.button));
         this.buttonDisabled = theme.paintOr(STYLE_BUTTON_DISABLED, theme.paintOr(Button.STYLE_DISABLED, this.button));
@@ -346,6 +385,14 @@ public final class SpinnerImpl extends BuiltInComposite<Spinner> implements Spin
     protected void paint(final Painter painter, final Rect bounds) {
         this.paintButton(painter, this.upButton, this.value < this.max, true);
         this.paintButton(painter, this.downButton, this.value > this.min, false);
+    }
+
+    @Override
+    protected void paintOverChildren(final Painter painter, final Rect bounds) {
+        // Around the field and the buttons both, so over the field that covers most of the bounds
+        if (this.isEnabled()) {
+            this.validity.paintOutline(painter, bounds);
+        }
     }
 
     private void paintButton(final Painter painter, final Rect rect, final boolean usable, final boolean upward) {

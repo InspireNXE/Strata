@@ -46,7 +46,9 @@ import java.util.function.Supplier;
  *
  * <p>The binding reads the property through the key's {@link PropertyKey#check() check}, so a
  * {@linkplain PropertyKey#convert converted} key compares and writes back the model's value, and writes nothing back
- * while the property's value does not convert.</p>
+ * while the property's value does not convert. While it does not, a component that is a {@link ConversionTarget}
+ * shows the conversion's message as an error, which the binding takes away once a report converts again, once it
+ * writes the state's value, and when it is {@linkplain #release released}.</p>
  *
  * <p>When the source is a state and the key has reports, the binding also handles each report on the component,
  * at the highest priority, so after the component's other handlers and before the handlers of the ancestors the
@@ -77,6 +79,10 @@ public final class Binding<V> extends Dependent {
     private final Origin.Binding origin;
     // Whether the source was read since the last attach; reports are not written back until it was
     private boolean evaluated;
+    // Whether the component shows a conversion error this binding gave it
+    private boolean marked;
+    // The state's version after this binding last wrote the control's value to it, or -1
+    private long echo = -1L;
 
     /**
      * Creates a binding that does nothing until attached.
@@ -156,6 +162,15 @@ public final class Binding<V> extends Dependent {
     }
 
     /**
+     * Ends the binding for good, when the component unbinds the key or binds it again: detaches it and takes away the
+     * conversion error it showed, if any. Call on the UI thread.
+     */
+    public void release() {
+        this.detach();
+        this.unmark();
+    }
+
+    /**
      * Evaluates the source and sets the property, if the binding is dirty and attached. Call on the UI thread. If the
      * source throws, the binding still follows the states it read before throwing, so a change to one of them
      * evaluates it again, and the exception goes on to the caller.
@@ -167,6 +182,11 @@ public final class Binding<V> extends Dependent {
         }
         final V value = this.read(this.source);
         this.evaluated = true;
+        if (this.writable != null && this.writable.version() == this.echo) {
+            // The state holds what this binding took from the control, which the control may show in its own way,
+            // such as "100" in a field whose state kept 10 because "100" does not convert
+            return;
+        }
         this.write(value);
     }
 
@@ -180,6 +200,8 @@ public final class Binding<V> extends Dependent {
         try (CauseFrame _ = this.causes.get().pushFrame().put(CauseKeys.ORIGIN, this.origin)) {
             this.key.writer().accept(this.component, value);
         }
+        // The control shows the state's value now, so it is valid again
+        this.unmark();
     }
 
     private void reported(final ControlEvent<?> event) {
@@ -197,16 +219,38 @@ public final class Binding<V> extends Dependent {
 
     /**
      * Writes the property's value to the state unless they are equal, as a report does, for a report an animation
-     * deferred. A value that does not convert is not written, so the state keeps its last valid value. Does nothing
-     * for a one-way binding, or one that is detached or not evaluated since it attached. Call on the UI thread.
+     * deferred. A value that does not convert is not written, so the state keeps its last valid value, and a
+     * {@link ConversionTarget} shows the conversion's message until a value converts again. Does nothing for a
+     * one-way binding, or one that is detached or not evaluated since it attached. Call on the UI thread.
      */
     public void writeBack() {
         if (this.writable == null || !this.evaluated || !this.isLive()) {
             return;
         }
-        if (this.key.check().apply(this.component) instanceof Conversion.Valid<? extends V> valid
-                && !Objects.equals(this.writable.peek(), valid.value())) {
-            this.writable.set(valid.value());
+        switch (this.key.check().apply(this.component)) {
+            case Conversion.Valid<? extends V> valid -> {
+                this.unmark();
+                if (!Objects.equals(this.writable.peek(), valid.value())) {
+                    this.writable.set(valid.value());
+                    this.echo = this.writable.version();
+                }
+            }
+            case Conversion.Invalid<? extends V> invalid -> {
+                if (this.component instanceof final ConversionTarget target) {
+                    this.marked = true;
+                    target.setConversionError(invalid.message());
+                }
+            }
+        }
+    }
+
+    /**
+     * Takes away the conversion error this binding showed, if it showed one.
+     */
+    private void unmark() {
+        if (this.marked && this.component instanceof final ConversionTarget target) {
+            this.marked = false;
+            target.setConversionError(null);
         }
     }
 

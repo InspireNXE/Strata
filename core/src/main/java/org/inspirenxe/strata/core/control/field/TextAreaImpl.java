@@ -54,6 +54,10 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.function.Consumer;
 import java.util.function.UnaryOperator;
+import org.inspirenxe.strata.api.component.Validation;
+import org.inspirenxe.strata.core.control.Validity;
+import org.inspirenxe.strata.core.state.ConversionTarget;
+import java.util.function.Function;
 
 /**
  * The core {@link TextArea}. It edits like {@link TextBoxImpl} and lays its text out in rows: one per line, and more
@@ -98,7 +102,7 @@ import java.util.function.UnaryOperator;
  * Page Down and triple clicks, and a user's edit goes through the {@code PlainEdits} the text box uses too. The rows
  * and their drawing are the area's own.</p>
  */
-public final class TextAreaImpl extends BuiltInComponent<TextArea> implements TextArea {
+public final class TextAreaImpl extends BuiltInComponent<TextArea> implements TextArea, ConversionTarget {
     /**
      * How many lines one wheel notch scrolls.
      */
@@ -115,6 +119,7 @@ public final class TextAreaImpl extends BuiltInComponent<TextArea> implements Te
      */
     public static final Insets DEFAULT_PADDING = Insets.of(4f);
 
+    private final Validity validity;
     private final PlainBuffer buffer;
     private final TextBoundaries boundaries;
     private final TextEditor editor;
@@ -227,6 +232,7 @@ public final class TextAreaImpl extends BuiltInComponent<TextArea> implements Te
     @SuppressWarnings("this-escape")
     public TextAreaImpl(final ComponentFactoryImpl ui) {
         super(ui);
+        this.validity = new Validity(this.node(), this::validated);
         this.buffer = new PlainBuffer();
         this.boundaries = new TextBoundaries(this.buffer);
         this.editor = new TextEditor(this.buffer, this.boundaries, new Editing(), new RowMoves(), this::caretMoved);
@@ -630,9 +636,40 @@ public final class TextAreaImpl extends BuiltInComponent<TextArea> implements Te
         return true;
     }
 
+    // ------------------------------------------------------------------
+    // Validatable
+    // ------------------------------------------------------------------
+
+    @Override
+    public Validation validation() {
+        return this.validity.validation();
+    }
+
+    @Override
+    public TextArea setValidation(final Validation validation) {
+        this.validity.set(validation);
+        return this;
+    }
+
+    @Override
+    public TextArea setValidator(final Function<? super TextArea, Validation> validator) {
+        this.validity.setValidator(validator == null ? null : () -> validator.apply(this));
+        return this;
+    }
+
+    @Override
+    public void setConversionError(final Text message) {
+        this.validity.setConversionError(message);
+    }
+
+    private void validated(final Validation validation, final Validation previous) {
+        this.report(VALIDATED, validation, previous);
+    }
+
     @Override
     protected void onApplyTheme(final Theme theme) {
         this.smoothMillis = Motion.millis(theme, ScrollPanel.STYLE_SMOOTH);
+        this.validity.applyTheme(theme, TextBox.STYLE_INVALID);
         this.themePadding = themePadding(theme);
         if (this.setPadding == null) {
             this.textPadding = this.themePadding;
@@ -911,12 +948,13 @@ public final class TextAreaImpl extends BuiltInComponent<TextArea> implements Te
         final Paint face;
         if (!this.isEnabled()) {
             face = this.disabledPaint;
-        } else if (this.isFocused()) {
-            face = this.focusedPaint;
         } else {
-            face = this.normal;
+            face = this.validity.face(this.isFocused() ? this.focusedPaint : this.normal);
         }
         face.paint(painter, bounds);
+        if (this.isEnabled()) {
+            this.validity.paintOutline(painter, bounds);
+        }
 
         this.ensureRows();
         this.updateVisuals();
@@ -1251,6 +1289,7 @@ public final class TextAreaImpl extends BuiltInComponent<TextArea> implements Te
         if (this.isHandled(MODIFIED)) {
             this.report(MODIFIED, this.codePoints(), previous.codePointCount(0, previous.length()));
         }
+        this.validity.check();
     }
 
     // ------------------------------------------------------------------

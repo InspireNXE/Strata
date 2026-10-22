@@ -21,6 +21,7 @@ import org.inspirenxe.strata.api.component.HasCursor;
 import org.inspirenxe.strata.api.component.HasTooltip;
 import org.inspirenxe.strata.api.control.attribute.value.Ranged;
 import org.inspirenxe.strata.api.control.attribute.value.Stepped;
+import org.inspirenxe.strata.api.control.attribute.value.Validatable;
 import org.inspirenxe.strata.api.layout.Orientation;
 
 import java.util.function.DoubleFunction;
@@ -101,7 +102,7 @@ import java.util.function.DoubleFunction;
  * interface.</p>
  */
 public interface Slider extends Component<Slider>, Focusable<Slider>, HasCursor<Slider>, HasTooltip<Slider>,
-        Stepped<Slider> {
+        Stepped<Slider>, Validatable<Slider> {
     /**
      * Style key for the track (paint, required).
      */
@@ -114,6 +115,12 @@ public interface Slider extends Component<Slider>, Focusable<Slider>, HasCursor<
      * Style key for the track when disabled (paint, optional).
      */
     String STYLE_TRACK_DISABLED = "slider.track.disabled";
+    /**
+     * Style key for the track while the slider is enabled and its validation is an error, in place of the normal and
+     * focused ones (paint, optional). Without it the slider draws its normal track with a one-unit outline in
+     * {@value Validatable#STYLE_ERROR}.
+     */
+    String STYLE_INVALID = "slider.invalid";
     /**
      * Style key for the thumb (paint, required).
      */

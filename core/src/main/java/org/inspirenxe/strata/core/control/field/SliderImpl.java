@@ -42,6 +42,10 @@ import java.math.BigDecimal;
 import java.util.Objects;
 import java.util.Set;
 import java.util.function.DoubleFunction;
+import org.inspirenxe.strata.api.component.Validation;
+import org.inspirenxe.strata.core.control.Validity;
+import org.inspirenxe.strata.core.state.ConversionTarget;
+import java.util.function.Function;
 
 /**
  * The core {@link Slider}. The track covers the whole bounds; the thumb is {@value #THUMB_WIDTH} units along the
@@ -58,7 +62,7 @@ import java.util.function.DoubleFunction;
  * <p>A press, drag or key that would change the value fires {@link Slider#CHANGE}, and the final value is set as
  * {@link #setValue} sets it. A press, drag or key that leaves the value as it is fires nothing.</p>
  */
-public final class SliderImpl extends BuiltInComponent<Slider> implements Slider {
+public final class SliderImpl extends BuiltInComponent<Slider> implements Slider, ConversionTarget {
     /**
      * The thumb's length along the track: its width on a horizontal slider, its height on a vertical one.
      */
@@ -77,6 +81,7 @@ public final class SliderImpl extends BuiltInComponent<Slider> implements Slider
     public static final int PAGE_STEPS = 10;
     private static final Set<String> REQUIRED = Set.of(STYLE_TRACK, STYLE_THUMB, STYLE_THUMB_HOVERED);
 
+    private final Validity validity;
     private final Caption caption;
     private double value;
     private double min;
@@ -112,6 +117,7 @@ public final class SliderImpl extends BuiltInComponent<Slider> implements Slider
     @SuppressWarnings("this-escape")
     public SliderImpl(final ComponentFactoryImpl ui) {
         super(ui);
+        this.validity = new Validity(this.node(), this::validated);
         this.caption = new Caption();
         this.min = 0d;
         this.max = 1d;
@@ -241,6 +247,7 @@ public final class SliderImpl extends BuiltInComponent<Slider> implements Slider
         this.value = next;
         this.updateLabel();
         this.report(CHANGED, next, previous);
+        this.validity.check();
     }
 
     private void updateLabel() {
@@ -293,8 +300,39 @@ public final class SliderImpl extends BuiltInComponent<Slider> implements Slider
         return REQUIRED;
     }
 
+    // ------------------------------------------------------------------
+    // Validatable
+    // ------------------------------------------------------------------
+
+    @Override
+    public Validation validation() {
+        return this.validity.validation();
+    }
+
+    @Override
+    public Slider setValidation(final Validation validation) {
+        this.validity.set(validation);
+        return this;
+    }
+
+    @Override
+    public Slider setValidator(final Function<? super Slider, Validation> validator) {
+        this.validity.setValidator(validator == null ? null : () -> validator.apply(this));
+        return this;
+    }
+
+    @Override
+    public void setConversionError(final Text message) {
+        this.validity.setConversionError(message);
+    }
+
+    private void validated(final Validation validation, final Validation previous) {
+        this.report(VALIDATED, validation, previous);
+    }
+
     @Override
     protected void onApplyTheme(final Theme theme) {
+        this.validity.applyTheme(theme, STYLE_INVALID);
         this.track = theme.paintOr(STYLE_TRACK, Paint.NONE);
         this.trackFocused = theme.paintOr(STYLE_TRACK_FOCUSED, this.track);
         this.trackDisabled = theme.paintOr(STYLE_TRACK_DISABLED, this.track);
@@ -319,8 +357,12 @@ public final class SliderImpl extends BuiltInComponent<Slider> implements Slider
     @Override
     protected void paint(final Painter painter, final Rect bounds) {
         final boolean enabled = this.isEnabled();
-        final Paint trackFace = !enabled ? this.trackDisabled : this.isFocused() ? this.trackFocused : this.track;
+        final Paint trackFace = !enabled ? this.trackDisabled
+                : this.validity.face(this.isFocused() ? this.trackFocused : this.track);
         trackFace.paint(painter, bounds);
+        if (enabled) {
+            this.validity.paintOutline(painter, bounds);
+        }
 
         final Paint thumbFace;
         if (!enabled) {

@@ -80,6 +80,7 @@ public final class DatePickerImpl extends PickerBase<DatePicker, LocalDate> impl
                 this.calendar.setDate(next);
             }
             this.report(DATE_PICKED, next, previous);
+            this.validate();
         }
         return this;
     }

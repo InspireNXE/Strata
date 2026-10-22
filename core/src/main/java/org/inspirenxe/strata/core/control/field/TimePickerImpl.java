@@ -77,6 +77,7 @@ public final class TimePickerImpl extends PickerBase<TimePicker, LocalTime> impl
             this.valueChanged();
             this.showColumns();
             this.report(TIME_PICKED, next, previous);
+            this.validate();
         }
         return this;
     }

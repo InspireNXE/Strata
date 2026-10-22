@@ -113,6 +113,7 @@ public final class DateTimePickerImpl extends PickerBase<DateTimePicker, LocalDa
         if (!Objects.equals(nextTime, previousTime)) {
             this.report(TIME_PICKED, nextTime, previousTime);
         }
+        this.validate();
         return this;
     }
 

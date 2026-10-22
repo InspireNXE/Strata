@@ -39,6 +39,10 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
+import org.inspirenxe.strata.api.component.Validation;
+import org.inspirenxe.strata.core.control.Validity;
+import org.inspirenxe.strata.core.state.ConversionTarget;
+import java.util.function.Function;
 
 /**
  * The core {@link CheckBox}. The box sits at the left edge, vertically centered, and the caption 4 units to its
@@ -52,7 +56,7 @@ import java.util.Set;
  * the mark's squares and the focus ring are kept from one frame to the next while the bounds and the box size stay
  * the same, so painting allocates nothing then.</p>
  */
-public final class CheckBoxImpl extends BuiltInComponent<CheckBox> implements CheckBox {
+public final class CheckBoxImpl extends BuiltInComponent<CheckBox> implements CheckBox, ConversionTarget {
     /**
      * The gap between the box and the caption.
      */
@@ -63,6 +67,7 @@ public final class CheckBoxImpl extends BuiltInComponent<CheckBox> implements Ch
     public static final float BOX_PADDING = 8f;
     private static final Set<String> REQUIRED = Set.of(STYLE_NORMAL, STYLE_HOVERED, STYLE_CHECKED, STYLE_CHECKED_HOVERED);
 
+    private final Validity validity;
     private Text text;
     private CheckState state;
     private boolean allowsMixed;
@@ -102,6 +107,7 @@ public final class CheckBoxImpl extends BuiltInComponent<CheckBox> implements Ch
     @SuppressWarnings("this-escape")
     public CheckBoxImpl(final ComponentFactoryImpl ui, final Text text) {
         super(ui);
+        this.validity = new Validity(this.node(), this::validated);
         this.text = Objects.requireNonNull(text, "text");
         this.fixedBoxSize = Float.NaN;
         this.normal = Paint.NONE;
@@ -167,6 +173,7 @@ public final class CheckBoxImpl extends BuiltInComponent<CheckBox> implements Ch
             if (previous.isChecked() != state.isChecked()) {
                 this.report(TOGGLED, state.isChecked(), previous.isChecked());
             }
+            this.validity.check();
         }
         return this;
     }
@@ -241,8 +248,39 @@ public final class CheckBoxImpl extends BuiltInComponent<CheckBox> implements Ch
         return REQUIRED;
     }
 
+    // ------------------------------------------------------------------
+    // Validatable
+    // ------------------------------------------------------------------
+
+    @Override
+    public Validation validation() {
+        return this.validity.validation();
+    }
+
+    @Override
+    public CheckBox setValidation(final Validation validation) {
+        this.validity.set(validation);
+        return this;
+    }
+
+    @Override
+    public CheckBox setValidator(final Function<? super CheckBox, Validation> validator) {
+        this.validity.setValidator(validator == null ? null : () -> validator.apply(this));
+        return this;
+    }
+
+    @Override
+    public void setConversionError(final Text message) {
+        this.validity.setConversionError(message);
+    }
+
+    private void validated(final Validation validation, final Validation previous) {
+        this.report(VALIDATED, validation, previous);
+    }
+
     @Override
     protected void onApplyTheme(final Theme theme) {
+        this.validity.applyTheme(theme, STYLE_INVALID);
         this.normal = theme.paintOr(STYLE_NORMAL, Paint.NONE);
         this.hoveredPaint = theme.paintOr(STYLE_HOVERED, this.normal);
         this.checkedPaint = theme.paintOr(STYLE_CHECKED, this.normal);
@@ -300,11 +338,14 @@ public final class CheckBoxImpl extends BuiltInComponent<CheckBox> implements Ch
         if (!enabled) {
             face = checked ? this.checkedDisabled : this.disabled;
         } else if (checked) {
-            face = lit ? this.checkedHovered : this.checkedPaint;
+            face = this.validity.face(lit ? this.checkedHovered : this.checkedPaint);
         } else {
-            face = lit ? this.hoveredPaint : this.normal;
+            face = this.validity.face(lit ? this.hoveredPaint : this.normal);
         }
         face.paint(painter, box);
+        if (enabled) {
+            this.validity.paintOutline(painter, box);
+        }
 
         final float inset = Math.round(this.boxSize * 0.2f);
         final Rect inner = this.markArea.at(box.x() + inset, box.y() + inset, box.width() - inset * 2f,

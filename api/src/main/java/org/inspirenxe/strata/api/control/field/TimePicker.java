@@ -22,6 +22,7 @@ import org.inspirenxe.strata.api.component.HasTooltip;
 import org.inspirenxe.strata.api.control.attribute.popup.Closable;
 import org.inspirenxe.strata.api.control.attribute.popup.Openable;
 import org.inspirenxe.strata.api.control.attribute.value.HasTime;
+import org.inspirenxe.strata.api.control.attribute.value.Validatable;
 import org.inspirenxe.strata.api.text.Text;
 
 import java.time.LocalTime;
@@ -77,7 +78,7 @@ import java.time.LocalTime;
  * interface.</p>
  */
 public interface TimePicker extends Component<TimePicker>, Focusable<TimePicker>, HasCursor<TimePicker>,
-        HasTooltip<TimePicker>, HasTime<TimePicker>, Openable<TimePicker> {
+        HasTooltip<TimePicker>, HasTime<TimePicker>, Openable<TimePicker>, Validatable<TimePicker> {
     /**
      * Style key for behind the focused part (paint, optional).
      */

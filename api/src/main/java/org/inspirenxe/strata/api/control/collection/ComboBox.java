@@ -23,6 +23,7 @@ import org.inspirenxe.strata.api.control.attribute.item.ItemSource;
 import org.inspirenxe.strata.api.control.attribute.item.SingleSelection;
 import org.inspirenxe.strata.api.control.attribute.popup.Closable;
 import org.inspirenxe.strata.api.control.attribute.popup.Openable;
+import org.inspirenxe.strata.api.control.attribute.value.Validatable;
 import org.inspirenxe.strata.api.text.Text;
 
 import java.util.List;
@@ -113,7 +114,7 @@ import java.util.function.Function;
  */
 public interface ComboBox<T> extends Component<ComboBox<T>>, Focusable<ComboBox<T>>, HasCursor<ComboBox<T>>,
         HasTooltip<ComboBox<T>>, ItemSource<T, ComboBox<T>>,
-        SingleSelection<T, ComboBox<T>>, Openable<ComboBox<T>> {
+        SingleSelection<T, ComboBox<T>>, Openable<ComboBox<T>>, Validatable<ComboBox<T>> {
     /**
      * Style key for the box (paint, required).
      */
@@ -126,6 +127,12 @@ public interface ComboBox<T> extends Component<ComboBox<T>>, Focusable<ComboBox<
      * Style key for the box when disabled (paint, optional).
      */
     String STYLE_DISABLED = "combobox.disabled";
+    /**
+     * Style key for the box while it is enabled and its validation is an error, in place of the normal and hovered
+     * ones (paint, optional). Without it the box draws its usual face with a one-unit outline in
+     * {@value Validatable#STYLE_ERROR}.
+     */
+    String STYLE_INVALID = "combobox.invalid";
     /**
      * Style key for the background of the open list (paint, required).
      */

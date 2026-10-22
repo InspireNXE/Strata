@@ -20,6 +20,7 @@ import org.inspirenxe.strata.api.component.HasCursor;
 import org.inspirenxe.strata.api.component.HasTooltip;
 import org.inspirenxe.strata.api.control.attribute.value.Ranged;
 import org.inspirenxe.strata.api.control.attribute.value.Stepped;
+import org.inspirenxe.strata.api.control.attribute.value.Validatable;
 import org.inspirenxe.strata.api.control.button.Button;
 import org.inspirenxe.strata.api.layout.HorizontalAlignment;
 
@@ -78,7 +79,8 @@ import org.inspirenxe.strata.api.layout.HorizontalAlignment;
  * <p>Get one from {@link org.inspirenxe.strata.api.ComponentFactory#spinner()}. Do not implement this
  * interface.</p>
  */
-public interface Spinner extends Component<Spinner>, HasCursor<Spinner>, HasTooltip<Spinner>, Stepped<Spinner> {
+public interface Spinner extends Component<Spinner>, HasCursor<Spinner>, HasTooltip<Spinner>, Stepped<Spinner>,
+        Validatable<Spinner> {
     /**
      * Style key for each step button (paint, optional).
      */

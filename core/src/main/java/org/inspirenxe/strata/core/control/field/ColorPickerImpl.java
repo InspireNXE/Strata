@@ -38,6 +38,11 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.regex.Pattern;
+import org.inspirenxe.strata.api.component.Validation;
+import org.inspirenxe.strata.api.text.Text;
+import org.inspirenxe.strata.core.control.Validity;
+import org.inspirenxe.strata.core.state.ConversionTarget;
+import java.util.function.Function;
 
 /**
  * The core {@link ColorPicker}: the square and strips are painted, and the hex field is a private
@@ -50,7 +55,7 @@ import java.util.regex.Pattern;
  * {@value #CHECKER}-unit cells. Columns, segments, checker cells and markers are worked out during arrange or after a
  * change, never while painting.</p>
  */
-public final class ColorPickerImpl extends BuiltInComposite<ColorPicker> implements ColorPicker {
+public final class ColorPickerImpl extends BuiltInComposite<ColorPicker> implements ColorPicker, ConversionTarget {
     /**
      * The side of each checkerboard cell behind translucent colors, in UI units.
      */
@@ -63,6 +68,7 @@ public final class ColorPickerImpl extends BuiltInComposite<ColorPicker> impleme
     private static final Pattern RGB = Pattern.compile("#?[0-9a-fA-F]{0,6}");
     private static final Pattern ARGB = Pattern.compile("#?[0-9a-fA-F]{0,8}");
 
+    private final Validity validity;
     private final TextBoxImpl field;
     private int color;
     private int alpha;
@@ -104,6 +110,7 @@ public final class ColorPickerImpl extends BuiltInComposite<ColorPicker> impleme
     @SuppressWarnings("this-escape")
     public ColorPickerImpl(final ComponentFactoryImpl ui) {
         super(ui);
+        this.validity = new Validity(this.node(), this::validated);
         this.color = 0xFFFFFFFF;
         this.alpha = 0xFF;
         this.brightness = 1f;
@@ -151,6 +158,7 @@ public final class ColorPickerImpl extends BuiltInComposite<ColorPicker> impleme
             final int previous = this.color;
             this.adopt(argb);
             this.report(PICKED, argb, previous);
+            this.validity.check();
         }
         return this;
     }
@@ -260,6 +268,7 @@ public final class ColorPickerImpl extends BuiltInComposite<ColorPicker> impleme
             this.brightness = brightness;
             this.changed();
             this.report(PICKED, next, previous);
+            this.validity.check();
         });
     }
 
@@ -354,8 +363,39 @@ public final class ColorPickerImpl extends BuiltInComposite<ColorPicker> impleme
     // Theme, layout and painting
     // ------------------------------------------------------------------
 
+    // ------------------------------------------------------------------
+    // Validatable
+    // ------------------------------------------------------------------
+
+    @Override
+    public Validation validation() {
+        return this.validity.validation();
+    }
+
+    @Override
+    public ColorPicker setValidation(final Validation validation) {
+        this.validity.set(validation);
+        return this;
+    }
+
+    @Override
+    public ColorPicker setValidator(final Function<? super ColorPicker, Validation> validator) {
+        this.validity.setValidator(validator == null ? null : () -> validator.apply(this));
+        return this;
+    }
+
+    @Override
+    public void setConversionError(final Text message) {
+        this.validity.setConversionError(message);
+    }
+
+    private void validated(final Validation validation, final Validation previous) {
+        this.report(VALIDATED, validation, previous);
+    }
+
     @Override
     protected void onApplyTheme(final Theme theme) {
+        this.validity.applyTheme(theme, null);
         this.frame = theme.paintOr(STYLE_FRAME, Paint.NONE);
         this.marker = theme.paintOr(STYLE_MARKER, DEFAULT_MARKER);
         this.markerOutline = theme.paintOr(STYLE_MARKER_OUTLINE, DEFAULT_MARKER_OUTLINE);
@@ -471,6 +511,13 @@ public final class ColorPickerImpl extends BuiltInComposite<ColorPicker> impleme
     @Override
     protected void onEnabledChanged() {
         this.field.setEnabled(this.isEnabled());
+    }
+
+    @Override
+    protected void paintOverChildren(final Painter painter, final Rect bounds) {
+        if (this.isEnabled()) {
+            this.validity.paintOutline(painter, bounds);
+        }
     }
 
     @Override

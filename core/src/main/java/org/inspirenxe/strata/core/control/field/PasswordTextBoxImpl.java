@@ -58,6 +58,9 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.function.IntPredicate;
+import org.inspirenxe.strata.api.component.Validation;
+import org.inspirenxe.strata.core.control.Validity;
+import org.inspirenxe.strata.core.state.ConversionTarget;
 
 /**
  * The core {@link PasswordTextBox}. It edits through a {@code LineEditor} over a {@code SecretBuffer}, the same
@@ -87,12 +90,14 @@ import java.util.function.IntPredicate;
  * rebuilds and after the overlay that holds it closes, and hides its text in {@link #onDisabled()} when it is
  * disabled. A wipe reports nothing, the caret's move to the start included.</p>
  */
-public final class PasswordTextBoxImpl extends BuiltInComposite<PasswordTextBox> implements PasswordTextBox {
+public final class PasswordTextBoxImpl extends BuiltInComposite<PasswordTextBox> implements PasswordTextBox,
+        ConversionTarget {
     /**
      * The space, in UI units, between the text and the eye.
      */
     public static final float REVEAL_GAP = 2f;
 
+    private final Validity validity;
     private final ComponentFactoryImpl ui;
     private final SecretBuffer buffer;
     private final LineEditor editor;
@@ -151,6 +156,7 @@ public final class PasswordTextBoxImpl extends BuiltInComposite<PasswordTextBox>
     @SuppressWarnings("this-escape")
     public PasswordTextBoxImpl(final ComponentFactoryImpl ui) {
         super(ui);
+        this.validity = new Validity(this.node(), this::validated);
         this.ui = ui;
         this.buffer = new SecretBuffer();
         this.editor = new LineEditor(this.buffer, new TextBoundaries(this.buffer), new Editing());
@@ -530,8 +536,39 @@ public final class PasswordTextBoxImpl extends BuiltInComposite<PasswordTextBox>
         return TextInputKind.SECRET;
     }
 
+    // ------------------------------------------------------------------
+    // Validatable
+    // ------------------------------------------------------------------
+
+    @Override
+    public Validation validation() {
+        return this.validity.validation();
+    }
+
+    @Override
+    public PasswordTextBox setValidation(final Validation validation) {
+        this.validity.set(validation);
+        return this;
+    }
+
+    @Override
+    public PasswordTextBox setValidator(final Function<? super PasswordTextBox, Validation> validator) {
+        this.validity.setValidator(validator == null ? null : () -> validator.apply(this));
+        return this;
+    }
+
+    @Override
+    public void setConversionError(final Text message) {
+        this.validity.setConversionError(message);
+    }
+
+    private void validated(final Validation validation, final Validation previous) {
+        this.report(VALIDATED, validation, previous);
+    }
+
     @Override
     protected void onApplyTheme(final Theme theme) {
+        this.validity.applyTheme(theme, TextBox.STYLE_INVALID);
         this.themePadding = theme.insetsOr(TextBox.STYLE_PADDING, TextBoxImpl.DEFAULT_PADDING);
         if (this.setPadding == null) {
             this.textPadding = this.themePadding;
@@ -577,12 +614,13 @@ public final class PasswordTextBoxImpl extends BuiltInComposite<PasswordTextBox>
         final Paint face;
         if (!this.isEnabled()) {
             face = this.disabledPaint;
-        } else if (this.isFocused()) {
-            face = this.focusedPaint;
         } else {
-            face = this.normal;
+            face = this.validity.face(this.isFocused() ? this.focusedPaint : this.normal);
         }
         face.paint(painter, bounds);
+        if (this.isEnabled()) {
+            this.validity.paintOutline(painter, bounds);
+        }
 
         if (!bounds.equals(this.contentFor) || this.textPadding != this.contentPadding
                 || this.revealable != this.contentRevealable || this.lineHeight != this.contentLineHeight) {
@@ -735,6 +773,7 @@ public final class PasswordTextBoxImpl extends BuiltInComposite<PasswordTextBox>
         if (this.isHandled(MODIFIED)) {
             this.report(MODIFIED, this.length(), before);
         }
+        this.validity.check();
     }
 
     private boolean replacesAll(final int start, final int end) {

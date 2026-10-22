@@ -22,6 +22,7 @@ import org.inspirenxe.strata.api.component.HasTooltip;
 import org.inspirenxe.strata.api.control.attribute.popup.Closable;
 import org.inspirenxe.strata.api.control.attribute.popup.Openable;
 import org.inspirenxe.strata.api.control.attribute.value.HasDate;
+import org.inspirenxe.strata.api.control.attribute.value.Validatable;
 import org.inspirenxe.strata.api.text.Text;
 
 import java.time.LocalDate;
@@ -102,7 +103,7 @@ import java.time.LocalDate;
  * interface.</p>
  */
 public interface DatePicker extends Component<DatePicker>, Focusable<DatePicker>, HasCursor<DatePicker>,
-        HasTooltip<DatePicker>, HasDate<DatePicker>, Openable<DatePicker> {
+        HasTooltip<DatePicker>, HasDate<DatePicker>, Openable<DatePicker>, Validatable<DatePicker> {
     /**
      * Style key for behind the focused part (paint, optional).
      */

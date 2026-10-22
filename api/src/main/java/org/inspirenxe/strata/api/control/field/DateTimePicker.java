@@ -23,6 +23,7 @@ import org.inspirenxe.strata.api.control.attribute.popup.Closable;
 import org.inspirenxe.strata.api.control.attribute.popup.Openable;
 import org.inspirenxe.strata.api.control.attribute.value.HasDate;
 import org.inspirenxe.strata.api.control.attribute.value.HasTime;
+import org.inspirenxe.strata.api.control.attribute.value.Validatable;
 import org.inspirenxe.strata.api.event.EventType;
 import org.inspirenxe.strata.api.event.control.ValueEvent;
 import org.inspirenxe.strata.api.event.control.ValueRequestEvent;
@@ -87,7 +88,7 @@ import java.util.Optional;
  */
 public interface DateTimePicker extends Component<DateTimePicker>, Focusable<DateTimePicker>,
         HasCursor<DateTimePicker>, HasTooltip<DateTimePicker>, HasDate<DateTimePicker>, HasTime<DateTimePicker>,
-        Openable<DateTimePicker> {
+        Openable<DateTimePicker>, Validatable<DateTimePicker> {
     /**
      * Style key for behind the focused part (paint, optional).
      */

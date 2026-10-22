@@ -21,6 +21,7 @@ import org.inspirenxe.strata.api.component.HasCursor;
 import org.inspirenxe.strata.api.component.HasTooltip;
 import org.inspirenxe.strata.api.control.attribute.text.HasText;
 import org.inspirenxe.strata.api.control.attribute.value.Toggle;
+import org.inspirenxe.strata.api.control.attribute.value.Validatable;
 import org.inspirenxe.strata.api.event.EventType;
 import org.inspirenxe.strata.api.event.control.ValueEvent;
 import org.inspirenxe.strata.api.event.control.ValueRequestEvent;
@@ -88,7 +89,7 @@ import java.util.Objects;
  * interface.</p>
  */
 public interface CheckBox extends Component<CheckBox>, Focusable<CheckBox>, HasCursor<CheckBox>, HasTooltip<CheckBox>,
-        HasText<CheckBox>, Toggle<CheckBox> {
+        HasText<CheckBox>, Toggle<CheckBox>, Validatable<CheckBox> {
     /**
      * Style key for the unchecked box (paint, required).
      */
@@ -109,6 +110,12 @@ public interface CheckBox extends Component<CheckBox>, Focusable<CheckBox>, HasC
      * Style key for the unchecked box when disabled (paint, optional).
      */
     String STYLE_DISABLED = "checkbox.disabled";
+    /**
+     * Style key for the box while the check box is enabled and its validation is an error, in place of the four
+     * enabled faces, checked or not (paint, optional). The check and mixed marks still draw on it. Without it the box
+     * draws its usual face with a one-unit outline in {@value Validatable#STYLE_ERROR}.
+     */
+    String STYLE_INVALID = "checkbox.invalid";
     /**
      * Style key for the checked box when disabled (paint, optional).
      */

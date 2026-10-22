@@ -57,6 +57,10 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.function.Consumer;
 import java.util.function.UnaryOperator;
+import org.inspirenxe.strata.api.component.Validation;
+import org.inspirenxe.strata.core.control.Validity;
+import org.inspirenxe.strata.core.state.ConversionTarget;
+import java.util.function.Function;
 
 /**
  * The core {@link TextBox}, a single-line field.
@@ -94,7 +98,7 @@ import java.util.function.UnaryOperator;
  * frame first. The clipboard and the caret's blink come from the host's platform. A double click on the first letter
  * of a word selects that word.</p>
  */
-public final class TextBoxImpl extends BuiltInComponent<TextBox> implements TextBox {
+public final class TextBoxImpl extends BuiltInComponent<TextBox> implements TextBox, ConversionTarget {
     /**
      * How long, in milliseconds, the caret stays shown and then hidden. Each edit or caret move restarts the cycle
      * with the caret shown.
@@ -113,6 +117,7 @@ public final class TextBoxImpl extends BuiltInComponent<TextBox> implements Text
     static final Paint DEFAULT_SELECTION = Paint.solid(0x806A9FFF);
     static final Paint DEFAULT_CARET = Paint.solid(0xFFE0E0E0);
 
+    private final Validity validity;
     private final ComponentFactoryImpl ui;
     private final PlainBuffer buffer;
     private final TextBoundaries boundaries;
@@ -177,6 +182,7 @@ public final class TextBoxImpl extends BuiltInComponent<TextBox> implements Text
     @SuppressWarnings("this-escape")
     public TextBoxImpl(final ComponentFactoryImpl ui) {
         super(ui);
+        this.validity = new Validity(this.node(), this::validated);
         this.ui = ui;
         this.buffer = new PlainBuffer();
         this.boundaries = new TextBoundaries(this.buffer);
@@ -667,8 +673,39 @@ public final class TextBoxImpl extends BuiltInComponent<TextBox> implements Text
         return true;
     }
 
+    // ------------------------------------------------------------------
+    // Validatable
+    // ------------------------------------------------------------------
+
+    @Override
+    public Validation validation() {
+        return this.validity.validation();
+    }
+
+    @Override
+    public TextBox setValidation(final Validation validation) {
+        this.validity.set(validation);
+        return this;
+    }
+
+    @Override
+    public TextBox setValidator(final Function<? super TextBox, Validation> validator) {
+        this.validity.setValidator(validator == null ? null : () -> validator.apply(this));
+        return this;
+    }
+
+    @Override
+    public void setConversionError(final Text message) {
+        this.validity.setConversionError(message);
+    }
+
+    private void validated(final Validation validation, final Validation previous) {
+        this.report(VALIDATED, validation, previous);
+    }
+
     @Override
     protected void onApplyTheme(final Theme theme) {
+        this.validity.applyTheme(theme, STYLE_INVALID);
         this.themePadding = theme.insetsOr(STYLE_PADDING, DEFAULT_PADDING);
         if (this.setPadding == null) {
             this.textPadding = this.themePadding;
@@ -713,12 +750,13 @@ public final class TextBoxImpl extends BuiltInComponent<TextBox> implements Text
         final Paint face;
         if (!this.isEnabled()) {
             face = this.disabledPaint;
-        } else if (this.isFocused()) {
-            face = this.focusedPaint;
         } else {
-            face = this.normal;
+            face = this.validity.face(this.isFocused() ? this.focusedPaint : this.normal);
         }
         face.paint(painter, bounds);
+        if (this.isEnabled()) {
+            this.validity.paintOutline(painter, bounds);
+        }
 
         if (!bounds.equals(this.contentFor) || this.textPadding != this.contentPadding) {
             this.contentBox = bounds.shrink(this.textPadding);
@@ -876,6 +914,7 @@ public final class TextBoxImpl extends BuiltInComponent<TextBox> implements Text
         if (this.isHandled(MODIFIED)) {
             this.report(MODIFIED, this.codePoints(), previous.codePointCount(0, previous.length()));
         }
+        this.validity.check();
     }
 
     // ------------------------------------------------------------------

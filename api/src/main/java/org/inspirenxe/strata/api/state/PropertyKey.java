@@ -156,7 +156,9 @@ public record PropertyKey<C, V>(String name, Function<? super C, ? extends V> re
      * }</pre>
      *
      * <p>Bound to a state, a converted key writes the user's change to the state only when it converts. When it does
-     * not, the state keeps its last valid value. When the state changes, the control shows the converted value.</p>
+     * not, the state keeps its last valid value, and a control that is
+     * {@link org.inspirenxe.strata.api.control.attribute.value.Validatable} shows the conversion's message as an
+     * error. When the state changes, the control shows the converted value and the error goes away.</p>
      *
      * @param <M> the type of the model's value
      * @param converter converts between the model's values and the property's

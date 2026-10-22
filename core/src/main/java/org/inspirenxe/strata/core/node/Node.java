@@ -22,6 +22,7 @@ import org.inspirenxe.strata.api.component.Focusable;
 import org.inspirenxe.strata.api.component.HasCursor;
 import org.inspirenxe.strata.api.component.HasTooltip;
 import org.inspirenxe.strata.api.component.Tooltip;
+import org.inspirenxe.strata.api.text.Text;
 import org.inspirenxe.strata.api.event.Event;
 import org.inspirenxe.strata.api.event.EventHandler;
 import org.inspirenxe.strata.api.event.EventType;
@@ -59,7 +60,9 @@ import org.inspirenxe.strata.core.event.ValueRequestEventImpl;
 import org.inspirenxe.strata.core.paint.CanvasPainter;
 import org.inspirenxe.strata.core.state.Binding;
 
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
@@ -148,6 +151,9 @@ public class Node implements ComponentPeer {
     private Paint background;
     private Border border;
     private Tooltip tooltip;
+    // A message shown ahead of the tooltip, such as a validation's, and the tooltip made of both
+    private Text tooltipNotice;
+    private Tooltip noticeTooltip;
 
     private float opacity;
 
@@ -687,7 +693,7 @@ public class Node implements ComponentPeer {
         }
         final Binding<?> replaced = this.bindings.put(key.name(), binding);
         if (replaced != null) {
-            replaced.detach();
+            replaced.release();
         }
         if (this.root != null) {
             binding.attach(this.root.bindingQueue());
@@ -709,7 +715,7 @@ public class Node implements ComponentPeer {
         }
         final Binding<?> removed = this.bindings.remove(key.name());
         if (removed != null) {
-            removed.detach();
+            removed.release();
         }
     }
 
@@ -1464,6 +1470,53 @@ public class Node implements ComponentPeer {
     @Override
     public final void setTooltip(final Tooltip tooltip) {
         this.tooltip = tooltip;
+        this.composeTooltip();
+    }
+
+    /**
+     * Sets a message the host shows first in this component's tooltip, ahead of the tooltip set in code, such as a
+     * control's validation message. {@link #tooltip()} still returns the tooltip set in code; the host shows
+     * {@link #shownTooltip()}.
+     *
+     * @param notice the message, or {@code null} for none
+     */
+    public final void setTooltipNotice(final Text notice) {
+        if (Objects.equals(notice, this.tooltipNotice)) {
+            return;
+        }
+        this.tooltipNotice = notice;
+        this.composeTooltip();
+    }
+
+    /**
+     * Returns the tooltip the host shows: the one set in code, with the {@linkplain #setTooltipNotice notice} ahead
+     * of it when there is one. A notice before a {@link Tooltip.Lines} tooltip is its first line; before a
+     * {@link Tooltip.Custom} one it is a line of text above the custom component. The result is the same object until
+     * either changes, so the host can tell when to show it again.
+     *
+     * @return the tooltip, or {@code null} for none or when the component is not a {@link HasTooltip}
+     */
+    public final Tooltip shownTooltip() {
+        if (!(this.facade instanceof HasTooltip<?>)) {
+            return null;
+        }
+        return this.tooltipNotice == null ? this.tooltip : this.noticeTooltip;
+    }
+
+    private void composeTooltip() {
+        final Text notice = this.tooltipNotice;
+        this.noticeTooltip = notice == null ? null : switch (this.tooltip) {
+            case null -> Tooltip.text(notice);
+            case Tooltip.Lines lines -> {
+                final List<Text> all = new ArrayList<>(lines.lines().size() + 1);
+                all.add(notice);
+                all.addAll(lines.lines());
+                yield Tooltip.lines(all);
+            }
+            case Tooltip.Custom custom -> Tooltip.of(ui -> ui.stackPanel()
+                    .add(new TooltipView((ComponentFactoryImpl) ui, Tooltip.text(notice)))
+                    .add(custom.builder().apply(ui)));
+        };
         if (this.root != null) {
             this.root.tooltipChanged(this);
         }

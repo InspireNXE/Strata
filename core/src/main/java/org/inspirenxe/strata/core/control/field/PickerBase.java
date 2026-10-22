@@ -55,6 +55,11 @@ import java.time.LocalDateTime;
 import java.util.HashSet;
 import java.util.Objects;
 import java.util.Set;
+import org.inspirenxe.strata.api.component.Validation;
+import org.inspirenxe.strata.core.control.Validity;
+import org.inspirenxe.strata.core.state.ConversionTarget;
+import java.util.function.Function;
+import org.inspirenxe.strata.api.control.attribute.value.Validatable;
 
 /**
  * What the date and time pickers share: the field of parts over a {@link SegmentedField}, its draft, its keys, its
@@ -70,7 +75,7 @@ import java.util.Set;
  * @param <T> the picker's own type
  * @param <V> the type of its value
  */
-abstract class PickerBase<T extends Component<T>, V> extends BuiltInComponent<T> {
+abstract class PickerBase<T extends Component<T>, V> extends BuiltInComponent<T> implements ConversionTarget {
     /**
      * The space the icon leaves around it inside the button, in UI units.
      */
@@ -84,6 +89,7 @@ abstract class PickerBase<T extends Component<T>, V> extends BuiltInComponent<T>
      * The parts and their draft.
      */
     final SegmentedField field;
+    private final Validity validity;
     private Text placeholder;
     private boolean clearable;
     private Overlay popup;
@@ -135,6 +141,7 @@ abstract class PickerBase<T extends Component<T>, V> extends BuiltInComponent<T>
     @SuppressWarnings("this-escape")
     PickerBase(final ComponentFactoryImpl ui, final Text placeholder) {
         super(ui);
+        this.validity = new Validity(this.node(), this::validated);
         this.ui = ui;
         this.field = new SegmentedField();
         this.placeholder = placeholder;
@@ -473,8 +480,60 @@ abstract class PickerBase<T extends Component<T>, V> extends BuiltInComponent<T>
         return keys;
     }
 
+    // ------------------------------------------------------------------
+    // Validatable
+    // ------------------------------------------------------------------
+
+    /**
+     * See {@link Validatable#validation()}.
+     *
+     * @return the validation
+     */
+    public Validation validation() {
+        return this.validity.validation();
+    }
+
+    /**
+     * See {@link Validatable#setValidation}.
+     *
+     * @param validation the validation
+     * @return this picker
+     */
+    public T setValidation(final Validation validation) {
+        this.validity.set(validation);
+        return this.self();
+    }
+
+    /**
+     * See {@link Validatable#setValidator}.
+     *
+     * @param validator the validator, or {@code null} for none
+     * @return this picker
+     */
+    public T setValidator(final Function<? super T, Validation> validator) {
+        this.validity.setValidator(validator == null ? null : () -> validator.apply(this.self()));
+        return this.self();
+    }
+
+    @Override
+    public void setConversionError(final Text message) {
+        this.validity.setConversionError(message);
+    }
+
+    private void validated(final Validation validation, final Validation previous) {
+        this.report(Validatable.VALIDATED, validation, previous);
+    }
+
+    /**
+     * Asks the validator again; pickers call this after they report a change of the value.
+     */
+    final void validate() {
+        this.validity.check();
+    }
+
     @Override
     protected void onApplyTheme(final Theme theme) {
+        this.validity.applyTheme(theme, TextBox.STYLE_INVALID);
         this.padding = theme.insetsOr(DatePicker.STYLE_PADDING,
                 theme.insetsOr(TextBox.STYLE_PADDING, TextBoxImpl.DEFAULT_PADDING));
         this.normal = theme.paintOr(TextBox.STYLE_NORMAL, Paint.NONE);
@@ -597,12 +656,13 @@ abstract class PickerBase<T extends Component<T>, V> extends BuiltInComponent<T>
         final Paint face;
         if (!enabled) {
             face = this.disabledPaint;
-        } else if (this.isFocused() || this.isOpen()) {
-            face = this.focusedPaint;
         } else {
-            face = this.normal;
+            face = this.validity.face(this.isFocused() || this.isOpen() ? this.focusedPaint : this.normal);
         }
         face.paint(painter, bounds);
+        if (enabled) {
+            this.validity.paintOutline(painter, bounds);
+        }
 
         if (this.showsPlaceholder()) {
             this.placeholderLine.draw(painter, bounds.x() + this.padding.left(), this.textY);

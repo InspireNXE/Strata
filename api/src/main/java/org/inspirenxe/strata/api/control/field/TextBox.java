@@ -21,6 +21,7 @@ import org.inspirenxe.strata.api.component.HasCursor;
 import org.inspirenxe.strata.api.component.HasTooltip;
 import org.inspirenxe.strata.api.control.attribute.text.TextEntry;
 import org.inspirenxe.strata.api.control.attribute.text.TextInput;
+import org.inspirenxe.strata.api.control.attribute.value.Validatable;
 import org.inspirenxe.strata.api.event.EventType;
 import org.inspirenxe.strata.api.event.control.RequestEvent;
 import org.inspirenxe.strata.api.event.control.ValueEvent;
@@ -187,7 +188,7 @@ import java.util.Objects;
  * interface.</p>
  */
 public interface TextBox extends Component<TextBox>, Focusable<TextBox>, HasCursor<TextBox>, HasTooltip<TextBox>,
-        TextInput<TextBox> {
+        TextInput<TextBox>, Validatable<TextBox> {
     /**
      * Style key for the background when not focused (paint, required).
      */
@@ -200,6 +201,12 @@ public interface TextBox extends Component<TextBox>, Focusable<TextBox>, HasCurs
      * Style key for the background when disabled (paint, required).
      */
     String STYLE_DISABLED = "textbox.disabled";
+    /**
+     * Style key for the background while the box is enabled and its validation is an error, in place of the normal
+     * and focused ones (paint, optional). Without it the box draws its normal face with a one-unit outline in
+     * {@value Validatable#STYLE_ERROR}. Text areas, password boxes and the date and time pickers read it too.
+     */
+    String STYLE_INVALID = "textbox.invalid";
     /**
      * Style key for the text (text style, optional).
      */

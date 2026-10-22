@@ -50,6 +50,9 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.function.Function;
+import org.inspirenxe.strata.api.component.Validation;
+import org.inspirenxe.strata.core.control.Validity;
+import org.inspirenxe.strata.core.state.ConversionTarget;
 
 /**
  * The core {@link ComboBox}. The open list is a {@link ListView} in a popup, not focusable, whose selection is the
@@ -65,7 +68,7 @@ import java.util.function.Function;
  *
  * @param <T> the type of the options
  */
-public final class ComboBoxImpl<T> extends BuiltInComponent<ComboBox<T>> implements ComboBox<T> {
+public final class ComboBoxImpl<T> extends BuiltInComponent<ComboBox<T>> implements ComboBox<T>, ConversionTarget {
     /**
      * The padding when the theme sets no {@value #STYLE_PADDING}: 4 at the sides and 3 at the top and bottom.
      */
@@ -80,6 +83,7 @@ public final class ComboBoxImpl<T> extends BuiltInComponent<ComboBox<T>> impleme
     public static final float ARROW_WIDTH = 7f;
     private static final Set<String> REQUIRED = Set.of(STYLE_NORMAL, STYLE_POPUP);
 
+    private final Validity validity;
     private final ComponentFactoryImpl ui;
     private Insets padding = DEFAULT_PADDING;
     private List<T> options;
@@ -129,6 +133,7 @@ public final class ComboBoxImpl<T> extends BuiltInComponent<ComboBox<T>> impleme
     @SuppressWarnings("this-escape")
     public ComboBoxImpl(final ComponentFactoryImpl ui, final Function<? super T, ?> labelFunction) {
         super(ui);
+        this.validity = new Validity(this.node(), this::validated);
         this.ui = ui;
         this.options = List.of();
         this.labelFunction = Objects.requireNonNull(labelFunction, "labelFunction");
@@ -181,6 +186,7 @@ public final class ComboBoxImpl<T> extends BuiltInComponent<ComboBox<T>> impleme
         this.invalidateLayout();
         if (index != beforeIndex || !this.selected().equals(before)) {
             this.report(SELECTED, index, beforeIndex);
+            this.validity.check();
         }
         return this;
     }
@@ -278,6 +284,7 @@ public final class ComboBoxImpl<T> extends BuiltInComponent<ComboBox<T>> impleme
             this.selectedIndex = index;
             this.shownIndex = -2;
             this.report(SELECTED, index, previous);
+            this.validity.check();
         }
         return this;
     }
@@ -410,8 +417,39 @@ public final class ComboBoxImpl<T> extends BuiltInComponent<ComboBox<T>> impleme
         return REQUIRED;
     }
 
+    // ------------------------------------------------------------------
+    // Validatable
+    // ------------------------------------------------------------------
+
+    @Override
+    public Validation validation() {
+        return this.validity.validation();
+    }
+
+    @Override
+    public ComboBox<T> setValidation(final Validation validation) {
+        this.validity.set(validation);
+        return this;
+    }
+
+    @Override
+    public ComboBox<T> setValidator(final Function<? super ComboBox<T>, Validation> validator) {
+        this.validity.setValidator(validator == null ? null : () -> validator.apply(this));
+        return this;
+    }
+
+    @Override
+    public void setConversionError(final Text message) {
+        this.validity.setConversionError(message);
+    }
+
+    private void validated(final Validation validation, final Validation previous) {
+        this.report(VALIDATED, validation, previous);
+    }
+
     @Override
     protected void onApplyTheme(final Theme theme) {
+        this.validity.applyTheme(theme, STYLE_INVALID);
         this.normal = theme.paintOr(STYLE_NORMAL, Paint.NONE);
         this.hoveredPaint = theme.paintOr(STYLE_HOVERED, this.normal);
         this.disabledPaint = theme.paintOr(STYLE_DISABLED, this.normal);
@@ -469,12 +507,13 @@ public final class ComboBoxImpl<T> extends BuiltInComponent<ComboBox<T>> impleme
         final Paint face;
         if (!enabled) {
             face = this.disabledPaint;
-        } else if (this.isHovered() || this.isFocused() || this.isOpen()) {
-            face = this.hoveredPaint;
         } else {
-            face = this.normal;
+            face = this.validity.face(this.isHovered() || this.isFocused() || this.isOpen() ? this.hoveredPaint : this.normal);
         }
         face.paint(painter, bounds);
+        if (enabled) {
+            this.validity.paintOutline(painter, bounds);
+        }
 
         final Insets padding = this.padding;
         final float textWidth = bounds.width() - padding.horizontal() - ARROW_GAP - ARROW_WIDTH;

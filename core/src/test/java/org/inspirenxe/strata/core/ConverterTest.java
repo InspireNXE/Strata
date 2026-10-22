@@ -214,6 +214,9 @@ class ConverterTest {
             // Each key is an edit: "1" and "10" convert, "100" does not
             this.retype("100");
             assertEquals(10, this.quantity.get());
+            // The state changed to 10 from this field, so the frame leaves the field's "100" alone
+            ConverterTest.this.test.host().flush();
+            assertEquals("100", this.box.text());
             ConverterTest.this.test.host().key(Key.BACKSPACE, KeyAction.PRESS, Modifiers.NONE);
             ConverterTest.this.test.host().key(Key.BACKSPACE, KeyAction.PRESS, Modifiers.NONE);
             assertEquals("1", this.box.text());

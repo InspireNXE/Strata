@@ -21,6 +21,7 @@ import org.inspirenxe.strata.api.component.HasCursor;
 import org.inspirenxe.strata.api.component.HasTooltip;
 import org.inspirenxe.strata.api.control.attribute.text.TextEntry;
 import org.inspirenxe.strata.api.control.attribute.text.TextInput;
+import org.inspirenxe.strata.api.control.attribute.value.Validatable;
 import org.inspirenxe.strata.api.geometry.Insets;
 import org.inspirenxe.strata.api.layout.HorizontalAlignment;
 import org.inspirenxe.strata.api.text.Text;
@@ -86,7 +87,7 @@ import java.util.Objects;
  * interface.</p>
  */
 public interface TextArea extends Component<TextArea>, Focusable<TextArea>, HasCursor<TextArea>, HasTooltip<TextArea>,
-        TextInput<TextArea> {
+        TextInput<TextArea>, Validatable<TextArea> {
     /**
      * The width, in UI units, a text area asks for.
      */
