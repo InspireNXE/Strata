@@ -39,7 +39,8 @@ import java.util.function.Function;
  * <p>While focused and closed: Up and Down select the previous and next option, Home and End the first and last,
  * and Enter, keypad Enter, Space or Alt+Down open the list. The open list takes no focus, so the keys stay with the
  * box: Up and Down move the highlight without wrapping, Enter, keypad Enter or Space selects it, and Escape closes.
- * Held arrows repeat; Enter, Space and Alt+Down do not. A box with no options takes no keys, and a disabled box
+ * Held arrows repeat; Enter, Space and Alt+Down do not. Typing an option's first letters selects it, or highlights
+ * it in the open list, as {@link #setTypeAhead} describes. A box with no options takes no keys, and a disabled box
  * ignores input.</p>
  *
  * <p>Options are drawn with the {@linkplain #setLabelFunction label function}. The one that
@@ -66,8 +67,8 @@ import java.util.function.Function;
  *     closed if it has no options left. Fires only for the user's actions.</li>
  *     <li>{@link Openable#OPENED}: Told after the list opened. Fires for {@link #open()} called from code too.</li>
  *     <li>{@link SingleSelection#SELECT}: Asked before the user changes the selection: a click on a row of the open
- *     list, Enter or Space on the highlighted row of the open list, or the Up, Down, Home and End keys on the closed
- *     box. A choice from the open list closes it before this fires. Moving the highlight in the open list does not fire
+ *     list, Enter or Space on the highlighted row of the open list, or the Up, Down, Home and End keys and
+ *     type-ahead on the closed box. A choice from the open list closes it before this fires. Moving the highlight in the open list does not fire
  *     it, and neither does a choice of the option already selected. The value is the index of the option about to be
  *     selected. A handler may rewrite it to another option's index; an index outside the options is ignored. Fires only
  *     for the user's actions.</li>
@@ -172,6 +173,18 @@ public interface ComboBox<T> extends Component<ComboBox<T>>, Focusable<ComboBox<
      * @return this box
      */
     ComboBox<T> setLabelFunction(Function<? super T, ?> labelFunction);
+
+    /**
+     * Sets the names that type-ahead matches while the box has focus, or turns it off. It works as
+     * {@link ListView#setTypeAhead} describes. On a closed box the match is selected without opening the list,
+     * through {@link SingleSelection#SELECT}; on an open box the highlight moves to it, and Enter or Space picks it.
+     *
+     * @param name returns what an option is called: a {@link org.inspirenxe.strata.api.text.Text}, or any other
+     *     value, named by its appearance's name. By default what the {@linkplain #setLabelFunction label function}
+     *     shows. Null turns type-ahead off.
+     * @return this box
+     */
+    ComboBox<T> setTypeAhead(Function<? super T, ?> name);
 
     /**
      * Returns the selected option.

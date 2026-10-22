@@ -86,6 +86,8 @@ public final class TableViewImpl<T> extends ListBackedControl<T, T, TableView<T>
     private int[] order;
     private TableColumnImpl<T> sortColumn;
     private boolean ascending;
+    // What type-ahead matches, or null for the first text column
+    private Function<? super T, ?> typeAheadName;
 
     // Column offsets and widths, relative to the start of a row
     private float[] columnX;
@@ -128,6 +130,7 @@ public final class TableViewImpl<T> extends ListBackedControl<T, T, TableView<T>
         this.header = new Header(ui, this);
         this.addChild(this.header);
         this.addChild(this.list);
+        this.list.setTypeAhead(this::typeAheadName);
     }
 
     // ------------------------------------------------------------------
@@ -392,6 +395,30 @@ public final class TableViewImpl<T> extends ListBackedControl<T, T, TableView<T>
     @Override
     public Optional<T> selected() {
         return this.list.selected();
+    }
+
+    @Override
+    public TableView<T> setTypeAhead(final Function<? super T, ?> name) {
+        this.typeAheadName = name;
+        this.list.setTypeAhead(name == null ? null : this::typeAheadName);
+        return this;
+    }
+
+    /**
+     * Returns what type-ahead matches for an item: its type-ahead name if one is set, else the text of the first
+     * column whose cells are text, else the item.
+     */
+    private Object typeAheadName(final T item) {
+        if (this.typeAheadName != null) {
+            return this.typeAheadName.apply(item);
+        }
+        for (final TableColumnImpl<T> column : this.columns) {
+            final Function<? super T, ?> text = column.cellText();
+            if (text != null) {
+                return text.apply(item);
+            }
+        }
+        return item;
     }
 
     @Override

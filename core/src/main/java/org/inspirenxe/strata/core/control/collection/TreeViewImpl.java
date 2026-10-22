@@ -90,6 +90,7 @@ public final class TreeViewImpl<T> extends ListBackedControl<T, TreeViewImpl.Ent
         this.indent = DEFAULT_INDENT;
         this.arrow = DEFAULT_ARROW;
         this.list.setKeyFunction(entry -> this.keyFunction.apply(entry.item));
+        this.list.setTypeAhead(Entry::item);
         this.addChild(this.list);
     }
 
@@ -139,6 +140,12 @@ public final class TreeViewImpl<T> extends ListBackedControl<T, TreeViewImpl.Ent
     @Override
     public TreeView<T> setKeyFunction(final Function<? super T, ?> keyFunction) {
         this.keyFunction = Objects.requireNonNull(keyFunction, "keyFunction");
+        return this;
+    }
+
+    @Override
+    public TreeView<T> setTypeAhead(final Function<? super T, ?> name) {
+        this.list.setTypeAhead(name == null ? null : entry -> name.apply(entry.item));
         return this;
     }
 

@@ -59,6 +59,7 @@ import java.util.function.Function;
  *     ends; the list scrolls to keep the selection in view. With nothing selected, Up starts from the last row.
  *     Held keys repeat. Keys with Alt are left alone, and so are keys with Control other than Control+A in
  *     {@link SelectionMode#MULTIPLE} mode. An empty list takes no keys.</li>
+ *     <li>Typing a name's first letters while focused selects the item, as {@link #setTypeAhead} describes.</li>
  *     <li>The wheel and the scroll bar scroll as in {@link org.inspirenxe.strata.api.layout.ScrollPanel}, and the
  *     list uses its theme keys for the bar.</li>
  * </ul>
@@ -78,8 +79,8 @@ import java.util.function.Function;
  * <h2>Events</h2>
  * <ul>
  *     <li>{@link Selection#SELECT}: Asked before the user changes the selection: a press on a row, a press on the
- *     selected row of a {@linkplain #setDeselectable deselectable} list, which clears it, or the Up, Down, Page Up,
- *     Page Down, Home and End keys while the list has focus. It fires only when the selection would change. The value
+ *     selected row of a {@linkplain #setDeselectable deselectable} list, which clears it, the Up, Down, Page Up,
+ *     Page Down, Home and End keys while the list has focus, or {@linkplain #setTypeAhead type-ahead}. It fires only when the selection would change. The value
  *     is the index of the row about to be selected, or -1 when the user clears the selection. A handler may rewrite it
  *     to another index or to -1; the list then selects that row and scrolls it into view, as {@link #select} does, and
  *     ignores any other index outside the items. Fires only for the user's actions.</li>
@@ -205,6 +206,16 @@ public interface ListView<T> extends Component<ListView<T>>, Focusable<ListView<
      * bottom.
      */
     String STYLE_CELL_PADDING = "list.cell.padding";
+    /**
+     * Style key for how long a {@linkplain #setTypeAhead type-ahead} prefix lasts without a key (metric, optional),
+     * in milliseconds. Defaults to {@value #DEFAULT_TYPEAHEAD_TIMEOUT}. Tables, trees and combo boxes read it too.
+     */
+    String STYLE_TYPEAHEAD_TIMEOUT = "list.typeahead.timeout";
+    /**
+     * How long a type-ahead prefix lasts without a key when the theme sets no {@value #STYLE_TYPEAHEAD_TIMEOUT}, in
+     * milliseconds.
+     */
+    long DEFAULT_TYPEAHEAD_TIMEOUT = 1000L;
 
     /**
      * Replaces the items and rebuilds the rows in view. Each selected item moves to the item with its key, as
@@ -231,6 +242,24 @@ public interface ListView<T> extends Component<ListView<T>>, Focusable<ListView<
      * @return this list
      */
     ListView<T> setCellFactory(Function<? super T, ? extends Component<?>> cellFactory);
+
+    /**
+     * Sets the names that type-ahead matches, or turns it off. While the list has focus, printable characters build
+     * a prefix, which starts again after {@value #STYLE_TYPEAHEAD_TIMEOUT} passes without one, and the selection
+     * moves to the next item after the current one whose name starts with it, ignoring case in the translator's
+     * locale. As the prefix grows the search starts at the current item, so it stays on a match that still fits, and
+     * one character typed again and again cycles through the items that start with it. The move asks
+     * {@link Selection#SELECT}, or {@link MultiSelection#SELECT_MANY} in {@link SelectionMode#MULTIPLE} mode, as a
+     * plain press on the row would. A space never starts a prefix, so Space reaches the cells, and characters with
+     * Control or Alt are left alone. A character a cell's own control consumes, such as one typed into a text box in
+     * a row, never reaches the list.
+     *
+     * @param name returns what an item is called: a {@link org.inspirenxe.strata.api.text.Text}, or any other value,
+     *     named by its appearance's name. By default the item itself, so the name is the text a default cell shows.
+     *     Null turns type-ahead off.
+     * @return this list
+     */
+    ListView<T> setTypeAhead(Function<? super T, ?> name);
 
     /**
      * Selects the item at an index and scrolls it into view.

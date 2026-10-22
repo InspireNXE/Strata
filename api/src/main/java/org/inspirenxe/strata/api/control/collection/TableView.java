@@ -297,6 +297,18 @@ public interface TableView<T> extends Component<TableView<T>>, Focusable<TableVi
     TableView<T> refresh();
 
     /**
+     * Sets the names that type-ahead matches while focus is in the table, or turns it off. It works as
+     * {@link ListView#setTypeAhead} describes, over the rows in the shown order.
+     *
+     * @param name returns what an item is called: a {@link Text}, or any other value, named by its appearance's
+     *     name. By default an item is named by the first column whose cells are text, the column a new column or
+     *     {@link TableColumn#setCellText} makes, and by its own appearance's name when no column is. Null turns
+     *     type-ahead off.
+     * @return this table
+     */
+    TableView<T> setTypeAhead(Function<? super T, ?> name);
+
+    /**
      * Returns the index of the selected row in the shown order.
      *
      * @return the index, or -1 when nothing is selected

@@ -38,6 +38,8 @@ public final class TableColumnImpl<T> implements TableColumn<T> {
     private Text title;
     private GridLength width;
     private Function<? super T, ? extends Component<?>> cellFactory;
+    // What the cells show while they are text, or null once a cell factory replaced them
+    private Function<? super T, ?> cellText;
     private Comparator<? super T> comparator;
     private TableViewImpl<T> table;
 
@@ -52,6 +54,7 @@ public final class TableColumnImpl<T> implements TableColumn<T> {
         this.title = Objects.requireNonNull(title, "title");
         this.width = GridLength.weighted(1f);
         this.cellFactory = this.textCells(Function.identity());
+        this.cellText = Function.identity();
     }
 
     @Override
@@ -82,6 +85,7 @@ public final class TableColumnImpl<T> implements TableColumn<T> {
     public TableColumn<T> setCellText(final Function<? super T, ?> text) {
         Objects.requireNonNull(text, "text");
         this.setCellFactory(this.textCells(text));
+        this.cellText = text;
         return this.setComparator(Comparator.comparing(item -> this.ui.appearances().nameOf(text.apply(item)).plain(),
                 String.CASE_INSENSITIVE_ORDER));
     }
@@ -93,6 +97,7 @@ public final class TableColumnImpl<T> implements TableColumn<T> {
     @Override
     public TableColumn<T> setCellFactory(final Function<? super T, ? extends Component<?>> cellFactory) {
         this.cellFactory = Objects.requireNonNull(cellFactory, "cellFactory");
+        this.cellText = null;
         if (this.table != null) {
             this.table.cellsChanged();
         }
@@ -101,6 +106,16 @@ public final class TableColumnImpl<T> implements TableColumn<T> {
 
     Function<? super T, ? extends Component<?>> cellFactory() {
         return this.cellFactory;
+    }
+
+    /**
+     * Returns what the cells show while they are text: the item itself for a new column, or the function
+     * {@link #setCellText} last set.
+     *
+     * @return the text function, or null once {@link #setCellFactory} replaced the text cells
+     */
+    Function<? super T, ?> cellText() {
+        return this.cellText;
     }
 
     @Override

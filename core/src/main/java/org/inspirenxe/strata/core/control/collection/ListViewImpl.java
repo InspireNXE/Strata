@@ -16,9 +16,11 @@
 package org.inspirenxe.strata.core.control.collection;
 
 import org.inspirenxe.strata.api.animation.Animator;
+import org.inspirenxe.strata.api.appearance.Appearances;
 import org.inspirenxe.strata.api.component.Component;
 import org.inspirenxe.strata.api.control.attribute.item.SelectionMode;
 import org.inspirenxe.strata.api.control.collection.ListView;
+import org.inspirenxe.strata.api.event.input.CharEvent;
 import org.inspirenxe.strata.api.event.input.DragEvent;
 import org.inspirenxe.strata.api.event.input.KeyEvent;
 import org.inspirenxe.strata.api.event.input.PointerButtonEvent;
@@ -90,6 +92,9 @@ public final class ListViewImpl<T> extends BuiltInComposite<ListView<T>> impleme
     private List<T> items;
     private Function<? super T, ? extends Component<?>> cellFactory;
     private Function<? super T, ?> keyFunction;
+    // What type-ahead matches, or null while it is off
+    private Function<? super T, ?> typeAheadName;
+    private final TypeAhead typeAhead;
     private float rowHeight;
     private float rowSpacing;
     private int selectedIndex;
@@ -176,6 +181,8 @@ public final class ListViewImpl<T> extends BuiltInComposite<ListView<T>> impleme
         this.items = List.of();
         this.cellFactory = Objects.requireNonNull(cellFactory, "cellFactory");
         this.keyFunction = Function.identity();
+        this.typeAheadName = Function.identity();
+        this.typeAhead = new TypeAhead();
         this.rowHeight = DEFAULT_ROW_HEIGHT;
         this.selectedIndex = -1;
         this.chosen = new TreeSet<>();
@@ -291,6 +298,13 @@ public final class ListViewImpl<T> extends BuiltInComposite<ListView<T>> impleme
     @Override
     public ListView<T> setKeyFunction(final Function<? super T, ?> keyFunction) {
         this.keyFunction = Objects.requireNonNull(keyFunction, "keyFunction");
+        return this;
+    }
+
+    @Override
+    public ListView<T> setTypeAhead(final Function<? super T, ?> name) {
+        this.typeAheadName = name;
+        this.typeAhead.reset();
         return this;
     }
 
@@ -858,6 +872,7 @@ public final class ListViewImpl<T> extends BuiltInComposite<ListView<T>> impleme
         this.track = theme.paintOr(ScrollPanel.STYLE_TRACK, Paint.NONE);
         this.smoothMillis = Motion.millis(theme, ScrollPanel.STYLE_SMOOTH);
         this.placeholderStyle = theme.textStyleOr(STYLE_PLACEHOLDER, TextStyle.DEFAULT);
+        this.typeAhead.applyTheme(theme);
     }
 
     @Override
@@ -1121,6 +1136,24 @@ public final class ListViewImpl<T> extends BuiltInComposite<ListView<T>> impleme
         if (this.glideTo(this.glide.destination(this.scrollY) - event.scrollY() * this.step() * this.scrollRows)) {
             event.consume();
         }
+    }
+
+    @Override
+    protected void onChar(final CharEvent event) {
+        final Function<? super T, ?> name = this.typeAheadName;
+        if (name == null || this.items.isEmpty()) {
+            return;
+        }
+        final Appearances appearances = this.node().factory().appearances();
+        final int found = this.typeAhead.type(event, this.environment().millis(), this.selectedIndex,
+                this.items.size(), index -> appearances.nameOf(name.apply(this.items.get(index))).plain());
+        if (found == TypeAhead.NOT_TAKEN) {
+            return;
+        }
+        if (found >= 0) {
+            this.keyMove(found, false);
+        }
+        event.consume();
     }
 
     @Override

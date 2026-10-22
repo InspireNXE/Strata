@@ -252,6 +252,17 @@ public interface TreeView<T> extends Component<TreeView<T>>, Focusable<TreeView<
     TreeView<T> setPlaceholder(Text placeholder);
 
     /**
+     * Sets the names that type-ahead matches while focus is in the tree, or turns it off. It works as
+     * {@link ListView#setTypeAhead} describes, over the {@linkplain #shownItems() shown rows}; it never expands an
+     * item to look inside it.
+     *
+     * @param name returns what an item is called: a {@link Text}, or any other value, named by its appearance's
+     *     name. By default the item itself. Null turns type-ahead off.
+     * @return this tree
+     */
+    TreeView<T> setTypeAhead(Function<? super T, ?> name);
+
+    /**
      * Returns the selected row.
      *
      * @return the selected row of {@link #shownItems()}, or -1 when nothing is selected

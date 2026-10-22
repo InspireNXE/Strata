@@ -19,6 +19,7 @@ import org.inspirenxe.strata.api.component.CursorKind;
 import org.inspirenxe.strata.api.control.collection.ComboBox;
 import org.inspirenxe.strata.api.control.collection.ListView;
 import org.inspirenxe.strata.api.control.display.Label;
+import org.inspirenxe.strata.api.event.input.CharEvent;
 import org.inspirenxe.strata.api.event.input.FocusEvent;
 import org.inspirenxe.strata.api.event.input.KeyEvent;
 import org.inspirenxe.strata.api.event.input.PointerButtonEvent;
@@ -83,6 +84,10 @@ public final class ComboBoxImpl<T> extends BuiltInComponent<ComboBox<T>> impleme
     private List<T> options;
     private Function<? super T, ?> labelFunction;
     private Function<? super T, ?> keyFunction;
+    // What type-ahead matches in place of the label, while typeAheadOn
+    private Function<? super T, ?> typeAheadName;
+    private boolean typeAheadOn;
+    private final TypeAhead typeAhead;
     private int selectedIndex;
     // Set once an option was selected or code set the selection; until then new options select the first one
     private boolean settled;
@@ -125,6 +130,8 @@ public final class ComboBoxImpl<T> extends BuiltInComponent<ComboBox<T>> impleme
         this.options = List.of();
         this.labelFunction = Objects.requireNonNull(labelFunction, "labelFunction");
         this.keyFunction = Function.identity();
+        this.typeAheadOn = true;
+        this.typeAhead = new TypeAhead();
         this.selectedIndex = -1;
         this.maxVisible = DEFAULT_MAX_VISIBLE_OPTIONS;
         this.normal = Paint.NONE;
@@ -194,6 +201,23 @@ public final class ComboBoxImpl<T> extends BuiltInComponent<ComboBox<T>> impleme
         this.labelFunction = Objects.requireNonNull(labelFunction, "labelFunction");
         this.invalidateLayout();
         return this;
+    }
+
+    @Override
+    public ComboBox<T> setTypeAhead(final Function<? super T, ?> name) {
+        this.typeAheadOn = name != null;
+        this.typeAheadName = name;
+        this.typeAhead.reset();
+        return this;
+    }
+
+    /**
+     * Returns the plain name type-ahead matches for an option: its type-ahead name if one is set, else its label.
+     */
+    private String typeAheadName(final int index) {
+        final T option = this.options.get(index);
+        final Object name = this.typeAheadName != null ? this.typeAheadName.apply(option) : this.labelFunction.apply(option);
+        return this.ui.appearances().nameOf(name).plain();
     }
 
     @Override
@@ -359,6 +383,7 @@ public final class ComboBoxImpl<T> extends BuiltInComponent<ComboBox<T>> impleme
         this.textStyle = theme.textStyleOr(STYLE_TEXT, TextStyle.DEFAULT);
         this.disabledTextStyle = theme.textStyleOr(STYLE_TEXT_DISABLED, this.textStyle);
         this.shownIndex = -2;
+        this.typeAhead.applyTheme(theme);
     }
 
     @Override
@@ -455,6 +480,28 @@ public final class ComboBoxImpl<T> extends BuiltInComponent<ComboBox<T>> impleme
         if (this.list == null || !this.nodeOf(this.list).isHoverWithin()) {
             this.close();
         }
+    }
+
+    @Override
+    protected void onChar(final CharEvent event) {
+        if (!this.typeAheadOn || !this.isEnabled() || this.options.isEmpty()) {
+            return;
+        }
+        final boolean open = this.isOpen();
+        final int current = open ? this.list.selectedIndex() : this.selectedIndex;
+        final int found = this.typeAhead.type(event, this.environment().millis(), current, this.options.size(),
+                this::typeAheadName);
+        if (found == TypeAhead.NOT_TAKEN) {
+            return;
+        }
+        if (found >= 0) {
+            if (open) {
+                this.list.select(found);
+            } else {
+                this.userSelect(found);
+            }
+        }
+        event.consume();
     }
 
     @Override
