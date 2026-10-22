@@ -53,9 +53,14 @@ import java.util.regex.Pattern;
  * for the text and once for the step. Whatever the handlers do, the field then shows the current value.
  * {@link #increment} and {@link #decrement} called from code fire no request.</p>
  *
- * <p>The field is a private {@link TextBoxImpl} whose internal filter keeps out text that could not become a number
- * in the range. The spinner is a composite and not a container, so the field's {@link TextBox} events stop at the
- * spinner.</p>
+ * <p>A step adds the step to the value, then clamps and rounds it. When rounding to the decimals would undo the
+ * step, as a step of 0.25 with no decimals does, the value moves by one unit of the last decimal instead, so a step
+ * moves the value whenever the range leaves room.</p>
+ *
+ * <p>The field is a private {@link TextBoxImpl} whose internal filter takes digits, one decimal point followed by no
+ * more digits than the decimals allow, and a leading minus sign when the minimum is negative. Taking the text clamps
+ * the number to the range. The spinner is a composite and not a container, so the field's {@link TextBox} events stop
+ * at the spinner.</p>
  */
 public final class SpinnerImpl extends BuiltInComposite<Spinner> implements Spinner {
     private final TextBoxImpl field;
@@ -179,7 +184,7 @@ public final class SpinnerImpl extends BuiltInComposite<Spinner> implements Spin
     public void increment() {
         if (this.isEnabled()) {
             this.commit(false);
-            this.setValue(this.value + this.step);
+            this.setValue(this.stepped(1));
         }
     }
 
@@ -187,8 +192,22 @@ public final class SpinnerImpl extends BuiltInComposite<Spinner> implements Spin
     public void decrement() {
         if (this.isEnabled()) {
             this.commit(false);
-            this.setValue(this.value - this.step);
+            this.setValue(this.stepped(-1));
         }
+    }
+
+    /**
+     * Returns the value some steps from the current one, clamped and rounded. When rounding to the decimals would
+     * undo the steps, it is the value one unit of the last decimal away instead, so a step finer than the decimals
+     * still moves the value while the range leaves room.
+     */
+    private double stepped(final int steps) {
+        final double target = this.fit(this.value + this.step * steps);
+        if (target != this.value || steps == 0) {
+            return target;
+        }
+        final double unit = BigDecimal.ONE.movePointLeft(this.decimals).doubleValue();
+        return this.fit(this.value + (steps > 0 ? unit : -unit));
     }
 
     /**
@@ -198,7 +217,7 @@ public final class SpinnerImpl extends BuiltInComposite<Spinner> implements Spin
     private void stepBy(final int steps) {
         if (this.isEnabled()) {
             this.commit(true);
-            this.change(this.value + this.step * steps);
+            this.change(this.stepped(steps));
         }
     }
 

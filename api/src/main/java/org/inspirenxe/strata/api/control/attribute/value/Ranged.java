@@ -33,8 +33,8 @@ import org.inspirenxe.strata.api.state.PropertyKey;
  */
 public interface Ranged<S extends Ranged<S>> extends EventTarget<S> {
     /**
-     * Asked before the user changes the value. The value is the one about to be set, already within the range and
-     * on a step where the control has one. A handler may rewrite it; the control clamps the new value again, and
+     * Asked before the user changes the value. The value is the one about to be set, already within the range, and on
+     * a step where the control keeps its value on steps. A handler may rewrite it; the control clamps the new value again, and
      * does nothing if it equals the current one. A value rewritten to null or NaN leaves the value as it is. Fires
      * only for the user's actions, and only when the value would change. A control the user cannot change, such as a
      * progress bar, never fires it.
