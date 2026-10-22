@@ -146,6 +146,8 @@ public final class ListViewImpl<T> extends BuiltInComposite<ListView<T>> impleme
     // The viewport as drawn: mirrored inside the bounds right to left, where the rows are worked out as for left to
     // right and the node mirrors them
     private Rect shownViewport;
+    // Where rows are clipped and hit: the viewport, or the centered column inside it
+    private Rect rowClip;
     private float rowWidth;
     private float rowX;
     // Set for a list the factory made, which follows the theme's row width and edges
@@ -229,6 +231,7 @@ public final class ListViewImpl<T> extends BuiltInComposite<ListView<T>> impleme
         this.reveal = -1;
         this.viewport = Rect.ZERO;
         this.shownViewport = Rect.ZERO;
+        this.rowClip = Rect.ZERO;
         this.background = Paint.NONE;
         this.row = Paint.NONE;
         this.rowHovered = Paint.NONE;
@@ -1256,6 +1259,9 @@ public final class ListViewImpl<T> extends BuiltInComposite<ListView<T>> impleme
         this.bar.update(this.flow(new Rect(barX, inner.y(), ScrollPanel.BAR_WIDTH, inner.height())),
                 this.viewport.height(), Math.max(total, this.viewport.height()));
         this.shownViewport = this.flow(this.viewport);
+        this.rowClip = column
+                ? this.flow(new Rect(this.rowX, this.viewport.y(), this.rowWidth, this.viewport.height()))
+                : this.shownViewport;
         this.thumbRect = this.bar.thumb(this.scrollY, this.maxScrollY);
         this.edges = this.standalone ? new Rect[] {
                 new Rect(bounds.x(), bounds.y() - 1f, bounds.width(), 1f),
@@ -1267,7 +1273,7 @@ public final class ListViewImpl<T> extends BuiltInComposite<ListView<T>> impleme
 
     @Override
     protected Rect childClip() {
-        return this.shownViewport;
+        return this.rowClip;
     }
 
     @Override

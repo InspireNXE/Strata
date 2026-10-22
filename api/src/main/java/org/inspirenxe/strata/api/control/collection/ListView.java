@@ -188,7 +188,7 @@ public interface ListView<T> extends Component<ListView<T>>, Focusable<ListView<
     /**
      * Style key for the widest a row gets (metric, optional), in UI units. A list wider than this centers a column
      * of rows this wide and puts its scroll bar beside the column, {@value #STYLE_BAR_GAP} units right of it, even
-     * where that reaches past the list's right edge. Defaults
+     * where that reaches past the list's right edge. Rows are clipped to the column. Defaults
      * to 0, which makes rows as wide as the list. Lists inside other controls, such as a table's or a combo box's,
      * ignore it.
      */
