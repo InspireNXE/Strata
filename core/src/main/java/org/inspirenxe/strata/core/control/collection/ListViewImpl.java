@@ -1000,6 +1000,14 @@ public final class ListViewImpl<T> extends BuiltInComposite<ListView<T>> impleme
     }
 
     @Override
+    protected void onPointerRelease(final PointerButtonEvent event) {
+        // A press on the thumb that never became a drag ends here, with no drag end
+        if (event.button() == MouseButton.LEFT) {
+            this.dragging = false;
+        }
+    }
+
+    @Override
     protected void onScroll(final ScrollEvent event) {
         if (this.scrollTo(this.scrollY - event.scrollY() * this.step() * this.scrollRows)) {
             event.consume();

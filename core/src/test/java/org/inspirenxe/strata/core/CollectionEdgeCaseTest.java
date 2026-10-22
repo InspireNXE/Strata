@@ -28,8 +28,12 @@ import org.inspirenxe.strata.api.input.Key;
 import org.inspirenxe.strata.api.input.KeyAction;
 import org.inspirenxe.strata.api.input.Modifier;
 import org.inspirenxe.strata.api.input.Modifiers;
+import org.inspirenxe.strata.api.input.MouseButton;
 import org.inspirenxe.strata.api.layout.AbsolutePanel;
 import org.inspirenxe.strata.api.layout.GridLength;
+import org.inspirenxe.strata.api.layout.ScrollPanel;
+import org.inspirenxe.strata.api.theme.Paint;
+import org.inspirenxe.strata.api.theme.Themes;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
@@ -180,6 +184,37 @@ class CollectionEdgeCaseTest {
             CollectionEdgeCaseTest.this.test.host().key(Key.TAB, KeyAction.PRESS, Modifiers.NONE);
             assertFalse(this.combo.isFocused());
             assertFalse(this.combo.isOpen());
+        }
+    }
+
+    @Nested
+    class ListThumbs {
+        private static final String THUMB = "#FF111111";
+        private static final String HOVERED = "#FF222222";
+
+        private List<String> thumbFills(final TestHost host) {
+            final DrawLog canvas = new DrawLog();
+            host.host().render(canvas);
+            return canvas.lines("fill 94,").stream()
+                    .filter(line -> line.endsWith(THUMB) || line.endsWith(HOVERED))
+                    .map(line -> line.substring(line.length() - THUMB.length()))
+                    .toList();
+        }
+
+        @Test
+        void aPressOnTheThumbWithoutADragLeavesItPlainOnRelease() {
+            final TestHost host = new TestHost(new TestPlatform(), Themes.flat().toBuilder()
+                    .paint(ScrollPanel.STYLE_THUMB, Paint.solid(0xFF111111))
+                    .paint(ScrollPanel.STYLE_THUMB_HOVERED, Paint.solid(0xFF222222))
+                    .build(), 300, 300);
+            final ListView<Integer> list = host.factory().<Integer>listView().setItems(numbers(50));
+            list.setSize(100, 100);
+            host.show(host.factory().absolutePanel().add(list, 0, 0));
+            assertEquals(List.of(THUMB), this.thumbFills(host));
+            host.host().pointerButton(97, 5, MouseButton.LEFT, true, Modifiers.NONE);
+            assertEquals(List.of(HOVERED), this.thumbFills(host));
+            host.host().pointerButton(97, 5, MouseButton.LEFT, false, Modifiers.NONE);
+            assertEquals(List.of(THUMB), this.thumbFills(host));
         }
     }
 }
