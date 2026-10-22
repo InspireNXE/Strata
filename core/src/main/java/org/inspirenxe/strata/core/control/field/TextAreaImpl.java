@@ -57,7 +57,8 @@ import java.util.function.UnaryOperator;
  * where a line wraps. Rows are worked out again only when the text, the style or the content size changes, and each
  * row keeps its span, so painting measures nothing. The caret stays shown and then hidden for the theme's
  * {@value TextBox#STYLE_CARET_BLINK}, {@link TextBoxImpl#BLINK_MILLIS} milliseconds each by default. Setting the text
- * puts the caret at its end and scrolls back to the top.
+ * puts the caret at its end and scrolls back to the top, and the view stays there until the caret moves, so new text
+ * shows its start.
  *
  * <p>A row that wraps keeps its trailing space, and the caret cannot sit after its last character: that position is
  * the start of the next row. The view scrolls to keep the caret in sight after the caret moves, but not on other
@@ -236,7 +237,7 @@ public final class TextAreaImpl extends BuiltInComponent<TextArea> implements Te
             this.editor.place(this.buffer.length());
             this.scrollX = 0f;
             this.scrollY = 0f;
-            this.changed(previous);
+            this.changed(previous, false);
         }
         return this;
     }
@@ -271,7 +272,7 @@ public final class TextAreaImpl extends BuiltInComponent<TextArea> implements Te
             final String previous = this.buffer.toString();
             this.buffer.truncate(this.buffer.offsetByCodePoints(0, maxLength));
             this.editor.clamp();
-            this.changed(previous);
+            this.changed(previous, true);
         }
         return this;
     }
@@ -927,9 +928,17 @@ public final class TextAreaImpl extends BuiltInComponent<TextArea> implements Te
         this.revealPending = true;
     }
 
-    private void changed(final String previous) {
+    /**
+     * Reports a change of the text, from any source: {@link TextArea#EDITED}, then {@link TextArea#MODIFIED}.
+     *
+     * @param reveal whether the next frame scrolls to the caret; false keeps the view where it is
+     */
+    private void changed(final String previous, final boolean reveal) {
         this.rowsDirty = true;
         this.editor.moved();
+        if (!reveal) {
+            this.revealPending = false;
+        }
         this.report(EDITED, this.buffer.toString(), previous);
         if (this.isHandled(MODIFIED)) {
             this.report(MODIFIED, this.codePoints(), previous.codePointCount(0, previous.length()));
@@ -1106,7 +1115,7 @@ public final class TextAreaImpl extends BuiltInComponent<TextArea> implements Te
 
         @Override
         public void userChanged(final String previous) {
-            TextAreaImpl.this.changed(previous);
+            TextAreaImpl.this.changed(previous, true);
         }
     }
 }

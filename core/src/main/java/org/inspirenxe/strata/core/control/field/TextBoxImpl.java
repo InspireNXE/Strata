@@ -58,7 +58,7 @@ import java.util.function.Consumer;
 import java.util.function.UnaryOperator;
 
 /**
- * The core {@link TextBox}, a single-line field ported from Wintergreen's {@code TextBox}.
+ * The core {@link TextBox}, a single-line field.
  *
  * <p>The box is focusable and tabbable, shows a text cursor, accepts text input, is at least 20 units wide, and
  * measures at least 20 tall, though a smaller height set on it applies. It
@@ -70,9 +70,8 @@ import java.util.function.UnaryOperator;
  * <p>Every user edit that would change the text fires {@link TextBox#MODIFY} and then {@link TextBox#EDIT} when a
  * handler for either is on its path. While the handlers run the box still holds the text and selection from before
  * the edit; a canceled {@code MODIFY} ends the edit there. The final text then has its line breaks and other control
- * characters dropped, is cut to
- * the length limit and goes through the internal filter, and the caret goes as many characters from its end as the
- * edit left it, with nothing selected. With neither handler on the path the edit applies directly, without putting
+ * characters dropped, is cut to the length limit and goes through the internal filter, and the caret goes as many
+ * characters from its end as the edit left it, with nothing selected. With neither handler on the path the edit applies directly, without putting
  * the old text back first. Every change reports {@link TextBox#EDITED} and then {@link TextBox#MODIFIED}. Enter fires
  * {@link TextBox#SUBMIT} on every press, but is consumed only when a handler for {@link TextBox#SUBMIT} or
  * {@link TextBox#SUBMITTED} is on the path, so an ancestor's key handler still sees Enter from a box nobody
@@ -84,14 +83,9 @@ import java.util.function.UnaryOperator;
  * as wide as the box. A press on a row takes focus away from the box, as a press on anything that cannot take focus
  * does; the box keeps the list open through that and takes focus back without moving the caret.</p>
  *
- * <p>Where it departs from Wintergreen:</p>
- * <ul>
- *     <li>A click places the caret when it happens. Wintergreen waited for the next frame because only painting
- *     could measure text; here the {@code Environment} measures at any time.</li>
- *     <li>The clipboard and the time come from the host's platform instead of AWT and the wall clock.</li>
- *     <li>Editing works in whole code points, so surrogate pairs are never split.</li>
- *     <li>Double-clicking the first letter of a word selects that word. Wintergreen selected the word before it.</li>
- * </ul>
+ * <p>A press places the caret when it happens, measuring the text through the {@code Environment}, so it needs no
+ * frame first. The clipboard and the caret's blink come from the host's platform. A double click on the first letter
+ * of a word selects that word.</p>
  */
 public final class TextBoxImpl extends BuiltInComponent<TextBox> implements TextBox {
     /**

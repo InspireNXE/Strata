@@ -300,9 +300,9 @@ public interface TextBox extends Component<TextBox>, Focusable<TextBox>, HasCurs
     String text();
 
     /**
-     * Replaces the text, removing line breaks and other control characters and cutting it to {@link #maxLength()},
-     * and puts the caret at the end. {@link #EDITED} fires if the result differs from the current text;
-     * {@link #EDIT} does not.
+     * Replaces the text, removing line breaks and other control characters and cutting it to {@link #maxLength()}.
+     * If the result differs from the current text, the caret goes to the end with nothing selected and
+     * {@link #EDITED} fires; otherwise nothing changes. {@link #EDIT} never fires.
      *
      * @param text the new text
      * @return this box

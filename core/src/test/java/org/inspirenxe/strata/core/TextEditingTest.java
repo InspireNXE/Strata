@@ -34,6 +34,7 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Editing that the text box and the text area share through one editing core, and the fixes made to it. With the
@@ -303,6 +304,30 @@ class TextEditingTest {
             TextEditingTest.this.type("x");
 
             assertEquals(List.of("modify", "modified"), this.heard);
+        }
+    }
+
+    @Nested
+    class SettingAreaText {
+
+        private void render() {
+            TextEditingTest.this.test.host().render(new NullCanvas());
+        }
+
+        @Test
+        void newTextShowsItsStartUntilTheCaretMoves() {
+            final TextArea area = TextEditingTest.this.showArea("");
+            final String lines = "one\ntwo\nthree\nfour\nfive\nsix\nseven\neight\nnine\nten";
+
+            area.setText(lines);
+            this.render();
+
+            assertEquals(0f, area.scrollY(), "the view stays at the top");
+            assertEquals(lines.length(), area.caret(), "with the caret at the end");
+
+            TextEditingTest.this.press(Key.LEFT, Modifiers.NONE);
+            this.render();
+            assertTrue(area.scrollY() > 0f, "moving the caret brings it into view");
         }
     }
 }

@@ -56,7 +56,8 @@ public interface TextInput<S extends TextInput<S>> extends TextEntry<S> {
     /**
      * The text, as {@link #text()} and {@link #setText} say. Binds two ways through {@link #EDITED}, so a bound
      * state takes each edit the user makes once {@link #EDIT} accepted it. A text set from the binding moves the
-     * caret to the end, as {@code setText} does.
+     * caret to the end when it differs from the control's, as {@code setText} does, so the binding writing back the
+     * text the user just typed leaves the caret where it is.
      */
     PropertyKey<TextInput<?>, String> TEXT = PropertyKey.of("text_input.text", TextInput::text, TextInput::setText,
             EDITED);
@@ -69,7 +70,8 @@ public interface TextInput<S extends TextInput<S>> extends TextEntry<S> {
     String text();
 
     /**
-     * Replaces the text. The caret moves to the end and the selection is cleared.
+     * Replaces the text. If that changes the text, the caret moves to the end and the selection is cleared. Setting
+     * the text the control already holds changes nothing, so the caret and the selection stay where they are.
      *
      * @param text the text, or an empty string for none
      * @return this control

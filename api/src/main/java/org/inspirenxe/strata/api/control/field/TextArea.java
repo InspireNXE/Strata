@@ -134,8 +134,10 @@ public interface TextArea extends Component<TextArea>, Focusable<TextArea>, HasC
     String text();
 
     /**
-     * Replaces the text, cut to the length limit, puts the caret at its end and scrolls to the top.
-     * {@link #EDITED} fires if the text changed; {@link #EDIT} does not.
+     * Replaces the text, cut to the length limit. If that changes the text, the caret goes to its end with nothing
+     * selected and the view scrolls to the top, where it stays until the caret moves, so the area shows the start of
+     * the new text. {@link #EDITED} fires if the text changed; {@link #EDIT} does not. Setting the text it already
+     * holds changes nothing.
      *
      * @param text the new text; its line breaks become {@code \n} and its control characters other than tabs are
      *     dropped, as pasted text's are
