@@ -29,9 +29,12 @@ import org.inspirenxe.strata.api.layout.HorizontalAlignment;
 /**
  * A number in a text field, with buttons to step it up and down.
  *
- * <p>The field is a {@link TextBox} and takes its look and editing from it. It accepts only digits, one decimal point
- * followed by no more digits than the {@linkplain #decimals() decimals} allow, and a leading minus sign when the
- * minimum is negative. Typed text becomes the value on Enter and when the field loses focus, clamped to the range;
+ * <p>The field is a {@link TextBox} and takes its look and editing from it. It shows the value as the language of
+ * the platform's translator writes numbers, with its digits, decimal separator and minus sign and no grouping, as the
+ * number {@linkplain org.inspirenxe.strata.api.state.Converters converters} do, so a German user sees and types
+ * "2,5". It accepts only digits, the language's or ASCII ones, one decimal separator followed by no more digits than
+ * the {@linkplain #decimals() decimals} allow, and a leading minus sign when the minimum is negative. A period is a
+ * decimal separator in every language, since numeric keypads type one. Typed text becomes the value on Enter and when the field loses focus, clamped to the range;
  * text that is not a number goes back to the current value. Up and Down step by one step while the field has focus, and
  * Page Up and Page Down by ten; held keys repeat, and with Control or Alt held they do nothing. The wheel
  * steps once for each vertical scroll while the pointer is over the spinner, up when it turns away from the user. The

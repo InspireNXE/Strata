@@ -29,8 +29,9 @@ import java.util.function.Function;
  * }</pre>
  *
  * <p>The number converters format and parse in the locale of the platform's translator, read on each call, so "2,5"
- * is two and a half where the decimal separator is a comma. They format without grouping and parse with or without
- * it, ignore spaces around the number, and turn a null model into empty text. Their messages are the translation keys
+ * is two and a half where the decimal separator is a comma. They format as a
+ * {@link org.inspirenxe.strata.api.control.field.Spinner} shows its value, in the language's digits and signs without
+ * grouping, and parse with or without grouping, ignore spaces around the number, and turn a null model into empty text. Their messages are the translation keys
  * {@code strata.validation.integer}, {@code strata.validation.integer_range}, {@code strata.validation.decimal} and
  * {@code strata.validation.decimal_range}, which have English in Strata's core, such as "Enter a whole number from 1
  * to 64".</p>

@@ -38,10 +38,10 @@ import org.inspirenxe.strata.api.theme.Theme;
 import org.inspirenxe.strata.core.control.Rings;
 import org.inspirenxe.strata.core.node.BuiltInComposite;
 import org.inspirenxe.strata.core.node.ComponentFactoryImpl;
+import org.inspirenxe.strata.core.text.Numbers;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
-import java.util.Locale;
 import java.util.regex.Pattern;
 import org.inspirenxe.strata.api.component.Validation;
 import org.inspirenxe.strata.api.text.Text;
@@ -63,9 +63,11 @@ import java.util.function.Function;
  * step, as a step of 0.25 with no decimals does, the value moves by one unit of the last decimal instead, so a step
  * moves the value whenever the range leaves room.</p>
  *
- * <p>The field is a private {@link TextBoxImpl} whose internal filter takes digits, one decimal point followed by no
- * more digits than the decimals allow, and a leading minus sign when the minimum is negative. Taking the text clamps
- * the number to the range. The spinner is a composite and not a container, so the field's {@link TextBox} events stop
+ * <p>The field is a private {@link TextBoxImpl} that shows the value through {@link Numbers} of the translator's
+ * locale. Its internal filter takes ASCII digits and the locale's, one decimal separator, the locale's or a period,
+ * followed by no more digits than the decimals allow, and a leading minus sign, the locale's or a hyphen, when the
+ * minimum is negative. A measure that finds the translator's locale changed shows the value again in the new one.
+ * Taking the text clamps the number to the range. The spinner is a composite and not a container, so the field's {@link TextBox} events stop
  * at the spinner.</p>
  */
 public final class SpinnerImpl extends BuiltInComposite<Spinner> implements Spinner, ConversionTarget {
@@ -77,6 +79,7 @@ public final class SpinnerImpl extends BuiltInComposite<Spinner> implements Spin
     private double step;
     private int decimals;
     private Pattern accepted;
+    private Numbers numbers;
     private float pointerY;
     private Rect buttons;
     // The halves of the button column, worked out during arrange
@@ -114,6 +117,7 @@ public final class SpinnerImpl extends BuiltInComposite<Spinner> implements Spin
         this.field.onEvent(Focusable.FOCUS_LOST, event -> this.commit(true));
         this.setFocusDelegate(this.field);
         this.addChild(this.field);
+        this.numbers = Numbers.current();
         this.updatePattern();
         this.show();
         this.setCursor(CursorKind.HAND);
@@ -270,10 +274,7 @@ public final class SpinnerImpl extends BuiltInComposite<Spinner> implements Spin
     }
 
     private String format(final double value) {
-        if (this.decimals == 0) {
-            return Long.toString(Math.round(value));
-        }
-        return String.format(Locale.ROOT, "%." + this.decimals + "f", value);
+        return this.numbers.format(value, this.decimals);
     }
 
     /**
@@ -289,13 +290,12 @@ public final class SpinnerImpl extends BuiltInComposite<Spinner> implements Spin
      * @param user true to set the value through {@code change}, false to call {@link #setValue} directly
      */
     private void commit(final boolean user) {
-        final double parsed;
-        try {
-            parsed = Double.parseDouble(this.field.text());
-        } catch (final NumberFormatException ignored) {
+        final BigDecimal number = this.numbers.parse(this.field.text(), false);
+        if (number == null) {
             this.show();
             return;
         }
+        final double parsed = number.doubleValue();
         if (user) {
             this.change(parsed);
         } else {
@@ -304,9 +304,19 @@ public final class SpinnerImpl extends BuiltInComposite<Spinner> implements Spin
     }
 
     private void updatePattern() {
-        final String sign = this.min < 0.0 ? "-?" : "";
-        final String fraction = this.decimals > 0 ? "(\\.\\d{0," + this.decimals + "})?" : "";
-        this.accepted = Pattern.compile(sign + "\\d*" + fraction);
+        final String digit = "[0-9" + escaped(this.numbers.zero()) + "-" + escaped((char) (this.numbers.zero() + 9))
+                + "]";
+        final String sign = this.min < 0.0 ? "[-\\x{2212}" + escaped(this.numbers.minus()) + "]?" : "";
+        final String fraction = this.decimals > 0
+                ? "([." + escaped(this.numbers.separator()) + "]" + digit + "{0," + this.decimals + "})?" : "";
+        this.accepted = Pattern.compile(sign + digit + "*" + fraction);
+    }
+
+    /**
+     * Writes a char as a regular expression escape, so a locale's sign or digit can sit in a character class.
+     */
+    private static String escaped(final char c) {
+        return "\\x{" + Integer.toHexString(c) + "}";
     }
 
     // ------------------------------------------------------------------
@@ -356,6 +366,12 @@ public final class SpinnerImpl extends BuiltInComposite<Spinner> implements Spin
 
     @Override
     protected Size measure(final MeasureContext context, final float availableWidth, final float availableHeight) {
+        final Numbers current = Numbers.current();
+        if (!current.locale().equals(this.numbers.locale())) {
+            this.numbers = current;
+            this.updatePattern();
+            this.show();
+        }
         final Size field = context.measure(this.field, Math.max(0f, availableWidth - BUTTON_WIDTH), availableHeight);
         return new Size(DEFAULT_WIDTH, field.height());
     }
