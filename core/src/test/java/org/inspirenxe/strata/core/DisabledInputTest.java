@@ -191,7 +191,8 @@ class DisabledInputTest {
                         if (method.getName().equals("requestCursor")) {
                             cursors.add((CursorKind) args[0]);
                         }
-                        return null;
+                        // The host asks whether a kind shows before it asks for it
+                        return method.getName().equals("showsCursor") ? Boolean.TRUE : null;
                     });
             DisabledInputTest.this.test.host().render(canvas);
 

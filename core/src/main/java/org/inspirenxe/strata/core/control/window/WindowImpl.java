@@ -341,7 +341,9 @@ public final class WindowImpl extends BuiltInContainer<Window> implements Window
         final boolean horizontal = (edges & (LEFT | RIGHT)) != 0;
         final boolean vertical = (edges & (TOP | BOTTOM)) != 0;
         if (horizontal && vertical) {
-            return CursorKind.RESIZE_ALL;
+            // Top left and bottom right resize along one diagonal, top right and bottom left along the other
+            final boolean down = ((edges & LEFT) != 0) == ((edges & TOP) != 0);
+            return down ? CursorKind.RESIZE_DIAGONAL_DOWN : CursorKind.RESIZE_DIAGONAL_UP;
         }
         if (horizontal) {
             return CursorKind.RESIZE_HORIZONTAL;

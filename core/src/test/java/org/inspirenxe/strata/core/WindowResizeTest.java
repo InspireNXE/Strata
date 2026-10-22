@@ -182,7 +182,7 @@ class WindowResizeTest {
     @Test
     void theCursorShowsWhatAPressWouldResize() {
         this.move(195, 185);
-        assertEquals(CursorKind.RESIZE_ALL, this.window.cursor().orElseThrow());
+        assertEquals(CursorKind.RESIZE_DIAGONAL_DOWN, this.window.cursor().orElseThrow());
         this.move(150, 150);
         assertEquals(Optional.empty(), this.window.cursor());
 
@@ -191,6 +191,12 @@ class WindowResizeTest {
         assertEquals(CursorKind.RESIZE_HORIZONTAL, this.window.cursor().orElseThrow());
         this.move(150, 189);
         assertEquals(CursorKind.RESIZE_VERTICAL, this.window.cursor().orElseThrow());
+        this.move(101, 111);
+        assertEquals(CursorKind.RESIZE_DIAGONAL_DOWN, this.window.cursor().orElseThrow());
+        this.move(199, 111);
+        assertEquals(CursorKind.RESIZE_DIAGONAL_UP, this.window.cursor().orElseThrow());
+        this.move(101, 189);
+        assertEquals(CursorKind.RESIZE_DIAGONAL_UP, this.window.cursor().orElseThrow());
         this.move(10, 10);
         this.move(150, 150);
         assertEquals(Optional.empty(), this.window.cursor());

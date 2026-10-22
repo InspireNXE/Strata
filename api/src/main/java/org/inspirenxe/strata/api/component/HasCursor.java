@@ -22,7 +22,7 @@ import java.util.Optional;
  *
  * <p>The host shows the cursor of the deepest component under the pointer that has one set, looking through its
  * ancestors, and {@link CursorKind#ARROW} when none has. A cursor set on a panel therefore covers what is inside it.
- * Engines without a matching cursor show the closest one they have.</p>
+ * A kind the engine cannot show gives way to its {@linkplain CursorKind#fallback() fallback}.</p>
  *
  * <p>To give a custom component a cursor, extend {@link org.inspirenxe.strata.api.extension.CustomComponent} and
  * declare {@code implements HasCursor<Self>}: the class already has both methods. Do not implement this interface any

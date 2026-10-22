@@ -1123,13 +1123,25 @@ public final class Root {
         // A disabled node shows the cursor of the nearest node that would take the pointer
         for (Node node = usableAncestor(this.hovered); node != null; node = node.parentNode()) {
             if (node.cursor() != null) {
-                canvas.requestCursor(node.cursor());
+                requestCursor(canvas, node.cursor());
                 return;
             }
         }
         if (this.hovered != null) {
             canvas.requestCursor(CursorKind.ARROW);
         }
+    }
+
+    /**
+     * Asks a canvas for a cursor, or for the first kind along its fallbacks that the canvas shows, ending at the
+     * arrow.
+     */
+    private static void requestCursor(final Canvas canvas, final CursorKind cursor) {
+        CursorKind kind = cursor;
+        while (kind != CursorKind.ARROW && !canvas.showsCursor(kind)) {
+            kind = kind.fallback();
+        }
+        canvas.requestCursor(kind);
     }
 
     private void pumpKeyRepeat() {

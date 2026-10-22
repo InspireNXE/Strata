@@ -206,6 +206,16 @@ public abstract class CanvasContract {
     }
 
     @Test
+    void showsTheArrowAndAnswersForEveryCursor() {
+        this.drawn(8, 8, canvas -> {
+            assertTrue(canvas.showsCursor(CursorKind.ARROW), "a canvas must show the arrow");
+            for (final CursorKind cursor : CursorKind.values()) {
+                assertDoesNotThrow(() -> canvas.showsCursor(cursor), cursor.name());
+            }
+        });
+    }
+
+    @Test
     void acceptsTheCallsWithDefaults() {
         final PixelBuffer buffer = PixelBuffer.of(4, 4).fill(RED).changed();
         assertDoesNotThrow(() -> this.drawn(32, 32, canvas -> {

@@ -245,12 +245,34 @@ public interface Canvas {
 
     /**
      * Asks for a mouse cursor. A host calls it at most once per frame, after drawing, while the pointer is over a
-     * component; the adapter shows the cursor (or the closest it has) until asked for another. In a frame without
-     * a request, show the default cursor.
+     * component or a drag carries a transfer; the adapter shows the cursor (or the closest it has) until asked for
+     * another. In a frame without a request, show the default cursor. The host asks only for kinds
+     * {@link #showsCursor} accepts, walking {@link CursorKind#fallback()} down to {@link CursorKind#ARROW} for the
+     * others, but the canvas must accept every kind without throwing.
      *
      * @param cursor the cursor to show
      */
     void requestCursor(CursorKind cursor);
+
+    /**
+     * Returns whether the canvas can show a cursor kind. The host asks before {@link #requestCursor}, and asks for
+     * the kind's {@linkplain CursorKind#fallback() fallback} instead when the answer is false. It must answer true
+     * for {@link CursorKind#ARROW}, from any frame, without drawing anything.
+     *
+     * <p>The default accepts the eight kinds Strata had before the diagonal, wait, progress, grab, copy, no-drop and
+     * help cursors were added: {@code ARROW}, {@code TEXT}, {@code HAND}, {@code CROSSHAIR},
+     * {@code RESIZE_HORIZONTAL}, {@code RESIZE_VERTICAL}, {@code RESIZE_ALL} and {@code NOT_ALLOWED}. A canvas that
+     * shows more overrides it.</p>
+     *
+     * @param cursor the kind
+     * @return true if {@link #requestCursor} shows it as itself
+     */
+    default boolean showsCursor(final CursorKind cursor) {
+        return switch (cursor) {
+            case ARROW, TEXT, HAND, CROSSHAIR, RESIZE_HORIZONTAL, RESIZE_VERTICAL, RESIZE_ALL, NOT_ALLOWED -> true;
+            default -> false;
+        };
+    }
 
     /**
      * Turns anti-aliasing on or off for what is drawn until the matching {@link #popSmoothing()}. Settings nest, and

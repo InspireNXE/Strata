@@ -25,6 +25,7 @@ import org.inspirenxe.strata.spi.Canvas;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 
 /**
  * A canvas that records fills and text, counts clip and transform pushes, and throws when a pop has no matching push.
@@ -34,6 +35,8 @@ public final class NullCanvas implements Canvas {
     private final List<TextSpan> texts;
     private int clipDepth;
     private int transformDepth;
+    private CursorKind cursor;
+    private Set<CursorKind> shownCursors;
 
     public NullCanvas() {
         this.fills = new ArrayList<>();
@@ -50,6 +53,27 @@ public final class NullCanvas implements Canvas {
 
     public int clipDepth() {
         return this.clipDepth;
+    }
+
+    /**
+     * Returns the cursor last requested, or null before any request.
+     */
+    public CursorKind cursor() {
+        return this.cursor;
+    }
+
+    /**
+     * Makes {@link #showsCursor} answer from a set instead of the default, so a test can stand in for a canvas that
+     * shows more or fewer kinds.
+     */
+    public NullCanvas showCursors(final Set<CursorKind> kinds) {
+        this.shownCursors = kinds;
+        return this;
+    }
+
+    @Override
+    public boolean showsCursor(final CursorKind cursor) {
+        return this.shownCursors == null ? Canvas.super.showsCursor(cursor) : this.shownCursors.contains(cursor);
     }
 
     @Override
@@ -113,5 +137,6 @@ public final class NullCanvas implements Canvas {
 
     @Override
     public void requestCursor(final CursorKind cursor) {
+        this.cursor = cursor;
     }
 }

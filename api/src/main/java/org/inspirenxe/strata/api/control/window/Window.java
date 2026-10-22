@@ -57,7 +57,8 @@ import org.inspirenxe.strata.api.text.Text;
  *     never below the width its title bar asks for or the bar's height plus the grip, and inside the slot its parent
  *     gives it. Each resize sets the window's {@linkplain #setSize fixed size} and moves it by its
  *     {@linkplain #setOffset offset}, so its alignment in the slot no longer matters. The pointer shows
- *     {@link org.inspirenxe.strata.api.component.CursorKind#RESIZE_ALL} over the grip and the corners, and
+ *     {@link org.inspirenxe.strata.api.component.CursorKind#RESIZE_DIAGONAL_DOWN} over the grip and the top left
+ *     corner, {@code RESIZE_DIAGONAL_UP} over the other two corners, and
  *     {@code RESIZE_HORIZONTAL} or {@code RESIZE_VERTICAL} over an edge. A child under the grip or an edge that
  *     consumes the press, such as a button, takes it instead, and one with its own cursor shows that.</li>
  * </ul>
