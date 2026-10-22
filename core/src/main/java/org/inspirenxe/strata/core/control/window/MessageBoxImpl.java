@@ -27,6 +27,7 @@ import org.inspirenxe.strata.api.extension.MeasureContext;
 import org.inspirenxe.strata.api.geometry.Insets;
 import org.inspirenxe.strata.api.geometry.Rect;
 import org.inspirenxe.strata.api.geometry.Size;
+import org.inspirenxe.strata.api.input.KeyAction;
 import org.inspirenxe.strata.api.layout.Anchor;
 import org.inspirenxe.strata.api.layout.HorizontalAlignment;
 import org.inspirenxe.strata.api.layout.Orientation;
@@ -37,6 +38,7 @@ import org.inspirenxe.strata.api.text.Text;
 import org.inspirenxe.strata.api.theme.Theme;
 import org.inspirenxe.strata.core.node.BuiltInComposite;
 import org.inspirenxe.strata.core.node.ComponentFactoryImpl;
+import org.inspirenxe.strata.core.node.InitialFocus;
 
 import java.util.EnumMap;
 import java.util.Map;
@@ -47,11 +49,13 @@ import java.util.Objects;
  * of buttons, each {@link #BUTTON_WIDTH} units wide, 4 units apart, unless the theme's metrics say otherwise. With
  * a button width of 0 the message is given its whole wrap width and the buttons split it evenly, less the gaps, each
  * no wider than the theme's maximum, in a centered row. The box itself is centered and the window fills it. An Escape
- * press sent to the box itself, as when its dialog has nothing focused, counts as one on the window. A box the host
+ * press sent to the box itself, as when its dialog has nothing focused, counts as one on the window. The default
+ * result's button is a default button, which the root focuses when the box opens as a dialog, and the dismiss
+ * result's button is a cancel button, which Escape presses in place of closing the window. A box the host
  * lets go of before it answered, as when the overlay showing it closes from code, answers the dismiss result without
  * a request.
  */
-public final class MessageBoxImpl extends BuiltInComposite<MessageBox> implements MessageBox {
+public final class MessageBoxImpl extends BuiltInComposite<MessageBox> implements MessageBox, InitialFocus {
     /**
      * The width of each button, in UI units.
      */
@@ -70,6 +74,8 @@ public final class MessageBoxImpl extends BuiltInComposite<MessageBox> implement
     private final StackPanel row;
     private final StackPanel column;
     private Buttons buttonSet;
+    // Null for the first result of the set
+    private Result defaultResult;
     private boolean done;
     private float messageWidth = MESSAGE_WIDTH;
     private float buttonWidth = BUTTON_WIDTH;
@@ -190,16 +196,50 @@ public final class MessageBoxImpl extends BuiltInComposite<MessageBox> implement
     @Override
     public MessageBox setButtons(final Buttons buttons) {
         this.buttonSet = Objects.requireNonNull(buttons, "buttons");
+        if (this.defaultResult != null && !buttons.results().contains(this.defaultResult)) {
+            this.defaultResult = null;
+        }
         this.row.clear();
         this.buttons.clear();
         for (final Result result : buttons.results()) {
             final Button button = this.ui.button(this.captions.getOrDefault(result, caption(result)))
                     .onEvent(Button.PRESSED, event -> this.answer(result));
+            button.setCancel(result == buttons.dismissResult());
             this.buttons.put(result, button);
             this.row.add(button);
         }
+        this.markDefault();
         this.sizeButtons();
         return this;
+    }
+
+    @Override
+    public Result defaultResult() {
+        return this.defaultResult != null ? this.defaultResult : this.buttonSet.results().getFirst();
+    }
+
+    @Override
+    public MessageBox setDefaultResult(final Result result) {
+        Objects.requireNonNull(result, "result");
+        if (!this.buttonSet.results().contains(result)) {
+            throw new IllegalArgumentException(this.buttonSet + " has no button for " + result);
+        }
+        this.defaultResult = result;
+        this.markDefault();
+        return this;
+    }
+
+    private void markDefault() {
+        final Result chosen = this.defaultResult();
+        this.buttons.forEach((result, button) -> button.setDefault(result == chosen));
+    }
+
+    /**
+     * Returns the default result's button, which the root focuses when the box opens as a dialog.
+     */
+    @Override
+    public Component<?> initialFocus() {
+        return this.buttons.get(this.defaultResult());
     }
 
     @Override
@@ -275,6 +315,11 @@ public final class MessageBoxImpl extends BuiltInComposite<MessageBox> implement
     protected void onKey(final KeyEvent event) {
         // With nothing focused, as after a press on the window's background, a dialog's keys come to the box itself
         this.window.escape(event);
+        if (!event.isHandled() && event.action() == KeyAction.PRESS && event.key().isEnter()
+                && event.modifiers().isEmpty() && this.hostRoot() != null
+                && this.hostRoot().pressDialogButton(this.nodeOf(this.window), false)) {
+            event.consume();
+        }
     }
 
     /**

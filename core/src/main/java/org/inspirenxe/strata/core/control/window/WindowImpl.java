@@ -692,7 +692,8 @@ public final class WindowImpl extends BuiltInContainer<Window> implements Window
 
     /**
      * Acts on an Escape press if a handler for {@link #CLOSE} or {@link #CLOSED} is on the window's path or it is
-     * shown in an overlay: consumes the press and, while the window is closable, closes it for the user. An
+     * shown in an overlay: consumes the press and, while the window is closable, presses its cancel button if it
+     * holds a usable one, or else closes it for the user. An
      * unclosable window consumes the press without closing, so the overlay showing it stays open. Ignores every other
      * key event. A control that holds this window privately calls this for Escape presses that reach the control
      * without passing through the window.
@@ -707,9 +708,15 @@ public final class WindowImpl extends BuiltInContainer<Window> implements Window
         if (this.isHandled(CLOSE) || this.isHandled(CLOSED)
                 || this.isAttached() && this.ui.overlays().of(this).isPresent()) {
             event.consume();
-            if (this.closable) {
-                this.userClose();
+            if (!this.closable) {
+                return;
             }
+            // A cancel button in the window answers Escape in place of closing
+            if (event.modifiers().isEmpty() && this.hostRoot() != null
+                    && this.hostRoot().pressDialogButton(this.node(), true)) {
+                return;
+            }
+            this.userClose();
         }
     }
 

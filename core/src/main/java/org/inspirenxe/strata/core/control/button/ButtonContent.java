@@ -72,6 +72,7 @@ final class ButtonContent {
     Paint pressed;
     Paint disabled;
     Paint focusRing;
+    Paint defaultFace;
     TextStyle textStyle;
     TextStyle disabledTextStyle;
     TextStyle linkTextStyle;
@@ -99,6 +100,7 @@ final class ButtonContent {
         this.pressed = Paint.NONE;
         this.disabled = Paint.NONE;
         this.focusRing = Paint.NONE;
+        this.defaultFace = Paint.NONE;
         this.textStyle = TextStyle.DEFAULT;
         this.disabledTextStyle = TextStyle.DEFAULT;
         this.linkTextStyle = TextStyle.DEFAULT;
@@ -204,6 +206,7 @@ final class ButtonContent {
         this.pressed = theme.paintOr(Button.STYLE_PRESSED, this.hovered);
         this.disabled = theme.paintOr(Button.STYLE_DISABLED, this.normal);
         this.focusRing = theme.paintOr(Button.STYLE_FOCUS, Paint.NONE);
+        this.defaultFace = theme.paintOr(Button.STYLE_DEFAULT, this.normal);
         this.textStyle = theme.textStyleOr(Button.STYLE_TEXT, TextStyle.DEFAULT);
         this.disabledTextStyle = theme.textStyleOr(Button.STYLE_TEXT_DISABLED, this.textStyle);
         this.linkTextStyle = theme.textStyleOr(Button.STYLE_LINK_TEXT, this.textStyle);

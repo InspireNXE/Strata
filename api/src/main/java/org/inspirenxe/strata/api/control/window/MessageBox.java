@@ -35,7 +35,9 @@ import java.util.List;
  *
  * <p>The message wraps at {@link #MESSAGE_WIDTH} units unless the theme says otherwise. The buttons sit at the
  * bottom right, or share the row when the theme says so, in the order of the
- * {@link Buttons} set, the first one focused when the dialog opens. A box made without a set has
+ * {@link Buttons} set. The {@linkplain #defaultResult() default result}'s button, the first one unless set otherwise,
+ * is the default button and is focused when the dialog opens, and the dismiss result's button is the cancel button.
+ * A box made without a set has
  * {@link Buttons#OK}. A button press, the close button or Escape
  * answers once: the box reports a {@link Result} through {@link #ANSWERED} and closes the overlay showing it. The
  * close button and Escape answer {@link Buttons#dismissResult()}.</p>
@@ -185,6 +187,27 @@ public interface MessageBox extends Component<MessageBox>, HasCursor<MessageBox>
      * @return this box
      */
     MessageBox setButtons(Buttons buttons);
+
+    /**
+     * Returns the result whose button is the box's {@linkplain Button#setDefault default button}, which takes focus
+     * when the box opens as a dialog and is pressed by an Enter that nothing else consumed.
+     *
+     * @return the result set with {@link #setDefaultResult}, or the first result of the button set when none is set
+     *     or the set has no button for it
+     */
+    Result defaultResult();
+
+    /**
+     * Makes a result's button the default button, in place of the first one. A question whose yes answer destroys
+     * something calls {@code setDefaultResult(Result.NO)}, so Enter keeps what is there. The button of
+     * {@link Buttons#dismissResult()} is always the {@linkplain Button#setCancel cancel button}. Replacing the button
+     * set with one that has no button for the result makes the first result the default again.
+     *
+     * @param result the result
+     * @return this box
+     * @throws IllegalArgumentException if the button set has no button for the result
+     */
+    MessageBox setDefaultResult(Result result);
 
     /**
      * Replaces a button's caption. The default captions are the translated {@code strata.button.ok},

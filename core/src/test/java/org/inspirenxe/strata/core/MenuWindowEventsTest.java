@@ -570,8 +570,9 @@ class MenuWindowEventsTest {
             assertEquals(List.of(), this.results);
             assertTrue(this.overlay.isOpen());
             refuse.close();
+            // Escape presses the cancel button, which answers as a click on it does, without closing the window
             MenuWindowEventsTest.this.key(Key.ESCAPE);
-            assertEquals(List.of("answer CANCEL", "answer CANCEL", "answer CANCEL", "window closed"),
+            assertEquals(List.of("answer CANCEL", "answer CANCEL", "answer CANCEL"),
                     MenuWindowEventsTest.this.heard);
             assertEquals(List.of(MessageBox.Result.CANCEL), this.results);
             assertFalse(this.overlay.isOpen());

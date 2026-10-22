@@ -24,6 +24,7 @@ import org.inspirenxe.strata.api.component.CursorKind;
 import org.inspirenxe.strata.api.component.Focusable;
 import org.inspirenxe.strata.api.component.Tooltip;
 import org.inspirenxe.strata.api.control.attribute.popup.Closable;
+import org.inspirenxe.strata.api.control.window.Window;
 import org.inspirenxe.strata.api.event.Event;
 import org.inspirenxe.strata.api.event.EventHandler;
 import org.inspirenxe.strata.api.event.EventType;
@@ -118,7 +119,9 @@ import java.util.function.Consumer;
  *
  * <p>Keyboard rules: key events go to the focused node, or else to the top dialog, or else to the content. An
  * unhandled press or repeat runs the first enabled command whose shortcut matches it, as {@link Shortcuts}
- * describes. An unhandled Escape press closes the top overlay that is not a toast. An unhandled Tab press or repeat without Ctrl
+ * describes. Then an unhandled Enter or Escape press with no modifiers presses the default or cancel button of the
+ * target's scope, as {@link #pressDialogButton} describes. An unhandled Escape press closes the top overlay that is
+ * not a toast. An unhandled Tab press or repeat without Ctrl
  * or Alt moves focus, backwards with Shift, among the nodes of the top dialog or, with no dialog, of the content.
  * Typed characters go only to the focused node. When the platform does not send key repeats, the root makes them
  * with a {@link KeyRepeater}; each repeat goes to whatever has focus when it fires.</p>
@@ -1667,6 +1670,10 @@ public final class Root {
         if (action.isDown() && this.runShortcut(target, key, modifiers)) {
             return true;
         }
+        if (action == KeyAction.PRESS && modifiers.isEmpty() && (key.isEnter() || key == Key.ESCAPE)
+                && this.pressDialogButton(target, key == Key.ESCAPE)) {
+            return true;
+        }
         if (key == Key.ESCAPE && action == KeyAction.PRESS) {
             for (int i = this.layers.size() - 1; i >= 0; i--) {
                 if (!this.layers.get(i).isToast()) {
@@ -1723,6 +1730,49 @@ public final class Root {
         }
         Commands.run(this.ui.causes(), command);
         return true;
+    }
+
+    /**
+     * Presses the default or cancel button of the scope a node is in, for an Enter or Escape nothing consumed. The
+     * scope is the nearest window that holds the node, or the node itself when it is a window, or else the top of the
+     * node's layer: the screen's content or an overlay's. The button must be in that scope and not inside a window
+     * nested in it, and it and every ancestor must be visible and enabled. The first such button in tree order is
+     * pressed for the user.
+     *
+     * @param from the node the key went to, or a window that handles the key itself
+     * @param cancel true for the cancel button, false for the default button
+     * @return true if a button was pressed
+     */
+    public boolean pressDialogButton(final Node from, final boolean cancel) {
+        Node scope = from;
+        while (!(scope.facade() instanceof Window) && scope.parentNode() != null) {
+            scope = scope.parentNode();
+        }
+        final Node button = findDialogButton(scope, scope, cancel);
+        if (button == null) {
+            return false;
+        }
+        ((DialogButton) button.facade()).pressForUser();
+        return true;
+    }
+
+    private static Node findDialogButton(final Node node, final Node scope, final boolean cancel) {
+        if (!node.isVisible() || !node.isEnabled() || node != scope && node.facade() instanceof Window) {
+            return null;
+        }
+        if (node.facade() instanceof DialogButton button && (cancel ? button.isCancel() : button.isDefault())
+                && isUsable(node)) {
+            return node;
+        }
+        if (node instanceof ContainerNode container) {
+            for (final Node child : container.childNodes()) {
+                final Node found = findDialogButton(child, scope, cancel);
+                if (found != null) {
+                    return found;
+                }
+            }
+        }
+        return null;
     }
 
     private Command matchCommandSources(final Node scope, final Key key, final Modifiers modifiers,
@@ -2166,7 +2216,14 @@ public final class Root {
         if (modal) {
             this.layout();
             final List<Node> order = this.tabOrder();
-            this.changeFocus(order.isEmpty() ? null : order.getFirst());
+            Node first = order.isEmpty() ? null : order.getFirst();
+            if (node.facade() instanceof InitialFocus initial && initial.initialFocus() != null) {
+                final Node named = this.ui.nodeOf(initial.initialFocus());
+                if (this.canFocus(named)) {
+                    first = named;
+                }
+            }
+            this.changeFocus(first);
         }
         return layer;
     }

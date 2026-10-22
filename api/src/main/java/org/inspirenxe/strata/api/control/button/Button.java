@@ -60,6 +60,8 @@ import java.util.Objects;
  *     <li>{@value #STYLE_DISABLED} (paint, required): the face when disabled.</li>
  *     <li>{@value #STYLE_FOCUS} (paint, optional): a one-unit ring drawn inside the edge while focused. No ring if
  *     missing.</li>
+ *     <li>{@value #STYLE_DEFAULT} (paint, optional): the face of a default button when idle, in place of
+ *     {@value #STYLE_NORMAL}. Falls back to {@value #STYLE_NORMAL}.</li>
  *     <li>{@value #STYLE_TEXT} (text style, optional): the caption. Falls back to the default text style.</li>
  *     <li>{@value #STYLE_TEXT_DISABLED} (text style, optional): the caption when disabled. Falls back to
  *     {@value #STYLE_TEXT}.</li>
@@ -103,6 +105,10 @@ public interface Button extends Component<Button>, Focusable<Button>, HasCursor<
      * Style key for the focus ring (paint, optional).
      */
     String STYLE_FOCUS = "button.focus";
+    /**
+     * Style key for the idle face of a {@linkplain #setDefault default button} (paint, optional).
+     */
+    String STYLE_DEFAULT = "button.default";
     /**
      * Style key for the caption (text style, optional).
      */
@@ -246,6 +252,45 @@ public interface Button extends Component<Button>, Focusable<Button>, HasCursor<
      * @return this button
      */
     Button setLink(boolean link);
+
+    /**
+     * Returns whether the button is its scope's default button.
+     *
+     * @return true after {@code setDefault(true)}; false for a new button
+     */
+    boolean isDefault();
+
+    /**
+     * Makes the button the default button of its scope, or an ordinary one again. A default button is pressed for
+     * the user, with {@link #PRESS} first, by an Enter press with no modifiers that nothing on the focus path
+     * consumed, while focus is inside the nearest window that holds the button, or inside the screen's content or the
+     * overlay that holds it when no window does. It must be visible and enabled, with every ancestor. A text box
+     * consumes Enter only while a handler for its submit events is on its path, so the fields of a form submit
+     * through the default button without code. When a scope holds several default buttons, the first in tree order
+     * is pressed. A default button draws the {@value #STYLE_DEFAULT} face when idle.
+     *
+     * @param isDefault true to make it the default button
+     * @return this button
+     */
+    Button setDefault(boolean isDefault);
+
+    /**
+     * Returns whether the button is its scope's cancel button.
+     *
+     * @return true after {@code setCancel(true)}; false for a new button
+     */
+    boolean isCancel();
+
+    /**
+     * Makes the button the cancel button of its scope, or an ordinary one again. A cancel button is pressed for the
+     * user by an Escape press with no modifiers that nothing on the focus path consumed, in the same scope as a
+     * {@linkplain #setDefault default button}, before the host closes the top overlay with it. A window that would
+     * close on Escape presses its cancel button instead.
+     *
+     * @param cancel true to make it the cancel button
+     * @return this button
+     */
+    Button setCancel(boolean cancel);
 
     /**
      * Presses the button as if it had been clicked, firing {@link #PRESSED} but not {@link #PRESS}, then running its

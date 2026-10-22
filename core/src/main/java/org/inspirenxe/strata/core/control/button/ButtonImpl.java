@@ -26,6 +26,7 @@ import org.inspirenxe.strata.api.geometry.Insets;
 import org.inspirenxe.strata.api.geometry.Rect;
 import org.inspirenxe.strata.api.geometry.Size;
 import org.inspirenxe.strata.api.text.Text;
+import org.inspirenxe.strata.api.theme.Paint;
 import org.inspirenxe.strata.api.theme.SpriteId;
 import org.inspirenxe.strata.api.theme.Theme;
 import org.inspirenxe.strata.api.visual.Visual;
@@ -34,6 +35,7 @@ import org.inspirenxe.strata.core.control.Commands;
 import org.inspirenxe.strata.core.frame.FrameRequests;
 import org.inspirenxe.strata.core.node.BuiltInComponent;
 import org.inspirenxe.strata.core.node.ComponentFactoryImpl;
+import org.inspirenxe.strata.core.node.DialogButton;
 import org.inspirenxe.strata.core.text.TextLine;
 
 import java.util.Objects;
@@ -43,7 +45,8 @@ import java.util.Set;
 /**
  * The core {@link Button}. Its face is the disabled paint when disabled, the pressed paint while held under the
  * pointer, the hovered paint while hovered or focused, and the normal paint otherwise. A focused button also draws
- * a one-unit focus ring when the theme has one. The caption is centered.
+ * a one-unit focus ring when the theme has one. A default button draws the theme's {@value #STYLE_DEFAULT} paint in
+ * place of the normal one. The caption is centered.
  *
  * <p>The button is focusable and tabbable, shows a hand cursor, is at least 20 units wide, and measures at least 20
  * tall, though a smaller height set on it applies. Its desired size is
@@ -63,7 +66,7 @@ import java.util.Set;
  * <p>The keys, the caption and the icon, and how they measure and draw, live in a helper that
  * {@link DropDownButtonImpl} shares, so the two buttons look and measure alike.</p>
  */
-public final class ButtonImpl extends BuiltInComponent<Button> implements Button {
+public final class ButtonImpl extends BuiltInComponent<Button> implements Button, DialogButton {
     /**
      * The space between the icon and the caption, in UI units.
      */
@@ -92,6 +95,8 @@ public final class ButtonImpl extends BuiltInComponent<Button> implements Button
     private final Activation activation;
     private boolean link;
     private Command.Action command;
+    private boolean isDefault;
+    private boolean cancel;
 
     /**
      * Creates a button.
@@ -226,6 +231,36 @@ public final class ButtonImpl extends BuiltInComponent<Button> implements Button
     }
 
     @Override
+    public boolean isDefault() {
+        return this.isDefault;
+    }
+
+    @Override
+    public Button setDefault(final boolean isDefault) {
+        this.isDefault = isDefault;
+        return this;
+    }
+
+    @Override
+    public boolean isCancel() {
+        return this.cancel;
+    }
+
+    @Override
+    public Button setCancel(final boolean cancel) {
+        this.cancel = cancel;
+        return this;
+    }
+
+    /**
+     * Presses the button for the user, as a click would, for the root's Enter or Escape.
+     */
+    @Override
+    public void pressForUser() {
+        this.userPress();
+    }
+
+    @Override
     public Optional<Command.Action> command() {
         return Optional.ofNullable(this.command);
     }
@@ -277,7 +312,8 @@ public final class ButtonImpl extends BuiltInComponent<Button> implements Button
         final boolean enabled = this.isEnabled();
         final boolean lit = this.isHovered() || this.isFocused();
         if (!this.link) {
-            content.face(enabled, this.isPressed() && this.isHovered(), lit).paint(painter, bounds);
+            final Paint face = content.face(enabled, this.isPressed() && this.isHovered(), lit);
+            (this.isDefault && face == content.normal ? content.defaultFace : face).paint(painter, bounds);
             if (this.isFocused()) {
                 content.paintFocusRing(painter, bounds);
             }
