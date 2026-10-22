@@ -152,11 +152,19 @@ final class Json {
                         if (this.pos + 4 > this.text.length()) {
                             throw this.error("Short \\u escape");
                         }
-                        try {
-                            out.append((char) Integer.parseInt(this.text.substring(this.pos, this.pos + 4), 16));
-                        } catch (final NumberFormatException e) {
-                            throw this.error("Bad \\u escape");
+                        int unit = 0;
+                        for (int i = this.pos; i < this.pos + 4; i++) {
+                            // Exactly four ASCII hex digits; Integer.parseInt would take a sign too
+                            final char hex = this.text.charAt(i);
+                            final int digit = hex >= '0' && hex <= '9' ? hex - '0'
+                                    : hex >= 'a' && hex <= 'f' ? hex - 'a' + 10
+                                    : hex >= 'A' && hex <= 'F' ? hex - 'A' + 10 : -1;
+                            if (digit < 0) {
+                                throw this.error("Bad \\u escape");
+                            }
+                            unit = unit * 16 + digit;
                         }
+                        out.append((char) unit);
                         this.pos += 4;
                     }
                     default -> throw this.error("Unknown escape '\\" + escaped + "'");

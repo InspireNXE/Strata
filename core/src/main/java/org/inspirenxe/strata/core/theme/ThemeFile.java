@@ -155,8 +155,8 @@ record ThemeFile(String layer, Optional<ThemeId> parent, Map<String, Paint> pain
     }
 
     private static Insets insets(final Object value, final String where) {
-        if (value instanceof final Double all) {
-            return Insets.of(all.floatValue());
+        if (value instanceof Double) {
+            return Insets.of(number(value, where));
         }
         final List<?> parts = list(value, where);
         return switch (parts.size()) {
@@ -210,7 +210,11 @@ record ThemeFile(String layer, Optional<ThemeId> parent, Map<String, Paint> pain
 
     private static float number(final Object value, final String where) {
         if (value instanceof final Double number) {
-            return number.floatValue();
+            final float result = number.floatValue();
+            if (!Float.isFinite(result)) {
+                throw new IllegalArgumentException(where + " must hold finite numbers, not " + number);
+            }
+            return result;
         }
         throw new IllegalArgumentException(where + " must hold numbers");
     }

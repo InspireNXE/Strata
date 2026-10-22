@@ -157,6 +157,22 @@ class ThemeResolverTest {
     }
 
     @Test
+    void aFileWithANumberTooLargeForAFloatIsSkipped() {
+        final MapSource source = new MapSource()
+                .file(MOD, "{ \"parent\": \"strata:flat\", \"insets\": { \"i\": 2 } }")
+                .file(MOD, "{ \"insets\": { \"i\": 1e999 } }");
+        assertEquals(Insets.of(2), resolve(source, ThemeRef.of(MOD)).insets("i").orElseThrow());
+    }
+
+    @Test
+    void aUnicodeEscapeTakesOnlyFourHexDigits() {
+        final MapSource source = new MapSource()
+                .file(MOD, "{ \"parent\": \"strata:flat\", \"paints\": { \"a\": \"#000001\" } }")
+                .file(MOD, "{ \"paints\": { \"a\": \"#000002\", \"b\\u-123\": \"#000003\" } }");
+        assertEquals(Paint.solid(0xFF000001), resolve(source, ThemeRef.of(MOD)).paint("a").orElseThrow());
+    }
+
+    @Test
     void eachKeyRecordsTheLayerThatSetItLast() {
         final MapSource source = new MapSource()
                 .base(ENGINE, Theme.builder("engine")
