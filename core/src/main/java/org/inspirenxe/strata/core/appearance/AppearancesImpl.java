@@ -125,12 +125,12 @@ public final class AppearancesImpl implements Appearances {
         if (cached != null) {
             return cached;
         }
-        final Appearance<?> found;
+        // Searched and cached under the lock, so a registration that clears the cache cannot be followed by a stale put
         synchronized (this) {
-            found = this.search(type);
+            final Appearance<?> found = this.search(type);
+            this.cache.put(type, found);
+            return found;
         }
-        this.cache.put(type, found);
-        return found;
     }
 
     /**
