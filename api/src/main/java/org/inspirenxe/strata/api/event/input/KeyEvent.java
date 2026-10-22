@@ -15,7 +15,7 @@
  */
 package org.inspirenxe.strata.api.event.input;
 
-import org.inspirenxe.strata.api.event.Cancelable;
+import org.inspirenxe.strata.api.event.SnapshotEvent;
 import org.inspirenxe.strata.api.input.Key;
 import org.inspirenxe.strata.api.input.KeyAction;
 import org.inspirenxe.strata.api.input.ModifierPolicy;
@@ -30,7 +30,7 @@ import org.inspirenxe.strata.api.input.Modifiers;
  *
  * <p>Only Strata creates events. Do not implement this interface.</p>
  */
-public interface KeyEvent extends Cancelable {
+public interface KeyEvent extends SnapshotEvent {
 
     /**
      * Returns the key.

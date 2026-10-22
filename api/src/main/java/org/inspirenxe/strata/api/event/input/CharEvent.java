@@ -15,7 +15,7 @@
  */
 package org.inspirenxe.strata.api.event.input;
 
-import org.inspirenxe.strata.api.event.Cancelable;
+import org.inspirenxe.strata.api.event.SnapshotEvent;
 import org.inspirenxe.strata.api.input.Modifiers;
 
 /**
@@ -28,7 +28,7 @@ import org.inspirenxe.strata.api.input.Modifiers;
  *
  * <p>Only Strata creates events. Do not implement this interface.</p>
  */
-public interface CharEvent extends Cancelable {
+public interface CharEvent extends SnapshotEvent {
 
     /**
      * Returns the typed character.

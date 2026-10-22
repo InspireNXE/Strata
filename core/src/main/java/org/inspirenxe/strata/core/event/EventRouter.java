@@ -17,6 +17,7 @@ package org.inspirenxe.strata.core.event;
 
 import org.inspirenxe.strata.api.component.ComponentSnapshot;
 import org.inspirenxe.strata.api.event.EventType;
+import org.inspirenxe.strata.api.event.SnapshotEvent;
 import org.inspirenxe.strata.api.event.control.ControlEvent;
 import org.inspirenxe.strata.api.event.control.RequestEvent;
 import org.inspirenxe.strata.core.node.Node;
@@ -36,8 +37,8 @@ public final class EventRouter {
      *
      * <p>Before anything runs, the router walks the path the event will take and looks for handlers of its type.
      * If it finds none, it takes no snapshots and allocates nothing. Otherwise it snapshots the target and every node
-     * on the path that has a handler for the type. Reports never take snapshots: they fire after their change, so
-     * they carry the value from before it instead.</p>
+     * on the path that has a handler for the type. Only a {@link SnapshotEvent} takes snapshots; reports fire after
+     * their change, so they carry the value from before it instead.</p>
      *
      * @param <E> the event class
      * @param type the event type, which decides whether the event bubbles
@@ -48,7 +49,7 @@ public final class EventRouter {
     public static <E extends EventImpl> E dispatch(final EventType<? super E> type, final E event, final Node target) {
         event.setCauses(target.causes());
         // A report fires after its change, so a snapshot would show the new state; it carries previous() instead
-        if (!(event instanceof ControlEventImpl<?>)) {
+        if (event instanceof SnapshotEvent) {
             EventRouter.takeSnapshots(type, event, target);
         }
 

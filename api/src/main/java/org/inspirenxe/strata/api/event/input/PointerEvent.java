@@ -15,7 +15,7 @@
  */
 package org.inspirenxe.strata.api.event.input;
 
-import org.inspirenxe.strata.api.event.Cancelable;
+import org.inspirenxe.strata.api.event.SnapshotEvent;
 import org.inspirenxe.strata.api.input.Modifiers;
 
 /**
@@ -24,7 +24,7 @@ import org.inspirenxe.strata.api.input.Modifiers;
  *
  * <p>Only Strata creates events. Do not implement this interface.</p>
  */
-public interface PointerEvent extends Cancelable {
+public interface PointerEvent extends SnapshotEvent {
 
     /**
      * Returns the pointer's x in the host's coordinates.

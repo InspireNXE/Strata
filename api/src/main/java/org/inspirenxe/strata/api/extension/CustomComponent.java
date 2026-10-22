@@ -415,8 +415,9 @@ public abstract class CustomComponent<T extends Component<T>> implements Compone
 
     /**
      * Returns this component's own state for a {@link ComponentSnapshot}, which stores it as
-     * {@link ComponentSnapshot#state()}. Strata calls this only when an event that has snapshots fires and this
-     * component is captured, before any handler runs.
+     * {@link ComponentSnapshot#state()}. Strata calls this only when a
+     * {@link org.inspirenxe.strata.api.event.SnapshotEvent} fires and this component is captured, before any handler
+     * runs.
      *
      * <p>Return an immutable value, such as a record, that a handler can compare with the live component later.
      * Copy mutable data; returning a live list or builder makes the snapshot change with the component. Record only

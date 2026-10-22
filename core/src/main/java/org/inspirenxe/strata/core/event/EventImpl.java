@@ -63,7 +63,13 @@ public abstract class EventImpl implements Event {
         this.current = current;
     }
 
-    @Override
+    /**
+     * Returns the snapshot taken of a component when the event fired. Public only for the event kinds that are
+     * {@code SnapshotEvent}s; the others never get snapshots and do not expose it.
+     *
+     * @param component the component to look up
+     * @return the component's snapshot, or empty if none was taken of it for this event
+     */
     public final Optional<ComponentSnapshot> snapshotOf(final Component<?> component) {
         Objects.requireNonNull(component, "component");
         // By identity. An event holds only a few snapshots, so a linear search is enough.
