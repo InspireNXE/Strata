@@ -36,6 +36,9 @@ import org.inspirenxe.strata.api.control.attribute.text.HasText;
  * runs the command after {@link Menu#CHOSEN} when chosen. A menu bar runs the commands of its menus from their
  * shortcuts.</p>
  *
+ * <p>Its caption marks a mnemonic with an underscore, as {@link org.inspirenxe.strata.api.control.button.Button}
+ * describes: Alt with the letter chooses the item while its menu is open, as the letter alone does.</p>
+ *
  * <p>Get one from {@link org.inspirenxe.strata.api.ComponentFactory#menuItem(String)} or make one with
  * {@link Menu#addItem(String, Runnable)}. Do not implement this interface.</p>
  */

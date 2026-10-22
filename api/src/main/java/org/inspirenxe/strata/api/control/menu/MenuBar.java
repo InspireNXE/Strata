@@ -75,6 +75,11 @@ import java.util.Optional;
  *         .addMenu("View", viewMenu);
  * }</pre>
  *
+ * <p>Its titles' text marks mnemonics, as {@link org.inspirenxe.strata.api.control.button.Button} describes: Alt with a
+ * title's letter opens its menu from the keyboard. Alt pressed and released alone, or F10, highlights the first title
+ * that opens a menu; Left and Right move the highlight, Down, Enter or Space open its menu, a title's letter opens that
+ * menu, and Escape or Alt again leaves the bar. The bar never takes focus, so focus stays where it was.</p>
+ *
  * <p>Get one from {@link org.inspirenxe.strata.api.ComponentFactory#menuBar()}. Do not implement this
  * interface.</p>
  */

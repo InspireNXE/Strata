@@ -62,6 +62,9 @@ import java.util.Objects;
  *     {@value #STYLE_TEXT}.</li>
  * </ul>
  *
+ * <p>Its caption marks a mnemonic with an underscore, as {@link Button} describes: Alt with the letter focuses and
+ * selects the button.</p>
+ *
  * <p>Get one from {@link RadioGroup#add}. Do not implement this interface.</p>
  */
 public interface RadioButton extends Component<RadioButton>, Focusable<RadioButton>, HasCursor<RadioButton>,

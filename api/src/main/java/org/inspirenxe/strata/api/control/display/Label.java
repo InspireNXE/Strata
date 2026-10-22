@@ -133,6 +133,25 @@ public interface Label extends Component<Label>, HasCursor<Label>, HasTooltip<La
     Label setStyle(TextStyle style);
 
     /**
+     * Returns whether the label reads a mnemonic from its text.
+     *
+     * @return false by default
+     */
+    boolean isMnemonicParsing();
+
+    /**
+     * Turns mnemonic parsing on or off. With it on, an underscore before a letter in the resolved text marks the
+     * label's mnemonic, as in {@code "_Name:"}, and a doubled underscore stands for one; the markers are not drawn.
+     * While mnemonics show, the letter is underlined, and Alt with it moves focus to the next tab stop after the
+     * label, such as the field it names. It is off by default because a label's text is often data, in which an
+     * underscore means itself.
+     *
+     * @param parsing true to read a mnemonic
+     * @return this label
+     */
+    Label setMnemonicParsing(boolean parsing);
+
+    /**
      * Returns whether the text wraps to the available width.
      *
      * @return false by default

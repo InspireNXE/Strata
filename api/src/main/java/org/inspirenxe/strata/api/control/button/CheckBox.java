@@ -87,6 +87,9 @@ import java.util.Objects;
  *         .onEvent(Toggle.TOGGLED, event -> settings.setMusic(event.value()));
  * }</pre>
  *
+ * <p>Its caption marks a mnemonic with an underscore, as {@link Button} describes: Alt with the letter focuses and
+ * toggles the box.</p>
+ *
  * <p>Get one from {@link org.inspirenxe.strata.api.ComponentFactory#checkBox(String)}. Do not implement this
  * interface.</p>
  */

@@ -29,6 +29,8 @@ import org.inspirenxe.strata.api.visual.Visual;
 import org.inspirenxe.strata.core.control.Caption;
 import org.inspirenxe.strata.core.control.RectCache;
 import org.inspirenxe.strata.core.control.Rings;
+import org.inspirenxe.strata.core.text.MnemonicLine;
+import org.inspirenxe.strata.core.text.Mnemonics;
 import org.inspirenxe.strata.core.text.TextLine;
 
 import java.util.Objects;
@@ -40,7 +42,8 @@ import java.util.Set;
  * from its own hooks, so the two measure alike and follow the same padding keys.
  *
  * <p>The caption is resolved during measure in three styles, normal, hovered and disabled, and the widest of the
- * three counts, so hovering, enabling or disabling needs no new layout. An icon is drawn {@link ButtonImpl#ICON_GAP}
+ * three counts, so hovering, enabling or disabling needs no new layout. The caption's mnemonic marker is taken out,
+ * and each of the three is also kept with the mnemonic underlined, for drawing while mnemonics show. An icon is drawn {@link ButtonImpl#ICON_GAP}
  * units before the caption, and the two are centered together in the area they are given. The padding is the one set
  * with {@link #setTextPadding}, or else none for a link, the theme's {@value Button#STYLE_PADDING_ICON} for an icon
  * with no caption, and the theme's {@value Button#STYLE_PADDING} otherwise.</p>
@@ -83,6 +86,11 @@ final class ButtonContent {
     TextLine caption;
     TextLine hoveredCaption;
     TextLine disabledCaption;
+    // The same three with the mnemonic underlined, drawn while mnemonics show
+    private TextLine markedCaption;
+    private TextLine markedHoveredCaption;
+    private TextLine markedDisabledCaption;
+    private int mnemonic = Mnemonics.NONE;
     private float captionWidth;
     private float captionHeight;
 
@@ -109,6 +117,34 @@ final class ButtonContent {
         this.caption = TextLine.EMPTY;
         this.hoveredCaption = this.caption;
         this.disabledCaption = this.caption;
+        this.markedCaption = this.caption;
+        this.markedHoveredCaption = this.caption;
+        this.markedDisabledCaption = this.caption;
+    }
+
+    /**
+     * Returns the caption's mnemonic as of the last measure.
+     *
+     * @return the mnemonic in lower case, or {@link Mnemonics#NONE}
+     */
+    int mnemonic() {
+        return this.mnemonic;
+    }
+
+    /**
+     * Returns one of the three captions with its mnemonic underlined, for drawing while mnemonics show.
+     *
+     * @param line the caption, one of the three this content measured
+     * @return the same caption marked
+     */
+    TextLine marked(final TextLine line) {
+        if (line == this.caption) {
+            return this.markedCaption;
+        }
+        if (line == this.hoveredCaption) {
+            return this.markedHoveredCaption;
+        }
+        return line == this.disabledCaption ? this.markedDisabledCaption : line;
     }
 
     // ------------------------------------------------------------------
@@ -226,9 +262,16 @@ final class ButtonContent {
         final TextStyle normalStyle = link ? this.linkTextStyle : this.textStyle;
         final TextStyle hoveredStyle = link ? this.linkHoveredTextStyle : this.textStyle;
         final TextStyle disabledStyle = link ? this.linkDisabledTextStyle : this.disabledTextStyle;
-        this.caption = TextLine.of(this.text, normalStyle, metrics);
-        this.hoveredCaption = TextLine.of(this.text, hoveredStyle, metrics);
-        this.disabledCaption = TextLine.of(this.text, disabledStyle, metrics);
+        final MnemonicLine normalLine = MnemonicLine.of(this.text, normalStyle, metrics);
+        final MnemonicLine hoveredLine = MnemonicLine.of(this.text, hoveredStyle, metrics);
+        final MnemonicLine disabledLine = MnemonicLine.of(this.text, disabledStyle, metrics);
+        this.caption = normalLine.plain();
+        this.hoveredCaption = hoveredLine.plain();
+        this.disabledCaption = disabledLine.plain();
+        this.markedCaption = normalLine.marked();
+        this.markedHoveredCaption = hoveredLine.marked();
+        this.markedDisabledCaption = disabledLine.marked();
+        this.mnemonic = normalLine.mnemonic();
         this.captionWidth = Math.max(this.caption.width(),
                 Math.max(this.hoveredCaption.width(), this.disabledCaption.width()));
         this.captionHeight = Math.max(this.caption.height(),

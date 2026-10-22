@@ -36,6 +36,7 @@ import org.inspirenxe.strata.core.frame.FrameRequests;
 import org.inspirenxe.strata.core.node.BuiltInComponent;
 import org.inspirenxe.strata.core.node.ComponentFactoryImpl;
 import org.inspirenxe.strata.core.node.DialogButton;
+import org.inspirenxe.strata.core.node.MnemonicTarget;
 import org.inspirenxe.strata.core.text.TextLine;
 
 import java.util.Objects;
@@ -66,7 +67,7 @@ import java.util.Set;
  * <p>The keys, the caption and the icon, and how they measure and draw, live in a helper that
  * {@link DropDownButtonImpl} shares, so the two buttons look and measure alike.</p>
  */
-public final class ButtonImpl extends BuiltInComponent<Button> implements Button, DialogButton {
+public final class ButtonImpl extends BuiltInComponent<Button> implements Button, DialogButton, MnemonicTarget {
     /**
      * The space between the icon and the caption, in UI units.
      */
@@ -261,6 +262,19 @@ public final class ButtonImpl extends BuiltInComponent<Button> implements Button
     }
 
     @Override
+    public boolean hasMnemonic(final int mnemonic) {
+        return this.content.mnemonic() == mnemonic;
+    }
+
+    /**
+     * Presses the button for the user, as Alt with its mnemonic does.
+     */
+    @Override
+    public void activateMnemonic(final int mnemonic) {
+        this.userPress();
+    }
+
+    @Override
     public Optional<Command.Action> command() {
         return Optional.ofNullable(this.command);
     }
@@ -318,13 +332,16 @@ public final class ButtonImpl extends BuiltInComponent<Button> implements Button
                 content.paintFocusRing(painter, bounds);
             }
         }
-        final TextLine shown;
+        TextLine shown;
         if (!enabled) {
             shown = content.disabledCaption;
         } else if (this.link && lit) {
             shown = content.hoveredCaption;
         } else {
             shown = content.caption;
+        }
+        if (this.hostRoot() != null && this.hostRoot().showsMnemonics()) {
+            shown = content.marked(shown);
         }
         // Centered in the button less its padding, which is the whole button when the padding is even
         if (content.paintContent(painter, bounds, content.padding(this.link), enabled, shown,

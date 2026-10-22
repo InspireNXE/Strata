@@ -35,6 +35,7 @@ import org.inspirenxe.strata.core.control.RectCache;
 import org.inspirenxe.strata.core.control.Rings;
 import org.inspirenxe.strata.core.node.BuiltInComponent;
 import org.inspirenxe.strata.core.node.ComponentFactoryImpl;
+import org.inspirenxe.strata.core.node.MnemonicTarget;
 
 import java.util.Objects;
 import java.util.Set;
@@ -46,7 +47,7 @@ import java.util.Set;
  * the box size, rounded to a whole unit, and a focused box a one-unit focus ring. The box, the mark and the ring are
  * kept from one frame to the next while the bounds stay the same. Its group holds the selection.
  */
-public final class RadioButtonImpl extends BuiltInComponent<RadioButton> implements RadioButton {
+public final class RadioButtonImpl extends BuiltInComponent<RadioButton> implements RadioButton, MnemonicTarget {
     private static final Set<String> REQUIRED = Set.of(STYLE_NORMAL, STYLE_HOVERED, STYLE_SELECTED, STYLE_SELECTED_HOVERED);
 
     private final RadioGroupImpl<?> group;
@@ -245,7 +246,8 @@ public final class RadioButtonImpl extends BuiltInComponent<RadioButton> impleme
         if (this.isFocused() && this.focusRing != Paint.NONE) {
             this.ring.paint(painter, this.focusRing, box);
         }
-        this.layout.paintCaption(painter, bounds, enabled);
+        this.layout.paintCaption(painter, bounds, enabled,
+                this.hostRoot() != null && this.hostRoot().showsMnemonics());
     }
 
     @Override
@@ -281,5 +283,18 @@ public final class RadioButtonImpl extends BuiltInComponent<RadioButton> impleme
     @Override
     protected Object snapshotState() {
         return new RadioButton.State(this.isSelected(), this.text);
+    }
+
+    @Override
+    public boolean hasMnemonic(final int mnemonic) {
+        return this.layout.mnemonic() == mnemonic;
+    }
+
+    /**
+     * Selects the button for the user, as Alt with the caption's mnemonic does.
+     */
+    @Override
+    public void activateMnemonic(final int mnemonic) {
+        this.userSelect(false);
     }
 }

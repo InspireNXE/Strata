@@ -36,6 +36,7 @@ import org.inspirenxe.strata.core.control.RectCache;
 import org.inspirenxe.strata.core.control.Rings;
 import org.inspirenxe.strata.core.node.BuiltInComponent;
 import org.inspirenxe.strata.core.node.ComponentFactoryImpl;
+import org.inspirenxe.strata.core.node.MnemonicTarget;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -59,7 +60,8 @@ import java.util.function.Function;
  * the mark's squares and the focus ring are kept from one frame to the next while the bounds and the box size stay
  * the same, so painting allocates nothing then.</p>
  */
-public final class CheckBoxImpl extends BuiltInComponent<CheckBox> implements CheckBox, ConversionTarget {
+public final class CheckBoxImpl extends BuiltInComponent<CheckBox> implements CheckBox, ConversionTarget,
+        MnemonicTarget {
     /**
      * The gap between the box and the caption.
      */
@@ -362,7 +364,8 @@ public final class CheckBoxImpl extends BuiltInComponent<CheckBox> implements Ch
         if (this.isFocused() && this.focusRing != Paint.NONE) {
             this.ring.paint(painter, this.focusRing, box);
         }
-        this.layout.paintCaption(painter, bounds, enabled);
+        this.layout.paintCaption(painter, bounds, enabled,
+                this.hostRoot() != null && this.hostRoot().showsMnemonics());
     }
 
     /**
@@ -431,5 +434,18 @@ public final class CheckBoxImpl extends BuiltInComponent<CheckBox> implements Ch
         this.command = command;
         Commands.follow(this.node(), command);
         return this;
+    }
+
+    @Override
+    public boolean hasMnemonic(final int mnemonic) {
+        return this.layout.mnemonic() == mnemonic;
+    }
+
+    /**
+     * Toggles the box for the user, as Alt with the caption's mnemonic does.
+     */
+    @Override
+    public void activateMnemonic(final int mnemonic) {
+        this.userToggle();
     }
 }

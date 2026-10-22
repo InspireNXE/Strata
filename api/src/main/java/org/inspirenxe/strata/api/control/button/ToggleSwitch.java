@@ -68,6 +68,9 @@ import java.util.Objects;
  *         .onEvent(Toggle.TOGGLED, event -> settings.setPvp(event.value()));
  * }</pre>
  *
+ * <p>Its caption marks a mnemonic with an underscore, as {@link Button} describes: Alt with the letter focuses and
+ * flips the switch.</p>
+ *
  * <p>Get one from {@link org.inspirenxe.strata.api.ComponentFactory#toggleSwitch(String)}. Do not implement this
  * interface.</p>
  */

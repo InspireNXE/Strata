@@ -20,6 +20,7 @@ import org.inspirenxe.strata.api.control.menu.Menu;
 import org.inspirenxe.strata.api.control.menu.MenuBar;
 import org.inspirenxe.strata.api.control.menu.SubmenuItem;
 import org.inspirenxe.strata.api.event.cause.CauseFrame;
+import org.inspirenxe.strata.api.event.input.KeyEvent;
 import org.inspirenxe.strata.api.event.input.PointerButtonEvent;
 import org.inspirenxe.strata.api.event.input.PointerEvent;
 import org.inspirenxe.strata.api.extension.MeasureContext;
@@ -27,6 +28,8 @@ import org.inspirenxe.strata.api.extension.Painter;
 import org.inspirenxe.strata.api.geometry.Insets;
 import org.inspirenxe.strata.api.geometry.Rect;
 import org.inspirenxe.strata.api.geometry.Size;
+import org.inspirenxe.strata.api.input.Key;
+import org.inspirenxe.strata.api.input.KeyAction;
 import org.inspirenxe.strata.api.input.MouseButton;
 import org.inspirenxe.strata.api.text.Text;
 import org.inspirenxe.strata.api.text.TextMetrics;
@@ -37,7 +40,10 @@ import org.inspirenxe.strata.core.control.RectCache;
 import org.inspirenxe.strata.core.node.BuiltInComponent;
 import org.inspirenxe.strata.core.node.CommandSource;
 import org.inspirenxe.strata.core.node.ComponentFactoryImpl;
-import org.inspirenxe.strata.core.text.TextLine;
+import org.inspirenxe.strata.core.node.KeyboardMenu;
+import org.inspirenxe.strata.core.node.MnemonicTarget;
+import org.inspirenxe.strata.core.text.MnemonicLine;
+import org.inspirenxe.strata.core.text.Mnemonics;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -48,8 +54,14 @@ import java.util.Optional;
  * The core {@link MenuBar}. It draws its titles itself, left to right from its left edge, and opens each menu as a
  * popup anchored to its title. Its titles are {@link SubmenuItemImpl}s; a disabled title, or one without a menu,
  * draws in the menu's disabled text style and opens nothing.
+ *
+ * <p>Alt with a title's mnemonic opens its menu from the keyboard. Alt pressed and released alone, or F10, makes
+ * the root give the bar every key and highlights its first title that opens a menu: Left and Right move the
+ * highlight, wrapping, Down, Enter or Space open the highlighted menu, a title's mnemonic opens its menu, and
+ * Escape lets the keys go. Any other key lets them go too and goes on as usual. Focus never moves to the bar.</p>
  */
-public final class MenuBarImpl extends BuiltInComponent<MenuBar> implements MenuBar, CommandSource {
+public final class MenuBarImpl extends BuiltInComponent<MenuBar> implements MenuBar, CommandSource,
+        MnemonicTarget, KeyboardMenu {
     /**
      * The space around each title when the theme sets no {@value #STYLE_TITLE_PADDING}: 8 at the sides and 3 at
      * the top and bottom.
@@ -58,6 +70,8 @@ public final class MenuBarImpl extends BuiltInComponent<MenuBar> implements Menu
 
     private final List<SubmenuItemImpl> entries;
     private int openIndex;
+    // The title the keyboard highlights while the bar has the keys, or -1
+    private int keyboardIndex;
     private boolean switching;
     private float pointerX;
     private final RectCache hoverRect = new RectCache();
@@ -71,7 +85,7 @@ public final class MenuBarImpl extends BuiltInComponent<MenuBar> implements Menu
     // Computed during measure
     private float[] titleX;
     private float[] titleWidth;
-    private TextLine[] spans;
+    private MnemonicLine[] spans;
     private float lineHeight;
     private Insets titlePadding = DEFAULT_TITLE_PADDING;
 
@@ -84,13 +98,14 @@ public final class MenuBarImpl extends BuiltInComponent<MenuBar> implements Menu
         super(ui);
         this.entries = new ArrayList<>();
         this.openIndex = -1;
+        this.keyboardIndex = -1;
         this.background = Paint.NONE;
         this.hovered = Paint.NONE;
         this.textStyle = TextStyle.DEFAULT;
         this.disabledTextStyle = TextStyle.DEFAULT;
         this.titleX = new float[0];
         this.titleWidth = new float[0];
-        this.spans = new TextLine[0];
+        this.spans = new MnemonicLine[0];
     }
 
     @Override
@@ -308,14 +323,15 @@ public final class MenuBarImpl extends BuiltInComponent<MenuBar> implements Menu
         if (this.titleX.length != count) {
             this.titleX = new float[count];
             this.titleWidth = new float[count];
-            this.spans = new TextLine[count];
+            this.spans = new MnemonicLine[count];
         }
         float x = 0f;
         for (int i = 0; i < count; i++) {
             final SubmenuItemImpl entry = this.entries.get(i);
-            this.spans[i] = TextLine.of(entry.text(), entry.usable() ? this.textStyle : this.disabledTextStyle, metrics);
+            this.spans[i] = MnemonicLine.of(entry.text(), entry.usable() ? this.textStyle : this.disabledTextStyle,
+                    metrics);
             this.titleX[i] = x;
-            this.titleWidth[i] = this.spans[i].width() + this.titlePadding.horizontal();
+            this.titleWidth[i] = this.spans[i].plain().width() + this.titlePadding.horizontal();
             x += this.titleWidth[i];
         }
         this.lineHeight = metrics.lineHeight(this.textStyle);
@@ -335,7 +351,9 @@ public final class MenuBarImpl extends BuiltInComponent<MenuBar> implements Menu
     @Override
     protected void paint(final Painter painter, final Rect bounds) {
         this.background.paint(painter, bounds);
-        final int hover = this.isHovered() ? this.titleAt(this.pointerX) : -1;
+        final int hover = this.keyboardIndex >= 0 ? this.keyboardIndex
+                : this.isHovered() ? this.titleAt(this.pointerX) : -1;
+        final boolean marked = this.hostRoot() != null && this.hostRoot().showsMnemonics();
         final Insets padding = this.titlePadding;
         final float textY = bounds.y() + padding.top() + (bounds.height() - padding.vertical() - this.lineHeight) * 0.5f;
         for (int i = 0; i < this.spans.length; i++) {
@@ -343,8 +361,102 @@ public final class MenuBarImpl extends BuiltInComponent<MenuBar> implements Menu
                 this.hovered.paint(painter, this.hoverRect.at(bounds.x() + this.titleX[i], bounds.y(),
                         this.titleWidth[i], bounds.height()));
             }
-            this.spans[i].draw(painter, bounds.x() + this.titleX[i] + padding.left(), textY);
+            this.spans[i].line(marked).draw(painter, bounds.x() + this.titleX[i] + padding.left(), textY);
         }
+    }
+
+    // ------------------------------------------------------------------
+    // Keyboard
+    // ------------------------------------------------------------------
+
+    private boolean opens(final int index) {
+        return index >= 0 && index < this.spans.length && index < this.entries.size()
+                && this.entries.get(index).usable() && this.menuAt(index) != null;
+    }
+
+    private int titleWithMnemonic(final int mnemonic) {
+        for (int i = 0; i < this.spans.length; i++) {
+            if (this.opens(i) && this.spans[i].mnemonic() == mnemonic) {
+                return i;
+            }
+        }
+        return -1;
+    }
+
+    @Override
+    public boolean hasMnemonic(final int mnemonic) {
+        return this.titleWithMnemonic(mnemonic) >= 0;
+    }
+
+    /**
+     * Opens the menu of the first title with the mnemonic for the user, from the keyboard, as Alt with the
+     * mnemonic does.
+     */
+    @Override
+    public void activateMnemonic(final int mnemonic) {
+        final int index = this.titleWithMnemonic(mnemonic);
+        if (index >= 0) {
+            this.userOpen(index, true);
+        }
+    }
+
+    @Override
+    public boolean enterKeyboard() {
+        if (this.hostRoot() == null) {
+            return false;
+        }
+        for (int i = 0; i < this.spans.length; i++) {
+            if (this.opens(i)) {
+                this.keyboardIndex = i;
+                this.hostRoot().grabKeys(this.node(), () -> this.keyboardIndex = -1);
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Moves the keyboard's highlight to the next title that opens a menu, wrapping.
+     */
+    private void stepHighlight(final int direction) {
+        final int count = this.spans.length;
+        for (int step = 1; step < count; step++) {
+            final int index = Math.floorMod(this.keyboardIndex + step * direction, count);
+            if (this.opens(index)) {
+                this.keyboardIndex = index;
+                return;
+            }
+        }
+    }
+
+    @Override
+    protected void onKey(final KeyEvent event) {
+        if (this.keyboardIndex < 0 || !event.action().isDown() || event.key().isModifier()) {
+            return;
+        }
+        final Key key = event.key();
+        final boolean press = event.action() == KeyAction.PRESS;
+        final int mnemonic = Mnemonics.of(key);
+        if (key == Key.LEFT || key == Key.RIGHT) {
+            this.stepHighlight(key == Key.LEFT ? -1 : 1);
+        } else if (key == Key.DOWN || key.isEnter() || key == Key.SPACE) {
+            if (press) {
+                final int index = this.keyboardIndex;
+                this.hostRoot().releaseKeys(this.node());
+                this.userOpen(index, true);
+            }
+        } else if (key == Key.ESCAPE) {
+            if (press) {
+                this.hostRoot().releaseKeys(this.node());
+            }
+        } else if (press && mnemonic != Mnemonics.NONE && this.titleWithMnemonic(mnemonic) >= 0) {
+            this.hostRoot().releaseKeys(this.node());
+            this.activateMnemonic(mnemonic);
+        } else {
+            this.hostRoot().releaseKeys(this.node());
+            return;
+        }
+        event.consume();
     }
 
     @Override

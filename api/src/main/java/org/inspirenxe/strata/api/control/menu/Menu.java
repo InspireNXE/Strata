@@ -38,7 +38,8 @@ import java.util.function.Consumer;
  * <p>Its entries are {@link MenuEntry}s: {@link MenuItem} commands, {@link CheckMenuItem}s that flip a setting,
  * {@link SubmenuItem}s that open another menu, and {@link MenuSeparator}s. Add them with {@link #addItem(MenuEntry)},
  * or let the shorthands such as {@link #addItem(String, Runnable)} make them. A shortcut is text drawn at the right of
- * an item; it is only a hint and binds no key.</p>
+ * an item; it is only a hint and binds no key. An item showing a {@linkplain MenuItem#setCommand command} with a
+ * stroke and no hint text shows the stroke, and a menu bar runs that command from it.</p>
  *
  * <p>An open menu takes focus. Hovering an item highlights it, and hovering a submenu item opens the submenu beside
  * it. Up and Down move the highlight past separators and disabled items, wrapping at the ends, and repeat while held.
@@ -46,8 +47,12 @@ import java.util.function.Consumer;
  * already opened the submenu, Right moves focus into it and highlights its first item unless the pointer highlighted
  * one there. Left in a submenu closes it and gives focus back to the menu it opened from. Enter, keypad Enter and Space choose the
  * highlighted item, or open the submenu of a submenu item as Right does. Escape closes the menu it is pressed in,
- * with its submenus, and focus goes back to the menu it opened from. These keys work with any modifiers held, and the
- * menu consumes them. A left click on an item chooses it. Choosing an item, by click or key, closes the whole chain of menus and then runs the item's action.
+ * with its submenus, and focus goes back to the menu it opened from. Home and End highlight the first and last items
+ * that can be chosen. These keys work with any modifiers held, and the menu consumes them. A letter or digit, alone
+ * or with Alt, chooses the one item whose mnemonic it is, or highlights the items that share it in turn; a letter no
+ * item's mnemonic claims highlights the next item whose text starts with it, and goes on to the host when none
+ * does. An item's mnemonics are underlined while Alt is held and once the keyboard opened or moved through the
+ * menu. A left click on an item chooses it. Choosing an item, by click or key, closes the whole chain of menus and then runs the item's action.
  * Clicking outside closes the menus. When the first menu of a chain closes, focus goes back to where it was before
  * the chain opened. Items are chosen on the click even on a platform whose conventions say buttons act on the press,
  * since those conventions cover buttons, checkboxes, radio buttons, toggles and tabs.</p>

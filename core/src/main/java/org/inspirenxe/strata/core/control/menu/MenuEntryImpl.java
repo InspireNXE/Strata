@@ -21,6 +21,7 @@ import org.inspirenxe.strata.api.input.KeyStroke;
 import org.inspirenxe.strata.api.text.Text;
 import org.inspirenxe.strata.core.control.RectCache;
 import org.inspirenxe.strata.core.control.Rings;
+import org.inspirenxe.strata.core.text.Mnemonics;
 import org.inspirenxe.strata.core.text.TextLine;
 
 /**
@@ -32,6 +33,12 @@ public abstract class MenuEntryImpl {
     private Object owner;
     TextLine span;
     TextLine disabledSpan;
+    // The two spans with the mnemonic underlined, drawn while mnemonics show
+    TextLine markedSpan;
+    TextLine markedDisabledSpan;
+    // The mnemonic and the first letter of the drawn text, in lower case, as of the last measure
+    int mnemonic = Mnemonics.NONE;
+    int initial = Mnemonics.NONE;
     TextLine shortcutSpan;
     float shortcutWidth;
     final RectCache rowRect = new RectCache();
@@ -44,6 +51,8 @@ public abstract class MenuEntryImpl {
     MenuEntryImpl() {
         this.span = TextLine.EMPTY;
         this.disabledSpan = this.span;
+        this.markedSpan = this.span;
+        this.markedDisabledSpan = this.span;
         this.shortcutSpan = this.span;
     }
 

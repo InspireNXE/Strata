@@ -37,6 +37,9 @@ import java.util.Optional;
  * sides.addTab(sell);
  * }</pre>
  *
+ * <p>Its caption marks a mnemonic with an underscore, as {@link org.inspirenxe.strata.api.control.button.Button}
+ * describes: Alt with the letter selects the tab and focuses its bar.</p>
+ *
  * <p>Get one from {@link org.inspirenxe.strata.api.ComponentFactory#tab(String)}. Call tabs on the UI thread. Do not
  * implement this interface.</p>
  */

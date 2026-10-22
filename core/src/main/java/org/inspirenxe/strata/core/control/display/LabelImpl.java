@@ -29,7 +29,9 @@ import org.inspirenxe.strata.api.text.TextStyle;
 import org.inspirenxe.strata.api.theme.Theme;
 import org.inspirenxe.strata.core.node.BuiltInComponent;
 import org.inspirenxe.strata.core.node.ComponentFactoryImpl;
+import org.inspirenxe.strata.core.node.MnemonicTarget;
 import org.inspirenxe.strata.core.text.InlineMetrics;
+import org.inspirenxe.strata.core.text.Mnemonics;
 import org.inspirenxe.strata.core.text.RichText;
 import org.inspirenxe.strata.core.text.TextWrap;
 
@@ -48,8 +50,12 @@ import java.util.Objects;
  *
  * <p>With {@link TextOverflow#ELLIPSIS}, the shortened lines are worked out when the bounds' width changes and kept
  * until the next change, so painting allocates nothing in between.</p>
+ *
+ * <p>With mnemonic parsing on, the resolved text's markers are taken out as {@link Mnemonics} describes, and the
+ * lines are broken from the marked text while mnemonics show. A label whose mnemonics start or stop showing lays
+ * out again on the next frame. Alt with its mnemonic focuses the next tab stop after it.</p>
  */
-public final class LabelImpl extends BuiltInComponent<Label> implements Label {
+public final class LabelImpl extends BuiltInComponent<Label> implements Label, MnemonicTarget {
     private Text text;
     private TextStyle explicitStyle;
     private TextStyle themeStyle;
@@ -57,8 +63,12 @@ public final class LabelImpl extends BuiltInComponent<Label> implements Label {
     private HorizontalAlignment textAlignment;
     private float textScale;
     private TextOverflow overflow;
+    private boolean mnemonicParsing;
 
     // Computed during measure, drawn during paint
+    private int mnemonic = Mnemonics.NONE;
+    // Whether the lines were broken from the marked text
+    private boolean measuredMarked;
     private final List<List<TextSpan>> lines;
     private final List<Float> lineWidths;
     private final List<Float> lineHeights;
@@ -175,6 +185,54 @@ public final class LabelImpl extends BuiltInComponent<Label> implements Label {
     }
 
     @Override
+    public boolean isMnemonicParsing() {
+        return this.mnemonicParsing;
+    }
+
+    @Override
+    public Label setMnemonicParsing(final boolean parsing) {
+        if (parsing != this.mnemonicParsing) {
+            this.mnemonicParsing = parsing;
+            this.mnemonic = Mnemonics.NONE;
+            this.invalidateLayout();
+        }
+        return this;
+    }
+
+    private boolean showsMnemonics() {
+        return this.hostRoot() != null && this.hostRoot().showsMnemonics();
+    }
+
+    /**
+     * Resolves the text and, with parsing on, takes its mnemonic out, marked while mnemonics show.
+     */
+    private List<TextSpan> runs() {
+        final List<TextSpan> runs = this.text.resolve(this.style());
+        if (!this.mnemonicParsing) {
+            return runs;
+        }
+        final Mnemonics parsed = Mnemonics.parse(runs);
+        this.mnemonic = parsed.mnemonic();
+        this.measuredMarked = this.showsMnemonics();
+        return this.measuredMarked ? parsed.marked() : parsed.plain();
+    }
+
+    @Override
+    public boolean hasMnemonic(final int mnemonic) {
+        return this.mnemonicParsing && this.mnemonic == mnemonic;
+    }
+
+    /**
+     * Focuses the next tab stop after the label, as Alt with its mnemonic does.
+     */
+    @Override
+    public void activateMnemonic(final int mnemonic) {
+        if (this.hostRoot() != null) {
+            this.hostRoot().focusNextAfter(this.node());
+        }
+    }
+
+    @Override
     protected void onApplyTheme(final Theme theme) {
         this.themeStyle = theme.textStyleOr(STYLE_TEXT, TextStyle.DEFAULT);
     }
@@ -182,7 +240,7 @@ public final class LabelImpl extends BuiltInComponent<Label> implements Label {
     @Override
     protected Size measureMinimum(final MeasureContext context) {
         final TextMetrics metrics = context.text();
-        final List<TextSpan> runs = this.text.resolve(this.style());
+        final List<TextSpan> runs = this.runs();
         final InlineMetrics inline = InlineMetrics.of(metrics);
         if (this.wrap) {
             return new Size(longestWord(runs, metrics) * this.textScale,
@@ -235,7 +293,7 @@ public final class LabelImpl extends BuiltInComponent<Label> implements Label {
     @Override
     protected Size measure(final MeasureContext context, final float availableWidth, final float availableHeight) {
         final TextMetrics metrics = context.text();
-        final List<TextSpan> runs = this.text.resolve(this.style());
+        final List<TextSpan> runs = this.runs();
         final float maxWidth = this.wrap ? availableWidth / this.textScale : Float.POSITIVE_INFINITY;
 
         this.lines.clear();
@@ -276,6 +334,10 @@ public final class LabelImpl extends BuiltInComponent<Label> implements Label {
 
     @Override
     protected void paint(final Painter painter, final Rect bounds) {
+        if (this.mnemonic != Mnemonics.NONE && this.measuredMarked != this.showsMnemonics()) {
+            // Broken again from the other text on the next frame; both measure the same
+            this.invalidateLayout();
+        }
         if (this.overflow == TextOverflow.ELLIPSIS && bounds.width() != this.shownForWidth) {
             this.shorten(bounds.width() / this.textScale);
             this.shownForWidth = bounds.width();

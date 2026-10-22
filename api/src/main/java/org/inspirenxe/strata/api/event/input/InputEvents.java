@@ -77,8 +77,10 @@ public final class InputEvents {
      * A key went down, repeated or came up. Fired at the focused component or, when nothing has focus, at the
      * content of the top dialog, or else at the screen's content. Bubbles. If nothing consumes a press or repeat, the
      * host runs the first enabled command whose shortcut matches it (see
-     * {@link org.inspirenxe.strata.api.command.Shortcuts}). If nothing consumes an Escape press, the top overlay that
-     * is not a toast closes. If nothing consumes a Tab press or repeat without Control or Alt, focus
+     * {@link org.inspirenxe.strata.api.command.Shortcuts}), then, where the platform uses mnemonics, Alt with a letter
+     * acts on the control whose caption has that mnemonic (see
+     * {@link org.inspirenxe.strata.api.control.button.Button}), and then Enter or Escape presses a default or cancel
+     * button. If nothing consumes an Escape press, the top overlay that is not a toast closes. If nothing consumes a Tab press or repeat without Control or Alt, focus
      * moves to the next tabbable component (with Shift, the previous). Default behavior: a button presses on Enter or
      * Space; a text box edits and moves its caret.
      */

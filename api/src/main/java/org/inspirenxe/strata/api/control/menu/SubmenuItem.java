@@ -30,6 +30,10 @@ import java.util.Optional;
  * bar.addMenu(factory.submenuItem("View").setMenu(viewMenu));
  * }</pre>
  *
+ * <p>Its caption marks a mnemonic with an underscore, as {@link org.inspirenxe.strata.api.control.button.Button}
+ * describes: Alt with the letter opens its menu while the menu holding it is open, as the letter alone does, or opens a
+ * menu bar's menu from anywhere in the bar's layer.</p>
+ *
  * <p>Get one from {@link org.inspirenxe.strata.api.ComponentFactory#submenuItem(String)} or make one with
  * {@link Menu#addSubmenu} or {@link MenuBar#addMenu(String, Menu)}. Do not implement this interface.</p>
  */

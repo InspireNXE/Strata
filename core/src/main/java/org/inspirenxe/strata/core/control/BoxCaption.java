@@ -21,7 +21,8 @@ import org.inspirenxe.strata.api.geometry.Size;
 import org.inspirenxe.strata.api.text.Text;
 import org.inspirenxe.strata.api.text.TextMetrics;
 import org.inspirenxe.strata.api.text.TextStyle;
-import org.inspirenxe.strata.core.text.TextLine;
+import org.inspirenxe.strata.core.text.MnemonicLine;
+import org.inspirenxe.strata.core.text.Mnemonics;
 
 /**
  * The layout a checkbox, a radio button and a toggle switch share: a box at the left edge, vertically centered, and
@@ -29,14 +30,15 @@ import org.inspirenxe.strata.core.text.TextLine;
  * its box through it, and draws its own box in the rectangle {@link #box} gives.
  *
  * <p>The caption is resolved in the normal and disabled styles, and the wider and taller of the two count, so
- * enabling or disabling the control needs no new layout. An empty caption leaves the gap out. The box's rectangle is
+ * enabling or disabling the control needs no new layout. Its mnemonic marker is taken out, and each is also kept
+ * with the mnemonic underlined, for drawing while mnemonics show. An empty caption leaves the gap out. The box's rectangle is
  * kept from one frame to the next while the control's bounds and the box size stay the same, so the same rectangle
  * comes back and painting allocates nothing.</p>
  */
 public final class BoxCaption {
     private final float gap;
-    private TextLine caption = TextLine.EMPTY;
-    private TextLine disabledCaption = TextLine.EMPTY;
+    private MnemonicLine caption = MnemonicLine.EMPTY;
+    private MnemonicLine disabledCaption = MnemonicLine.EMPTY;
     private float captionWidth;
     private float captionHeight;
     private float boxWidth;
@@ -63,11 +65,20 @@ public final class BoxCaption {
      */
     public float measureCaption(final Text text, final TextStyle style, final TextStyle disabledStyle,
                                 final TextMetrics metrics) {
-        this.caption = TextLine.of(text, style, metrics);
-        this.disabledCaption = TextLine.of(text, disabledStyle, metrics);
-        this.captionWidth = Math.max(this.caption.width(), this.disabledCaption.width());
-        this.captionHeight = Math.max(this.caption.height(), this.disabledCaption.height());
+        this.caption = MnemonicLine.of(text, style, metrics);
+        this.disabledCaption = MnemonicLine.of(text, disabledStyle, metrics);
+        this.captionWidth = Math.max(this.caption.plain().width(), this.disabledCaption.plain().width());
+        this.captionHeight = Math.max(this.caption.plain().height(), this.disabledCaption.plain().height());
         return this.captionHeight;
+    }
+
+    /**
+     * Returns the caption's mnemonic as of the last measure.
+     *
+     * @return the mnemonic in lower case, or {@link Mnemonics#NONE}
+     */
+    public int mnemonic() {
+        return this.caption.mnemonic();
     }
 
     /**
@@ -81,7 +92,7 @@ public final class BoxCaption {
     public Size size(final float width, final float height) {
         this.boxWidth = width;
         this.boxHeight = height;
-        final float total = this.caption.isEmpty() ? width : width + this.gap + this.captionWidth;
+        final float total = this.caption.plain().isEmpty() ? width : width + this.gap + this.captionWidth;
         return new Size(total, Math.max(height, this.captionHeight));
     }
 
@@ -103,10 +114,10 @@ public final class BoxCaption {
      * @return the baseline below the control's top, or NaN for an empty caption
      */
     public float baseline(final float height) {
-        if (this.caption.isEmpty()) {
+        if (this.caption.plain().isEmpty()) {
             return Float.NaN;
         }
-        return height * 0.5f - this.captionHeight * 0.5f + this.caption.baseline();
+        return height * 0.5f - this.captionHeight * 0.5f + this.caption.plain().baseline();
     }
 
     /**
@@ -116,13 +127,15 @@ public final class BoxCaption {
      * @param painter what to draw with
      * @param bounds the control's bounds
      * @param enabled false for the disabled style
+     * @param showMnemonic true to underline the mnemonic
      */
-    public void paintCaption(final Painter painter, final Rect bounds, final boolean enabled) {
-        if (this.caption.isEmpty()) {
+    public void paintCaption(final Painter painter, final Rect bounds, final boolean enabled,
+                             final boolean showMnemonic) {
+        if (this.caption.plain().isEmpty()) {
             return;
         }
         final float middle = bounds.y() + bounds.height() * 0.5f;
-        (enabled ? this.caption : this.disabledCaption).draw(painter, bounds.x() + this.boxWidth + this.gap,
-                middle - this.captionHeight * 0.5f);
+        (enabled ? this.caption : this.disabledCaption).line(showMnemonic).draw(painter,
+                bounds.x() + this.boxWidth + this.gap, middle - this.captionHeight * 0.5f);
     }
 }

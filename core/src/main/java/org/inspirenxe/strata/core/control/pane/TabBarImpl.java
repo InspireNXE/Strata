@@ -43,6 +43,8 @@ import org.inspirenxe.strata.core.frame.FrameRequests;
 import org.inspirenxe.strata.core.node.BuiltInComponent;
 import org.inspirenxe.strata.core.node.BuiltInComposite;
 import org.inspirenxe.strata.core.node.ComponentFactoryImpl;
+import org.inspirenxe.strata.core.node.MnemonicTarget;
+import org.inspirenxe.strata.core.text.MnemonicLine;
 import org.inspirenxe.strata.core.text.TextLine;
 
 import java.util.ArrayList;
@@ -324,7 +326,7 @@ public final class TabBarImpl extends BuiltInComposite<TabBar> implements TabBar
      * The component that draws one tab. It stretches over the slot the bar gives it.
      */
     private static final class TabView extends BuiltInComponent<TabView> implements HasCursor<TabView>,
-            HasTooltip<TabView> {
+            HasTooltip<TabView>, MnemonicTarget {
         private final TabBarImpl bar;
         private final TabImpl tab;
         private Paint normal;
@@ -344,9 +346,9 @@ public final class TabBarImpl extends BuiltInComposite<TabBar> implements TabBar
         private Insets padding;
         private Insets selectedPadding;
         private float lineHeight;
-        private TextLine span;
-        private TextLine selectedSpan;
-        private TextLine disabledSpan;
+        private MnemonicLine span;
+        private MnemonicLine selectedSpan;
+        private MnemonicLine disabledSpan;
         private float textWidth;
         private final Activation activation;
         // Kept between frames
@@ -372,7 +374,7 @@ public final class TabBarImpl extends BuiltInComposite<TabBar> implements TabBar
             this.textStyle = TextStyle.DEFAULT;
             this.selectedText = TextStyle.DEFAULT;
             this.disabledText = TextStyle.DEFAULT;
-            this.span = TextLine.EMPTY;
+            this.span = MnemonicLine.EMPTY;
             this.selectedSpan = this.span;
             this.disabledSpan = this.span;
             this.activation = new Activation(this::activatesOnPress, this::clicked);
@@ -417,11 +419,11 @@ public final class TabBarImpl extends BuiltInComposite<TabBar> implements TabBar
         protected Size measure(final MeasureContext context, final float availableWidth, final float availableHeight) {
             final TextMetrics metrics = context.text();
             final Text text = this.tab.text();
-            this.span = TextLine.of(text, this.textStyle, metrics);
-            this.selectedSpan = TextLine.of(text, this.selectedText, metrics);
-            this.disabledSpan = TextLine.of(text, this.disabledText, metrics);
-            this.textWidth = Math.max(this.span.width(), this.selectedSpan.width());
-            this.lineHeight = Math.max(this.span.height(), this.selectedSpan.height());
+            this.span = MnemonicLine.of(text, this.textStyle, metrics);
+            this.selectedSpan = MnemonicLine.of(text, this.selectedText, metrics);
+            this.disabledSpan = MnemonicLine.of(text, this.disabledText, metrics);
+            this.textWidth = Math.max(this.span.plain().width(), this.selectedSpan.plain().width());
+            this.lineHeight = Math.max(this.span.plain().height(), this.selectedSpan.plain().height());
             // Sized for the larger padding, so selecting a tab never moves its neighbors
             final float sides = Math.max(this.padding.left() + this.padding.right(),
                     this.selectedPadding.left() + this.selectedPadding.right());
@@ -450,19 +452,20 @@ public final class TabBarImpl extends BuiltInComposite<TabBar> implements TabBar
             // A disabled bar draws every tab disabled, keeping the selected one distinct
             final boolean enabled = this.tab.isEnabled() && this.bar.isEnabled();
             final Paint face;
-            final TextLine caption;
+            final MnemonicLine shown;
             if (isSelected) {
                 face = !enabled ? this.selectedDisabled
                         : this.isHovered() || this.bar.isFocused() && this.bar.keyboardFocus ? this.selectedHovered
                         : this.selected;
-                caption = enabled ? this.selectedSpan : this.disabledSpan;
+                shown = enabled ? this.selectedSpan : this.disabledSpan;
             } else if (!enabled) {
                 face = this.disabled;
-                caption = this.disabledSpan;
+                shown = this.disabledSpan;
             } else {
                 face = this.isHovered() ? this.hovered : this.normal;
-                caption = this.span;
+                shown = this.span;
             }
+            final TextLine caption = shown.line(this.hostRoot() != null && this.hostRoot().showsMnemonics());
             face.paint(painter, bounds);
             if (isSelected) {
                 if (this.selectedFill != Paint.NONE) {
@@ -497,6 +500,22 @@ public final class TabBarImpl extends BuiltInComposite<TabBar> implements TabBar
         @Override
         protected void onClick(final PointerButtonEvent event) {
             this.activation.click(event);
+        }
+
+        @Override
+        public boolean hasMnemonic(final int mnemonic) {
+            return this.tab.isEnabled() && this.span.mnemonic() == mnemonic;
+        }
+
+        /**
+         * Selects the tab for the user and gives the bar focus, as Alt with the tab's mnemonic does.
+         */
+        @Override
+        public void activateMnemonic(final int mnemonic) {
+            if (this.bar.requestFocus()) {
+                this.bar.keyboardFocus = true;
+            }
+            this.bar.userSelect(this.index());
         }
 
         /**

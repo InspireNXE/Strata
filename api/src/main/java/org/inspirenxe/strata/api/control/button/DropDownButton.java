@@ -79,6 +79,9 @@ import java.util.Optional;
  * DropDownButton button = factory.dropDownButton("Sort", sort);
  * }</pre>
  *
+ * <p>Its caption marks a mnemonic with an underscore, as {@link Button} describes: Alt with the letter focuses the
+ * button and opens its popup.</p>
+ *
  * <p>Get one from {@link org.inspirenxe.strata.api.ComponentFactory#dropDownButton(String)}. Do not implement this
  * interface.</p>
  */

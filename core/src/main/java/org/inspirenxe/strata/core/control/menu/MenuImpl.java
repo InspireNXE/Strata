@@ -45,6 +45,8 @@ import org.inspirenxe.strata.core.node.BuiltInComponent;
 import org.inspirenxe.strata.core.node.ComponentFactoryImpl;
 import org.inspirenxe.strata.core.node.Node;
 import org.inspirenxe.strata.core.node.Root;
+import org.inspirenxe.strata.core.text.MnemonicLine;
+import org.inspirenxe.strata.core.text.Mnemonics;
 import org.inspirenxe.strata.core.text.TextLine;
 
 import java.util.ArrayList;
@@ -102,6 +104,8 @@ public final class MenuImpl extends BuiltInComponent<Menu> implements Menu, Core
     private final PopupSession session;
     private MenuImpl openSubmenu;
     private int highlighted;
+    // Whether the keyboard opened or moved through the menu since it opened, which shows its mnemonics
+    private boolean fromKeyboard;
 
     // Theme
     private Paint background;
@@ -342,6 +346,7 @@ public final class MenuImpl extends BuiltInComponent<Menu> implements Menu, Core
      */
     private void closed() {
         this.highlighted = -1;
+        this.fromKeyboard = false;
         if (this.anchorWidth != 0f) {
             this.anchorWidth = 0f;
             this.invalidateLayout();
@@ -431,6 +436,7 @@ public final class MenuImpl extends BuiltInComponent<Menu> implements Menu, Core
      * Highlights the first item that can be chosen, for menus opened from the keyboard.
      */
     void highlightFirst() {
+        this.fromKeyboard = true;
         this.highlight(this.nextUsable(-1, 1));
     }
 
@@ -584,8 +590,14 @@ public final class MenuImpl extends BuiltInComponent<Menu> implements Menu, Core
                 y += SEPARATOR_HEIGHT;
                 continue;
             }
-            item.span = TextLine.of(item.label(), this.textStyle, metrics);
-            item.disabledSpan = TextLine.of(item.label(), this.disabledTextStyle, metrics);
+            final MnemonicLine line = MnemonicLine.of(item.label(), this.textStyle, metrics);
+            final MnemonicLine disabledLine = MnemonicLine.of(item.label(), this.disabledTextStyle, metrics);
+            item.span = line.plain();
+            item.markedSpan = line.marked();
+            item.disabledSpan = disabledLine.plain();
+            item.markedDisabledSpan = disabledLine.marked();
+            item.mnemonic = line.mnemonic();
+            item.initial = Mnemonics.initial(line.plain().spans());
             final KeyStroke stroke = item.stroke();
             item.shortcutSpan = TextLine.of(stroke != null ? this.ui.keyText(stroke) : item.hint(), this.shortcutStyle,
                     metrics);
@@ -602,6 +614,7 @@ public final class MenuImpl extends BuiltInComponent<Menu> implements Menu, Core
     @Override
     protected void paint(final Painter painter, final Rect bounds) {
         this.background.paint(painter, bounds);
+        final boolean marked = this.fromKeyboard || this.hostRoot() != null && this.hostRoot().showsMnemonics();
         final float left = bounds.x() + this.padding.left();
         final float width = bounds.width() - this.padding.horizontal();
         for (int i = 0; i < this.items.size(); i++) {
@@ -617,7 +630,9 @@ public final class MenuImpl extends BuiltInComponent<Menu> implements Menu, Core
             }
             final Insets padding = this.itemPadding;
             final float textY = top + padding.top() + (this.itemHeight - padding.vertical() - this.lineHeight) * 0.5f;
-            (item.usable() ? item.span : item.disabledSpan).draw(painter, left + padding.left(), textY);
+            final TextLine text = item.usable() ? marked ? item.markedSpan : item.span
+                    : marked ? item.markedDisabledSpan : item.disabledSpan;
+            text.draw(painter, left + padding.left(), textY);
             final int color = (item.usable() ? this.textStyle : this.disabledTextStyle).color();
             if (item.checked()) {
                 painter.fill(item.markRect.at(left + (padding.left() - CHECK_SIZE) * 0.5f,
@@ -680,9 +695,12 @@ public final class MenuImpl extends BuiltInComponent<Menu> implements Menu, Core
         }
         final Key key = event.key();
         final boolean press = event.action() == KeyAction.PRESS;
+        this.fromKeyboard = true;
         switch (key) {
             case UP -> this.highlight(this.nextUsable(this.highlighted < 0 ? 0 : this.highlighted, -1));
             case DOWN -> this.highlight(this.nextUsable(this.highlighted, 1));
+            case HOME -> this.highlight(this.nextUsable(-1, 1));
+            case END -> this.highlight(this.nextUsable(0, -1));
             case RIGHT -> {
                 if (this.highlighted >= 0 && this.items.get(this.highlighted).submenu() != null) {
                     this.openSubmenu(this.highlighted, true);
@@ -712,11 +730,52 @@ public final class MenuImpl extends BuiltInComponent<Menu> implements Menu, Core
             default -> {
                 if (press && (key.isEnter() || key == Key.SPACE)) {
                     this.choose(this.highlighted);
-                } else {
+                } else if (!press || event.modifiers().control() || event.modifiers().superKey()
+                        || !this.letter(Mnemonics.of(key))) {
                     return;
                 }
             }
         }
         event.consume();
+    }
+
+    /**
+     * Acts on a letter or digit typed in the open menu, with or without Alt. One usable entry whose mnemonic it is
+     * gets chosen; several are highlighted in turn. With no mnemonic for it, the highlight moves to the next usable
+     * entry whose text starts with it.
+     *
+     * @return true if the letter did anything
+     */
+    private boolean letter(final int letter) {
+        if (letter == Mnemonics.NONE) {
+            return false;
+        }
+        int first = -1;
+        int count = 0;
+        for (int i = 0; i < this.items.size(); i++) {
+            final MenuEntryImpl entry = this.items.get(i);
+            if (entry.usable() && entry.mnemonic == letter) {
+                count++;
+                if (first < 0) {
+                    first = i;
+                }
+            }
+        }
+        if (count == 1) {
+            this.highlight(first);
+            this.choose(first);
+            return true;
+        }
+        final boolean byMnemonic = count > 1;
+        final int size = this.items.size();
+        for (int step = 1; step <= size; step++) {
+            final int index = Math.floorMod(this.highlighted + step, size);
+            final MenuEntryImpl entry = this.items.get(index);
+            if (entry.usable() && (byMnemonic ? entry.mnemonic == letter : entry.initial == letter)) {
+                this.highlight(index);
+                return true;
+            }
+        }
+        return false;
     }
 }

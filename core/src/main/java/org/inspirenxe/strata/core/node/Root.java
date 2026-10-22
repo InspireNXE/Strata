@@ -71,6 +71,7 @@ import org.inspirenxe.strata.core.text.InlineMetrics;
 import org.inspirenxe.strata.core.state.Binding;
 import org.inspirenxe.strata.core.state.BindingQueue;
 import org.inspirenxe.strata.core.state.Watch;
+import org.inspirenxe.strata.core.text.Mnemonics;
 import org.inspirenxe.strata.spi.Canvas;
 import org.inspirenxe.strata.spi.Platform;
 
@@ -119,7 +120,11 @@ import java.util.function.Consumer;
  *
  * <p>Keyboard rules: key events go to the focused node, or else to the top dialog, or else to the content. An
  * unhandled press or repeat runs the first enabled command whose shortcut matches it, as {@link Shortcuts}
- * describes. Then an unhandled Enter or Escape press with no modifiers presses the default or cancel button of the
+ * describes. Where the platform's conventions turn mnemonics on, an unhandled press of Alt with a letter or digit
+ * acts on the component in the top layer whose caption has that mnemonic, and Alt pressed and released alone, or an
+ * unhandled F10, gives the keys to the first menu bar, as {@link #grabKeys} describes; while a node holds the keys,
+ * they go to it ahead of the focused node. Then an unhandled Enter or Escape press with no modifiers presses the
+ * default or cancel button of the
  * target's scope, as {@link #pressDialogButton} describes. An unhandled Escape press closes the top overlay that is
  * not a toast. An unhandled Tab press or repeat without Ctrl
  * or Alt moves focus, backwards with Shift, among the nodes of the top dialog or, with no dialog, of the content.
@@ -184,6 +189,11 @@ public final class Root {
     private List<Node> commandSources;
     private Node commandSourceScope;
     private final List<Command> commandScratch;
+    // The node that takes every key while set, as a menu bar does after Alt alone, and what to tell when it ends
+    private Node keyGrab;
+    private Runnable keyGrabEnded;
+    // Whether Alt went down with nothing else held and no other key has gone down since
+    private boolean altAlone;
     private Screen screen;
 
     private Theme theme;
@@ -697,6 +707,9 @@ public final class Root {
             }
             if (node == this.tooltipPending) {
                 this.tooltipPending = null;
+            }
+            if (node == this.keyGrab) {
+                this.endKeyGrab();
             }
             this.presses.values().removeIf(press -> press.target == node);
             node.detach();
@@ -1237,6 +1250,8 @@ public final class Root {
         this.pointerX = x;
         this.pointerY = y;
         this.pointerInside = true;
+        this.altAlone = false;
+        this.endKeyGrab();
         this.swallowedReleases.remove(button);
         final Press stale = this.presses.remove(button);
         if (stale != null) {
@@ -1654,12 +1669,41 @@ public final class Root {
         if (!this.platform.capabilities().sendsKeyRepeat()) {
             this.keyRepeater.onKey(key, action, modifiers, this.platform.clock().millis());
         }
-        return this.dispatchKey(key, action, modifiers);
+        if (key != Key.LEFT_ALT && key != Key.RIGHT_ALT) {
+            if (action == KeyAction.PRESS) {
+                this.altAlone = false;
+            }
+            return this.dispatchKey(key, action, modifiers);
+        }
+        if (action == KeyAction.PRESS) {
+            this.altAlone = modifiers.equals(Modifiers.of(Modifier.ALT));
+        }
+        final boolean used = this.dispatchKey(key, action, modifiers);
+        if (action != KeyAction.RELEASE || !this.altAlone) {
+            return used;
+        }
+        // Alt pressed and released alone moves to the menu bar, or back out of it
+        this.altAlone = false;
+        if (!this.mnemonicsOn()) {
+            return used;
+        }
+        if (this.keyGrab != null) {
+            this.endKeyGrab();
+            return true;
+        }
+        return this.enterMenuBar() || used;
     }
 
     private boolean dispatchKey(final Key key, final KeyAction action, final Modifiers modifiers) {
         final Layer dialog = this.topDialog();
-        final Node target = this.focused != null ? this.focused : dialog != null ? dialog.node : this.content;
+        Node target = this.focused != null ? this.focused : dialog != null ? dialog.node : this.content;
+        if (this.keyGrab != null) {
+            if (this.keyGrab.root() == this && isUsable(this.keyGrab)) {
+                target = this.keyGrab;
+            } else {
+                this.endKeyGrab();
+            }
+        }
         if (target == null) {
             return false;
         }
@@ -1669,6 +1713,16 @@ public final class Root {
         }
         if (action.isDown() && this.runShortcut(target, key, modifiers)) {
             return true;
+        }
+        if (action == KeyAction.PRESS && this.mnemonicsOn()) {
+            final int mnemonic = Mnemonics.of(key);
+            if (mnemonic != Mnemonics.NONE && modifiers.alt() && !modifiers.control() && !modifiers.superKey()
+                    && this.runMnemonic(mnemonic)) {
+                return true;
+            }
+            if (key == Key.F10 && modifiers.isEmpty() && this.keyGrab == null && this.enterMenuBar()) {
+                return true;
+            }
         }
         if (action == KeyAction.PRESS && modifiers.isEmpty() && (key.isEnter() || key == Key.ESCAPE)
                 && this.pressDialogButton(target, key == Key.ESCAPE)) {
@@ -1773,6 +1827,159 @@ public final class Root {
             }
         }
         return null;
+    }
+
+    // ------------------------------------------------------------------
+    // Mnemonics
+    // ------------------------------------------------------------------
+
+    private boolean mnemonicsOn() {
+        return this.platform.conventions().mnemonics();
+    }
+
+    /**
+     * Returns whether captions underline their mnemonics now: the platform's conventions turn mnemonics on, and Alt
+     * is held or a menu bar has the keys.
+     *
+     * @return true while mnemonics show
+     */
+    public boolean showsMnemonics() {
+        return this.mnemonicsOn() && (this.modifiers.alt() || this.keyGrab != null);
+    }
+
+    /**
+     * Gives every key to a node, ahead of the focused one, until {@link #releaseKeys} or until the grab ends: a
+     * pointer press, a change of focus, another grab, or the node leaving the tree or being hidden or disabled. A
+     * menu bar takes the keys this way after Alt alone. The keys go along the node's path as they would from focus.
+     *
+     * @param node the node
+     * @param ended run once when the grab ends, however it ends
+     */
+    public void grabKeys(final Node node, final Runnable ended) {
+        Objects.requireNonNull(node, "node");
+        Objects.requireNonNull(ended, "ended");
+        this.endKeyGrab();
+        this.keyGrab = node;
+        this.keyGrabEnded = ended;
+    }
+
+    /**
+     * Ends a node's grab of the keys, telling it as {@link #grabKeys} says. Does nothing if the node holds no grab.
+     *
+     * @param node the node
+     */
+    public void releaseKeys(final Node node) {
+        if (this.keyGrab == node) {
+            this.endKeyGrab();
+        }
+    }
+
+    private void endKeyGrab() {
+        final Runnable ended = this.keyGrabEnded;
+        this.keyGrab = null;
+        this.keyGrabEnded = null;
+        if (ended != null) {
+            ended.run();
+        }
+    }
+
+    /**
+     * Acts on Alt with a mnemonic. The top layer that has a visible, enabled component with the mnemonic is
+     * searched, from the top overlay that is not a toast down to the content, stopping at a dialog. One component
+     * with it is focused when it can take focus, then acted on. Several share it: each press moves focus to the next
+     * of them that can take it, after the focused one, without acting.
+     */
+    private boolean runMnemonic(final int mnemonic) {
+        this.layout();
+        for (int i = this.layers.size() - 1; i >= -1; i--) {
+            final Node top;
+            boolean modal = false;
+            if (i >= 0) {
+                final Layer layer = this.layers.get(i);
+                if (layer.isToast() || !layer.open) {
+                    continue;
+                }
+                top = layer.node;
+                modal = layer.modal;
+            } else {
+                top = this.content;
+            }
+            if (top != null) {
+                final List<Node> matches = new ArrayList<>();
+                collectMnemonics(top, mnemonic, matches);
+                if (!matches.isEmpty()) {
+                    this.actOnMnemonic(matches, mnemonic);
+                    return true;
+                }
+            }
+            if (modal) {
+                return false;
+            }
+        }
+        return false;
+    }
+
+    private static void collectMnemonics(final Node node, final int mnemonic, final List<Node> out) {
+        if (!node.isVisible() || !node.isEnabled()) {
+            return;
+        }
+        if (node.facade() instanceof MnemonicTarget target && target.hasMnemonic(mnemonic)) {
+            out.add(node);
+        }
+        if (node instanceof ContainerNode container) {
+            for (final Node child : container.childNodes()) {
+                collectMnemonics(child, mnemonic, out);
+            }
+        }
+    }
+
+    private void actOnMnemonic(final List<Node> matches, final int mnemonic) {
+        if (matches.size() == 1) {
+            final Node only = matches.getFirst();
+            if (this.canFocus(only)) {
+                this.changeFocus(only);
+            }
+            ((MnemonicTarget) only.facade()).activateMnemonic(mnemonic);
+            return;
+        }
+        int at = -1;
+        for (int i = 0; i < matches.size(); i++) {
+            if (matches.get(i) == this.focused) {
+                at = i;
+            }
+        }
+        for (int step = 1; step <= matches.size(); step++) {
+            final Node next = matches.get((at + step) % matches.size());
+            if (this.canFocus(next)) {
+                this.changeFocus(next);
+                return;
+            }
+        }
+        ((MnemonicTarget) matches.get((at + 1) % matches.size()).facade()).activateMnemonic(mnemonic);
+    }
+
+    /**
+     * Moves to the first visible, enabled menu bar in the top dialog, or in the content while no dialog is open.
+     */
+    private boolean enterMenuBar() {
+        final Layer dialog = this.topDialog();
+        final Node scope = dialog != null ? dialog.node : this.content;
+        if (scope == null) {
+            return false;
+        }
+        this.layout();
+        final List<Node> bars = new ArrayList<>();
+        visit(scope, node -> {
+            if (node.facade() instanceof KeyboardMenu && isUsable(node)) {
+                bars.add(node);
+            }
+        });
+        for (final Node bar : bars) {
+            if (((KeyboardMenu) bar.facade()).enterKeyboard()) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private Command matchCommandSources(final Node scope, final Key key, final Modifiers modifiers,
@@ -1920,6 +2127,27 @@ public final class Root {
     }
 
     /**
+     * Moves focus to the first node in {@link #tabOrder()} after a node, wrapping at the end, as Alt with a label's
+     * mnemonic does. A node that is not in the order counts at the place its tab index and tree position give it.
+     *
+     * @param node the node, such as a label
+     * @return true if focus moved; false if no node is tabbable or the node is not in the order's scope
+     */
+    public boolean focusNextAfter(final Node node) {
+        final List<Node> order = this.tabOrder();
+        if (order.isEmpty()) {
+            return false;
+        }
+        final int index = order.indexOf(node);
+        final int place = index >= 0 ? index + 1 : this.placeInOrder(order, node);
+        if (place < 0) {
+            return false;
+        }
+        this.changeFocus(order.get(place % order.size()));
+        return true;
+    }
+
+    /**
      * Returns how many nodes of a tab order come before a node that is not in it, by tab index and then tree order,
      * or -1 if the node is not in the scope the order was collected from.
      */
@@ -2034,6 +2262,7 @@ public final class Root {
             return;
         }
         this.frames.request();
+        this.endKeyGrab();
         final Node previous = this.focused;
         // A node another change assigned but has not told yet never had focus, so it has none to lose
         final Node lost = previous == this.focusArriving ? null : previous;

@@ -40,6 +40,9 @@ import java.util.function.Consumer;
  *         .setAction(settings::setPrices));
  * }</pre>
  *
+ * <p>Its caption marks a mnemonic with an underscore, as {@link org.inspirenxe.strata.api.control.button.Button}
+ * describes: Alt with the letter chooses the item while its menu is open, as the letter alone does.</p>
+ *
  * <p>Get one from {@link org.inspirenxe.strata.api.ComponentFactory#checkMenuItem(String)} or make one with
  * {@link Menu#addCheckItem}. Do not implement this interface.</p>
  */

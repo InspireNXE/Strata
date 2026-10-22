@@ -42,7 +42,8 @@ import org.inspirenxe.strata.core.control.RectCache;
 import org.inspirenxe.strata.core.control.Rings;
 import org.inspirenxe.strata.core.node.BuiltInComposite;
 import org.inspirenxe.strata.core.node.ComponentFactoryImpl;
-import org.inspirenxe.strata.core.text.TextLine;
+import org.inspirenxe.strata.core.node.MnemonicTarget;
+import org.inspirenxe.strata.core.text.MnemonicLine;
 
 import java.util.Objects;
 import java.util.Optional;
@@ -56,7 +57,7 @@ import java.util.Optional;
  * at its full height below the header and, while the share moves, clipped to the expander's bounds below the
  * header. With the metric at 0, or while detached, the share jumps and the content comes and goes at once.</p>
  */
-public final class ExpanderImpl extends BuiltInComposite<Expander> implements Expander {
+public final class ExpanderImpl extends BuiltInComposite<Expander> implements Expander, MnemonicTarget {
     /**
      * The space around the header's arrow and title when the theme sets no {@value #STYLE_HEADER_PADDING}: 4 at
      * the sides and 3 at the top and bottom.
@@ -94,8 +95,8 @@ public final class ExpanderImpl extends BuiltInComposite<Expander> implements Ex
     private TextStyle disabledTextStyle;
 
     // Computed during measure
-    private TextLine span;
-    private TextLine disabledSpan;
+    private MnemonicLine span;
+    private MnemonicLine disabledSpan;
     private float lineHeight;
 
     /**
@@ -112,7 +113,7 @@ public final class ExpanderImpl extends BuiltInComposite<Expander> implements Ex
         this.headerHovered = Paint.NONE;
         this.textStyle = TextStyle.DEFAULT;
         this.disabledTextStyle = TextStyle.DEFAULT;
-        this.span = TextLine.EMPTY;
+        this.span = MnemonicLine.EMPTY;
         this.disabledSpan = this.span;
         this.pointerY = Float.NaN;
     }
@@ -233,12 +234,13 @@ public final class ExpanderImpl extends BuiltInComposite<Expander> implements Ex
     @Override
     protected Size measure(final MeasureContext context, final float availableWidth, final float availableHeight) {
         final TextMetrics metrics = context.text();
-        this.span = TextLine.of(this.title, this.textStyle, metrics);
-        this.disabledSpan = TextLine.of(this.title, this.disabledTextStyle, metrics);
-        this.lineHeight = Math.max(this.span.height(), this.disabledSpan.height());
+        this.span = MnemonicLine.of(this.title, this.textStyle, metrics);
+        this.disabledSpan = MnemonicLine.of(this.title, this.disabledTextStyle, metrics);
+        this.lineHeight = Math.max(this.span.plain().height(), this.disabledSpan.plain().height());
         this.headerHeight = this.lineHeight + this.headerPadding.vertical();
         final float headerWidth = this.headerPadding.left() + Rings.ARROW_LONG + ARROW_GAP
-                + Math.max(this.span.width(), this.disabledSpan.width()) + this.headerPadding.right();
+                + Math.max(this.span.plain().width(), this.disabledSpan.plain().width())
+                + this.headerPadding.right();
         if (!this.shown || this.content == null) {
             return new Size(headerWidth, this.headerHeight);
         }
@@ -283,7 +285,8 @@ public final class ExpanderImpl extends BuiltInComposite<Expander> implements Ex
             this.arrow.right(painter, color, arrowX + (Rings.ARROW_LONG - Rings.ARROW_SHORT) * 0.5f,
                     innerY + (innerHeight - Rings.ARROW_LONG) * 0.5f);
         }
-        (enabled ? this.span : this.disabledSpan).draw(painter, arrowX + Rings.ARROW_LONG + ARROW_GAP,
+        (enabled ? this.span : this.disabledSpan).line(this.hostRoot() != null && this.hostRoot().showsMnemonics())
+                .draw(painter, arrowX + Rings.ARROW_LONG + ARROW_GAP,
                 innerY + (innerHeight - this.lineHeight) * 0.5f);
     }
 
@@ -317,5 +320,19 @@ public final class ExpanderImpl extends BuiltInComposite<Expander> implements Ex
     @Override
     protected Object snapshotState() {
         return new Expander.State(this.expanded, this.title);
+    }
+
+    @Override
+    public boolean hasMnemonic(final int mnemonic) {
+        return this.span.mnemonic() == mnemonic;
+    }
+
+    /**
+     * Expands or collapses the expander for the user, as a click on its header does, for Alt with the title's
+     * mnemonic.
+     */
+    @Override
+    public void activateMnemonic(final int mnemonic) {
+        this.userToggle();
     }
 }

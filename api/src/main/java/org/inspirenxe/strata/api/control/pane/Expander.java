@@ -60,6 +60,9 @@ import java.util.Optional;
  * Expander filters = factory.expander("Filters").setContent(filterPanel).setExpanded(true);
  * }</pre>
  *
+ * <p>Its caption marks a mnemonic with an underscore, as {@link org.inspirenxe.strata.api.control.button.Button}
+ * describes: Alt with the letter focuses the expander and expands or collapses it.</p>
+ *
  * <p>Get one from {@link org.inspirenxe.strata.api.ComponentFactory#expander(String)}. Do not implement this
  * interface.</p>
  */

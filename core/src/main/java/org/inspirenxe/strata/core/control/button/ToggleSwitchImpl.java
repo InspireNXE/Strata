@@ -37,6 +37,7 @@ import org.inspirenxe.strata.core.control.RectCache;
 import org.inspirenxe.strata.core.control.Rings;
 import org.inspirenxe.strata.core.node.BuiltInComponent;
 import org.inspirenxe.strata.core.node.ComponentFactoryImpl;
+import org.inspirenxe.strata.core.node.MnemonicTarget;
 
 import java.util.Objects;
 import java.util.Optional;
@@ -49,7 +50,7 @@ import java.util.Set;
  * jumps when the metric is 0 or the switch is detached. The track, the knob and the focus ring are kept from one
  * frame to the next while they stay in place, so painting allocates nothing then.
  */
-public final class ToggleSwitchImpl extends BuiltInComponent<ToggleSwitch> implements ToggleSwitch {
+public final class ToggleSwitchImpl extends BuiltInComponent<ToggleSwitch> implements ToggleSwitch, MnemonicTarget {
     /**
      * The gap between the track and the caption, in UI units.
      */
@@ -233,7 +234,8 @@ public final class ToggleSwitchImpl extends BuiltInComponent<ToggleSwitch> imple
         if (this.isFocused() && this.focusRing != Paint.NONE) {
             this.ring.paint(painter, this.focusRing, bar);
         }
-        this.layout.paintCaption(painter, bounds, enabled);
+        this.layout.paintCaption(painter, bounds, enabled,
+                this.hostRoot() != null && this.hostRoot().showsMnemonics());
     }
 
     @Override
@@ -270,5 +272,18 @@ public final class ToggleSwitchImpl extends BuiltInComponent<ToggleSwitch> imple
         this.command = command;
         Commands.follow(this.node(), command);
         return this;
+    }
+
+    @Override
+    public boolean hasMnemonic(final int mnemonic) {
+        return this.layout.mnemonic() == mnemonic;
+    }
+
+    /**
+     * Flips the switch for the user, as Alt with the caption's mnemonic does.
+     */
+    @Override
+    public void activateMnemonic(final int mnemonic) {
+        this.userToggle();
     }
 }

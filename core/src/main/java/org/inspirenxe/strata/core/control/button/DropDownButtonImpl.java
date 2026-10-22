@@ -41,6 +41,8 @@ import org.inspirenxe.strata.core.control.collection.ComboBoxImpl;
 import org.inspirenxe.strata.core.frame.FrameRequests;
 import org.inspirenxe.strata.core.node.BuiltInComponent;
 import org.inspirenxe.strata.core.node.ComponentFactoryImpl;
+import org.inspirenxe.strata.core.node.MnemonicTarget;
+import org.inspirenxe.strata.core.text.TextLine;
 
 import java.util.Objects;
 import java.util.Optional;
@@ -60,7 +62,7 @@ import java.util.Set;
  * opened it. A disabled button closes its popup.</p>
  */
 public final class DropDownButtonImpl extends BuiltInComponent<DropDownButton> implements DropDownButton,
-        CorePopup.Holder {
+        CorePopup.Holder, MnemonicTarget {
     private final ButtonContent content;
     private Popup<?> popup;
     private boolean open;
@@ -305,9 +307,13 @@ public final class DropDownButtonImpl extends BuiltInComponent<DropDownButton> i
         final float innerY = bounds.y() + padding.top();
         final float innerHeight = bounds.height() - padding.vertical();
         // The content and its clip area end before the arrow
+        TextLine shown = enabled ? content.caption : content.disabledCaption;
+        if (this.hostRoot() != null && this.hostRoot().showsMnemonics()) {
+            shown = content.marked(shown);
+        }
         if (content.paintContent(painter, this.contentArea.at(bounds.x(), bounds.y(),
                         bounds.width() - ComboBoxImpl.ARROW_GAP - ComboBoxImpl.ARROW_WIDTH, bounds.height()), padding,
-                enabled, enabled ? content.caption : content.disabledCaption, this.environment().millis())) {
+                enabled, shown, this.environment().millis())) {
             this.repaintAfter(FrameRequests.CONTINUOUS_MILLIS);
         }
 
@@ -348,6 +354,19 @@ public final class DropDownButtonImpl extends BuiltInComponent<DropDownButton> i
             this.userOpen(true);
             event.consume();
         }
+    }
+
+    @Override
+    public boolean hasMnemonic(final int mnemonic) {
+        return this.content.mnemonic() == mnemonic;
+    }
+
+    /**
+     * Opens the popup for the user from the keyboard, as Alt with the caption's mnemonic does.
+     */
+    @Override
+    public void activateMnemonic(final int mnemonic) {
+        this.userOpen(true);
     }
 
     @Override

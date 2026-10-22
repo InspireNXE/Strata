@@ -80,6 +80,13 @@ import java.util.Objects;
  * Button save = factory.button("Save").onEvent(Button.PRESSED, event -> this.save());
  * }</pre>
  *
+ * <p>An underscore before a letter in the caption's resolved text marks its mnemonic, as in {@code "_Save"}, so each
+ * translation places its own; a doubled underscore stands for one, and the markers are never drawn. While Alt is held,
+ * the letter is underlined, and Alt with the letter presses the button, when no component closer to the top layer has
+ * the same letter. When several components in that layer share the letter, each press moves focus to the next of them
+ * without acting. A platform whose conventions turn mnemonics off still takes the markers out, and Alt does
+ * nothing.</p>
+ *
  * <p>Get one from {@link org.inspirenxe.strata.api.ComponentFactory#button(String)}. Do not implement this
  * interface.</p>
  */
