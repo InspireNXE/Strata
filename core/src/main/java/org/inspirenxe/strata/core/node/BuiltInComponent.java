@@ -853,11 +853,21 @@ public abstract class BuiltInComponent<T extends Component<T>> implements Compon
     /**
      * Sets the tooltip. See {@link HasTooltip#setTooltip(Tooltip)}.
      *
-     * @param tooltip the tooltip, or {@code null} for none
+     * @param tooltip the tooltip
      * @return this component
      */
     public final T setTooltip(final Tooltip tooltip) {
-        this.node.setTooltip(tooltip);
+        this.node.setTooltip(Objects.requireNonNull(tooltip, "tooltip"));
+        return this.self();
+    }
+
+    /**
+     * Removes the tooltip. See {@link HasTooltip#clearTooltip()}.
+     *
+     * @return this component
+     */
+    public final T clearTooltip() {
+        this.node.setTooltip(null);
         return this.self();
     }
 

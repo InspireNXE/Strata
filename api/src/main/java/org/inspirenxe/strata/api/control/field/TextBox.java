@@ -345,7 +345,7 @@ public interface TextBox extends Component<TextBox>, Focusable<TextBox>, HasCurs
      * {@value #STYLE_PLACEHOLDER_HIDE} hides it while focused, goes away as soon as there is text, and is never part
      * of {@link #text()}.
      *
-     * @param placeholder the hint, or {@code null} or empty for none
+     * @param placeholder the hint, or empty for none
      * @return this box
      */
     TextBox setPlaceholder(Text placeholder);
@@ -353,11 +353,11 @@ public interface TextBox extends Component<TextBox>, Focusable<TextBox>, HasCurs
     /**
      * Does the same as {@link #setPlaceholder(Text)} with literal text.
      *
-     * @param placeholder the hint, or {@code null} or empty for none
+     * @param placeholder the hint, or empty for none
      * @return this box
      */
     default TextBox setPlaceholder(final String placeholder) {
-        return this.setPlaceholder(placeholder == null ? null : Text.of(placeholder));
+        return this.setPlaceholder(Text.of(placeholder));
     }
 
     /**

@@ -350,8 +350,16 @@ public final class PasswordTextBoxImpl extends BuiltInComposite<PasswordTextBox>
 
     @Override
     public PasswordTextBox setTextPadding(final Insets padding) {
-        this.setPadding = padding;
-        this.textPadding = padding != null ? padding : this.themePadding;
+        this.setPadding = Objects.requireNonNull(padding, "padding");
+        this.textPadding = padding;
+        this.invalidateLayout();
+        return this;
+    }
+
+    @Override
+    public PasswordTextBox clearTextPadding() {
+        this.setPadding = null;
+        this.textPadding = this.themePadding;
         this.invalidateLayout();
         return this;
     }
@@ -458,7 +466,7 @@ public final class PasswordTextBoxImpl extends BuiltInComposite<PasswordTextBox>
 
     @Override
     public PasswordTextBox setPlaceholder(final Text placeholder) {
-        this.placeholder = placeholder == null ? Text.empty() : placeholder;
+        this.placeholder = Objects.requireNonNull(placeholder, "placeholder");
         this.invalidateLayout();
         return this;
     }
@@ -973,7 +981,11 @@ public final class PasswordTextBoxImpl extends BuiltInComposite<PasswordTextBox>
             }
             // Set only on a change, so typing does not refresh a tooltip that is showing
             if (this.tooltip().orElse(null) != wanted) {
-                this.setTooltip(wanted);
+                if (wanted == null) {
+                    this.clearTooltip();
+                } else {
+                    this.setTooltip(wanted);
+                }
             }
         }
 

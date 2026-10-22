@@ -241,7 +241,7 @@ public interface TreeView<T> extends Component<TreeView<T>>, HasCursor<TreeView<
     /**
      * Sets the text shown while there are no roots.
      *
-     * @param placeholder the text, or {@code null} or empty for none
+     * @param placeholder the text, or empty for none
      * @return this tree
      */
     TreeView<T> setPlaceholder(Text placeholder);

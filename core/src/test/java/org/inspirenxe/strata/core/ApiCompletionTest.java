@@ -17,8 +17,15 @@ package org.inspirenxe.strata.core;
 
 import org.inspirenxe.strata.api.ComponentFactory;
 import org.inspirenxe.strata.api.component.Component;
+import org.inspirenxe.strata.api.component.Tooltip;
+import org.inspirenxe.strata.api.control.button.Button;
 import org.inspirenxe.strata.api.control.display.Label;
+import org.inspirenxe.strata.api.control.field.TextBox;
+import org.inspirenxe.strata.api.control.pane.Tab;
 import org.inspirenxe.strata.api.extension.CustomComponent;
+import org.inspirenxe.strata.api.geometry.Insets;
+import org.inspirenxe.strata.api.layout.AbsolutePanel;
+import org.inspirenxe.strata.api.text.Text;
 import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.Method;
@@ -29,6 +36,7 @@ import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -47,6 +55,27 @@ class ApiCompletionTest {
         assertSame(box, box.clearTooltip());
 
         assertEquals(Optional.empty(), box.tooltip());
+    }
+
+    @Test
+    void settersWithOverloadsRefuseNullAndHaveAClearBesideThem() {
+        final Button button = this.ui.button("Ana").setTooltip("Hint").setTextPadding(Insets.of(1));
+        final AbsolutePanel panel = this.ui.absolutePanel().setPadding(Insets.of(3));
+        final TextBox box = this.ui.textBox().setTextPadding(Insets.of(2));
+        final Tab tab = this.ui.tab("Sell").setTooltip("Why");
+
+        assertThrows(NullPointerException.class, () -> button.setTooltip((Tooltip) null));
+        assertThrows(NullPointerException.class, () -> button.setTextPadding((Insets) null));
+        assertThrows(NullPointerException.class, () -> panel.setPadding((Insets) null));
+        assertThrows(NullPointerException.class, () -> box.setTextPadding((Insets) null));
+        assertThrows(NullPointerException.class, () -> tab.setTooltip((Tooltip) null));
+        assertThrows(NullPointerException.class, () -> box.setPlaceholder((Text) null));
+
+        assertEquals(Optional.empty(), button.clearTooltip().tooltip());
+        assertEquals(Optional.empty(), tab.clearTooltip().tooltip());
+        assertEquals(Insets.NONE, panel.clearPadding().padding());
+        assertSame(box, box.clearTextPadding());
+        assertSame(button, button.clearTextPadding());
     }
 
     @Test

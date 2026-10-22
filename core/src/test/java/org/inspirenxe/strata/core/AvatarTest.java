@@ -151,7 +151,7 @@ class AvatarTest {
             assertEquals("X", avatar.initials());
             avatar.setInitials("");
             assertEquals("", avatar.initials());
-            avatar.setInitials(null).setName((String) null);
+            avatar.setInitials(null).setName("");
             assertEquals("BD", avatar.initials());
             assertEquals(Text.empty(), avatar.name());
         }

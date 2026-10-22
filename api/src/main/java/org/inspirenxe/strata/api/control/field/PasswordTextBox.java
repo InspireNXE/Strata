@@ -298,7 +298,7 @@ public interface PasswordTextBox extends Component<PasswordTextBox>, Focusable<P
      * Sets the hint drawn in the {@value TextBox#STYLE_PLACEHOLDER} style while the box is empty, such as
      * {@code "Password"}. The mask does not cover it.
      *
-     * @param placeholder the hint, or {@code null} or empty for none
+     * @param placeholder the hint, or empty for none
      * @return this box
      */
     PasswordTextBox setPlaceholder(Text placeholder);
@@ -306,11 +306,11 @@ public interface PasswordTextBox extends Component<PasswordTextBox>, Focusable<P
     /**
      * Does the same as {@link #setPlaceholder(Text)} with literal text.
      *
-     * @param placeholder the hint, or {@code null} or empty for none
+     * @param placeholder the hint, or empty for none
      * @return this box
      */
     default PasswordTextBox setPlaceholder(final String placeholder) {
-        return this.setPlaceholder(placeholder == null ? null : Text.of(placeholder));
+        return this.setPlaceholder(Text.of(placeholder));
     }
 
     /**

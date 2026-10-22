@@ -1522,7 +1522,13 @@ public final class NavigationViewImpl extends BuiltInComposite<NavigationView> i
             if (this.entry instanceof final NavigationItemImpl item) {
                 this.setCursor(item.isEnabled() ? CursorKind.HAND : null);
                 final Tooltip own = item.tooltip().orElse(null);
-                this.setTooltip(own == null && NavigationViewImpl.this.compactLook() ? Tooltip.text(item.text()) : own);
+                final Tooltip shown = own == null && NavigationViewImpl.this.compactLook()
+                        ? Tooltip.text(item.text()) : own;
+                if (shown == null) {
+                    this.clearTooltip();
+                } else {
+                    this.setTooltip(shown);
+                }
             }
             this.invalidateLayout();
         }

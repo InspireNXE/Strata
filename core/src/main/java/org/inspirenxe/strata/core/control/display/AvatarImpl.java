@@ -37,6 +37,7 @@ import org.inspirenxe.strata.core.text.TextLine;
 import org.inspirenxe.strata.core.text.Translations;
 
 import java.util.Locale;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 
@@ -187,7 +188,11 @@ public final class AvatarImpl extends BuiltInComponent<Avatar> implements Avatar
     private void showValueTooltip() {
         final Tooltip next = this.value == null ? null : Strata.appearances().tooltipOf(this.value).orElse(null);
         if (next != null || this.tooltip().orElse(null) == this.valueTooltip) {
-            this.setTooltip(next);
+            if (next == null) {
+                this.clearTooltip();
+            } else {
+                this.setTooltip(next);
+            }
         }
         this.valueTooltip = next;
     }
@@ -233,7 +238,7 @@ public final class AvatarImpl extends BuiltInComponent<Avatar> implements Avatar
 
     @Override
     public Avatar setName(final Text name) {
-        this.name = name == null ? Text.empty() : name;
+        this.name = Objects.requireNonNull(name, "name");
         this.invalidateLayout();
         return this;
     }

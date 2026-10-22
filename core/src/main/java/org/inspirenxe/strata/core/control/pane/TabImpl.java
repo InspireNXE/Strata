@@ -72,8 +72,15 @@ public final class TabImpl implements Tab {
     }
 
     @Override
+    public Tab clearTooltip() {
+        this.tooltip = null;
+        this.changed();
+        return this;
+    }
+
+    @Override
     public Tab setTooltip(final Tooltip tooltip) {
-        this.tooltip = tooltip;
+        this.tooltip = Objects.requireNonNull(tooltip, "tooltip");
         this.changed();
         return this;
     }

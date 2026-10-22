@@ -25,6 +25,7 @@ import org.inspirenxe.strata.api.theme.Border;
 import org.inspirenxe.strata.api.theme.Paint;
 
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 
 /**
@@ -162,7 +163,13 @@ public abstract class CustomContainer<T extends Container<T>> extends CustomComp
 
     @Override
     public final T setPadding(final Insets padding) {
-        this.containerPeer().setPadding(padding);
+        this.containerPeer().setPadding(Objects.requireNonNull(padding, "padding"));
+        return this.self();
+    }
+
+    @Override
+    public final T clearPadding() {
+        this.containerPeer().setPadding(null);
         return this.self();
     }
 

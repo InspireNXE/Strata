@@ -321,8 +321,9 @@ public final class ComponentFactoryImpl implements ComponentFactory {
         final Text name = appearances.nameOf(value);
         final Optional<Visual> icon = appearances.iconOf(value);
         final Label row = this.cellLabel(icon.isEmpty() ? name : Text.concat(Text.visual(icon.get()), CELL_GAP, name));
-        row.setTooltip(appearances.tooltipOf(value).orElse(null));
-        return row.onEvent(InputEvents.POINTER_ENTER, event -> row.setTooltip(appearances.tooltipOf(value).orElse(null)));
+        final Runnable ask = () -> appearances.tooltipOf(value).ifPresentOrElse(row::setTooltip, row::clearTooltip);
+        ask.run();
+        return row.onEvent(InputEvents.POINTER_ENTER, event -> ask.run());
     }
 
     /**

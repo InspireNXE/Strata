@@ -72,7 +72,7 @@ public interface RowView<S extends RowView<S>> {
     /**
      * Sets the text shown in the middle of the rows while there are none.
      *
-     * @param placeholder the text, or {@code null} or empty for none
+     * @param placeholder the text, or empty for none
      * @return this control
      */
     S setPlaceholder(Text placeholder);
@@ -80,11 +80,11 @@ public interface RowView<S extends RowView<S>> {
     /**
      * Does the same as {@link #setPlaceholder(Text)} with literal text.
      *
-     * @param placeholder the text, or {@code null} or empty for none
+     * @param placeholder the text, or empty for none
      * @return this control
      */
     default S setPlaceholder(final String placeholder) {
-        return this.setPlaceholder(placeholder == null ? null : Text.of(placeholder));
+        return this.setPlaceholder(Text.of(placeholder));
     }
 
     /**

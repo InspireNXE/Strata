@@ -424,14 +424,15 @@ class CollectionEdgeCaseTest {
     @Nested
     class Getters {
         @Test
-        void rowViewsReturnTheirPlaceholderAndNullMeansNone() {
+        void rowViewsReturnTheirPlaceholderAndEmptyMeansNone() {
             final ComponentFactory ui = CollectionEdgeCaseTest.this.ui;
             final ListView<String> list = ui.<String>listView();
             assertEquals(Text.empty(), list.placeholder());
             list.setPlaceholder("Nothing yet");
             assertEquals(Text.of("Nothing yet"), list.placeholder());
-            list.setPlaceholder((Text) null);
+            list.setPlaceholder(Text.empty());
             assertEquals(Text.empty(), list.placeholder());
+            assertThrows(NullPointerException.class, () -> list.setPlaceholder((Text) null));
             assertEquals(Text.of("No rows"), ui.<String>tableView().setPlaceholder("No rows").placeholder());
             assertEquals(Text.of("No roots"), ui.<String>treeView().setPlaceholder("No roots").placeholder());
         }

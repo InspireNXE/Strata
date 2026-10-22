@@ -138,7 +138,8 @@ public interface Avatar extends Component<Avatar>, HasCursor<Avatar>, HasTooltip
      * The name the initials are worked out from, as {@link #name()} and {@link #setName(Text)} say. Binds one way.
      * Null or {@link Text#empty()} goes back to the value's name.
      */
-    PropertyKey<Avatar, Text> NAME = PropertyKey.of("avatar.name", Avatar::name, Avatar::setName);
+    PropertyKey<Avatar, Text> NAME = PropertyKey.of("avatar.name", Avatar::name,
+            (avatar, name) -> avatar.setName(name == null ? Text.empty() : name));
     /**
      * The count the badge shows, as {@link #badge()} and {@link #setBadge} say. Binds one way. A negative count
      * throws as {@code setBadge} does.
@@ -208,7 +209,7 @@ public interface Avatar extends Component<Avatar>, HasCursor<Avatar>, HasTooltip
     /**
      * Sets the name the initials are worked out from, in place of the value's name. The avatar lays out again.
      *
-     * @param name the name, or {@code null} or {@link Text#empty()} to go back to the value's name
+     * @param name the name, or {@link Text#empty()} to go back to the value's name
      * @return this avatar
      */
     Avatar setName(Text name);
@@ -216,11 +217,11 @@ public interface Avatar extends Component<Avatar>, HasCursor<Avatar>, HasTooltip
     /**
      * Sets the name with literal text, as {@link #setName(Text)} does.
      *
-     * @param name the name, or {@code null} or an empty string to go back to the value's name
+     * @param name the name, or an empty string to go back to the value's name
      * @return this avatar
      */
     default Avatar setName(final String name) {
-        return this.setName(name == null ? null : Text.of(name));
+        return this.setName(Text.of(name));
     }
 
     /**

@@ -153,11 +153,18 @@ public interface TextEntry<S extends TextEntry<S>> extends EventTarget<S> {
     /**
      * Sets the space between the text and the control's edges. Padding set here stays through theme changes.
      *
-     * @param padding the padding, or {@code null} to go back to the theme's padding for the control, or the
-     *     control's default when the theme has none
+     * @param padding the padding; {@link #clearTextPadding()} goes back to the theme's
      * @return this control
      */
     S setTextPadding(Insets padding);
+
+    /**
+     * Goes back to the theme's text padding for the control, or the control's default when the theme has none. The
+     * padding then follows theme changes again.
+     *
+     * @return this control
+     */
+    S clearTextPadding();
 
     /**
      * Sets the same text padding on all four sides.

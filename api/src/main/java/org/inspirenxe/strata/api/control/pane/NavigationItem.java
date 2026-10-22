@@ -111,7 +111,7 @@ public non-sealed interface NavigationItem extends NavigationEntry, HasText<Navi
      * Sets the tooltip shown while the pointer rests on the item. While the pane shows as a column of icons, an item
      * with no tooltip shows its text as one.
      *
-     * @param tooltip the tooltip, or {@code null} for none
+     * @param tooltip the tooltip; {@link #clearTooltip()} removes it
      * @return this item
      */
     @Override

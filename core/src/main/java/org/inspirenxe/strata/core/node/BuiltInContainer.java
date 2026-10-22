@@ -24,6 +24,7 @@ import org.inspirenxe.strata.api.theme.Border;
 import org.inspirenxe.strata.api.theme.Paint;
 
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 
 /**
@@ -122,8 +123,14 @@ public abstract class BuiltInContainer<T extends Container<T>> extends BuiltInCo
     }
 
     @Override
+    public final T clearPadding() {
+        this.node().setPadding(null);
+        return this.self();
+    }
+
+    @Override
     public final T setPadding(final Insets padding) {
-        this.node().setPadding(padding);
+        this.node().setPadding(Objects.requireNonNull(padding, "padding"));
         return this.self();
     }
 

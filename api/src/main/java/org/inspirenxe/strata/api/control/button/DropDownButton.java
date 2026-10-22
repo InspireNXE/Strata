@@ -111,12 +111,19 @@ public interface DropDownButton extends Component<DropDownButton>, Focusable<Dro
      * Sets the space between the button's edges and its content, which with the caption, the icon and the arrow
      * gives the desired size. Padding set here stays through theme changes.
      *
-     * @param padding the padding, or {@code null} to go back to the default: the theme's
-     *     {@value Button#STYLE_PADDING} (8 left and right and 5 top and bottom without it), or its
-     *     {@value Button#STYLE_PADDING_ICON} (2 on every side) for a button with an icon and no caption
+     * @param padding the padding; {@link #clearTextPadding()} goes back to the default
      * @return this button
      */
     DropDownButton setTextPadding(Insets padding);
+
+    /**
+     * Goes back to the default text padding: the theme's {@value Button#STYLE_PADDING} (8 left and right and 5 top
+     * and bottom without it), or its {@value Button#STYLE_PADDING_ICON} (2 on every side) for a button with an icon
+     * and no caption. A new layout runs.
+     *
+     * @return this button
+     */
+    DropDownButton clearTextPadding();
 
     /**
      * Sets the same text padding on all four sides.

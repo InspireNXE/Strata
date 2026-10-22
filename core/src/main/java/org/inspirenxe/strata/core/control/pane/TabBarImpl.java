@@ -384,7 +384,7 @@ public final class TabBarImpl extends BuiltInComposite<TabBar> implements TabBar
          */
         void sync() {
             this.setCursor(this.tab.isEnabled() ? CursorKind.HAND : null);
-            this.setTooltip(this.tab.tooltip().orElse(null));
+            this.tab.tooltip().ifPresentOrElse(this::setTooltip, this::clearTooltip);
             this.invalidateLayout();
         }
 

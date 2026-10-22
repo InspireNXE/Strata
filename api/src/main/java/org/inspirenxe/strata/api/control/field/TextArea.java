@@ -112,7 +112,7 @@ public interface TextArea extends Component<TextArea>, Focusable<TextArea>, HasC
      * such as {@code "Add a note"}. It goes away as soon as there is text, hides while the area has focus when the
      * theme's {@value TextBox#STYLE_PLACEHOLDER_HIDE} says so, and is never part of {@link #text()}.
      *
-     * @param placeholder the hint, or {@code null} or empty for none
+     * @param placeholder the hint, or empty for none
      * @return this area
      */
     TextArea setPlaceholder(Text placeholder);
@@ -120,11 +120,11 @@ public interface TextArea extends Component<TextArea>, Focusable<TextArea>, HasC
     /**
      * Does the same as {@link #setPlaceholder(Text)} with literal text.
      *
-     * @param placeholder the hint, or {@code null} or empty for none
+     * @param placeholder the hint, or empty for none
      * @return this area
      */
     default TextArea setPlaceholder(final String placeholder) {
-        return this.setPlaceholder(placeholder == null ? null : Text.of(placeholder));
+        return this.setPlaceholder(Text.of(placeholder));
     }
 
     /**

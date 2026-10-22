@@ -177,12 +177,19 @@ public interface Button extends Component<Button>, Focusable<Button>, HasCursor<
      * Sets the space between the caption and the button's edges, which with the caption gives the desired size.
      * Padding set here stays through theme changes.
      *
-     * @param padding the padding, or {@code null} to go back to the default: the theme's {@value #STYLE_PADDING}
-     *     (8 left and right and 5 top and bottom without it), its {@value #STYLE_PADDING_ICON} (2 on every side)
-     *     for a button with an icon and no caption, and none for a link
+     * @param padding the padding; {@link #clearTextPadding()} goes back to the default
      * @return this button
      */
     Button setTextPadding(Insets padding);
+
+    /**
+     * Goes back to the default text padding: the theme's {@value #STYLE_PADDING} (8 left and right and 5 top and
+     * bottom without it), its {@value #STYLE_PADDING_ICON} (2 on every side) for a button with an icon and no
+     * caption, and none for a link. A new layout runs.
+     *
+     * @return this button
+     */
+    Button clearTextPadding();
 
     /**
      * Sets the same text padding on all four sides.

@@ -172,8 +172,15 @@ public final class NavigationItemImpl extends NavigationEntryImpl implements Nav
     }
 
     @Override
+    public NavigationItem clearTooltip() {
+        this.tooltip = null;
+        this.changed();
+        return this;
+    }
+
+    @Override
     public NavigationItem setTooltip(final Tooltip tooltip) {
-        this.tooltip = tooltip;
+        this.tooltip = Objects.requireNonNull(tooltip, "tooltip");
         this.changed();
         return this;
     }

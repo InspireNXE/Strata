@@ -41,6 +41,7 @@ import org.inspirenxe.strata.core.control.collection.ComboBoxImpl;
 import org.inspirenxe.strata.core.node.BuiltInComponent;
 import org.inspirenxe.strata.core.node.ComponentFactoryImpl;
 
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 
@@ -102,7 +103,14 @@ public final class DropDownButtonImpl extends BuiltInComponent<DropDownButton> i
 
     @Override
     public DropDownButton setTextPadding(final Insets padding) {
-        this.content.setTextPadding(padding);
+        this.content.setTextPadding(Objects.requireNonNull(padding, "padding"));
+        this.invalidateLayout();
+        return this;
+    }
+
+    @Override
+    public DropDownButton clearTextPadding() {
+        this.content.setTextPadding(null);
         this.invalidateLayout();
         return this;
     }

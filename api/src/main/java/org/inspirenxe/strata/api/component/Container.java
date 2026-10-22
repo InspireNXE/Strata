@@ -165,8 +165,7 @@ public interface Container<T extends Container<T>> extends Component<T>, HasCurs
      * Sets the space between the container's edges and its children. Padding is inside the bounds, so the
      * container's background covers it. Padding set here stays through theme changes.
      *
-     * @param padding the padding, or {@code null} to go back to the container's default: none, or the theme's for a
-     *     container that reads one, such as a window
+     * @param padding the padding; {@link #clearPadding()} goes back to the default
      * @return this container
      */
     T setPadding(Insets padding);
@@ -192,6 +191,13 @@ public interface Container<T extends Container<T>> extends Component<T>, HasCurs
      * @return this container
      */
     T setTextStyle(TextStylePatch patch);
+    /**
+     * Goes back to the container's default padding: none, or the theme's for a container that reads one, such as a
+     * window. The default then follows theme changes again.
+     *
+     * @return this container
+     */
+    T clearPadding();
 
     /**
      * Sets the same padding on all four sides.

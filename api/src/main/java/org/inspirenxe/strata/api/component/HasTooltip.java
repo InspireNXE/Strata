@@ -42,7 +42,13 @@ public interface HasTooltip<S extends HasTooltip<S>> {
      * The tooltip, as {@link #tooltip()} and {@link #setTooltip(Tooltip)} say, null for none. Binds one way.
      */
     PropertyKey<HasTooltip<?>, Tooltip> TOOLTIP = PropertyKey.of("has_tooltip.tooltip",
-            target -> target.tooltip().orElse(null), HasTooltip::setTooltip);
+            target -> target.tooltip().orElse(null), (target, tooltip) -> {
+                if (tooltip == null) {
+                    target.clearTooltip();
+                } else {
+                    target.setTooltip(tooltip);
+                }
+            });
 
     /**
      * Returns the tooltip.
@@ -54,38 +60,35 @@ public interface HasTooltip<S extends HasTooltip<S>> {
     /**
      * Sets what the host shows near the pointer while it rests on this component or a descendant that sets none.
      *
-     * @param tooltip the tooltip, or {@code null} for none; {@code setTooltip(null)} does not compile, since three
-     *     overloads take null, so write {@link #clearTooltip()} or {@code setTooltip((Tooltip) null)}
+     * @param tooltip the tooltip; {@link #clearTooltip()} removes it
      * @return this component
      */
     S setTooltip(Tooltip tooltip);
 
     /**
-     * Removes the tooltip, as {@code setTooltip((Tooltip) null)} does.
+     * Removes the tooltip.
      *
      * @return this component
      */
-    default S clearTooltip() {
-        return this.setTooltip((Tooltip) null);
-    }
+    S clearTooltip();
 
     /**
      * Sets a tooltip of text. Line breaks ({@code \n}) start new lines.
      *
-     * @param text the text, or {@code null} for no tooltip
+     * @param text the text
      * @return this component
      */
     default S setTooltip(final Text text) {
-        return this.setTooltip(text == null ? null : Tooltip.text(text));
+        return this.setTooltip(Tooltip.text(text));
     }
 
     /**
      * Sets a tooltip of literal text. Line breaks ({@code \n}) start new lines.
      *
-     * @param text the text, or {@code null} for no tooltip
+     * @param text the text
      * @return this component
      */
     default S setTooltip(final String text) {
-        return this.setTooltip(text == null ? null : Tooltip.text(text));
+        return this.setTooltip(Tooltip.text(text));
     }
 }

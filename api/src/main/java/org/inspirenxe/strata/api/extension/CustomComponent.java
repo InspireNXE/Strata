@@ -854,11 +854,21 @@ public abstract class CustomComponent<T extends Component<T>> implements Compone
     /**
      * Sets the tooltip. See {@link HasTooltip#setTooltip(Tooltip)}.
      *
-     * @param tooltip the tooltip, or {@code null} for none
+     * @param tooltip the tooltip
      * @return this component
      */
     public final T setTooltip(final Tooltip tooltip) {
-        this.peer.setTooltip(tooltip);
+        this.peer.setTooltip(Objects.requireNonNull(tooltip, "tooltip"));
+        return this.self();
+    }
+
+    /**
+     * Removes the tooltip. See {@link HasTooltip#clearTooltip()}.
+     *
+     * @return this component
+     */
+    public final T clearTooltip() {
+        this.peer.setTooltip(null);
         return this.self();
     }
 

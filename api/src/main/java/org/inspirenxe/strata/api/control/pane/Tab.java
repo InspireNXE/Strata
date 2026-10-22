@@ -71,7 +71,7 @@ public interface Tab extends HasText<Tab>, Enableable<Tab>, HasTooltip<Tab> {
     /**
      * Sets the tooltip shown while the pointer rests on the tab, such as one that says why it is disabled.
      *
-     * @param tooltip the tooltip, or {@code null} for none
+     * @param tooltip the tooltip; {@link #clearTooltip()} removes it
      * @return this tab
      */
     @Override

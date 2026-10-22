@@ -112,7 +112,7 @@ class ControlPolishTest {
         test.host().render(typed);
         assertEquals(List.of("apple"), typed.texts);
 
-        box.setPlaceholder((Text) null);
+        box.setPlaceholder(Text.empty());
         assertEquals("", box.placeholder().plain());
     }
 

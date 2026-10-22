@@ -333,8 +333,17 @@ public final class TextAreaImpl extends BuiltInComponent<TextArea> implements Te
 
     @Override
     public TextArea setTextPadding(final Insets padding) {
-        this.setPadding = padding;
-        this.textPadding = padding != null ? padding : this.themePadding;
+        this.setPadding = Objects.requireNonNull(padding, "padding");
+        this.textPadding = padding;
+        this.rowsDirty = true;
+        this.invalidateLayout();
+        return this;
+    }
+
+    @Override
+    public TextArea clearTextPadding() {
+        this.setPadding = null;
+        this.textPadding = this.themePadding;
         this.rowsDirty = true;
         this.invalidateLayout();
         return this;
@@ -799,7 +808,7 @@ public final class TextAreaImpl extends BuiltInComponent<TextArea> implements Te
 
     @Override
     public TextArea setPlaceholder(final Text placeholder) {
-        this.placeholder = placeholder == null ? Text.empty() : placeholder;
+        this.placeholder = Objects.requireNonNull(placeholder, "placeholder");
         this.invalidateLayout();
         return this;
     }

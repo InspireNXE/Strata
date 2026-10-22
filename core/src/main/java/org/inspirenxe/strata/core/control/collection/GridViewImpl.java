@@ -399,7 +399,12 @@ public final class GridViewImpl<T> extends BuiltInComposite<GridView<T>> impleme
                 this.content = this.grid.cellFactory.apply(item);
                 this.addContent(this.content);
             }
-            this.setTooltip(item == null || this.grid.tooltips == null ? null : this.grid.tooltips.apply(item));
+            final Tooltip shown = item == null || this.grid.tooltips == null ? null : this.grid.tooltips.apply(item);
+            if (shown == null) {
+                this.clearTooltip();
+            } else {
+                this.setTooltip(shown);
+            }
             this.invalidateLayout();
         }
 

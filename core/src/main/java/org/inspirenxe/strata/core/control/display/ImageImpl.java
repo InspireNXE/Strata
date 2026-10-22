@@ -148,7 +148,11 @@ public final class ImageImpl extends BuiltInComponent<Image> implements Image {
     private void showValueTooltip() {
         final Tooltip next = this.value == null ? null : Strata.appearances().tooltipOf(this.value).orElse(null);
         if (next != null || this.tooltip().orElse(null) == this.valueTooltip) {
-            this.setTooltip(next);
+            if (next == null) {
+                this.clearTooltip();
+            } else {
+                this.setTooltip(next);
+            }
         }
         this.valueTooltip = next;
     }

@@ -33,6 +33,7 @@ import org.inspirenxe.strata.core.node.BuiltInComponent;
 import org.inspirenxe.strata.core.node.ComponentFactoryImpl;
 import org.inspirenxe.strata.core.text.TextLine;
 
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 
@@ -117,7 +118,14 @@ public final class ButtonImpl extends BuiltInComponent<Button> implements Button
 
     @Override
     public Button setTextPadding(final Insets padding) {
-        this.content.setTextPadding(padding);
+        this.content.setTextPadding(Objects.requireNonNull(padding, "padding"));
+        this.invalidateLayout();
+        return this;
+    }
+
+    @Override
+    public Button clearTextPadding() {
+        this.content.setTextPadding(null);
         this.invalidateLayout();
         return this;
     }

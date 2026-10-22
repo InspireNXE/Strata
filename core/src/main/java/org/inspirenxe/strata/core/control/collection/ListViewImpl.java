@@ -549,7 +549,7 @@ public final class ListViewImpl<T> extends BuiltInComposite<ListView<T>> impleme
 
     @Override
     public ListView<T> setPlaceholder(final Text placeholder) {
-        this.placeholder = placeholder == null ? Text.empty() : placeholder;
+        this.placeholder = Objects.requireNonNull(placeholder, "placeholder");
         this.invalidateLayout();
         return this;
     }
