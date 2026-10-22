@@ -36,8 +36,10 @@ import java.util.Optional;
 /**
  * The core {@link Image}. Its desired size is the image size, 16 by 16 by default or the visual's natural size. It
  * draws the sprite, visual or pixel buffer stretched over its bounds, or, with {@link Image.Scaling#FIT}, at the largest size with
- * the image size's aspect ratio that fits, centered. An image size of zero on either axis draws nothing with
- * {@code FIT}.
+ * the image size's aspect ratio that fits, centered. {@link Image.Scaling#COVER} draws it at the smallest size with that
+ * aspect ratio that covers the bounds, and {@link Image.Scaling#NONE} at the image size, each centered and clipped to
+ * the bounds, so every kind of image is cut the same way. An image size of zero on either axis draws nothing with
+ * any scaling but {@code STRETCH}.
  */
 public final class ImageImpl extends BuiltInComponent<Image> implements Image {
     private SpriteId sprite;
@@ -47,6 +49,10 @@ public final class ImageImpl extends BuiltInComponent<Image> implements Image {
     private float imageWidth;
     private float imageHeight;
     private Scaling scaling;
+    // What the clipped draw paints, set only while it runs, so a cut image allocates nothing
+    private Painter clipPainter;
+    private Rect clipPlaced;
+    private final Runnable drawClipped = () -> this.draw(this.clipPainter, this.clipPlaced);
     // Kept between frames while the image fits the same bounds
     private final RectCache fitRect = new RectCache();
     // The value shown through its appearance, and the tooltip it last set, which is refreshed on hover while it is
@@ -244,11 +250,27 @@ public final class ImageImpl extends BuiltInComponent<Image> implements Image {
         if (this.imageWidth <= 0f || this.imageHeight <= 0f) {
             return;
         }
-        final float scale = Math.min(bounds.width() / this.imageWidth, bounds.height() / this.imageHeight);
+        final float scale = switch (this.scaling) {
+            case COVER -> Math.max(bounds.width() / this.imageWidth, bounds.height() / this.imageHeight);
+            case NONE -> 1f;
+            default -> Math.min(bounds.width() / this.imageWidth, bounds.height() / this.imageHeight);
+        };
         final float width = this.imageWidth * scale;
         final float height = this.imageHeight * scale;
-        this.draw(painter, this.fitRect.at(bounds.x() + (bounds.width() - width) * 0.5f,
-                bounds.y() + (bounds.height() - height) * 0.5f, width, height));
+        final Rect placed = this.fitRect.at(bounds.x() + (bounds.width() - width) * 0.5f,
+                bounds.y() + (bounds.height() - height) * 0.5f, width, height);
+        if (width <= bounds.width() && height <= bounds.height()) {
+            this.draw(painter, placed);
+            return;
+        }
+        this.clipPainter = painter;
+        this.clipPlaced = placed;
+        try {
+            painter.clipped(bounds, this.drawClipped);
+        } finally {
+            this.clipPainter = null;
+            this.clipPlaced = null;
+        }
     }
 
     private void draw(final Painter painter, final Rect rect) {

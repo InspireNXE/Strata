@@ -21,6 +21,7 @@ import org.inspirenxe.strata.api.component.HasCursor;
 import org.inspirenxe.strata.api.component.HasTooltip;
 import org.inspirenxe.strata.api.control.attribute.text.HasText;
 import org.inspirenxe.strata.api.control.attribute.value.Ranged;
+import org.inspirenxe.strata.api.layout.Orientation;
 import org.inspirenxe.strata.api.state.PropertyKey;
 import org.inspirenxe.strata.api.text.Text;
 
@@ -30,6 +31,11 @@ import org.inspirenxe.strata.api.text.Text;
  *
  * <p>It asks for 100 units of width and one line plus 4 units of height; stretch it or give it a size. It is not
  * focusable and has no default behavior for input, so it never fires {@link Ranged#CHANGE}.</p>
+ *
+ * <p>A {@linkplain #setOrientation vertical} bar, such as a health bar or a battery gauge, fills from the bottom up,
+ * as a vertical slider rises, and asks for 100 units of height and its caption's width plus the padding, at least
+ * one line plus 4. Its caption stays level, centered in the bar, and its indeterminate segment slides from the bottom
+ * to the top.</p>
  *
  * <h2>Indeterminate</h2>
  * <p>For work whose length is not known, {@link #setIndeterminate(boolean)} replaces the fill with a segment a
@@ -60,6 +66,21 @@ import org.inspirenxe.strata.api.text.Text;
  */
 public interface ProgressBar extends Component<ProgressBar>, HasCursor<ProgressBar>, HasTooltip<ProgressBar>,
         HasContextMenu<ProgressBar>, HasText<ProgressBar>, Ranged<ProgressBar> {
+    /**
+     * Returns which way the bar fills.
+     *
+     * @return the orientation; {@link Orientation#HORIZONTAL} for a new bar
+     */
+    Orientation orientation();
+
+    /**
+     * Sets which way the bar fills: from the left across, or from the bottom up. A new layout runs.
+     *
+     * @param orientation the orientation
+     * @return this bar
+     */
+    ProgressBar setOrientation(Orientation orientation);
+
     /**
      * Style key for the bar's track (paint, required).
      */

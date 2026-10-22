@@ -22,6 +22,7 @@ import org.inspirenxe.strata.api.extension.Painter;
 import org.inspirenxe.strata.api.geometry.Insets;
 import org.inspirenxe.strata.api.geometry.Rect;
 import org.inspirenxe.strata.api.geometry.Size;
+import org.inspirenxe.strata.api.layout.Orientation;
 import org.inspirenxe.strata.api.text.Text;
 import org.inspirenxe.strata.api.text.TextStyle;
 import org.inspirenxe.strata.api.theme.Paint;
@@ -37,14 +38,15 @@ import java.util.Set;
 
 /**
  * The core {@link ProgressBar}. The fill covers the value's share of the range, as a share of the bounds' width from
- * the left edge, over the whole height.
+ * the left edge, over the whole height, or on a vertical bar as a share of the height from the bottom edge, over the
+ * whole width.
  *
  * <p>The fill eases to a new value over the theme's {@value ProgressBar#STYLE_ANIMATION} metric through a
  * {@link Motion} of the drawn fraction, and jumps when the metric is 0 or the bar is detached; the value itself
  * changes at once.</p>
  *
  * <p>While indeterminate, the segment's left edge steps one unit at a time from a segment's length before the left
- * edge to the right edge, over {@link #SEGMENT_PERIOD} milliseconds of the environment's clock. Every position's
+ * edge to the right edge, or on a vertical bar its top edge from a segment's length below the bottom to the top, over {@link #SEGMENT_PERIOD} milliseconds of the environment's clock. Every position's
  * rectangle, already cut to the bounds, is worked out once when the bounds change, so painting picks one and
  * allocates nothing.</p>
  */
@@ -77,6 +79,7 @@ public final class ProgressBarImpl extends BuiltInComponent<ProgressBar> impleme
     private double max;
     private Text text;
     private boolean indeterminate;
+    private Orientation orientation = Orientation.HORIZONTAL;
     private Paint trackPaint;
     private Paint fillPaint;
     private Paint segmentPaint;
@@ -128,6 +131,23 @@ public final class ProgressBarImpl extends BuiltInComponent<ProgressBar> impleme
         }
         this.apply(value);
         return this;
+    }
+
+    @Override
+    public Orientation orientation() {
+        return this.orientation;
+    }
+
+    @Override
+    public ProgressBar setOrientation(final Orientation orientation) {
+        this.orientation = Objects.requireNonNull(orientation, "orientation");
+        this.segmentBounds = Rect.ZERO;
+        this.invalidateLayout();
+        return this;
+    }
+
+    private boolean vertical() {
+        return this.orientation == Orientation.VERTICAL;
     }
 
     @Override
@@ -215,8 +235,11 @@ public final class ProgressBarImpl extends BuiltInComponent<ProgressBar> impleme
         this.line = TextLine.of(this.text, this.textStyle, context.text());
         this.textWidth = this.line.width();
         this.lineHeight = this.line.height();
-        return new Size(Math.max(DEFAULT_WIDTH, this.textWidth + this.padding.horizontal()),
-                this.lineHeight + this.padding.vertical());
+        final float thickness = this.lineHeight + this.padding.vertical();
+        if (this.vertical()) {
+            return new Size(Math.max(thickness, this.textWidth + this.padding.horizontal()), DEFAULT_WIDTH);
+        }
+        return new Size(Math.max(DEFAULT_WIDTH, this.textWidth + this.padding.horizontal()), thickness);
     }
 
     @Override
@@ -237,7 +260,11 @@ public final class ProgressBarImpl extends BuiltInComponent<ProgressBar> impleme
             }
         } else {
             final float fraction = this.shownFraction;
-            if (fraction > 0f) {
+            if (fraction > 0f && this.vertical()) {
+                final float height = bounds.height() * fraction;
+                this.fillPaint.paint(painter, this.fillRect.at(bounds.x(), bounds.bottom() - height, bounds.width(),
+                        height));
+            } else if (fraction > 0f) {
                 // Right to left the fill grows from the right
                 final float width = bounds.width() * fraction;
                 this.fillPaint.paint(painter, this.fillRect.at(this.isRightToLeft() ? bounds.right() - width
@@ -261,15 +288,23 @@ public final class ProgressBarImpl extends BuiltInComponent<ProgressBar> impleme
         if (bounds.equals(this.segmentBounds) && rightToLeft == this.segmentsRightToLeft) {
             return this.segments;
         }
-        final float width = bounds.width();
+        final boolean vertical = this.vertical();
+        final float width = vertical ? bounds.height() : bounds.width();
         final float length = Math.min(width, Math.max(MIN_SEGMENT_LENGTH, width * SEGMENT_SHARE));
         final int count = width > 0f ? (int) Math.ceil(width + length) : 0;
         final Rect[] steps = new Rect[count];
         for (int i = 0; i < count; i++) {
-            final float left = Math.max(bounds.x(), bounds.x() - length + i);
-            final float right = Math.min(bounds.right(), bounds.x() + i);
-            final Rect step = right > left ? new Rect(left, bounds.y(), right - left, bounds.height()) : null;
-            steps[i] = step != null && rightToLeft ? Flow.mirror(step, bounds) : step;
+            if (vertical) {
+                // Measured up from the bottom edge, whatever the direction
+                final float low = Math.max(0f, i - length);
+                final float high = Math.min(width, i);
+                steps[i] = high > low ? new Rect(bounds.x(), bounds.bottom() - high, bounds.width(), high - low) : null;
+            } else {
+                final float left = Math.max(bounds.x(), bounds.x() - length + i);
+                final float right = Math.min(bounds.right(), bounds.x() + i);
+                final Rect step = right > left ? new Rect(left, bounds.y(), right - left, bounds.height()) : null;
+                steps[i] = step != null && rightToLeft ? Flow.mirror(step, bounds) : step;
+            }
         }
         this.segments = steps;
         this.segmentBounds = bounds;

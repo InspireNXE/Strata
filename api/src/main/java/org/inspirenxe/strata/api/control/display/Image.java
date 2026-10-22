@@ -199,7 +199,16 @@ public interface Image extends Component<Image>, HasCursor<Image>, HasTooltip<Im
          * Draw the sprite as large as fits inside the bounds with the image size's aspect ratio, centered. Space
          * left over on one axis stays empty.
          */
-        FIT
+        FIT,
+        /**
+         * Draw the sprite as small as covers the bounds with the image size's aspect ratio, centered, and cut what
+         * falls outside them, as a banner fills a card.
+         */
+        COVER,
+        /**
+         * Draw the sprite at the image size, centered in the bounds, and cut what falls outside them.
+         */
+        NONE
     }
 
     /**
