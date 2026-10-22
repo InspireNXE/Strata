@@ -67,6 +67,9 @@ public final class SpinnerImpl extends BuiltInComposite<Spinner> implements Spin
     private Pattern accepted;
     private float pointerY;
     private Rect buttons;
+    // The halves of the button column, worked out during arrange
+    private Rect upButton;
+    private Rect downButton;
 
     // Theme
     private Paint button;
@@ -86,6 +89,8 @@ public final class SpinnerImpl extends BuiltInComposite<Spinner> implements Spin
         this.max = 100.0;
         this.step = 1.0;
         this.buttons = Rect.ZERO;
+        this.upButton = Rect.ZERO;
+        this.downButton = Rect.ZERO;
         this.button = Paint.NONE;
         this.buttonHovered = Paint.NONE;
         this.buttonDisabled = Paint.NONE;
@@ -289,6 +294,10 @@ public final class SpinnerImpl extends BuiltInComposite<Spinner> implements Spin
         final float fieldWidth = Math.max(0f, bounds.width() - BUTTON_WIDTH);
         context.arrange(this.field, new Rect(bounds.x(), bounds.y(), fieldWidth, bounds.height()));
         this.buttons = new Rect(bounds.x() + fieldWidth, bounds.y(), bounds.width() - fieldWidth, bounds.height());
+        final float half = (float) Math.floor(this.buttons.height() * 0.5f);
+        this.upButton = new Rect(this.buttons.x(), this.buttons.y(), this.buttons.width(), half);
+        this.downButton = new Rect(this.buttons.x(), this.buttons.y() + half, this.buttons.width(),
+                this.buttons.height() - half);
     }
 
     @Override
@@ -298,11 +307,8 @@ public final class SpinnerImpl extends BuiltInComposite<Spinner> implements Spin
 
     @Override
     protected void paint(final Painter painter, final Rect bounds) {
-        final float half = (float) Math.floor(this.buttons.height() * 0.5f);
-        final Rect up = new Rect(this.buttons.x(), this.buttons.y(), this.buttons.width(), half);
-        final Rect down = new Rect(this.buttons.x(), this.buttons.y() + half, this.buttons.width(), this.buttons.height() - half);
-        this.paintButton(painter, up, this.value < this.max, true);
-        this.paintButton(painter, down, this.value > this.min, false);
+        this.paintButton(painter, this.upButton, this.value < this.max, true);
+        this.paintButton(painter, this.downButton, this.value > this.min, false);
     }
 
     private void paintButton(final Painter painter, final Rect rect, final boolean usable, final boolean upward) {

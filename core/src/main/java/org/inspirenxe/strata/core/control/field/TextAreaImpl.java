@@ -108,6 +108,7 @@ public final class TextAreaImpl extends BuiltInComponent<TextArea> implements Te
     private final ScrollTrack bar;
     private final ScrollTrack horizontalBar;
     private final Runnable drawContent;
+    private final Runnable drawRow;
     private int maxLength;
     private boolean wrap;
     private int visibleLines;
@@ -169,8 +170,26 @@ public final class TextAreaImpl extends BuiltInComponent<TextArea> implements Te
     private float[] selectionX0;
     private float[] selectionX1;
 
-    // Set only while paint runs, for drawContent
+    // Drawn last frame, made again only when they move or the rows change
+    private Rect innerFor;
+    private Insets innerPadding;
+    private Rect barTrack;
+    private Rect horizontalTrack;
+    private Rect caretRect;
+    private Rect[] selectedRects;
+    private Rect[] beforeClips;
+    private Rect[] afterClips;
+    // Each row's spans in the selected style, made again when the row's spans or the style change
+    private TextSpan[][] selectedSpans;
+    private TextSpan[][] selectedSpansFor;
+    private TextStyle selectedSpansStyle;
+
+    // Set only while paint runs, for drawContent and drawRow
     private Painter painter;
+    private TextSpan[] drawnSpans;
+    private float[] drawnOffsets;
+    private float drawnX;
+    private float drawnY;
 
     /**
      * Creates an empty text area that wraps.
@@ -187,6 +206,7 @@ public final class TextAreaImpl extends BuiltInComponent<TextArea> implements Te
         this.bar = new ScrollTrack(true);
         this.horizontalBar = new ScrollTrack(false);
         this.drawContent = this::drawContent;
+        this.drawRow = this::drawRow;
         this.maxLength = Integer.MAX_VALUE;
         this.wrap = true;
         this.visibleLines = DEFAULT_VISIBLE_LINES;
@@ -215,6 +235,11 @@ public final class TextAreaImpl extends BuiltInComponent<TextArea> implements Te
         this.highlighter = TextHighlighter.NONE;
         this.selectionX0 = new float[8];
         this.selectionX1 = new float[8];
+        this.selectedRects = new Rect[8];
+        this.beforeClips = new Rect[8];
+        this.afterClips = new Rect[8];
+        this.selectedSpans = new TextSpan[8][];
+        this.selectedSpansFor = new TextSpan[8][];
         this.contentBox = Rect.ZERO;
         this.viewport = Rect.ZERO;
         this.visualsDirty = true;
@@ -434,8 +459,13 @@ public final class TextAreaImpl extends BuiltInComponent<TextArea> implements Te
      * Works out the content box and, if the text, style or size changed, the rows and the scroll bar.
      */
     private void ensureRows() {
-        final Rect inner = this.bounds().shrink(this.textPadding);
-        this.contentBox = inner;
+        final Rect bounds = this.bounds();
+        if (!bounds.equals(this.innerFor) || this.textPadding != this.innerPadding) {
+            this.contentBox = bounds.shrink(this.textPadding);
+            this.innerFor = bounds;
+            this.innerPadding = this.textPadding;
+        }
+        final Rect inner = this.contentBox;
         final TextStyle style = this.style();
         if (this.rowsDirty || inner.width() != this.rowsWidth || inner.height() != this.rowsHeight || style != this.rowsStyle) {
             this.rowsDirty = false;
@@ -458,18 +488,20 @@ public final class TextAreaImpl extends BuiltInComponent<TextArea> implements Te
             this.visualsDirty = true;
         }
         final float bottomGutter = this.horizontalBarShown ? GUTTER : 0f;
-        this.viewport = new Rect(inner.x(), inner.y(), Math.max(0f, inner.width() - (this.barShown ? GUTTER : 0f)),
-                Math.max(0f, inner.height() - bottomGutter));
+        this.viewport = Rects.reuse(this.viewport, inner.x(), inner.y(), inner.width() - (this.barShown ? GUTTER : 0f),
+                inner.height() - bottomGutter);
         final float total = this.rowCount * this.lineHeight;
         this.maxScrollY = Math.max(0f, total - this.viewport.height());
         this.scrollY = Math.max(0f, Math.min(this.scrollY, this.maxScrollY));
-        this.bar.update(new Rect(inner.right() - ScrollPanel.BAR_WIDTH, inner.y(), ScrollPanel.BAR_WIDTH,
-                Math.max(0f, inner.height() - bottomGutter)), this.viewport.height(), Math.max(total, this.viewport.height()));
+        this.barTrack = Rects.reuse(this.barTrack, inner.right() - ScrollPanel.BAR_WIDTH, inner.y(), ScrollPanel.BAR_WIDTH,
+                inner.height() - bottomGutter);
+        this.bar.update(this.barTrack, this.viewport.height(), Math.max(total, this.viewport.height()));
         final float wide = this.widestRow + 1f;
         this.maxScrollX = this.wrap ? 0f : Math.max(0f, wide - this.viewport.width());
         this.scrollX = Math.max(0f, Math.min(this.scrollX, this.maxScrollX));
-        this.horizontalBar.update(new Rect(inner.x(), inner.bottom() - ScrollPanel.BAR_WIDTH, this.viewport.width(),
-                ScrollPanel.BAR_WIDTH), this.viewport.width(), Math.max(wide, this.viewport.width()));
+        this.horizontalTrack = Rects.reuse(this.horizontalTrack, inner.x(), inner.bottom() - ScrollPanel.BAR_WIDTH,
+                this.viewport.width(), ScrollPanel.BAR_WIDTH);
+        this.horizontalBar.update(this.horizontalTrack, this.viewport.width(), Math.max(wide, this.viewport.width()));
     }
 
     /**
@@ -516,6 +548,11 @@ public final class TextAreaImpl extends BuiltInComponent<TextArea> implements Te
             this.rowSpanX = Arrays.copyOf(this.rowSpanX, grown);
             this.selectionX0 = Arrays.copyOf(this.selectionX0, grown);
             this.selectionX1 = Arrays.copyOf(this.selectionX1, grown);
+            this.selectedRects = Arrays.copyOf(this.selectedRects, grown);
+            this.beforeClips = Arrays.copyOf(this.beforeClips, grown);
+            this.afterClips = Arrays.copyOf(this.afterClips, grown);
+            this.selectedSpans = Arrays.copyOf(this.selectedSpans, grown);
+            this.selectedSpansFor = Arrays.copyOf(this.selectedSpansFor, grown);
         }
         final TextSpan[] spans = this.styled.spans(start, end);
         final float[] offsets = StyledText.offsets(metrics, spans);
@@ -662,7 +699,8 @@ public final class TextAreaImpl extends BuiltInComponent<TextArea> implements Te
             if (x >= this.viewport.x() && x < this.viewport.right() && y + this.lineHeight > this.viewport.y()
                     && y < this.viewport.bottom()) {
                 final float reach = this.look.caretExtend();
-                this.look.caret().paint(painter, new Rect(x, y - reach, 1f, this.lineHeight + reach * 2f));
+                this.caretRect = Rects.reuse(this.caretRect, x, y - reach, 1f, this.lineHeight + reach * 2f);
+                this.look.caret().paint(painter, this.caretRect);
             }
         }
         if (this.barShown) {
@@ -676,7 +714,8 @@ public final class TextAreaImpl extends BuiltInComponent<TextArea> implements Te
 
     /**
      * Runs inside the viewport clip during {@link #paint}; a field-held method reference, so painting allocates no
-     * lambda per frame.
+     * lambda per frame. The rectangles of each selected row and its spans in the selected style are kept from frame to
+     * frame, so a frame that repeats the last one allocates nothing.
      */
     private void drawContent() {
         final float originX = this.viewport.x() - this.scrollX;
@@ -690,34 +729,66 @@ public final class TextAreaImpl extends BuiltInComponent<TextArea> implements Te
         final int first = Math.max(0, (int) Math.floor(offset / this.lineHeight));
         final int last = Math.min(this.rowCount - 1, (int) Math.floor((offset + this.viewport.height()) / this.lineHeight));
         final TextStyle selectedStyle = this.look.selectedText();
+        if (selectedStyle != this.selectedSpansStyle) {
+            Arrays.fill(this.selectedSpans, null);
+            Arrays.fill(this.selectedSpansFor, null);
+            this.selectedSpansStyle = selectedStyle;
+        }
+        this.drawnX = originX;
         for (int row = first; row <= last; row++) {
             final float y = this.viewport.y() + row * this.lineHeight - offset;
-            final TextSpan[] spans = this.rowSpans[row];
-            final float[] offsets = this.rowSpanX[row];
+            this.drawnY = y;
+            this.drawnSpans = this.rowSpans[row];
+            this.drawnOffsets = this.rowSpanX[row];
             if (this.selectionX1[row] > this.selectionX0[row]) {
-                final Rect selected = new Rect(originX + this.selectionX0[row], y,
+                this.selectedRects[row] = Rects.reuse(this.selectedRects[row], originX + this.selectionX0[row], y,
                         this.selectionX1[row] - this.selectionX0[row], this.lineHeight);
+                final Rect selected = this.selectedRects[row];
                 this.look.selection().paint(this.painter, selected);
                 if (selectedStyle != null) {
                     // The row outside the selection as it is, and inside it in the selected style
                     final float left = this.viewport.x();
                     final float right = this.viewport.right();
-                    this.painter.clipped(new Rect(left, y, Math.max(0f, selected.x() - left), this.lineHeight),
-                            () -> this.drawRow(spans, offsets, originX, y, null));
-                    this.painter.clipped(new Rect(selected.right(), y, Math.max(0f, right - selected.right()),
-                            this.lineHeight), () -> this.drawRow(spans, offsets, originX, y, null));
-                    this.painter.clipped(selected, () -> this.drawRow(spans, offsets, originX, y, selectedStyle));
+                    this.beforeClips[row] = Rects.reuse(this.beforeClips[row], left, y, selected.x() - left,
+                            this.lineHeight);
+                    this.afterClips[row] = Rects.reuse(this.afterClips[row], selected.right(), y,
+                            right - selected.right(), this.lineHeight);
+                    this.painter.clipped(this.beforeClips[row], this.drawRow);
+                    this.painter.clipped(this.afterClips[row], this.drawRow);
+                    this.drawnSpans = this.selectedSpans(row, selectedStyle);
+                    this.painter.clipped(selected, this.drawRow);
                     continue;
                 }
             }
-            this.drawRow(spans, offsets, originX, y, null);
+            this.drawRow();
         }
+        this.drawnSpans = null;
+        this.drawnOffsets = null;
     }
 
-    private void drawRow(final TextSpan[] spans, final float[] offsets, final float originX, final float y,
-                         final TextStyle style) {
+    /**
+     * Returns a row's spans in the selected style, made again only when the row's spans changed.
+     */
+    private TextSpan[] selectedSpans(final int row, final TextStyle style) {
+        final TextSpan[] spans = this.rowSpans[row];
+        if (this.selectedSpansFor[row] != spans) {
+            final TextSpan[] styled = new TextSpan[spans.length];
+            for (int i = 0; i < spans.length; i++) {
+                styled[i] = new TextSpan(spans[i].text(), style);
+            }
+            this.selectedSpans[row] = styled;
+            this.selectedSpansFor[row] = spans;
+        }
+        return this.selectedSpans[row];
+    }
+
+    /**
+     * Draws the spans set for the row being drawn; a field-held method reference, as {@link #drawContent} is.
+     */
+    private void drawRow() {
+        final TextSpan[] spans = this.drawnSpans;
         for (int i = 0; i < spans.length; i++) {
-            this.painter.text(style == null ? spans[i] : new TextSpan(spans[i].text(), style), originX + offsets[i], y);
+            this.painter.text(spans[i], this.drawnX + this.drawnOffsets[i], this.drawnY);
         }
     }
 

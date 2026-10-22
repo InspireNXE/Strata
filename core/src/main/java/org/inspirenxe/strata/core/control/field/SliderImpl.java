@@ -49,7 +49,8 @@ import java.util.function.DoubleFunction;
  * <p>Snapping: a value is clamped to the range, then moved to the nearest {@code min + k * step}; if the maximum is
  * nearer to the requested value than that grid point, the maximum is used instead, so the maximum is always
  * reachable. The label is clipped to the bounds, and its text is measured when it changes, during painting, through
- * the environment's text metrics.</p>
+ * the environment's text metrics. The thumb's rectangle is kept from frame to frame and made again only when it
+ * moves.</p>
  *
  * <p>A press, drag or key that would change the value fires {@link Slider#CHANGE}, and the final value is set as
  * {@link #setValue} sets it. A press, drag or key that leaves the value as it is fires nothing.</p>
@@ -97,6 +98,8 @@ public final class SliderImpl extends BuiltInComponent<Slider> implements Slider
     private float labelHeight;
     private Insets padding = Insets.NONE;
     private float keyTravel;
+    // Drawn last frame, made again only when the thumb moves
+    private Rect thumbRect;
 
     /**
      * Creates a slider over 0 to 1, at 0, with no step.
@@ -321,14 +324,15 @@ public final class SliderImpl extends BuiltInComponent<Slider> implements Slider
         }
         if (this.orientation == Orientation.HORIZONTAL) {
             final float travel = Math.max(0f, bounds.width() - THUMB_WIDTH);
-            thumbFace.paint(painter, new Rect(bounds.x() + (float) (this.fraction() * travel), bounds.y(),
-                    Math.min(THUMB_WIDTH, bounds.width()), bounds.height()));
+            this.thumbRect = Rects.reuse(this.thumbRect, bounds.x() + (float) (this.fraction() * travel), bounds.y(),
+                    Math.min(THUMB_WIDTH, bounds.width()), bounds.height());
         } else {
             final float length = Math.min(THUMB_WIDTH, bounds.height());
             final float travel = Math.max(0f, bounds.height() - THUMB_WIDTH);
-            thumbFace.paint(painter, new Rect(bounds.x(), bounds.bottom() - length - (float) (this.fraction() * travel),
-                    bounds.width(), length));
+            this.thumbRect = Rects.reuse(this.thumbRect, bounds.x(),
+                    bounds.bottom() - length - (float) (this.fraction() * travel), bounds.width(), length);
         }
+        thumbFace.paint(painter, this.thumbRect);
 
         if (!this.labelText.isEmpty()) {
             if (this.labelSpan == null) {

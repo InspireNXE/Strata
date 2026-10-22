@@ -36,6 +36,9 @@ import org.inspirenxe.strata.api.theme.Paint;
  * <p>It never changes the text itself: every edit goes to the owner, which fires its requests and reports and then
  * places the caret with {@link #place}. Word movement and double clicks use the {@link TextBoundaries} it is given,
  * so a password box can make its whole text one word.</p>
+ *
+ * <p>The rectangles it draws are kept from frame to frame and made again only when what they cover moves, so a
+ * frame that repeats the last one allocates nothing.</p>
  */
 final class LineEditor {
     /**
@@ -62,6 +65,13 @@ final class LineEditor {
     private float caretX;
     private float selectionStartX;
     private float selectionEndX;
+
+    // Drawn last frame, made again only when they move
+    private Rect clipRect;
+    private Rect caretRect;
+    private Rect selectedRect;
+    private Rect beforeClip;
+    private Rect afterClip;
 
     // Set only while paint runs, for drawContent
     private Painter painter;
@@ -252,9 +262,13 @@ final class LineEditor {
         this.painter = painter;
         try {
             final float reach = look.selectionExtend();
-            painter.clipped(reach > 0f
-                    ? new Rect(contentBox.x(), contentBox.y() - reach, contentBox.width(), contentBox.height() + reach * 2f)
-                    : contentBox, this.drawContent);
+            if (reach > 0f) {
+                this.clipRect = Rects.reuse(this.clipRect, contentBox.x(), contentBox.y() - reach, contentBox.width(),
+                        contentBox.height() + reach * 2f);
+                painter.clipped(this.clipRect, this.drawContent);
+            } else {
+                painter.clipped(contentBox, this.drawContent);
+            }
         } finally {
             this.painter = null;
         }
@@ -271,7 +285,8 @@ final class LineEditor {
             }
             final float x = Math.max(contentBox.x(), Math.min(contentBox.right() - 1f, atX));
             final float reach = look.caretExtend();
-            look.caret().paint(painter, new Rect(x, textY - reach, 1f, lineHeight + reach * 2f));
+            this.caretRect = Rects.reuse(this.caretRect, x, textY - reach, 1f, lineHeight + reach * 2f);
+            look.caret().paint(painter, this.caretRect);
         }
     }
 
@@ -286,8 +301,9 @@ final class LineEditor {
             return;
         }
         final float reach = this.look.selectionExtend();
-        final Rect selected = new Rect(originX + this.selectionStartX, this.textY - reach,
+        this.selectedRect = Rects.reuse(this.selectedRect, originX + this.selectionStartX, this.textY - reach,
                 this.selectionEndX - this.selectionStartX, this.lineHeight + reach * 2f);
+        final Rect selected = this.selectedRect;
         this.selectionPaint.paint(this.painter, selected);
         if (this.look.selectedText() == null) {
             this.owner.drawText(this.painter, originX, this.contentBox.x(), this.textY, null);
@@ -297,10 +313,10 @@ final class LineEditor {
         final Rect content = this.contentBox;
         final float top = content.y() - reach;
         final float height = content.height() + reach * 2f;
-        this.painter.clipped(new Rect(content.x(), top, Math.max(0f, selected.x() - content.x()), height),
-                this.drawPlain);
-        this.painter.clipped(new Rect(selected.right(), top, Math.max(0f, content.right() - selected.right()), height),
-                this.drawPlain);
+        this.beforeClip = Rects.reuse(this.beforeClip, content.x(), top, selected.x() - content.x(), height);
+        this.afterClip = Rects.reuse(this.afterClip, selected.right(), top, content.right() - selected.right(), height);
+        this.painter.clipped(this.beforeClip, this.drawPlain);
+        this.painter.clipped(this.afterClip, this.drawPlain);
         this.painter.clipped(selected, this.drawSelected);
     }
 

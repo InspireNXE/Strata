@@ -122,9 +122,19 @@ public final class PasswordTextBoxImpl extends BuiltInComposite<PasswordTextBox>
     // Made during measure
     private TextLine placeholderLine;
     private float lineHeight;
+    // The bounds less the padding, and the part of it the text takes, made again when what they depend on changes
+    private Rect contentBox;
+    private Rect textBox;
+    private Rect contentFor;
+    private Insets contentPadding;
+    private boolean contentRevealable;
+    private float contentLineHeight;
 
     // The text as drawn, made again after each edit: the mask, or the shown text and its boundaries
     private TextSpan drawn;
+    // The drawn text again in the selected style, made again when either changes
+    private TextSpan selectedDrawn;
+    private TextSpan selectedDrawnFor;
     private int drawnCount;
     private float drawnWidth;
     private float[] shownX;
@@ -403,6 +413,8 @@ public final class PasswordTextBoxImpl extends BuiltInComposite<PasswordTextBox>
      */
     private void forgetDrawn() {
         this.drawn = null;
+        this.selectedDrawn = null;
+        this.selectedDrawnFor = null;
         this.shownX = null;
         this.drawnCount = 0;
         this.drawnWidth = 0f;
@@ -535,14 +547,22 @@ public final class PasswordTextBoxImpl extends BuiltInComposite<PasswordTextBox>
         }
         face.paint(painter, bounds);
 
-        final Rect content = bounds.shrink(this.textPadding);
-        // The text keeps the eye's room whenever the box is revealable, so it does not move when the eye appears
-        final Rect text = this.revealable
-                ? new Rect(content.x(), content.y(), Math.max(0f, content.width() - this.lineHeight - REVEAL_GAP),
-                        content.height())
-                : content;
+        if (!bounds.equals(this.contentFor) || this.textPadding != this.contentPadding
+                || this.revealable != this.contentRevealable || this.lineHeight != this.contentLineHeight) {
+            this.contentBox = bounds.shrink(this.textPadding);
+            // The text keeps the eye's room whenever the box is revealable, so it does not move when the eye appears
+            this.textBox = this.revealable
+                    ? new Rect(this.contentBox.x(), this.contentBox.y(),
+                            this.contentBox.width() - this.lineHeight - REVEAL_GAP, this.contentBox.height())
+                    : this.contentBox;
+            this.contentFor = bounds;
+            this.contentPadding = this.textPadding;
+            this.contentRevealable = this.revealable;
+            this.contentLineHeight = this.lineHeight;
+        }
+        final Rect content = this.contentBox;
         final float textY = content.y() + (content.height() - this.lineHeight) * 0.5f;
-        this.editor.paint(painter, text, textY, this.lineHeight, this.look, this.shownStyle(),
+        this.editor.paint(painter, this.textBox, textY, this.lineHeight, this.look, this.shownStyle(),
                 this.isFocused() && this.isEnabled() && !this.readOnly);
     }
 
@@ -786,9 +806,18 @@ public final class PasswordTextBoxImpl extends BuiltInComposite<PasswordTextBox>
                 }
                 return;
             }
-            if (box.drawn != null) {
-                painter.text(style == null ? box.drawn : new TextSpan(box.drawn.text(), style), originX, y);
+            if (box.drawn == null) {
+                return;
             }
+            if (style == null) {
+                painter.text(box.drawn, originX, y);
+                return;
+            }
+            if (box.selectedDrawnFor != box.drawn || box.selectedDrawn.style() != style) {
+                box.selectedDrawn = new TextSpan(box.drawn.text(), style);
+                box.selectedDrawnFor = box.drawn;
+            }
+            painter.text(box.selectedDrawn, originX, y);
         }
 
         @Override

@@ -152,6 +152,14 @@ public final class TextBoxImpl extends BuiltInComponent<TextBox> implements Text
     private TextHighlighter highlighter;
     private TextSpan[] displaySpans;
     private float[] displayX;
+    // The spans again in the selected style, made again when the spans or the style change
+    private TextSpan[] selectedSpans;
+    private TextSpan[] selectedSpansFor;
+    private TextStyle selectedSpansStyle;
+    // The bounds less the padding, made again when either changes
+    private Rect contentBox;
+    private Rect contentFor;
+    private Insets contentPadding;
 
     /**
      * Creates an empty box with no length limit.
@@ -604,7 +612,12 @@ public final class TextBoxImpl extends BuiltInComponent<TextBox> implements Text
         }
         face.paint(painter, bounds);
 
-        final Rect contentBox = bounds.shrink(this.textPadding);
+        if (!bounds.equals(this.contentFor) || this.textPadding != this.contentPadding) {
+            this.contentBox = bounds.shrink(this.textPadding);
+            this.contentFor = bounds;
+            this.contentPadding = this.textPadding;
+        }
+        final Rect contentBox = this.contentBox;
         final float textY = contentBox.y() + (contentBox.height() - this.lineHeight) * 0.5f;
         this.editor.paint(painter, contentBox, textY, this.lineHeight, this.look, this.style(),
                 this.isFocused() && this.isEnabled() && !this.readOnly);
@@ -753,6 +766,22 @@ public final class TextBoxImpl extends BuiltInComponent<TextBox> implements Text
         return this.buffer.codePointCount(0, this.buffer.length());
     }
 
+    /**
+     * Returns the drawn spans in another style, made again only when the spans or the style changed.
+     */
+    private TextSpan[] selectedSpans(final TextStyle style) {
+        if (this.selectedSpansFor != this.displaySpans || this.selectedSpansStyle != style) {
+            final TextSpan[] spans = new TextSpan[this.displaySpans.length];
+            for (int i = 0; i < spans.length; i++) {
+                spans[i] = new TextSpan(this.displaySpans[i].text(), style);
+            }
+            this.selectedSpans = spans;
+            this.selectedSpansFor = this.displaySpans;
+            this.selectedSpansStyle = style;
+        }
+        return this.selectedSpans;
+    }
+
     @Override
     protected Object snapshotState() {
         return new TextBox.State(this.buffer.toString(), this.editor.caret(), this.editor.anchor(), this.maxLength);
@@ -808,9 +837,9 @@ public final class TextBoxImpl extends BuiltInComponent<TextBox> implements Text
                 }
                 return;
             }
-            for (int i = 0; i < box.displaySpans.length; i++) {
-                final TextSpan span = box.displaySpans[i];
-                painter.text(style == null ? span : new TextSpan(span.text(), style), originX + box.displayX[i], y);
+            final TextSpan[] spans = style == null ? box.displaySpans : box.selectedSpans(style);
+            for (int i = 0; i < spans.length; i++) {
+                painter.text(spans[i], originX + box.displayX[i], y);
             }
         }
 
