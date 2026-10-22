@@ -15,17 +15,28 @@
  */
 package org.inspirenxe.strata.core;
 
+import org.inspirenxe.strata.api.ComponentFactory;
+import org.inspirenxe.strata.api.control.display.Label;
+import org.inspirenxe.strata.api.extension.ArrangeContext;
+import org.inspirenxe.strata.api.extension.CustomComponent;
+import org.inspirenxe.strata.api.extension.CustomContainer;
+import org.inspirenxe.strata.api.extension.MeasureContext;
+import org.inspirenxe.strata.api.geometry.Rect;
+import org.inspirenxe.strata.api.geometry.Size;
+import org.inspirenxe.strata.api.layout.StackPanel;
 import org.inspirenxe.strata.api.text.TextStyle;
 import org.inspirenxe.strata.api.text.TextStylePatch;
 import org.inspirenxe.strata.api.theme.Theme;
 import org.inspirenxe.strata.api.theme.ThemeId;
 import org.inspirenxe.strata.api.theme.ThemeOverrides;
 import org.inspirenxe.strata.api.theme.ThemeRef;
+import org.inspirenxe.strata.api.theme.Themes;
 import org.inspirenxe.strata.core.theme.ThemeRegistryImpl;
 import org.inspirenxe.strata.core.theme.ThemeResolver;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
+import java.util.Optional;
 import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -135,6 +146,153 @@ class StylingExtrasTest {
             assertTrue(new ThemeOverrides(java.util.Map.of(), java.util.Map.of(), java.util.Map.of()).textPatches()
                     .isEmpty());
             assertTrue(ThemeRef.platform().textPatches().isEmpty());
+        }
+    }
+
+    @Nested
+    class InheritedText {
+        private static final TextStyle LABEL = TextStyle.DEFAULT.withShadow(true).withColor(0xFFFFFFFF);
+        private static final Theme THEME = Themes.flat().toBuilder().textStyle(Label.STYLE_TEXT, LABEL)
+                .textStyle("fancy.text", TextStyle.DEFAULT).build();
+        private final TestHost test = new TestHost(new TestPlatform(), THEME, 200, 100);
+        private final ComponentFactory ui = this.test.factory();
+        private final TextStylePatch gray = TextStylePatch.of().color(0xFF808080);
+
+        /**
+         * A component as a developer would write one, reading its text style when the theme is applied.
+         */
+        static final class Badge extends CustomComponent<Badge> {
+            TextStyle style;
+
+            Badge(final ComponentFactory ui) {
+                super(ui);
+            }
+
+            @Override
+            protected void onApplyTheme(final Theme theme) {
+                this.style = theme.textStyleOr("fancy.text", TextStyle.DEFAULT);
+            }
+
+            @Override
+            protected Size measure(final MeasureContext context, final float availableWidth,
+                                   final float availableHeight) {
+                return Size.ZERO;
+            }
+        }
+
+        /**
+         * A container as a developer would write one, stacking its children.
+         */
+        static final class Box extends CustomContainer<Box> {
+            Box(final ComponentFactory ui) {
+                super(ui);
+            }
+
+            @Override
+            protected Size measure(final MeasureContext context, final float availableWidth,
+                                   final float availableHeight) {
+                for (final var child : this.children()) {
+                    context.measure(child, availableWidth, availableHeight);
+                }
+                return Size.ZERO;
+            }
+
+            @Override
+            protected void arrange(final ArrangeContext context, final Rect bounds) {
+                for (final var child : this.children()) {
+                    context.arrange(child, bounds);
+                }
+            }
+        }
+
+        @Test
+        void aPanelPatchesTheTextOfTheControlsInsideIt() {
+            final Label label = this.ui.label("Ana");
+            final StackPanel panel = this.ui.stackPanel().add(this.ui.stackPanel().add(label));
+            this.test.show(panel);
+            assertEquals(LABEL, label.style());
+
+            panel.setTextStyle(this.gray);
+            assertEquals(Optional.of(this.gray), panel.textStyle());
+            assertEquals(LABEL.withColor(0xFF808080), label.style());
+
+            panel.setTextStyle(null);
+            assertTrue(panel.textStyle().isEmpty());
+            assertEquals(LABEL, label.style());
+        }
+
+        @Test
+        void innerPatchesApplyLast() {
+            final Label label = this.ui.label("Ana");
+            final StackPanel inner = this.ui.stackPanel().add(label)
+                    .setTextStyle(TextStylePatch.of().color(0xFF0000FF));
+            final StackPanel outer = this.ui.stackPanel().add(inner)
+                    .setTextStyle(TextStylePatch.of().color(0xFFFF0000).bold(true));
+            this.test.show(outer);
+
+            assertEquals(LABEL.withColor(0xFF0000FF).withBold(true), label.style());
+        }
+
+        @Test
+        void aStyleSetInCodeWins() {
+            final TextStyle own = TextStyle.DEFAULT.withItalic(true);
+            final Label label = this.ui.label("Ana").setStyle(own);
+            this.test.show(this.ui.stackPanel().add(label).setTextStyle(this.gray));
+
+            assertEquals(own, label.style());
+        }
+
+        @Test
+        void theTreeChangingFollowsThePatches() {
+            final Label label = this.ui.label("Ana");
+            final StackPanel gray = this.ui.stackPanel().setTextStyle(this.gray);
+            final StackPanel plain = this.ui.stackPanel();
+            this.test.show(this.ui.stackPanel().add(gray).add(plain));
+
+            gray.add(label);
+            assertEquals(LABEL.withColor(0xFF808080), label.style());
+            gray.remove(label);
+            plain.add(label);
+            assertEquals(LABEL, label.style());
+        }
+
+        @Test
+        void aNewThemeKeepsThePatch() {
+            final Label label = this.ui.label("Ana");
+            this.test.show(this.ui.stackPanel().add(label).setTextStyle(this.gray));
+            this.test.host().setTheme(THEME.toBuilder().textStyle(Label.STYLE_TEXT, TextStyle.DEFAULT).build());
+
+            assertEquals(TextStyle.DEFAULT.withColor(0xFF808080), label.style());
+        }
+
+        @Test
+        void aDevelopersComponentAndContainerTakePartToo() {
+            final Badge badge = new Badge(this.ui);
+            final Box box = new Box(this.ui);
+            box.add(badge);
+            this.test.show(box);
+            assertEquals(TextStyle.DEFAULT, badge.style);
+
+            box.setTextStyle(TextStylePatch.of().underline(true));
+            assertEquals(TextStyle.DEFAULT.withUnderline(true), badge.style);
+        }
+
+        @Test
+        void otherKindsOfValueAreLeftAlone() {
+            final Badge badge = new Badge(this.ui);
+            final StackPanel panel = this.ui.stackPanel().add(badge).setTextStyle(this.gray);
+            this.test.show(panel);
+            assertEquals(THEME.paints(), new Probe(badge).theme().paints());
+            assertEquals(THEME.metrics(), new Probe(badge).theme().metrics());
+        }
+
+        /**
+         * Reads a component's theme from outside it, as only a subclass could.
+         */
+        private record Probe(Badge badge) {
+            Theme theme() {
+                return this.badge.peer().theme();
+            }
         }
     }
 

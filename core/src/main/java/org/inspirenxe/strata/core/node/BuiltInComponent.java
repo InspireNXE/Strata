@@ -236,7 +236,7 @@ public abstract class BuiltInComponent<T extends Component<T>> implements Compon
      * Reads paints and text styles from the theme, on attach and after every theme change, before the next layout.
      * The default does nothing.
      *
-     * @param theme the host's theme
+     * @param theme the host's theme, with the text style patches of the containers around the component applied
      */
     protected void onApplyTheme(final Theme theme) {
     }
@@ -868,7 +868,9 @@ public abstract class BuiltInComponent<T extends Component<T>> implements Compon
     /**
      * Returns the theme applied to this component, for reading styles outside {@link #onApplyTheme}.
      *
-     * @return the host's theme, or {@code null} before the component is first attached
+     * @return the host's theme, with the {@linkplain org.inspirenxe.strata.api.component.Container#setTextStyle text
+     *     style patches} of the containers around the component applied, or {@code null} before the component is
+     *     first attached
      */
     protected final Theme theme() {
         return this.node.theme();

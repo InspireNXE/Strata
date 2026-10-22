@@ -16,10 +16,12 @@
 package org.inspirenxe.strata.api.component;
 
 import org.inspirenxe.strata.api.geometry.Insets;
+import org.inspirenxe.strata.api.text.TextStylePatch;
 import org.inspirenxe.strata.api.theme.Border;
 import org.inspirenxe.strata.api.theme.Paint;
 
 import java.util.List;
+import java.util.Optional;
 
 /**
  * A component with children. The container decides where its children go (see the layouts in
@@ -168,6 +170,28 @@ public interface Container<T extends Container<T>> extends Component<T>, HasCurs
      * @return this container
      */
     T setPadding(Insets padding);
+
+    /**
+     * Returns the patch this container applies to the text drawn inside it.
+     *
+     * @return the patch, or empty for none, the default
+     */
+    Optional<TextStylePatch> textStyle();
+
+    /**
+     * Sets a patch applied over the text styles of every control inside this container, its children and theirs, so
+     * a panel can make the text inside it gray without restyling each control:
+     * {@code panel.setTextStyle(TextStylePatch.of().color(0xFF808080))}. Each control's theme style comes first,
+     * then the patches of its containers, outermost first, so an inner container wins where both set a property. A
+     * style set in code on the control, such as with {@code Label.setStyle}, wins over them all. The patches apply to
+     * the text style keys the theme defines; a control reading a key the theme lacks keeps its own fallback. They do
+     * not reach popups and other overlays, which are not inside the container, nor text the container draws itself.
+     * Strata works the styles out when the theme is applied or the tree changes, never while painting.
+     *
+     * @param patch the patch, or {@code null} for none
+     * @return this container
+     */
+    T setTextStyle(TextStylePatch patch);
 
     /**
      * Sets the same padding on all four sides.

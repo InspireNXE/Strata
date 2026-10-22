@@ -19,11 +19,13 @@ import org.inspirenxe.strata.api.ComponentFactory;
 import org.inspirenxe.strata.api.component.Component;
 import org.inspirenxe.strata.api.component.Container;
 import org.inspirenxe.strata.api.geometry.Insets;
+import org.inspirenxe.strata.api.text.TextStylePatch;
 import org.inspirenxe.strata.api.geometry.Rect;
 import org.inspirenxe.strata.api.theme.Border;
 import org.inspirenxe.strata.api.theme.Paint;
 
 import java.util.List;
+import java.util.Optional;
 
 /**
  * Base class for new layouts: a {@link CustomComposite} whose children callers add and remove, as they do with
@@ -161,6 +163,17 @@ public abstract class CustomContainer<T extends Container<T>> extends CustomComp
     @Override
     public final T setPadding(final Insets padding) {
         this.containerPeer().setPadding(padding);
+        return this.self();
+    }
+
+    @Override
+    public final Optional<TextStylePatch> textStyle() {
+        return Optional.ofNullable(this.containerPeer().textStyle());
+    }
+
+    @Override
+    public final T setTextStyle(final TextStylePatch patch) {
+        this.containerPeer().setTextStyle(patch);
         return this.self();
     }
 

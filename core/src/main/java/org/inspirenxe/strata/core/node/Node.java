@@ -753,16 +753,19 @@ public class Node implements ComponentPeer {
     }
 
     /**
-     * Gives the component a theme and marks its layout dirty, since styles can change sizes.
+     * Gives the component a theme and marks its layout dirty, since styles can change sizes. The component gets the
+     * theme with the {@linkplain ContainerNode#childTheme text style patches} of its containers applied, which is the
+     * theme itself when none sets one.
      *
-     * @param theme the theme
+     * @param theme the root's theme
      */
     public final void applyTheme(final Theme theme) {
-        this.theme = Objects.requireNonNull(theme, "theme");
+        Objects.requireNonNull(theme, "theme");
+        this.theme = this.parent != null ? this.parent.childTheme(theme) : theme;
         if (this.themeMargin != null && !this.marginSet) {
-            this.margin = this.themeMargin.apply(theme);
+            this.margin = this.themeMargin.apply(this.theme);
         }
-        this.hooks.applyTheme(theme);
+        this.hooks.applyTheme(this.theme);
         this.invalidateLayout();
     }
 

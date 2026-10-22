@@ -19,10 +19,12 @@ import org.inspirenxe.strata.api.component.Component;
 import org.inspirenxe.strata.api.component.Container;
 import org.inspirenxe.strata.api.geometry.Insets;
 import org.inspirenxe.strata.api.geometry.Rect;
+import org.inspirenxe.strata.api.text.TextStylePatch;
 import org.inspirenxe.strata.api.theme.Border;
 import org.inspirenxe.strata.api.theme.Paint;
 
 import java.util.List;
+import java.util.Optional;
 
 /**
  * Base class of Strata's own panels and of controls whose children callers add and remove, the counterpart of the
@@ -122,6 +124,17 @@ public abstract class BuiltInContainer<T extends Container<T>> extends BuiltInCo
     @Override
     public final T setPadding(final Insets padding) {
         this.node().setPadding(padding);
+        return this.self();
+    }
+
+    @Override
+    public final Optional<TextStylePatch> textStyle() {
+        return Optional.ofNullable(this.node().textStyle());
+    }
+
+    @Override
+    public final T setTextStyle(final TextStylePatch patch) {
+        this.node().setTextStyle(patch);
         return this.self();
     }
 

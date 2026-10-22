@@ -19,6 +19,9 @@ import org.inspirenxe.strata.api.component.Component;
 import org.inspirenxe.strata.api.extension.peer.ContainerPeer;
 import org.inspirenxe.strata.api.geometry.Insets;
 import org.inspirenxe.strata.api.geometry.Rect;
+import org.inspirenxe.strata.api.text.TextStyle;
+import org.inspirenxe.strata.api.text.TextStylePatch;
+import org.inspirenxe.strata.api.theme.Theme;
 import org.inspirenxe.strata.core.paint.CanvasPainter;
 import org.inspirenxe.strata.spi.Canvas;
 
@@ -26,7 +29,9 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 
 /**
  * Core's half of a container or composite: the child list, the drawing order, padding and clipping. A new container
@@ -52,6 +57,10 @@ public final class ContainerNode extends Node implements ContainerPeer {
     private boolean paddingSet;
     private boolean clipChildren;
     private final boolean composite;
+    // The patch over the text styles of everything inside, and the theme it last made from the theme it was given
+    private TextStylePatch textPatch;
+    private Theme patchedFrom;
+    private Theme patched;
 
     // The drawing order, bottom first, in the first paintCount entries; sorted again when paintOrderValid is false
     private Node[] paintOrder;
@@ -294,6 +303,84 @@ public final class ContainerNode extends Node implements ContainerPeer {
         if (!this.paddingSet && !this.padding.equals(padding)) {
             this.padding = padding;
             this.invalidateLayout();
+        }
+    }
+
+    @Override
+    public TextStylePatch textStyle() {
+        return this.textPatch;
+    }
+
+    /**
+     * Sets the patch over the text styles of everything inside, and applies the theme again to every node inside
+     * when the container is attached, so they read the new styles before the next layout.
+     *
+     * @param patch the patch, or {@code null} for none
+     */
+    @Override
+    public void setTextStyle(final TextStylePatch patch) {
+        if (Objects.equals(this.textPatch, patch)) {
+            return;
+        }
+        this.textPatch = patch;
+        this.patchedFrom = null;
+        this.patched = null;
+        final Root root = this.root();
+        if (root != null && root.theme() != null) {
+            for (final Node child : List.copyOf(this.childNodes)) {
+                ContainerNode.reapply(child, root.theme());
+            }
+        }
+    }
+
+    private static void reapply(final Node node, final Theme theme) {
+        node.applyTheme(theme);
+        if (node instanceof final ContainerNode container) {
+            for (final Node child : List.copyOf(container.childNodes)) {
+                ContainerNode.reapply(child, theme);
+            }
+        }
+    }
+
+    /**
+     * Returns the theme the nodes inside this container get: the theme their root gives, with the text style patches
+     * of this container and of every container above it applied over its text styles, outermost first. The result is
+     * kept while the theme from above stays the same object, so applying a theme to many children makes one copy.
+     *
+     * @param theme the root's theme
+     * @return the theme for the children; {@code theme} itself when no container on the way sets a patch
+     */
+    Theme childTheme(final Theme theme) {
+        final ContainerNode parent = this.parentNode();
+        final Theme inherited = parent != null ? parent.childTheme(theme) : theme;
+        if (this.textPatch == null || this.textPatch.isEmpty()) {
+            return inherited;
+        }
+        if (this.patchedFrom != inherited) {
+            this.patched = ContainerNode.patch(inherited, this.textPatch);
+            this.patchedFrom = inherited;
+        }
+        return this.patched;
+    }
+
+    /**
+     * Returns a copy of a theme with a patch applied over every text style, keeping its name and layers.
+     */
+    private static Theme patch(final Theme theme, final TextStylePatch patch) {
+        final Theme.Builder builder = theme.toBuilder();
+        for (final Map.Entry<String, TextStyle> entry : theme.textStyles().entrySet()) {
+            builder.textStyle(entry.getKey(), patch.apply(entry.getValue()));
+        }
+        ContainerNode.copyLayers(theme, theme.paints().keySet(), builder);
+        ContainerNode.copyLayers(theme, theme.textStyles().keySet(), builder);
+        ContainerNode.copyLayers(theme, theme.insets().keySet(), builder);
+        ContainerNode.copyLayers(theme, theme.metrics().keySet(), builder);
+        return builder.build();
+    }
+
+    private static void copyLayers(final Theme theme, final Set<String> keys, final Theme.Builder builder) {
+        for (final String key : keys) {
+            theme.layer(key).ifPresent(layer -> builder.layer(key, layer));
         }
     }
 
