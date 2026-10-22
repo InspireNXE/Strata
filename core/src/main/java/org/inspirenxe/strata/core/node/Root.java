@@ -1276,7 +1276,15 @@ public final class Root {
         return false;
     }
 
-    private Node hitTest(final float x, final float y) {
+    /**
+     * Returns the node the pointer would hit at a point: in the topmost overlay that has something there, where a
+     * dialog blocks every layer below it, else in the content. The tooltip is never hit. The node may be disabled.
+     *
+     * @param x the x, in the host's coordinates
+     * @param y the y, in the host's coordinates
+     * @return the deepest visible node there, or {@code null} if nothing is there or a dialog's backdrop is
+     */
+    public Node hitTest(final float x, final float y) {
         for (int i = this.layers.size() - 1; i >= 0; i--) {
             final Layer layer = this.layers.get(i);
             final Node hit = layer.node.hitTest(x, y);
