@@ -15,10 +15,14 @@
  */
 package org.inspirenxe.strata.core;
 
+import org.inspirenxe.strata.api.NamespacedId;
 import org.inspirenxe.strata.api.component.registry.ComponentId;
 import org.inspirenxe.strata.api.theme.SpriteId;
 import org.inspirenxe.strata.api.theme.ThemeId;
 import org.junit.jupiter.api.Test;
+
+import java.util.List;
+import java.util.function.BiFunction;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -44,5 +48,27 @@ class IdGrammarTest {
         assertEquals(component, ComponentId.parse(component.toString()));
         assertEquals(theme, ThemeId.parse(theme.toString()));
         assertEquals(sprite, SpriteId.parse(sprite.toString()));
+    }
+
+    @Test
+    void theThreeKindsShareOneGrammar() {
+        final List<BiFunction<String, String, ? extends NamespacedId>> makers =
+                List.of(ComponentId::of, ThemeId::of, SpriteId::of);
+        for (final BiFunction<String, String, ? extends NamespacedId> maker : makers) {
+            assertThrows(IllegalArgumentException.class, () -> maker.apply("", "b"));
+            assertThrows(IllegalArgumentException.class, () -> maker.apply("a", ""));
+            final NamespacedId id = maker.apply("a", "b/c");
+            assertEquals("a", id.namespace());
+            assertEquals("b/c", id.path());
+            assertEquals("a:b/c", id.toString());
+        }
+    }
+
+    @Test
+    void parsingNeedsANamespace() {
+        assertThrows(IllegalArgumentException.class, () -> ComponentId.parse("button"));
+        assertThrows(IllegalArgumentException.class, () -> ThemeId.parse(":flat"));
+        assertThrows(IllegalArgumentException.class, () -> SpriteId.parse("a:"));
+        assertEquals(SpriteId.of("a", "b"), NamespacedId.parse("Sprite", "a:b", SpriteId::new));
     }
 }

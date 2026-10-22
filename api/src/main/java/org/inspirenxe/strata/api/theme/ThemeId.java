@@ -15,7 +15,7 @@
  */
 package org.inspirenxe.strata.api.theme;
 
-import java.util.Objects;
+import org.inspirenxe.strata.api.NamespacedId;
 
 /**
  * Names a theme as {@code namespace:path}, the way a {@link SpriteId} names a sprite. Pass one to
@@ -26,24 +26,20 @@ import java.util.Objects;
  * files, which the adapter finds in its asset roots.</p>
  *
  * <p>The namespace is one or more characters with no colon, and the path one or more characters of any kind, so
- * {@link #toString()} and {@link #parse} give back the same id.</p>
+ * {@link #toString()} and {@link #parse} give back the same id. The grammar is {@link NamespacedId}'s, which the
+ * other ids share.</p>
  *
  * @param namespace the owner, usually the id of the application, library or plugin; not empty, and without a colon
  * @param path the theme's name within the namespace; not empty
  */
-public record ThemeId(String namespace, String path) {
+public record ThemeId(String namespace, String path) implements NamespacedId {
     /**
      * Checks the parts.
      *
      * @throws IllegalArgumentException if either part is empty, or the namespace holds a colon
      */
     public ThemeId {
-        Objects.requireNonNull(namespace, "namespace");
-        Objects.requireNonNull(path, "path");
-        if (namespace.isEmpty() || path.isEmpty() || namespace.indexOf(':') >= 0) {
-            throw new IllegalArgumentException("Theme id needs a namespace without a colon and a path: "
-                    + namespace + ":" + path);
-        }
+        NamespacedId.check("Theme", namespace, path);
     }
 
     /**
@@ -66,11 +62,7 @@ public record ThemeId(String namespace, String path) {
      * @throws IllegalArgumentException if there is no colon or either part is empty
      */
     public static ThemeId parse(final String id) {
-        final int colon = id.indexOf(':');
-        if (colon < 0) {
-            throw new IllegalArgumentException("Theme id needs a namespace: " + id);
-        }
-        return new ThemeId(id.substring(0, colon), id.substring(colon + 1));
+        return NamespacedId.parse("Theme", id, ThemeId::new);
     }
 
     /**

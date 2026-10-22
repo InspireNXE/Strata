@@ -15,7 +15,7 @@
  */
 package org.inspirenxe.strata.api.theme;
 
-import java.util.Objects;
+import org.inspirenxe.strata.api.NamespacedId;
 
 /**
  * Names a sprite as {@code namespace:path}. The engine adapter decides where the image comes from. The Swing
@@ -23,24 +23,20 @@ import java.util.Objects;
  * resolver for any other layout. A missing image draws as magenta.
  *
  * <p>The namespace is one or more characters with no colon, and the path one or more characters of any kind, so
- * {@link #toString()} and {@link #parse} give back the same id.</p>
+ * {@link #toString()} and {@link #parse} give back the same id. The grammar is {@link NamespacedId}'s, which the
+ * other ids share.</p>
  *
  * @param namespace the owner, usually the id of the application or library; not empty, and without a colon
  * @param path the path inside the namespace, without extension; not empty
  */
-public record SpriteId(String namespace, String path) {
+public record SpriteId(String namespace, String path) implements NamespacedId {
     /**
      * Checks the parts.
      *
      * @throws IllegalArgumentException if either part is empty, or the namespace holds a colon
      */
     public SpriteId {
-        Objects.requireNonNull(namespace, "namespace");
-        Objects.requireNonNull(path, "path");
-        if (namespace.isEmpty() || path.isEmpty() || namespace.indexOf(':') >= 0) {
-            throw new IllegalArgumentException("Sprite id needs a namespace without a colon and a path: "
-                    + namespace + ":" + path);
-        }
+        NamespacedId.check("Sprite", namespace, path);
     }
 
     /**
@@ -64,11 +60,7 @@ public record SpriteId(String namespace, String path) {
      * @throws IllegalArgumentException if there is no colon, or either side of it is empty
      */
     public static SpriteId parse(final String id) {
-        final int colon = id.indexOf(':');
-        if (colon < 0) {
-            throw new IllegalArgumentException("Sprite id needs a namespace: " + id);
-        }
-        return new SpriteId(id.substring(0, colon), id.substring(colon + 1));
+        return NamespacedId.parse("Sprite", id, SpriteId::new);
     }
 
     /**
