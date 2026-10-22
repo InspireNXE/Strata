@@ -16,6 +16,7 @@
 package org.inspirenxe.strata.core;
 
 import org.inspirenxe.strata.api.ComponentFactory;
+import org.inspirenxe.strata.api.control.attribute.text.TextEntry;
 import org.inspirenxe.strata.api.control.attribute.text.TextInput;
 import org.inspirenxe.strata.api.control.field.PasswordTextBox;
 import org.inspirenxe.strata.api.control.field.TextArea;
@@ -257,6 +258,51 @@ class TextEditingTest {
 
             TextEditingTest.this.paste("pass\r\n");
             assertEquals(4, box.length(), "line breaks are still removed");
+        }
+    }
+
+    @Nested
+    class PasswordEditsThatChangeNothing {
+        private final List<String> heard = new ArrayList<>();
+        private PasswordTextBox box;
+
+        private void show() {
+            this.box = TextEditingTest.this.ui.passwordTextBox().setAnchor(Anchor.TOP_LEFT);
+            TextEditingTest.this.test.show(this.box);
+            this.box.setPassword("abc".toCharArray());
+            this.box.requestFocus();
+            this.box.onEvent(TextEntry.MODIFY, event -> this.heard.add("modify"));
+            this.box.onEvent(TextEntry.MODIFIED, event -> this.heard.add("modified"));
+        }
+
+        @Test
+        void typingTheSelectedCharacterAgainFiresNothing() {
+            this.show();
+            this.box.select(1, 2);
+
+            TextEditingTest.this.type("b");
+
+            assertEquals(List.of(), this.heard);
+        }
+
+        @Test
+        void pastingTheSelectedTextAgainFiresNothing() {
+            this.show();
+            this.box.select(1, 3);
+
+            TextEditingTest.this.paste("bc");
+
+            assertEquals(List.of(), this.heard);
+        }
+
+        @Test
+        void typingAnotherCharacterOverTheSelectionStillFires() {
+            this.show();
+            this.box.select(1, 2);
+
+            TextEditingTest.this.type("x");
+
+            assertEquals(List.of("modify", "modified"), this.heard);
         }
     }
 }

@@ -76,7 +76,8 @@ import java.util.function.IntPredicate;
  * and drops all of it when the text hides. Typed code points go into the buffer as ints.</p>
  *
  * <p>A user's edit asks {@link PasswordTextBox#MODIFY} with the buffer unchanged and applies only if it was not
- * canceled, so the box never needs a second copy of its text to fall back to. Every change reports
+ * canceled, so the box never needs a second copy of its text to fall back to. An edit that would put back the chars
+ * it replaces asks nothing, which the box checks against the buffer without copying it. Every change reports
  * {@link PasswordTextBox#MODIFIED} with the lengths. Core never logs the text or a typed code point.</p>
  *
  * <p>The box wipes itself in {@link #onReleased()}, which the root calls after the screen that holds it closes or
@@ -803,7 +804,8 @@ public final class PasswordTextBoxImpl extends BuiltInComposite<PasswordTextBox>
             }
             final int before = box.length();
             final boolean fits = before - box.buffer.codePointCount(start, end) < box.maxLength;
-            if (!fits && start == end) {
+            // An edit that would leave the text as it is fires nothing
+            if (!fits && start == end || fits && box.buffer.holds(start, end, codePoint)) {
                 return;
             }
             if (!box.request(MODIFY)) {
@@ -854,7 +856,7 @@ public final class PasswordTextBoxImpl extends BuiltInComposite<PasswordTextBox>
             }
             final int before = box.length();
             if ((long) before - box.buffer.codePointCount(start, end) + text.codePointCount(0, text.length())
-                    > box.maxLength) {
+                    > box.maxLength || box.buffer.holds(start, end, text)) {
                 return;
             }
             if (!box.request(MODIFY)) {
