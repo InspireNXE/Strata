@@ -1070,6 +1070,27 @@ public abstract class BuiltInComponent<T extends Component<T>> implements Compon
     }
 
     /**
+     * Asks the host for a frame because the look changed and the layout did not, as
+     * {@code CustomComponent.repaint()} does. Reports, layout and the root's hover, press and focus changes already
+     * ask; call it for a change of look that none of them covers.
+     */
+    protected final void repaint() {
+        this.node.repaint();
+    }
+
+    /**
+     * Tells the host that the look changes by itself after a time, as {@code CustomComponent.repaintAfter} does:
+     * the caret's next blink, a step of a busy indicator or a sliding caption. Call it from {@link #paint}, for the
+     * next change only.
+     *
+     * @param millis the delay in milliseconds, by the platform's clock; 0 is {@link #repaint()}
+     * @throws IllegalArgumentException if {@code millis} is negative
+     */
+    protected final void repaintAfter(final long millis) {
+        this.node.repaintAfter(millis);
+    }
+
+    /**
      * Fires a request without a value through this component's path, for the user's actions only. Fires nothing and
      * returns true when the current origin is not {@code Origin.User} or no handler for the type is on the path.
      *

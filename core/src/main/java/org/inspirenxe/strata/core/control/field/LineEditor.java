@@ -273,6 +273,9 @@ final class LineEditor {
             this.painter = null;
         }
 
+        if (showCaret) {
+            this.owner.repaintAfter(this.editor.untilBlink(look.blinkMillis()));
+        }
         if (showCaret && this.caretShown()) {
             final float atX = contentBox.x() + this.caretX - this.scrollX;
             if (look.underscoreCaret() && this.editor.caret() == this.buffer.length()) {

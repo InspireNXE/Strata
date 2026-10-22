@@ -39,7 +39,9 @@ import java.util.Optional;
  *     the window moves to another display or the user zooms, together with {@link #resize}, since the area in UI
  *     units changes with it.</li>
  *     <li>Call {@link #render} once per frame. It builds pending screens, runs layout if needed, draws, and asks for
- *     the cursor.</li>
+ *     the cursor. An adapter whose engine does not draw every frame may render on demand instead: whenever
+ *     {@link #needsFrame()} is true, which the {@linkplain #setFrameRequester frame requester} announces, and
+ *     whenever the platform's clock reaches {@link #nextFrameNanos()}.</li>
  *     <li>Call {@link #close()} when the engine screen goes away, so the Strata screen's {@code closed()} runs.</li>
  *     <li>When the user asks to close the engine screen, with its close button or a key the engine closes screens
  *     with, call {@link #requestClose()} first and close the engine screen only if it returns true.</li>
@@ -228,6 +230,38 @@ public interface ScreenHost extends InputSink {
      * @param canvas the engine canvas for this frame
      */
     void render(Canvas canvas);
+
+    /**
+     * Returns whether something changed since the last {@link #render}, so the next frame would draw something
+     * different: input this host dispatched, a layout invalidation, a binding queued or a task handed to the UI
+     * thread from any thread, an overlay opening or closing, a change of look a component reported, or a screen
+     * opening or closing. A new host needs a frame. Any thread may call this.
+     *
+     * @return true if a frame is needed
+     */
+    boolean needsFrame();
+
+    /**
+     * Returns when the next timed change is due, such as a caret's next blink, a tooltip's delay running out, a
+     * toast's expiry, the next synthesized key repeat, a caption or progress bar that moves with the clock, or an
+     * animation's next step. An adapter that renders on demand renders when the platform's clock reaches it, even if
+     * {@link #needsFrame()} is false. Call it on the UI thread, after a render.
+     *
+     * @return the {@link Clock#nanoTime()} reading at which a frame is due, possibly already past, or
+     *     {@link Long#MAX_VALUE} if nothing timed is waiting
+     */
+    long nextFrameNanos();
+
+    /**
+     * Sets what runs when {@link #needsFrame()} turns from false to true, and runs it at once if a frame is already
+     * needed. It runs once per change from clean to dirty, not again before the next {@link #render}. It can run on
+     * any thread, such as the thread that set a state, so it must only schedule a frame, for example by asking the
+     * engine to repaint, and must not call into the host. An adapter that renders every frame anyway can leave it
+     * unset.
+     *
+     * @param requester the requester, or {@code null} for none
+     */
+    void setFrameRequester(Runnable requester);
 
     /**
      * Returns the component with keyboard focus.

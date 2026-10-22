@@ -202,7 +202,11 @@ public final class ProgressBarImpl extends BuiltInComponent<ProgressBar> impleme
             final Rect[] steps = this.segments(bounds);
             if (steps.length > 0) {
                 final long phase = Math.floorMod(this.environment().millis(), SEGMENT_PERIOD);
-                final Rect segment = steps[(int) (phase * steps.length / SEGMENT_PERIOD)];
+                final int index = (int) (phase * steps.length / SEGMENT_PERIOD);
+                // The segment moves at the first phase that maps to the next step
+                final long next = ((index + 1L) * SEGMENT_PERIOD + steps.length - 1L) / steps.length;
+                this.repaintAfter(Math.max(1L, next - phase));
+                final Rect segment = steps[index];
                 if (segment != null) {
                     this.segmentPaint.paint(painter, segment);
                 }

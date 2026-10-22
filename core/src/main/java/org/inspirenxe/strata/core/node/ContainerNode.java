@@ -231,6 +231,7 @@ public final class ContainerNode extends Node implements ContainerPeer {
         if (node.paintSequence() != this.topSequence) {
             node.setPaintSequence(++this.topSequence);
             this.paintOrderValid = false;
+            this.repaint();
         }
     }
 
@@ -240,6 +241,7 @@ public final class ContainerNode extends Node implements ContainerPeer {
         if (node.paintSequence() != this.bottomSequence) {
             node.setPaintSequence(--this.bottomSequence);
             this.paintOrderValid = false;
+            this.repaint();
         }
     }
 
@@ -403,6 +405,7 @@ public final class ContainerNode extends Node implements ContainerPeer {
     @Override
     public void setClipChildren(final boolean clipChildren) {
         this.clipChildren = clipChildren;
+        this.repaint();
     }
 
     @Override

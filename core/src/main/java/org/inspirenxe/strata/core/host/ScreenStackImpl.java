@@ -27,8 +27,9 @@ import org.inspirenxe.strata.api.screen.ScreenHandle;
 import org.inspirenxe.strata.api.text.Text;
 import org.inspirenxe.strata.api.theme.Theme;
 import org.inspirenxe.strata.api.theme.ThemeRef;
-import org.inspirenxe.strata.core.node.Root;
+import org.inspirenxe.strata.core.frame.FrameRequests;
 import org.inspirenxe.strata.core.frame.UiThreadImpl;
+import org.inspirenxe.strata.core.node.Root;
 import org.inspirenxe.strata.core.theme.ThemeResolver;
 import org.inspirenxe.strata.spi.Canvas;
 import org.inspirenxe.strata.spi.Platform;
@@ -52,6 +53,11 @@ import java.util.Optional;
  * tooltip and cursor, and the engine's text input stops if its focused field had it; when it is on top again, text
  * input starts again for that field. The platform's text input is shared by every screen, so only the top one may
  * hold it.</p>
+ *
+ * <p>The stack keeps its own frame requests. Every screen's host asks the stack for a frame when it needs one, and
+ * pushing, removing or resizing screens and changing the theme ask too. After a render the stack asks again at once
+ * if a screen it drew still needs a frame. A screen hidden under one that hides the background does not count until
+ * it shows again.</p>
  */
 public final class ScreenStackImpl implements ScreenStack {
     private final Platform platform;
@@ -63,6 +69,7 @@ public final class ScreenStackImpl implements ScreenStack {
     // Negative until set, so each screen follows its theme
     private long tooltipDelay = -1L;
     private float pixelsPerUnit = 1f;
+    private final FrameRequests frames = new FrameRequests();
 
     /**
      * Creates an empty stack of size 0 by 0. Adapters use {@code StrataCore} instead.
@@ -130,6 +137,7 @@ public final class ScreenStackImpl implements ScreenStack {
         }
         self[0] = host;
         host.setOpener(new Above(host));
+        host.setFrameRequester(this.frames::request);
         host.resize(this.width, this.height);
         host.setPixelsPerUnit(this.pixelsPerUnit);
         if (this.tooltipDelay >= 0L) {
@@ -137,6 +145,7 @@ public final class ScreenStackImpl implements ScreenStack {
         }
         final Entry entry = new Entry(host, own != null);
         final ScreenHostImpl covered = this.topHost();
+        this.frames.request();
         // In the stack before it opens, so a screen can open another above itself from opened()
         this.entries.add(index, entry);
         if (this.topHost() == host) {
@@ -164,6 +173,7 @@ public final class ScreenStackImpl implements ScreenStack {
             return Optional.empty();
         }
         final ScreenHostImpl host = this.entries.removeLast().host();
+        this.frames.request();
         final Optional<Screen> screen = host.screen();
         try {
             host.close();
@@ -176,6 +186,7 @@ public final class ScreenStackImpl implements ScreenStack {
     private void remove(final ScreenHostImpl host) {
         final boolean wasTop = this.topHost() == host;
         if (this.entries.removeIf(entry -> entry.host() == host)) {
+            this.frames.request();
             try {
                 host.close();
             } finally {
@@ -269,6 +280,7 @@ public final class ScreenStackImpl implements ScreenStack {
         this.checkTheme(theme);
         this.theme = theme;
         this.themeRef = null;
+        this.frames.request();
         for (final Entry entry : this.entries) {
             if (!entry.ownTheme()) {
                 entry.host().setTheme(theme);
@@ -291,6 +303,7 @@ public final class ScreenStackImpl implements ScreenStack {
         }
         this.theme = resolved;
         this.themeRef = theme;
+        this.frames.request();
     }
 
     private void checkTheme(final Theme theme) {
@@ -305,6 +318,7 @@ public final class ScreenStackImpl implements ScreenStack {
     public void resize(final float width, final float height) {
         this.width = width;
         this.height = height;
+        this.frames.request();
         for (final Entry entry : this.entries) {
             entry.host().resize(width, height);
         }
@@ -314,6 +328,7 @@ public final class ScreenStackImpl implements ScreenStack {
     public void setPixelsPerUnit(final float pixelsPerUnit) {
         Root.checkPixelsPerUnit(pixelsPerUnit);
         this.pixelsPerUnit = pixelsPerUnit;
+        this.frames.request();
         for (final Entry entry : this.entries) {
             entry.host().setPixelsPerUnit(pixelsPerUnit);
         }
@@ -350,21 +365,53 @@ public final class ScreenStackImpl implements ScreenStack {
         }
     }
 
-    @Override
-    public void render(final Canvas canvas) {
-        int first = 0;
+    /**
+     * Returns the index of the lowest screen that is drawn: the topmost that hides the background, or the bottom.
+     */
+    private int firstShown() {
         for (int i = this.entries.size() - 1; i >= 0; i--) {
             if (this.entries.get(i).host().screen().map(Screen::hidesBackground).orElse(false)) {
-                first = i;
-                break;
+                return i;
             }
         }
+        return 0;
+    }
+
+    @Override
+    public void render(final Canvas canvas) {
+        final int first = this.firstShown();
         for (int i = first; i < this.entries.size(); i++) {
             if (i > first) {
                 canvas.nextLayer();
             }
             this.entries.get(i).host().render(canvas);
         }
+        this.frames.clear();
+        for (int i = this.firstShown(); i < this.entries.size(); i++) {
+            if (this.entries.get(i).host().needsFrame()) {
+                this.frames.request();
+                return;
+            }
+        }
+    }
+
+    @Override
+    public boolean needsFrame() {
+        return this.frames.needsFrame();
+    }
+
+    @Override
+    public long nextFrameNanos() {
+        long next = Long.MAX_VALUE;
+        for (int i = this.firstShown(); i < this.entries.size(); i++) {
+            next = Math.min(next, this.entries.get(i).host().nextFrameNanos());
+        }
+        return next;
+    }
+
+    @Override
+    public void setFrameRequester(final Runnable requester) {
+        this.frames.setRequester(requester);
     }
 
     private Optional<ScreenHostImpl> input() {

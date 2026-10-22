@@ -734,6 +734,11 @@ public final class PasswordTextBoxImpl extends BuiltInComposite<PasswordTextBox>
         }
 
         @Override
+        public void repaintAfter(final long millis) {
+            PasswordTextBoxImpl.this.repaintAfter(millis);
+        }
+
+        @Override
         public boolean isReadOnly() {
             return PasswordTextBoxImpl.this.readOnly;
         }

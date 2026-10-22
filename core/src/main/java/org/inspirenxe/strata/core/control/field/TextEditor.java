@@ -164,6 +164,16 @@ final class TextEditor {
         return ((this.host.environment().millis() - this.blinkStart) / blinkMillis) % 2 == 0;
     }
 
+    /**
+     * Returns how long until the caret next turns on or off, for the field to ask for a frame then.
+     *
+     * @param blinkMillis how long the caret stays shown and then hidden, above 0
+     * @return the delay in milliseconds, at least 1
+     */
+    long untilBlink(final long blinkMillis) {
+        return blinkMillis - Math.floorMod(this.host.environment().millis() - this.blinkStart, blinkMillis);
+    }
+
     private void moveTo(final int index, final boolean extend) {
         this.host.beforeMove();
         this.caret = this.boundaries.snap(index);
@@ -442,6 +452,11 @@ final class TextEditor {
          * The field's environment, for the clock and the clipboard.
          */
         Environment environment();
+
+        /**
+         * Asks the field's host for a frame after a time, for the caret's next blink.
+         */
+        void repaintAfter(long millis);
 
         /**
          * Whether the field is read-only, which stops cutting.

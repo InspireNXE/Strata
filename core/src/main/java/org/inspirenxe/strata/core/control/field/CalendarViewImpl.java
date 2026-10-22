@@ -690,6 +690,8 @@ public final class CalendarViewImpl extends BuiltInComponent<CalendarView> imple
             return;
         }
         this.refreshToday();
+        // Today is read again a minute after the last reading, which this frame must then show
+        this.repaintAfter(Math.max(1L, TODAY_CHECK_MILLIS - (this.ui.platform().clock().millis() - this.todayCheckedAt)));
         this.sync(bounds);
         this.background.paint(painter, bounds);
         final boolean enabled = this.isEnabled();

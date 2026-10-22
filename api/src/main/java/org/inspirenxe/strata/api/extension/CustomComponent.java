@@ -1091,6 +1091,32 @@ public abstract class CustomComponent<T extends Component<T>> implements Compone
         this.peer.invalidateLayout();
     }
 
+    /**
+     * Asks the host for a frame, because the component's look changed and its layout did not. Call it when only
+     * {@link #paint} reads a change, such as a gauge whose needle moves through a setter that changes no size. Layout
+     * invalidation, reports, focus, hover and press, and the setters for background and border already ask. On an
+     * engine that draws every frame it costs nothing; on one that draws only when asked, a component that forgets
+     * looks stale until the next input. Does nothing while the component is detached. Any thread may call it.
+     */
+    protected final void repaint() {
+        this.peer.repaint();
+    }
+
+    /**
+     * Tells the host that the component's look changes by itself after a time, such as a blinking cursor's next
+     * blink or a clock's next second, so a host that draws only when asked draws a frame then. Call it from
+     * {@link #paint} for the next change only, and again on the next paint; the same deadline registered twice
+     * counts once. Does nothing while the component is detached.
+     *
+     * @param millis the delay in milliseconds, by the platform's clock read through {@link #environment()}; 0 is
+     *     {@link #repaint()}
+     * @throws IllegalArgumentException if {@code millis} is negative
+     * @throws IllegalStateException if the component is attached and this is called off the UI thread
+     */
+    protected final void repaintAfter(final long millis) {
+        this.peer.repaintAfter(millis);
+    }
+
     @Override
     public final <E extends Event> T onEvent(final EventType<E> type, final EventHandler<? super E> handler) {
         return this.onEvent(type, 0, handler);

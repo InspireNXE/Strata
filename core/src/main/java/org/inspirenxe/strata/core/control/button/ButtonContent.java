@@ -305,9 +305,10 @@ final class ButtonContent {
      * @param enabled false to tint the icon gray
      * @param shown the caption to draw, one of the three this content measured
      * @param millis the platform's clock, for a scrolling caption
+     * @return true if the caption slides, so the button should ask for another frame
      */
-    void paintContent(final Painter painter, final Rect bounds, final Insets padding, final boolean enabled,
-                      final TextLine shown, final long millis) {
+    boolean paintContent(final Painter painter, final Rect bounds, final Insets padding, final boolean enabled,
+                         final TextLine shown, final long millis) {
         final boolean icon = this.hasIcon();
         final boolean hasText = !this.caption.isEmpty();
         final float left = bounds.x() + padding.left();
@@ -315,11 +316,8 @@ final class ButtonContent {
         final float width = bounds.width() - padding.horizontal();
         final float height = bounds.height() - padding.vertical();
         if (!icon) {
-            if (hasText) {
-                this.captionDrawer.draw(painter, shown, bounds, padding, top + (height - this.captionHeight) * 0.5f,
-                        millis);
-            }
-            return;
+            return hasText && this.captionDrawer.draw(painter, shown, bounds, padding,
+                    top + (height - this.captionHeight) * 0.5f, millis);
         }
         final float contentWidth = this.contentWidth();
         final float x = hasText ? this.captionDrawer.start(bounds, padding, contentWidth)
@@ -332,9 +330,7 @@ final class ButtonContent {
         } else {
             painter.sprite(this.iconSprite, iconRect, tint);
         }
-        if (hasText) {
-            this.captionDrawer.draw(painter, shown, bounds, padding, this.iconWidth + ButtonImpl.ICON_GAP,
-                    contentWidth, top + (height - this.captionHeight) * 0.5f, millis);
-        }
+        return hasText && this.captionDrawer.draw(painter, shown, bounds, padding,
+                this.iconWidth + ButtonImpl.ICON_GAP, contentWidth, top + (height - this.captionHeight) * 0.5f, millis);
     }
 }

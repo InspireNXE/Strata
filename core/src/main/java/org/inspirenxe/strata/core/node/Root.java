@@ -217,11 +217,11 @@ public final class Root {
         this.paintLayers = new ArrayList<>();
         this.arrangeRequests = new ArrayList<>();
         this.overlays = new OverlaysImpl();
-        this.bindingQueue = new BindingQueue();
         this.user = new Origin.User(platform.user().orElse(null));
         this.uiThread = ui.uiThread();
         this.frames = new FrameRequests();
         this.uiThread.register(this.frames);
+        this.bindingQueue = new BindingQueue(this.frames::request);
         this.attachedBindings = new ArrayList<>();
         this.modifiers = Modifiers.NONE;
         this.layoutRequested = true;
@@ -255,6 +255,58 @@ public final class Root {
      */
     void checkThread() {
         this.uiThread.checkCurrent();
+    }
+
+    /**
+     * Notes that the look changed without a new layout, so the host needs a frame.
+     */
+    void repaint() {
+        this.frames.request();
+    }
+
+    /**
+     * Registers a timed change, so {@link #nextFrameNanos()} reports a frame due then.
+     *
+     * @param nanos the platform clock's {@code nanoTime()} at which the look changes
+     */
+    void repaintAt(final long nanos) {
+        this.frames.at(nanos);
+    }
+
+    /**
+     * Returns the platform clock's reading.
+     *
+     * @return the clock's {@code nanoTime()}
+     */
+    long nanoTime() {
+        return this.platform.clock().nanoTime();
+    }
+
+    /**
+     * Returns when the next timed change is due: the earliest of the deadlines components registered, each toast's
+     * expiry, the end of the delay of a tooltip waiting to show, and the next key repeat the root makes itself.
+     * Allocates nothing.
+     *
+     * @return the platform clock's {@code nanoTime()} at which a frame is due, or {@link Long#MAX_VALUE} for none
+     */
+    public long nextFrameNanos() {
+        long next = this.frames.earliest();
+        for (int i = 0; i < this.layers.size(); i++) {
+            final Layer layer = this.layers.get(i);
+            if (layer.isToast()) {
+                next = Math.min(next, layer.expiresAt * 1_000_000L);
+            }
+        }
+        if (this.tooltipPending != null) {
+            next = Math.min(next, (this.tooltipPendingSince + this.tooltipDelay()) * 1_000_000L);
+        }
+        if (!this.platform.capabilities().sendsKeyRepeat()) {
+            final long repeat = this.keyRepeater.nextFire();
+            if (repeat != Long.MAX_VALUE) {
+                next = Math.min(next, repeat * 1_000_000L);
+            }
+        }
+        return next;
     }
 
     /**
@@ -573,6 +625,7 @@ public final class Root {
     }
 
     void treeChanged() {
+        this.frames.request();
         this.tabOrder = null;
         // What is under the pointer may have changed though the pointer did not move
         this.hoverStale = true;
@@ -747,11 +800,13 @@ public final class Root {
 
     void requestLayout() {
         this.layoutRequested = true;
+        this.frames.request();
     }
 
     void requestArrangement(final Node node) {
         this.arrangeRequests.add(node);
         this.layoutRequested = true;
+        this.frames.request();
     }
 
     /**
@@ -860,14 +915,20 @@ public final class Root {
     }
 
     /**
-     * Draws one frame: fires a key repeat if one is due, lays out if needed, works hover out again if the tree
-     * changed since the pointer last moved and the pointer is inside the host, paints the content, each overlay and
-     * the tooltip, and asks the canvas for the cursor of the hovered node (or its nearest ancestor that sets one,
-     * falling back to the arrow). An overlay that a paint handler closes is not painted after it closes.
+     * Draws one frame: drops the deadlines it reaches, fires a key repeat if one is due, lays out if needed, works
+     * hover out again if the tree changed since the pointer last moved and the pointer is inside the host, paints the
+     * content, each overlay and the tooltip, and asks the canvas for the cursor of the hovered node (or its nearest
+     * ancestor that sets one, falling back to the arrow). An overlay that a paint handler closes is not painted after
+     * it closes.
+     *
+     * <p>Just before painting, the root forgets the changes that asked for this frame, since the frame shows them,
+     * and asks again at once if a binding or a task is still waiting or a layout is still requested. Changes during
+     * painting ask for the next frame.</p>
      *
      * @param canvas the frame's canvas
      */
     public void render(final Canvas canvas) {
+        this.frames.prune(this.platform.clock().nanoTime());
         this.pumpKeyRepeat();
         this.expireToasts();
         this.showPendingTooltip();
@@ -878,6 +939,10 @@ public final class Root {
             this.layout();
         }
         this.hoverStale = false;
+        this.frames.clear();
+        if (this.layoutRequested || !this.bindingQueue.isEmpty() || this.uiThread.hasQueued()) {
+            this.frames.request();
+        }
         final CanvasPainter frame = this.painter.begin(canvas, this.platform.capabilities(), this.pixelsPerUnit);
         if (this.content != null) {
             this.content.paint(frame);
@@ -995,6 +1060,7 @@ public final class Root {
      * @return true if a drag is in progress or the pointer is over a node
      */
     public boolean pointerMoved(final float x, final float y, final Modifiers modifiers) {
+        this.frames.request();
         try (CauseFrame _ = this.inputFrame(Device.MOUSE, modifiers)) {
             return this.handlePointerMoved(x, y, modifiers);
         }
@@ -1049,6 +1115,7 @@ public final class Root {
      */
     public boolean pointerButton(final float x, final float y, final MouseButton button, final boolean pressed,
                                  final Modifiers modifiers) {
+        this.frames.request();
         try (CauseFrame _ = this.inputFrame(Device.MOUSE, modifiers).put(CauseKeys.BUTTON, button)) {
             return this.handlePointerButton(x, y, button, pressed, modifiers);
         }
@@ -1217,6 +1284,7 @@ public final class Root {
      */
     public boolean scroll(final float x, final float y, final float scrollX, final float scrollY,
                           final ScrollKind kind, final Modifiers modifiers) {
+        this.frames.request();
         try (CauseFrame _ = this.inputFrame(Device.MOUSE, modifiers)) {
             return this.handleScroll(x, y, scrollX, scrollY, kind, modifiers);
         }
@@ -1248,6 +1316,7 @@ public final class Root {
      * tooltip hides. Presses stay tracked, so a drag can continue when the pointer comes back.
      */
     public void pointerLeft() {
+        this.frames.request();
         try (CauseFrame _ = this.inputFrame(Device.MOUSE, this.modifiers)) {
             this.handlePointerLeft();
         }
@@ -1469,6 +1538,7 @@ public final class Root {
      * @return true if a node handled the key, it closed an overlay, or it moved focus
      */
     public boolean key(final Key key, final KeyAction action, final Modifiers modifiers) {
+        this.frames.request();
         try (CauseFrame frame = this.inputFrame(Device.KEYBOARD, modifiers)) {
             this.updateModifiers(modifiers, key, action);
             frame.put(CauseKeys.MODIFIERS, this.modifiers);
@@ -1515,6 +1585,7 @@ public final class Root {
      * @return true if a node handled it; false when nothing has focus or the code point was ignored
      */
     public boolean charTyped(final int codePoint, final Modifiers modifiers) {
+        this.frames.request();
         try (CauseFrame _ = this.inputFrame(Device.KEYBOARD, modifiers)) {
             return this.handleCharTyped(codePoint, modifiers);
         }
@@ -1722,6 +1793,7 @@ public final class Root {
         if (next == this.focused) {
             return;
         }
+        this.frames.request();
         final Node previous = this.focused;
         // A node another change assigned but has not told yet never had focus, so it has none to lose
         final Node lost = previous == this.focusArriving ? null : previous;

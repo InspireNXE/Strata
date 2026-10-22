@@ -431,6 +431,18 @@ public interface ComponentPeer {
     void invalidateArrangement();
 
     /**
+     * See {@link org.inspirenxe.strata.api.extension.CustomComponent#repaint()}.
+     */
+    void repaint();
+
+    /**
+     * See {@link org.inspirenxe.strata.api.extension.CustomComponent#repaintAfter(long)}.
+     *
+     * @param millis the delay in milliseconds
+     */
+    void repaintAfter(long millis);
+
+    /**
      * See {@link org.inspirenxe.strata.api.event.EventTarget#subscribe(EventType, int, EventHandler)}.
      *
      * @param <E> the event interface

@@ -30,6 +30,12 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * a blinking caret does, allocates nothing.</p>
  */
 public final class FrameRequests {
+    /**
+     * How soon, in milliseconds, something that moves with the clock asks for its next frame, such as a sliding
+     * caption or a running animation: about 60 frames a second.
+     */
+    public static final long CONTINUOUS_MILLIS = 16L;
+
     private final AtomicBoolean dirty;
     private volatile Runnable requester;
     private long[] deadlines;

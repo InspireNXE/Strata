@@ -85,10 +85,12 @@ public final class Caption {
      * @param padding the control's padding, which centering leaves out
      * @param y the caption's top
      * @param millis the platform's clock, for scrolling
+     * @return true if the caption slides, so it looks different on the next frame and the control should ask for
+     *     one
      */
-    public void draw(final Painter painter, final TextLine line, final Rect bounds, final Insets padding,
-                     final float y, final long millis) {
-        this.draw(painter, line, bounds, padding, 0f, line.width(), y, millis);
+    public boolean draw(final Painter painter, final TextLine line, final Rect bounds, final Insets padding,
+                        final float y, final long millis) {
+        return this.draw(painter, line, bounds, padding, 0f, line.width(), y, millis);
     }
 
     /**
@@ -104,16 +106,18 @@ public final class Caption {
      * @param width the width of the whole piece, as measured
      * @param y the caption's top
      * @param millis the platform's clock, for scrolling
+     * @return true if the caption slides, so it looks different on the next frame and the control should ask for
+     *     one
      */
-    public void draw(final Painter painter, final TextLine line, final Rect bounds, final Insets padding,
-                     final float lead, final float width, final float y, final long millis) {
+    public boolean draw(final Painter painter, final TextLine line, final Rect bounds, final Insets padding,
+                        final float lead, final float width, final float y, final long millis) {
         final float clipRight = bounds.right() - (this.clip != null ? this.clip.right() : padding.right());
         final float left = this.start(bounds, padding, width) + lead;
         final float space = Math.max(0f, clipRight - left);
         final float overflow = line.width() - space;
         if (overflow <= 0f) {
             line.draw(painter, left, y);
-            return;
+            return false;
         }
         float x = left;
         if (this.scrollRate > 0f) {
@@ -135,6 +139,7 @@ public final class Caption {
             this.painter = null;
             this.line = null;
         }
+        return this.scrollRate > 0f;
     }
 
     /**

@@ -44,6 +44,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.function.Function;
+import org.inspirenxe.strata.core.frame.FrameRequests;
 
 /**
  * The core {@link CycleButton}. It draws with the {@link Button} theme keys: the disabled paint when disabled, the
@@ -370,9 +371,11 @@ public final class CycleButtonImpl<T> extends BuiltInComponent<CycleButton<T>> i
         }
         final TextLine line = enabled ? this.shown : this.shownDisabled;
         final Insets padding = this.padding;
-        this.caption.draw(painter, line, bounds, padding,
+        if (this.caption.draw(painter, line, bounds, padding,
                 bounds.y() + padding.top() + (bounds.height() - padding.vertical() - this.lineHeight) * 0.5f,
-                this.environment().millis());
+                this.environment().millis())) {
+            this.repaintAfter(FrameRequests.CONTINUOUS_MILLIS);
+        }
     }
 
     // ------------------------------------------------------------------

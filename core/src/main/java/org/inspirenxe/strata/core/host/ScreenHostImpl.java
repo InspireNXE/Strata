@@ -61,6 +61,9 @@ import java.util.Optional;
  * <p>Every input, {@link #flush}, {@link #layout} and {@link #render} first lets the platform's
  * {@link UiThreadImpl} note the calling thread as the UI thread, if it has none yet and the platform names none.
  * {@link #flush} then runs the tasks waiting in that UI thread's queue, before anything else of the frame.</p>
+ *
+ * <p>Whether a frame is needed and when the next timed change is due come from the root: see
+ * {@link Root#render} and {@link Root#nextFrameNanos()}.</p>
  */
 public final class ScreenHostImpl implements ScreenHost {
     private static final System.Logger LOGGER = System.getLogger(ScreenHostImpl.class.getName());
@@ -378,6 +381,21 @@ public final class ScreenHostImpl implements ScreenHost {
             this.rebuild = false;
             this.root.setContent(this.ui.nodeOf(this.screen.build(this.ui)));
         }
+    }
+
+    @Override
+    public boolean needsFrame() {
+        return this.root.frames().needsFrame();
+    }
+
+    @Override
+    public long nextFrameNanos() {
+        return this.root.nextFrameNanos();
+    }
+
+    @Override
+    public void setFrameRequester(final Runnable requester) {
+        this.root.frames().setRequester(requester);
     }
 
     @Override

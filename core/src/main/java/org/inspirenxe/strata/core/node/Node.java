@@ -83,6 +83,10 @@ import java.util.function.Function;
  * nothing inside it changed since, keeps its bounds without arranging its children. {@link #invalidateLayout()}
  * marks the node and every ancestor as changed.</p>
  *
+ * <p>Every change that shows asks the host for a frame (design 4.47): layout invalidation through the root, and
+ * {@link #repaint()} for the rest, which the background, border, cursor and z index setters and every report call.
+ * {@link #repaintAfter(long)} registers a change the clock brings.</p>
+ *
  * <p>Every method must be called on the UI thread. While the node is attached, its changes check that through
  * {@link #checkThread()}.</p>
  */
@@ -455,6 +459,43 @@ public class Node implements ComponentPeer {
         }
     }
 
+    /**
+     * Asks the host for a frame, because the component's look changed and its layout did not. Does nothing while
+     * detached: attaching asks for a frame anyway.
+     */
+    @Override
+    public final void repaint() {
+        final Root current = this.root;
+        if (current != null) {
+            current.repaint();
+        }
+    }
+
+    /**
+     * Tells the host that the component's look changes by itself after a time, so a host that renders on demand
+     * draws a frame then. A delay of 0 is {@link #repaint()}. Does nothing while detached.
+     *
+     * @param millis the delay in milliseconds, by the platform's clock
+     * @throws IllegalArgumentException if {@code millis} is negative
+     * @throws IllegalStateException if attached and called off the UI thread
+     */
+    @Override
+    public final void repaintAfter(final long millis) {
+        if (millis < 0L) {
+            throw new IllegalArgumentException("A repaint delay must not be negative: " + millis);
+        }
+        final Root current = this.root;
+        if (current == null) {
+            return;
+        }
+        current.checkThread();
+        if (millis == 0L) {
+            current.repaint();
+        } else {
+            current.repaintAt(current.nanoTime() + millis * 1_000_000L);
+        }
+    }
+
     @Override
     public final void invalidateArrangement() {
         this.checkThread();
@@ -676,6 +717,8 @@ public class Node implements ComponentPeer {
     @Override
     public final void report(final EventType<?> type) {
         Node.requireClass(type, ControlEvent.class);
+        // A report is a change, and most changes show
+        this.repaint();
         if (this.isHandled(type)) {
             Node.dispatchControl(type, new ControlEventImpl<>(this.facade), this);
         }
@@ -684,6 +727,7 @@ public class Node implements ComponentPeer {
     @Override
     public final <V> void report(final EventType<?> type, final V value, final V previous) {
         Node.requireClass(type, ValueEvent.class);
+        this.repaint();
         if (this.isHandled(type)) {
             Node.dispatchControl(type, new ValueEventImpl<>(this.facade, value, previous), this);
         }
@@ -1146,6 +1190,8 @@ public class Node implements ComponentPeer {
     @Override
     public final void setCursor(final CursorKind cursor) {
         this.cursor = cursor;
+        // The host asks for the cursor as it renders
+        this.repaint();
     }
 
     @Override
@@ -1293,6 +1339,7 @@ public class Node implements ComponentPeer {
             if (this.parent != null) {
                 this.parent.paintOrderChanged();
             }
+            this.repaint();
         }
     }
 
@@ -1318,6 +1365,7 @@ public class Node implements ComponentPeer {
     @Override
     public final void setBorder(final Border border) {
         this.border = Objects.requireNonNull(border, "border");
+        this.repaint();
     }
 
     @Override
@@ -1341,6 +1389,7 @@ public class Node implements ComponentPeer {
     @Override
     public final void setBackground(final Paint background) {
         this.background = Objects.requireNonNull(background, "background");
+        this.repaint();
     }
 
     private void treeChanged() {

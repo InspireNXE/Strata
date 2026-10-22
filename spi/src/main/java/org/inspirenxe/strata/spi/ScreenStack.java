@@ -173,6 +173,32 @@ public interface ScreenStack extends InputSink, ScreenController {
     void flush();
 
     /**
+     * Returns whether something changed since the last {@link #render} in a screen that would be drawn, or in the
+     * stack itself, such as a screen pushed or removed, as {@link ScreenHost#needsFrame()} describes. Any thread may
+     * call this.
+     *
+     * @return true if a frame is needed
+     */
+    boolean needsFrame();
+
+    /**
+     * Returns the earliest {@link ScreenHost#nextFrameNanos()} of the screens that would be drawn. Call it on the UI
+     * thread, after a render.
+     *
+     * @return the {@link Clock#nanoTime()} reading at which a frame is due, or {@link Long#MAX_VALUE} if nothing
+     *     timed is waiting
+     */
+    long nextFrameNanos();
+
+    /**
+     * Sets what runs when {@link #needsFrame()} turns from false to true, as
+     * {@link ScreenHost#setFrameRequester(Runnable)} describes for a host.
+     *
+     * @param requester the requester, or {@code null} for none
+     */
+    void setFrameRequester(Runnable requester);
+
+    /**
      * Draws the visible screens, bottom to top.
      *
      * @param canvas the engine canvas for this frame

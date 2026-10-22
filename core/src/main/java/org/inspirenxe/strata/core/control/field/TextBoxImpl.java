@@ -812,6 +812,11 @@ public final class TextBoxImpl extends BuiltInComponent<TextBox> implements Text
         }
 
         @Override
+        public void repaintAfter(final long millis) {
+            TextBoxImpl.this.repaintAfter(millis);
+        }
+
+        @Override
         public boolean isReadOnly() {
             return TextBoxImpl.this.readOnly;
         }

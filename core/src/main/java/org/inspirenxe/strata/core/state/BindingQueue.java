@@ -40,18 +40,30 @@ public final class BindingQueue {
 
     private final Queue<Binding<?>> dirty;
     private final List<Binding<?>> round;
+    private final Runnable queued;
     private boolean flushing;
 
     /**
      * Creates an empty queue.
      */
     public BindingQueue() {
+        this(() -> { });
+    }
+
+    /**
+     * Creates an empty queue that tells something whenever a binding is queued, as a root asks its host for a frame.
+     *
+     * @param queued runs after each binding is queued, on the thread that queued it, which can be any thread
+     */
+    public BindingQueue(final Runnable queued) {
         this.dirty = new ConcurrentLinkedQueue<>();
         this.round = new ArrayList<>();
+        this.queued = queued;
     }
 
     void enqueue(final Binding<?> binding) {
         this.dirty.add(binding);
+        this.queued.run();
     }
 
     /**

@@ -36,6 +36,7 @@ import org.inspirenxe.strata.core.text.TextLine;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
+import org.inspirenxe.strata.core.frame.FrameRequests;
 
 /**
  * The core {@link Button}. Its face is the disabled paint when disabled, the pressed paint while held under the
@@ -265,7 +266,10 @@ public final class ButtonImpl extends BuiltInComponent<Button> implements Button
             shown = content.caption;
         }
         // Centered in the button less its padding, which is the whole button when the padding is even
-        content.paintContent(painter, bounds, content.padding(this.link), enabled, shown, this.environment().millis());
+        if (content.paintContent(painter, bounds, content.padding(this.link), enabled, shown,
+                this.environment().millis())) {
+            this.repaintAfter(FrameRequests.CONTINUOUS_MILLIS);
+        }
     }
 
     @Override

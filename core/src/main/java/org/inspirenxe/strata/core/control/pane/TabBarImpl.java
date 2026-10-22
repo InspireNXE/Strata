@@ -49,6 +49,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
+import org.inspirenxe.strata.core.frame.FrameRequests;
 
 /**
  * The core {@link TabBar}. Each {@link TabImpl} is drawn by a private child component, so it can have its own hover
@@ -481,9 +482,11 @@ public final class TabBarImpl extends BuiltInComposite<TabBar> implements TabBar
             }
             // Centered in the tab less its state's padding
             final Insets pad = isSelected ? this.selectedPadding : this.padding;
-            this.caption.draw(painter, caption, bounds, pad,
+            if (this.caption.draw(painter, caption, bounds, pad,
                     bounds.y() + pad.top() + (bounds.height() - pad.top() - pad.bottom() - this.lineHeight) * 0.5f,
-                    this.environment().millis());
+                    this.environment().millis())) {
+                this.repaintAfter(FrameRequests.CONTINUOUS_MILLIS);
+            }
         }
 
         @Override

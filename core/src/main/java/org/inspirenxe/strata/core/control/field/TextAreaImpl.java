@@ -698,6 +698,9 @@ public final class TextAreaImpl extends BuiltInComponent<TextArea> implements Te
             this.painter = null;
         }
 
+        if (this.isFocused() && this.isEnabled() && !this.readOnly) {
+            this.repaintAfter(this.editor.untilBlink(this.look.blinkMillis()));
+        }
         if (this.isFocused() && this.isEnabled() && !this.readOnly && this.editor.caretShown(this.look.blinkMillis())) {
             float x = this.viewport.x() + this.caretX - this.scrollX;
             if (this.wrap) {
@@ -1015,6 +1018,11 @@ public final class TextAreaImpl extends BuiltInComponent<TextArea> implements Te
         @Override
         public Environment environment() {
             return TextAreaImpl.this.environment();
+        }
+
+        @Override
+        public void repaintAfter(final long millis) {
+            TextAreaImpl.this.repaintAfter(millis);
         }
 
         @Override

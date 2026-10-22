@@ -44,6 +44,7 @@ import org.inspirenxe.strata.core.node.ComponentFactoryImpl;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
+import org.inspirenxe.strata.core.frame.FrameRequests;
 
 /**
  * The core {@link DropDownButton}. It shares its keys, caption, icon and measuring with {@link ButtonImpl}, and adds
@@ -304,9 +305,11 @@ public final class DropDownButtonImpl extends BuiltInComponent<DropDownButton> i
         final float innerY = bounds.y() + padding.top();
         final float innerHeight = bounds.height() - padding.vertical();
         // The content and its clip area end before the arrow
-        content.paintContent(painter, this.contentArea.at(bounds.x(), bounds.y(),
+        if (content.paintContent(painter, this.contentArea.at(bounds.x(), bounds.y(),
                         bounds.width() - ComboBoxImpl.ARROW_GAP - ComboBoxImpl.ARROW_WIDTH, bounds.height()), padding,
-                enabled, enabled ? content.caption : content.disabledCaption, this.environment().millis());
+                enabled, enabled ? content.caption : content.disabledCaption, this.environment().millis())) {
+            this.repaintAfter(FrameRequests.CONTINUOUS_MILLIS);
+        }
 
         final float arrowX = bounds.right() - padding.right() - ComboBoxImpl.ARROW_WIDTH;
         final float arrowY = innerY + (innerHeight - Rings.ARROW_SHORT) * 0.5f;

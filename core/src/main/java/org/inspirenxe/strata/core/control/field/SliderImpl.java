@@ -41,6 +41,7 @@ import java.math.BigDecimal;
 import java.util.Objects;
 import java.util.Set;
 import java.util.function.DoubleFunction;
+import org.inspirenxe.strata.core.frame.FrameRequests;
 
 /**
  * The core {@link Slider}. The track covers the whole bounds; the thumb is {@value #THUMB_WIDTH} units along the
@@ -349,9 +350,11 @@ public final class SliderImpl extends BuiltInComponent<Slider> implements Slider
                 this.labelHeight = metrics.lineHeight(this.textStyle);
             }
             final Insets padding = this.padding;
-            this.caption.draw(painter, enabled ? this.labelSpan : this.disabledLabelSpan, bounds, padding,
+            if (this.caption.draw(painter, enabled ? this.labelSpan : this.disabledLabelSpan, bounds, padding,
                     bounds.y() + padding.top() + (bounds.height() - padding.vertical() - this.labelHeight) * 0.5f,
-                    this.environment().millis());
+                    this.environment().millis())) {
+                this.repaintAfter(FrameRequests.CONTINUOUS_MILLIS);
+            }
         }
     }
 
