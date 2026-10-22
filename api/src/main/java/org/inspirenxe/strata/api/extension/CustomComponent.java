@@ -118,8 +118,8 @@ import java.util.function.Consumer;
  *     <li>Read time, the clipboard and text sizes through {@link #environment()}, never from the system directly,
  *     so the component works on every engine and in tests.</li>
  *     <li>Event hooks run only while the component is attached, and a disabled or hidden component gets no new
- *     pointer or keyboard input. Consume the events you act on, so ancestors and the engine do not act on them
- *     too.</li>
+ *     pointer or keyboard input, nor does one inside it. Consume the events you act on, so ancestors and the engine
+ *     do not act on them too.</li>
  *     <li>Hooks run on the UI thread. Exceptions thrown from them propagate to the engine's call into Strata.</li>
  * </ul>
  *
@@ -586,6 +586,16 @@ public abstract class CustomComponent<T extends Component<T>> implements Compone
     }
 
     @Override
+    public final boolean isEffectivelyEnabled() {
+        return Component.super.isEffectivelyEnabled();
+    }
+
+    @Override
+    public final boolean isEffectivelyVisible() {
+        return Component.super.isEffectivelyVisible();
+    }
+
+    @Override
     public final Insets margin() {
         return this.peer.margin();
     }
@@ -819,7 +829,7 @@ public abstract class CustomComponent<T extends Component<T>> implements Compone
 
     /**
      * Returns whether the pointer is over this component. Only the deepest component under the pointer counts as
-     * hovered; its ancestors do not.
+     * hovered; its ancestors do not. A component that is disabled, or inside a disabled one, is never hovered.
      *
      * @return true while hovered
      */

@@ -86,18 +86,23 @@ import java.util.function.Consumer;
  * it, and the tooltip is never hit. {@link Overlay#raise()} moves a popup or toast up past the popups and toasts
  * above it, stopping below the first dialog, so a dialog stays above every overlay opened before it.</p>
  *
- * <p>Pointer rules: hover goes to the deepest visible, enabled node under the pointer. A press first closes every
+ * <p>Pointer rules: hover goes to the deepest visible node under the pointer. A disabled node, or one inside a
+ * disabled node, can be that node: it is then the hovered node for its tooltip, but it is not marked hovered, hears
+ * no pointer enter, exit or move, and shows the cursor of its nearest enabled ancestor. A press first closes every
  * popup above the layer it lands on, except those opened without light dismiss, and then goes nowhere if any
- * closed. Otherwise it focuses the pressed node or its nearest focusable ancestor and clears focus if there is none,
- * then tells the pressed node and each of its ancestors through {@link NodeHooks#pressedWithin}, innermost first,
- * and only then fires the press. Each button is tracked on its own. A press that closed popups or hit a dialog's
- * backdrop uses up its release too. A press of a button that is still held, because the engine lost its release,
- * first ends the old press with a release and no click. A drag starts once the pointer moves more than
- * {@link #DRAG_THRESHOLD} units from the press on either axis, and its events go to the pressed node wherever the
- * pointer is, carrying the press's button and click count in their cause. A release fires a click only when it ends
- * no drag and lands inside the pressed node, which must still be visible and enabled, as must every ancestor. After a
- * scroll that a node handled, hover is worked out again, since content may have moved under the pointer; the first
- * frame after the tree changes does the same while the pointer is inside the host.</p>
+ * closed. A press on a disabled node goes no further either: it fires nothing, runs no hook, leaves focus alone and
+ * uses up its release, so nothing behind the node acts. Otherwise the press focuses the pressed node or its nearest
+ * focusable ancestor and clears focus if there is none, then tells the pressed node and each of its ancestors
+ * through {@link NodeHooks#pressedWithin}, innermost first, and only then fires the press. Each button is tracked on
+ * its own. A press that closed popups or hit a dialog's backdrop uses up its release too. A press of a button that
+ * is still held, because the engine lost its release, first ends the old press with a release and no click. A drag
+ * starts once the pointer moves more than {@link #DRAG_THRESHOLD} units from the press on either axis, and its
+ * events go to the pressed node wherever the pointer is, carrying the press's button and click count in their cause.
+ * A release fires a click only when it ends no drag and lands inside the pressed node, which must still be visible
+ * and enabled, as must every ancestor. A scroll goes to the hovered node, or over a disabled node to its nearest
+ * enabled ancestor. After a scroll that a node handled, hover is worked out again, since content may have moved
+ * under the pointer; the first frame after the tree changes does the same while the pointer is inside the host, so
+ * a node disabled or enabled under a still pointer loses or gains its hover then.</p>
  *
  * <p>Keyboard rules: key events go to the focused node, or else to the top dialog, or else to the content. An
  * unhandled Escape press closes the top overlay that is not a toast. An unhandled Tab press or repeat without Ctrl
@@ -112,12 +117,13 @@ import java.util.function.Consumer;
  * <p>Toasts are overlays placed down the top-right corner. Presses elsewhere and Escape leave them open; each closes
  * on a click that nothing in it consumed, or on the first frame rendered after its time runs out.</p>
  *
- * <p>Tooltips: the hovered node's tooltip, or its nearest ancestor's, shows with its corner offset from the
- * pointer's whole-unit position by the theme's {@value Tooltip#STYLE_OFFSET_X} and {@value Tooltip#STYLE_OFFSET_Y},
- * {@link #TOOLTIP_OFFSET} units right of and above it by default, flipped left of it when it would leave the host on
- * the right, kept inside the host. It shows on the first frame rendered once the pointer has stayed on its owner for
- * the {@linkplain #tooltipDelay tooltip delay}, or at once when the pointer moves to it from another tooltip's
- * owner. It follows the pointer and hides while a drag is in progress.</p>
+ * <p>Tooltips: the hovered node's tooltip, or its nearest ancestor's, shows whether or not they are enabled, so a
+ * disabled control can say why it is disabled. Its corner is offset from the pointer's whole-unit position by the
+ * theme's {@value Tooltip#STYLE_OFFSET_X} and {@value Tooltip#STYLE_OFFSET_Y}, {@link #TOOLTIP_OFFSET} units right of
+ * and above it by default, flipped left of it when it would leave the host on the right, kept inside the host. It
+ * shows on the first frame rendered once the pointer has stayed on its owner for the
+ * {@linkplain #tooltipDelay tooltip delay}, or at once when the pointer moves to it from another tooltip's owner. It
+ * follows the pointer and hides while a drag is in progress.</p>
  *
  * <p>Every method must be called on the UI thread.</p>
  */
@@ -158,6 +164,8 @@ public final class Root {
     private boolean layoutRequested;
 
     private Node hovered;
+    // Whether the hovered node and its ancestors are visible and enabled, so it was marked hovered and told it entered
+    private boolean hoverLive;
     // Set when the tree changed, so the next frame works hover out again at the pointer's last position
     private boolean hoverStale;
     private boolean pointerInside;
@@ -460,6 +468,7 @@ public final class Root {
         visit(subtree, node -> {
             if (node == this.hovered) {
                 this.hovered = null;
+                this.hoverLive = false;
             }
             if (node == this.focused) {
                 try {
@@ -773,7 +782,8 @@ public final class Root {
     }
 
     private void requestHoverCursor(final Canvas canvas) {
-        for (Node node = this.hovered; node != null; node = node.parentNode()) {
+        // A disabled node shows the cursor of the nearest node that would take the pointer
+        for (Node node = usableAncestor(this.hovered); node != null; node = node.parentNode()) {
             if (node.cursor() != null) {
                 canvas.requestCursor(node.cursor());
                 return;
@@ -867,7 +877,7 @@ public final class Root {
         }
 
         this.updateHover(x, y, modifiers);
-        if (this.hovered != null) {
+        if (this.hovered != null && this.hoverLive) {
             this.hovered.fire(InputEvents.POINTER_MOVE, new PointerEventImpl(this.hovered.facade(), x, y, modifiers));
         }
         this.updateTooltip();
@@ -941,6 +951,11 @@ public final class Root {
             }
             this.changeFocus(null);
             return false;
+        }
+        if (!isUsable(target)) {
+            // A disabled node takes the press so nothing behind it acts, and does nothing with it
+            this.swallowedReleases.add(button);
+            return true;
         }
 
         this.focusFromPress = true;
@@ -1020,8 +1035,25 @@ public final class Root {
     }
 
     /**
-     * Handles a scroll by firing a scroll event at the hovered node, which bubbles until something handles it. If
-     * something did, layout runs and hover is worked out again.
+     * Returns the node itself if it and every ancestor are visible and enabled, else its nearest ancestor that is,
+     * which is the one just above the outermost disabled or hidden node.
+     *
+     * @return the node, an ancestor, or {@code null} for a {@code null} node or when no ancestor is usable
+     */
+    private static Node usableAncestor(final Node node) {
+        Node usable = node;
+        for (Node candidate = node; candidate != null; candidate = candidate.parentNode()) {
+            if (!candidate.isVisible() || !candidate.isEnabled()) {
+                usable = candidate.parentNode();
+            }
+        }
+        return usable;
+    }
+
+    /**
+     * Handles a scroll by firing a scroll event at the hovered node, or at its nearest enabled ancestor when it is
+     * disabled or inside a disabled node, which bubbles until something handles it. If something did, layout runs
+     * and hover is worked out again.
      *
      * @param x the pointer's x, in UI units
      * @param y the pointer's y, in UI units
@@ -1045,11 +1077,12 @@ public final class Root {
         this.pointerInside = true;
         this.updateModifiers(modifiers, null, null);
         this.updateHover(x, y, modifiers);
-        if (this.hovered == null) {
+        final Node target = usableAncestor(this.hovered);
+        if (target == null) {
             return false;
         }
-        final boolean handled = this.hovered.fire(InputEvents.SCROLL,
-                new ScrollEventImpl(this.hovered.facade(), x, y, modifiers, scrollX, scrollY, kind)).isHandled();
+        final boolean handled = target.fire(InputEvents.SCROLL,
+                new ScrollEventImpl(target.facade(), x, y, modifiers, scrollX, scrollY, kind)).isHandled();
         if (handled) {
             this.layout();
             this.updateHover(x, y, modifiers);
@@ -1072,16 +1105,21 @@ public final class Root {
         this.pointerInside = false;
         if (this.hovered != null) {
             final Node old = this.hovered;
+            final boolean live = this.hoverLive;
             this.hovered = null;
-            old.setHovered(false);
-            old.fire(InputEvents.POINTER_EXIT, new PointerEventImpl(old.facade(), this.pointerX, this.pointerY,
-                    this.modifiers));
+            this.hoverLive = false;
+            if (live) {
+                old.setHovered(false);
+                old.fire(InputEvents.POINTER_EXIT, new PointerEventImpl(old.facade(), this.pointerX, this.pointerY,
+                        this.modifiers));
+            }
         }
         this.updateTooltip();
     }
 
     /**
-     * Returns the node under the pointer.
+     * Returns the deepest visible node under the pointer. It may be disabled or inside a disabled node, and is then
+     * not {@linkplain Node#isHovered() marked hovered}.
      *
      * @return the hovered node, or {@code null} if the pointer is over nothing or outside the host
      */
@@ -1122,16 +1160,20 @@ public final class Root {
         this.layout();
         this.hoverStale = false;
         final Node next = this.hitTest(x, y);
-        if (next == this.hovered) {
+        // A disabled node under the pointer is hovered for its tooltip but hears nothing
+        final boolean live = next != null && isUsable(next);
+        if (next == this.hovered && live == this.hoverLive) {
             return;
         }
         final Node previous = this.hovered;
+        final boolean wasLive = this.hoverLive;
         this.hovered = next;
-        if (previous != null) {
+        this.hoverLive = live;
+        if (previous != null && wasLive) {
             previous.setHovered(false);
             previous.fire(InputEvents.POINTER_EXIT, new PointerEventImpl(previous.facade(), x, y, modifiers));
         }
-        if (next != null) {
+        if (live) {
             next.setHovered(true);
             next.fire(InputEvents.POINTER_ENTER, new PointerEventImpl(next.facade(), x, y, modifiers));
         }

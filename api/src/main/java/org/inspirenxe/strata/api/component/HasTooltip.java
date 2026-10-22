@@ -22,7 +22,8 @@ import org.inspirenxe.strata.api.text.Text;
  * A component that can show a tooltip. Every container and nearly every control has one.
  *
  * <p>While the pointer rests on a component, the host shows the tooltip of the deepest component under it that has
- * one set, looking through its ancestors, so a tooltip on a panel covers what is inside it.</p>
+ * one set, looking through its ancestors, so a tooltip on a panel covers what is inside it. A disabled component
+ * shows its tooltip too, so it can say why it is disabled.</p>
  *
  * <p>To give a custom component a tooltip, extend {@link org.inspirenxe.strata.api.extension.CustomComponent} and
  * declare {@code implements HasTooltip<Self>}: the class already has these methods. Do not implement this interface

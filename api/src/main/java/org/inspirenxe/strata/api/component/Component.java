@@ -182,13 +182,46 @@ public interface Component<T extends Component<T>> extends EventTarget<T> {
 
     /**
      * Enables or disables the component. A disabled component is still drawn (built-in controls draw a disabled
-     * look) and still takes space, but it receives no pointer or keyboard input and cannot be focused. Disabling
-     * the focused component, or one of its ancestors, clears focus.
+     * look) and still takes space, but it gets no pointer or keyboard events and cannot be focused, and neither can
+     * anything inside it. It still stops the pointer: a press or click on it, or on anything inside it, goes no
+     * further, so the container behind it does not act either, and its tooltip shows while the pointer rests on it.
+     * A scroll over it goes to its nearest enabled ancestor. Disabling the focused component, or one of its
+     * ancestors, clears focus.
      *
      * @param enabled false to disable
      * @return this component
      */
     T setEnabled(boolean enabled);
+
+    /**
+     * Returns whether the component and every container or composite it is inside are enabled, so that it can take
+     * input. An overlay's content counts only the components inside the overlay.
+     *
+     * @return true unless this component or one of its ancestors is disabled
+     */
+    default boolean isEffectivelyEnabled() {
+        for (Component<?> component = this; component != null; component = component.parent()) {
+            if (!component.isEnabled()) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /**
+     * Returns whether the component and every container or composite it is inside are visible. It says nothing of
+     * whether the tree is shown at all; see {@link #isAttached()}.
+     *
+     * @return true unless this component or one of its ancestors is hidden
+     */
+    default boolean isEffectivelyVisible() {
+        for (Component<?> component = this; component != null; component = component.parent()) {
+            if (!component.isVisible()) {
+                return false;
+            }
+        }
+        return true;
+    }
 
     // Layout
 

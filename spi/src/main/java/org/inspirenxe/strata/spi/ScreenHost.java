@@ -179,7 +179,8 @@ public interface ScreenHost extends InputSink {
     Optional<Component<?>> focused();
 
     /**
-     * Returns the deepest component under the pointer, as of the last pointer input.
+     * Returns the deepest visible component under the pointer, as of the last pointer input. It may be disabled, or
+     * inside a disabled component, and then hears no pointer events.
      *
      * @return the hovered component, or empty
      */

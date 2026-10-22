@@ -526,15 +526,16 @@ public class Node implements ComponentPeer {
     }
 
     /**
-     * Finds the deepest visible, enabled node at a point. A disabled or hidden node hides its whole subtree from
-     * the pointer.
+     * Finds the deepest visible node at a point. A hidden node hides its whole subtree from the pointer. A disabled
+     * node, or one inside a disabled node, can be hit, so the pointer stops there: {@link Root} gives it no input
+     * events and shows its tooltip.
      *
      * @param x the x, in the host's coordinates
      * @param y the y, in the host's coordinates
      * @return the node hit, or {@code null} if the point misses this node
      */
     public Node hitTest(final float x, final float y) {
-        if (!this.visible || !this.enabled || !this.bounds.contains(x, y)) {
+        if (!this.visible || !this.bounds.contains(x, y)) {
             return null;
         }
         return this;

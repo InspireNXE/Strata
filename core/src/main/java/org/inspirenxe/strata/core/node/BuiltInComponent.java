@@ -846,7 +846,8 @@ public abstract class BuiltInComponent<T extends Component<T>> implements Compon
     }
 
     /**
-     * Returns whether the pointer is over this component and not over a child of it.
+     * Returns whether the pointer is over this component and not over a child of it. A component that is disabled,
+     * or inside a disabled one, is never hovered.
      *
      * @return true while hovered
      */
