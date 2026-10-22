@@ -1582,6 +1582,21 @@ public final class Root {
         return this.content == null ? null : this.content.hitTest(x, y);
     }
 
+    /**
+     * Returns the component the pointer would hit at a point, after laying out if anything asked for it, as
+     * {@link org.inspirenxe.strata.api.ComponentFactory#componentAt} describes.
+     *
+     * @param x the x, in the host's coordinates
+     * @param y the y, in the host's coordinates
+     * @return the component, or empty where {@link #hitTest} finds nothing
+     * @throws IllegalStateException off the UI thread
+     */
+    public Optional<Component<?>> componentAt(final float x, final float y) {
+        this.checkThread();
+        this.layout();
+        return Optional.ofNullable(this.hitTest(x, y)).map(Node::facade);
+    }
+
     private void updateHover(final float x, final float y, final Modifiers modifiers) {
         this.layout();
         this.hoverStale = false;

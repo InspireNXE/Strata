@@ -187,6 +187,22 @@ public interface ComponentFactory {
     void setClipboard(Transfer transfer);
 
     /**
+     * Returns the component the pointer would hit at a point of the host, as a drop handler or a test needs. The
+     * host lays out first if anything changed. The search runs as the pointer's does: through the open overlays from
+     * the top, where a dialog hides every layer below it, then the content. The tooltip is never found. A hidden
+     * component and everything inside it is skipped. A disabled component, or one inside a disabled component, can
+     * be found, since it takes the press there. Where a container that clips its children cuts a child off, the
+     * container is found.
+     *
+     * @param x the x, in the host's coordinates
+     * @param y the y, in the host's coordinates
+     * @return the deepest component there, or empty over nothing, over a dialog's backdrop or before the factory has
+     *     a host
+     * @throws IllegalStateException off the UI thread once Strata knows which thread that is
+     */
+    Optional<Component<?>> componentAt(float x, float y);
+
+    /**
      * Calls a listener when a source's value changes, for screen code that acts on a change, such as saving a setting
      * or sending it to a server. The source is tracked as a {@linkplain Component#bind binding's} is: every state it
      * reads is followed, and when one of them changes, the source is read again before the next frame is laid out,

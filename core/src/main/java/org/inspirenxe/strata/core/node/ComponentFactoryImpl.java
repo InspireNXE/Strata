@@ -300,6 +300,14 @@ public final class ComponentFactoryImpl implements ComponentFactory {
     }
 
     @Override
+    public Optional<Component<?>> componentAt(final float x, final float y) {
+        if (this.root == null) {
+            return Optional.empty();
+        }
+        return this.root.componentAt(x, y);
+    }
+
+    @Override
     public Overlays overlays() {
         if (this.root == null) {
             throw new IllegalStateException("This factory has no host yet");
