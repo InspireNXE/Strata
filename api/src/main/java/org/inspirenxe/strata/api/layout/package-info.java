@@ -16,7 +16,7 @@
 /**
  * Layout containers and the values that control placement.
  *
- * <p>Strata ships five containers. Each measures its children, then gives each one a slot; a child places itself
+ * <p>Strata ships six containers. Each measures its children, then gives each one a slot; a child places itself
  * in its slot by its own {@link org.inspirenxe.strata.api.layout.HorizontalAlignment} and
  * {@link org.inspirenxe.strata.api.layout.VerticalAlignment}.</p>
  * <ul>
@@ -25,6 +25,8 @@
  *     <li>{@link org.inspirenxe.strata.api.layout.StackPanel}: children follow one another in a row or a column.</li>
  *     <li>{@link org.inspirenxe.strata.api.layout.GridPanel}: children sit in the cells of rows and columns sized
  *     automatically, fixed, or by weight.</li>
+ *     <li>{@link org.inspirenxe.strata.api.layout.WrapPanel}: children follow one another and wrap onto a new row
+ *     or column when the current one is full.</li>
  *     <li>{@link org.inspirenxe.strata.api.layout.AbsolutePanel}: children sit at fixed positions.</li>
  *     <li>{@link org.inspirenxe.strata.api.layout.ScrollPanel}: children larger than the panel scroll.</li>
  * </ul>

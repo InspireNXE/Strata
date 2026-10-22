@@ -80,6 +80,7 @@ import org.inspirenxe.strata.api.layout.Orientation;
 import org.inspirenxe.strata.api.layout.ScrollPanel;
 import org.inspirenxe.strata.api.layout.Spacer;
 import org.inspirenxe.strata.api.layout.StackPanel;
+import org.inspirenxe.strata.api.layout.WrapPanel;
 import org.inspirenxe.strata.api.overlay.Overlays;
 import org.inspirenxe.strata.api.text.Text;
 import org.inspirenxe.strata.api.theme.SpriteId;
@@ -172,6 +173,21 @@ public interface ComponentFactory {
      * @return a new grid panel
      */
     GridPanel gridPanel();
+
+    /**
+     * Makes a {@link WrapPanel} that fills rows.
+     *
+     * @return a new wrap panel laying out children left to right and wrapping onto new rows
+     */
+    WrapPanel wrapPanel();
+
+    /**
+     * Makes a {@link WrapPanel} with the given orientation, as {@code wrapPanel().setOrientation(orientation)} does.
+     *
+     * @param orientation the direction each line fills in
+     * @return a new wrap panel
+     */
+    WrapPanel wrapPanel(Orientation orientation);
 
     /**
      * Makes an {@link AbsolutePanel}.

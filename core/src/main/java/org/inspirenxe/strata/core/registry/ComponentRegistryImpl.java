@@ -65,6 +65,7 @@ import org.inspirenxe.strata.api.layout.GridPanel;
 import org.inspirenxe.strata.api.layout.ScrollPanel;
 import org.inspirenxe.strata.api.layout.Spacer;
 import org.inspirenxe.strata.api.layout.StackPanel;
+import org.inspirenxe.strata.api.layout.WrapPanel;
 
 import java.util.ArrayDeque;
 import java.util.ArrayList;
@@ -128,6 +129,7 @@ public final class ComponentRegistryImpl implements ComponentRegistry {
         this.builtIn("anchor_panel", AnchorPanel.class, ComponentFactory::anchorPanel);
         this.builtIn("stack_panel", StackPanel.class, ComponentFactory::stackPanel);
         this.builtIn("grid_panel", GridPanel.class, ComponentFactory::gridPanel);
+        this.builtIn("wrap_panel", WrapPanel.class, ComponentFactory::wrapPanel);
         this.builtIn("absolute_panel", AbsolutePanel.class, ComponentFactory::absolutePanel);
         this.builtIn("scroll_panel", ScrollPanel.class, ComponentFactory::scrollPanel);
         this.builtIn("spacer", Spacer.class, ComponentFactory::spacer);

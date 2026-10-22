@@ -86,6 +86,7 @@ import org.inspirenxe.strata.api.layout.Orientation;
 import org.inspirenxe.strata.api.layout.ScrollPanel;
 import org.inspirenxe.strata.api.layout.Spacer;
 import org.inspirenxe.strata.api.layout.StackPanel;
+import org.inspirenxe.strata.api.layout.WrapPanel;
 import org.inspirenxe.strata.api.overlay.Overlays;
 import org.inspirenxe.strata.api.text.Text;
 import org.inspirenxe.strata.api.text.TextOverflow;
@@ -145,6 +146,7 @@ import org.inspirenxe.strata.core.layout.GridPanelImpl;
 import org.inspirenxe.strata.core.layout.ScrollPanelImpl;
 import org.inspirenxe.strata.core.layout.SpacerImpl;
 import org.inspirenxe.strata.core.layout.StackPanelImpl;
+import org.inspirenxe.strata.core.layout.WrapPanelImpl;
 import org.inspirenxe.strata.core.registry.ComponentRegistryImpl;
 import org.inspirenxe.strata.spi.Platform;
 
@@ -273,6 +275,16 @@ public final class ComponentFactoryImpl implements ComponentFactory {
     @Override
     public GridPanel gridPanel() {
         return new GridPanelImpl(this);
+    }
+
+    @Override
+    public WrapPanel wrapPanel() {
+        return new WrapPanelImpl(this, Orientation.HORIZONTAL);
+    }
+
+    @Override
+    public WrapPanel wrapPanel(final Orientation orientation) {
+        return new WrapPanelImpl(this, orientation);
     }
 
     @Override
