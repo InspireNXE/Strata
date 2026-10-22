@@ -36,10 +36,27 @@ import java.util.Optional;
  * <p>A {@link Orientation#HORIZONTAL} pane puts the first component on the left and the second on the right, with a
  * vertical divider; a {@link Orientation#VERTICAL} one puts the first on top. The divider is {@value #DIVIDER_SIZE}
  * units thick and shows a resize cursor. Its position is the fraction of the space left beside the divider that the
- * first component gets. Dragging moves it, kept so neither side is smaller than its
- * {@linkplain #setMinSizes minimum} when there is room for both. Each move by a drag fires {@link #MOVE}, and every
- * change fires {@link #MOVED}. Each side is placed in its part by its own alignment, so give it
+ * first component gets. Dragging moves it. Each move by a drag fires {@link #MOVE}, and every change fires
+ * {@link #MOVED}. Each side is placed in its part by its own alignment, so give it
  * {@link org.inspirenxe.strata.api.layout.Anchor#FILL} to fill the part.</p>
+ *
+ * <p>Neither side is ever laid out smaller than its {@linkplain #setMinSizes minimum} when the pane has room for
+ * both, whatever the position, so shrinking the pane does not push a sidebar below its minimum. When there is not
+ * room for both, the side the {@linkplain #setResizePolicy resize policy} keeps gets its minimum, or all the space if
+ * that is less, and the other side gives way: the second under {@link ResizePolicy#PROPORTIONAL}. The position is
+ * not changed by this; it comes back into force once the pane is large enough.</p>
+ *
+ * <p>When the pane's size changes, {@link ResizePolicy#PROPORTIONAL} keeps the position, so both sides grow and
+ * shrink together, while {@link ResizePolicy#KEEP_FIRST} keeps the first side's length in units and
+ * {@link ResizePolicy#KEEP_SECOND} the second's, so a sidebar keeps its width as a window grows. Under those two the
+ * position follows the kept length, and changes without {@link #MOVED} as the pane is resized, since the divider
+ * stays where it was.</p>
+ *
+ * <p>A side made {@linkplain #setCollapsible collapsible} collapses with a double click on the divider, or Enter
+ * while the divider has focus, through {@link #COLLAPSE}, and the same again restores it to where it was. A
+ * collapsed side is taken out of the tree until it is restored, and the other side gets all the space beside the
+ * divider. Dragging the divider of a collapsed pane restores it first, through {@link #COLLAPSE} with null, and then
+ * moves it. The arrows, Home and End do nothing while a side is collapsed.</p>
  *
  * <p>The divider is a tab stop between the two sides, and a press on it focuses it: {@link #requestFocus()} focuses
  * it, and {@link #isFocused()} is true while it has focus. While focused, the arrow keys along the split, Left and
@@ -119,6 +136,51 @@ public interface SplitPane extends Component<SplitPane>, Focusable<SplitPane>, H
             SplitPane::setPosition, MOVED);
 
     /**
+     * Asked before the user collapses a side or restores it, by a double click on the divider, Enter while the
+     * divider has focus, or a drag on the divider of a collapsed pane. The value is the side about to collapse, or
+     * null to restore the collapsed one. Canceling it keeps the pane as it is; a handler may set another side, or
+     * null, which the pane then takes. Fires only for the user's actions.
+     */
+    EventType<ValueRequestEvent<SplitPane, Side>> COLLAPSE = EventType.valueRequest("split_pane.collapse");
+    /**
+     * Told after a side collapsed or was restored. The value is the collapsed side, or null when none is collapsed
+     * now, and the previous value the side collapsed before, or null. Fires for changes made from code too.
+     */
+    EventType<ValueEvent<SplitPane, Side>> COLLAPSED = EventType.valueReport("split_pane.collapsed");
+
+    /**
+     * How a pane shares a change of its size between its sides.
+     */
+    enum ResizePolicy {
+        /**
+         * The position is kept, so both sides grow and shrink in proportion. A new pane's policy.
+         */
+        PROPORTIONAL,
+        /**
+         * The first side keeps its length in units and the second takes the change.
+         */
+        KEEP_FIRST,
+        /**
+         * The second side keeps its length in units and the first takes the change.
+         */
+        KEEP_SECOND
+    }
+
+    /**
+     * One of a pane's two sides.
+     */
+    enum Side {
+        /**
+         * The left or top side.
+         */
+        FIRST,
+        /**
+         * The right or bottom side.
+         */
+        SECOND
+    }
+
+    /**
      * Returns the direction of the split.
      *
      * @return {@link Orientation#HORIZONTAL} for side by side, {@link Orientation#VERTICAL} for one above the other
@@ -186,7 +248,7 @@ public interface SplitPane extends Component<SplitPane>, Focusable<SplitPane>, H
     SplitPane setPosition(float position);
 
     /**
-     * Sets the smallest each side may be dragged to.
+     * Sets the smallest each side may be, whether dragged or laid out. A new layout runs.
      *
      * @param first the first component's minimum along the split, in UI units
      * @param second the second component's minimum, in UI units
@@ -194,4 +256,55 @@ public interface SplitPane extends Component<SplitPane>, Focusable<SplitPane>, H
      * @throws IllegalArgumentException if either is negative or infinite
      */
     SplitPane setMinSizes(float first, float second);
+
+    /**
+     * Returns how the pane shares a change of its size between its sides.
+     *
+     * @return the policy; {@link ResizePolicy#PROPORTIONAL} for a new pane
+     */
+    ResizePolicy resizePolicy();
+
+    /**
+     * Sets how the pane shares a change of its size between its sides. The sides keep their lengths as of now, and
+     * the new policy applies from the next change of size. A new layout runs.
+     *
+     * @param policy the policy
+     * @return this pane
+     */
+    SplitPane setResizePolicy(ResizePolicy policy);
+
+    /**
+     * Returns whether the user can collapse a side.
+     *
+     * @param side the side
+     * @return true after {@code setCollapsible} turned it on; false for a new pane
+     */
+    boolean isCollapsible(Side side);
+
+    /**
+     * Sets which sides the user can collapse with a double click on the divider or Enter. When both can, the first
+     * collapses. Code can collapse either side with {@link #setCollapsed} whatever this says.
+     *
+     * @param first whether the user can collapse the first side
+     * @param second whether the user can collapse the second side
+     * @return this pane
+     */
+    SplitPane setCollapsible(boolean first, boolean second);
+
+    /**
+     * Returns the collapsed side.
+     *
+     * @return the side, or empty while both show
+     */
+    Optional<Side> collapsed();
+
+    /**
+     * Collapses a side, or restores the collapsed one for null, without asking {@link #COLLAPSE}. Collapsing one
+     * side while the other is collapsed restores that one first. Fires {@link #COLLAPSED} if anything changed. The
+     * position is kept, so restoring puts the divider back where it was. A new layout runs.
+     *
+     * @param side the side to collapse, or null to show both
+     * @return this pane
+     */
+    SplitPane setCollapsed(Side side);
 }

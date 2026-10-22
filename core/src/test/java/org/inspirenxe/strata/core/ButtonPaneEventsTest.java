@@ -655,6 +655,8 @@ class ButtonPaneEventsTest {
         @Test
         void aPositionFromALengthGivesTheFirstSideThatLength() {
             this.show();
+            // Minimums would hold the sides away from the ends, since they apply on every layout (design 4.57)
+            this.split.setMinSizes(0f, 0f);
             final List<String> missed = new ArrayList<>();
             for (int width = 300; width <= 420; width++) {
                 this.split.setWidth(width);
