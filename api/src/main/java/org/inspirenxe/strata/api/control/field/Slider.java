@@ -83,8 +83,8 @@ import java.util.function.DoubleFunction;
  * <h2>Ticks</h2>
  * <p>{@link #setTicks} draws a mark across the bottom of a horizontal slider, or the left of a vertical one, at each
  * major tick, {@code min + k * major}, 4 units long, and a mark 2 units long at each minor tick between them, all
- * one unit wide and centered where the thumb's center would be at that value. Ticks closer together than 3 units
- * are left out.</p>
+ * one unit wide and centered where the thumb's center would be at that value, so they run from the right while the
+ * slider runs right to left. Ticks closer together than 3 units are left out.</p>
  *
  * <h2>Theme keys</h2>
  * <ul>

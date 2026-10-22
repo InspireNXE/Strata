@@ -112,6 +112,7 @@ public final class SliderImpl extends BuiltInComponent<Slider> implements Slider
     private final List<Rect> minorTickRects = new ArrayList<>();
     private Rect tickBounds;
     private boolean ticksStale = true;
+    private boolean ticksRightToLeft;
 
     private Paint track;
     private Paint trackFocused;
@@ -513,7 +514,7 @@ public final class SliderImpl extends BuiltInComponent<Slider> implements Slider
         if (this.majorTicks <= 0d) {
             return;
         }
-        if (this.ticksStale || !bounds.equals(this.tickBounds)) {
+        if (this.ticksStale || !bounds.equals(this.tickBounds) || this.isRightToLeft() != this.ticksRightToLeft) {
             this.placeTicks(bounds);
         }
         for (int i = 0; i < this.minorTickRects.size(); i++) {
@@ -527,6 +528,9 @@ public final class SliderImpl extends BuiltInComponent<Slider> implements Slider
     private void placeTicks(final Rect bounds) {
         this.tickBounds = bounds;
         this.ticksStale = false;
+        // Right to left a horizontal slider's minimum is at its right, so its ticks are mirrored
+        final boolean mirrored = this.isRightToLeft();
+        this.ticksRightToLeft = mirrored;
         this.tickRects.clear();
         this.minorTickRects.clear();
         final boolean horizontal = this.orientation == Orientation.HORIZONTAL;
@@ -546,7 +550,8 @@ public final class SliderImpl extends BuiltInComponent<Slider> implements Slider
             final float along = THUMB_WIDTH * 0.5f + (float) (k * spacing / range * travel);
             final float length = major ? 4f : 2f;
             final Rect mark = horizontal
-                    ? new Rect((float) Math.floor(bounds.x() + along), bounds.bottom() - length, 1f, length)
+                    ? new Rect(mirrored ? bounds.x() + bounds.right() - (float) Math.floor(bounds.x() + along) - 1f
+                    : (float) Math.floor(bounds.x() + along), bounds.bottom() - length, 1f, length)
                     : new Rect(bounds.x(), (float) Math.floor(bounds.bottom() - along), length, 1f);
             (major ? this.tickRects : this.minorTickRects).add(mark);
         }

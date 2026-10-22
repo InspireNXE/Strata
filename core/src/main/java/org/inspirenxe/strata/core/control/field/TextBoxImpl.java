@@ -836,8 +836,10 @@ public final class TextBoxImpl extends BuiltInComponent<TextBox> implements Text
         this.editor.paint(painter, contentBox, textY, this.lineHeight, this.look, this.style(),
                 this.isFocused() && this.isEnabled() && !this.readOnly);
         if (this.dropDown) {
+            // Right to left the arrow sits at the left, mirrored with the padding that makes room for it
+            final float arrowX = bounds.right() - this.basePadding().right() - ComboBoxImpl.ARROW_WIDTH;
             this.arrow.down(painter, this.style().color(),
-                    bounds.right() - this.basePadding().right() - ComboBoxImpl.ARROW_WIDTH,
+                    rightToLeft ? bounds.x() + bounds.right() - arrowX - ComboBoxImpl.ARROW_WIDTH : arrowX,
                     contentBox.y() + (contentBox.height() - Rings.ARROW_SHORT) * 0.5f);
         }
     }
@@ -865,7 +867,8 @@ public final class TextBoxImpl extends BuiltInComponent<TextBox> implements Text
         if (event.button() != MouseButton.LEFT || !this.isEnabled()) {
             return;
         }
-        if (this.dropDown && event.localX() >= this.bounds().width() - this.textPadding.right()) {
+        if (this.dropDown && (this.isRightToLeft() ? event.localX() < this.textPadding.right()
+                : event.localX() >= this.bounds().width() - this.textPadding.right())) {
             this.toggleEverySuggestion();
             event.consume();
             return;

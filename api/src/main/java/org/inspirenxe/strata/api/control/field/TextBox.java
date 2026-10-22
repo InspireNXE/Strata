@@ -90,7 +90,8 @@ import java.util.Objects;
  *
  * <h2>Drop-down</h2>
  * <p>A box made a {@linkplain #setDropDown drop-down} is an editable combo box: it draws the combo box's arrow at its
- * right, inside its padding and 4 units after the text, which ends that much sooner. A left press on the arrow, or
+ * right, or its left while it runs right to left, inside its padding and 4 units after the text, which ends that much
+ * sooner. A left press on the arrow, or
  * Alt+Down, shows {@linkplain SuggestionProvider#every every suggestion} the provider offers for the text in the same
  * list, each replacing the whole text, or closes the list when it is open. The arrow is drawn in the text's color.</p>
  *
