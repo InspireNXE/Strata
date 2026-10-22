@@ -71,7 +71,7 @@ import java.util.function.UnaryOperator;
  * <p>Every user edit that would change the text fires {@link TextArea#MODIFY} and then {@link TextArea#EDIT} when a
  * handler for either is on its path. While the handlers run the area still holds the text and selection from before
  * the edit; a canceled {@code MODIFY} ends the edit there. The final text then has its line breaks turned into
- * {@code \n} and is cut to the length limit, and the caret goes as many characters from its end as the edit left it,
+ * {@code \n} and its control characters other than tabs dropped, and is cut to the length limit, and the caret goes as many characters from its end as the edit left it,
  * with nothing selected. With neither handler on the path the edit applies directly, without putting the old text
  * back first. Every change reports {@link TextArea#EDITED} and then {@link TextArea#MODIFIED}.</p>
  *
@@ -229,7 +229,7 @@ public final class TextAreaImpl extends BuiltInComponent<TextArea> implements Te
 
     @Override
     public TextArea setText(final String text) {
-        final String clean = PlainEdits.truncate(normalize(Objects.requireNonNull(text, "text")), this.maxLength);
+        final String clean = PlainEdits.truncate(FieldText.lines(Objects.requireNonNull(text, "text")), this.maxLength);
         if (!this.buffer.contentEquals(clean)) {
             final String previous = this.buffer.toString();
             this.buffer.set(clean);
@@ -962,10 +962,6 @@ public final class TextAreaImpl extends BuiltInComponent<TextArea> implements Te
         return newline < 0 ? this.buffer.length() : newline;
     }
 
-    private static String normalize(final String text) {
-        return text.replace("\r\n", "\n").replace('\r', '\n');
-    }
-
     @Override
     protected Object snapshotState() {
         return new TextArea.State(this.buffer.toString(), this.editor.caret(), this.editor.anchor(), this.maxLength);
@@ -1008,7 +1004,7 @@ public final class TextAreaImpl extends BuiltInComponent<TextArea> implements Te
         @Override
         public void paste(final int start, final int end) {
             TextAreaImpl.this.environment().clipboardText()
-                    .map(TextAreaImpl::normalize)
+                    .map(FieldText::lines)
                     .ifPresent(text -> TextAreaImpl.this.edits.edit(start, end, text));
         }
 
@@ -1085,7 +1081,7 @@ public final class TextAreaImpl extends BuiltInComponent<TextArea> implements Te
 
         @Override
         public String clean(final String text) {
-            return normalize(text);
+            return FieldText.lines(text);
         }
 
         @Override

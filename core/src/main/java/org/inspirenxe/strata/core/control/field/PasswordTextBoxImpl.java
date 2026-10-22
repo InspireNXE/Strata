@@ -201,7 +201,7 @@ public final class PasswordTextBoxImpl extends BuiltInComposite<PasswordTextBox>
             int i = 0;
             while (i < password.length && count < this.maxLength) {
                 final char c = password[i];
-                if (c == '\r' || c == '\n') {
+                if (FieldText.isLineBreak(c)) {
                     i++;
                     continue;
                 }
@@ -843,12 +843,13 @@ public final class PasswordTextBoxImpl extends BuiltInComposite<PasswordTextBox>
             if (clipboard.isEmpty()) {
                 return;
             }
-            final String text = TextBoxImpl.sanitize(clipboard.get());
+            final String text = FieldText.withoutLineBreaks(clipboard.get());
             if (text.isEmpty()) {
                 return;
             }
             // Refused whole: a password silently cut short or filtered is worse than none
-            if (box.filter != null && !text.codePoints().allMatch(box.filter)) {
+            if (!text.codePoints().allMatch(FieldText::isTypeable)
+                    || box.filter != null && !text.codePoints().allMatch(box.filter)) {
                 return;
             }
             final int before = box.length();

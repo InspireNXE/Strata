@@ -45,7 +45,7 @@ import java.util.Objects;
  *     a selection and no Shift, Left and Right collapse it to its start or end.</li>
  *     <li>Ctrl+Left and Ctrl+Right move by word; Ctrl+Backspace and Ctrl+Delete delete by word.</li>
  *     <li>Ctrl+A selects all. Ctrl+C copies, Ctrl+X cuts and Ctrl+V pastes, through the host's clipboard. Pasted
- *     line breaks are removed.</li>
+ *     line breaks and other control characters, such as tabs, are removed, as typing never inserts them.</li>
  *     <li>Typing replaces the selection. Text past {@link #maxLength()} is dropped.</li>
  *     <li>A handler for {@link #EDIT} sees the text each edit would produce and may cancel or rewrite it, so a box
  *     can take only digits. {@link #EDITED} reports every change of the text.</li>
@@ -91,8 +91,8 @@ import java.util.Objects;
  * <h2>Text and indexes</h2>
  * <p>Caret and selection indexes count UTF-16 chars, like {@link String} indexes, but never fall inside a surrogate
  * pair: editing works on whole code points. {@link #maxLength()} counts code points. The box holds one line; line
- * breaks given to {@link #setText} or pasted are removed. For a password, use a {@link PasswordTextBox}, which keeps
- * its text out of events, snapshots and the clipboard.</p>
+ * breaks and other control characters given to {@link #setText} or pasted are removed. For a password, use a
+ * {@link PasswordTextBox}, which keeps its text out of events, snapshots and the clipboard.</p>
  *
  * <h2>Events</h2>
  * <ul>
@@ -103,10 +103,10 @@ import java.util.Objects;
  *     pasting, unless {@code MODIFY} was canceled. The value is the whole text the edit would produce. While handlers
  *     run, the box still holds the text and selection from before the edit. Cancel the event to reject the edit and
  *     keep the text and selection as they were, or set another text to rewrite it; the value must not be set to null.
- *     The final text has its line breaks removed and is cut to {@link #maxLength()} before it applies, and the caret
- *     goes as many characters before its end as the edit left it, with nothing selected. An edit that would leave the
- *     text as it is, such as typing into a full box, fires nothing, and a read-only box fires nothing. Fires only for
- *     the user's actions: {@link #setText} and {@link #setMaxLength} fire none.</li>
+ *     The final text has its line breaks and control characters removed and is cut to {@link #maxLength()} before
+ *     it applies, and the caret goes as many characters before its end as the edit left it, with nothing selected. An
+ *     edit that would leave the text as it is, such as typing into a full box, fires nothing, and a read-only box
+ *     fires nothing. Fires only for the user's actions: {@link #setText} and {@link #setMaxLength} fire none.</li>
  *     <li>{@link TextInput#EDITED}: Fired after the text changed: by an edit of the user's, by {@link #setText}, or by
  *     {@link #setMaxLength} cutting it. The value is the new text and {@code previous()} the text before; neither is
  *     null. An edit whose final text equals the old one fires nothing.</li>
@@ -300,8 +300,9 @@ public interface TextBox extends Component<TextBox>, Focusable<TextBox>, HasCurs
     String text();
 
     /**
-     * Replaces the text, removing line breaks and cutting it to {@link #maxLength()}, and puts the caret at the
-     * end. {@link #EDITED} fires if the result differs from the current text; {@link #EDIT} does not.
+     * Replaces the text, removing line breaks and other control characters and cutting it to {@link #maxLength()},
+     * and puts the caret at the end. {@link #EDITED} fires if the result differs from the current text;
+     * {@link #EDIT} does not.
      *
      * @param text the new text
      * @return this box
@@ -492,7 +493,7 @@ public interface TextBox extends Component<TextBox>, Focusable<TextBox>, HasCurs
      * A completion for the text of a box: the text that replaces a range of the box's text when the user accepts it.
      * The list shows {@link #text()}.
      *
-     * @param text what replaces the range; line breaks are removed when it applies
+     * @param text what replaces the range; line breaks and control characters are removed when it applies
      * @param start the char index where the replaced range starts
      * @param end the char index where the replaced range ends, exclusive; equal to {@code start} to insert
      */

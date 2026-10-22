@@ -178,7 +178,7 @@ final class PlainEdits {
         int maxLength();
 
         /**
-         * Returns text as the field holds it, such as with its line breaks removed.
+         * Returns text as the field holds it, such as with its line breaks and control characters removed.
          */
         String clean(String text);
 

@@ -69,9 +69,9 @@ import java.util.function.IntPredicate;
  *     <li>Every code point draws as the {@linkplain #setMaskCodePoint mask}. The caret and the selection sit on the
  *     mask glyphs. The placeholder is not masked.</li>
  *     <li>Ctrl+C and Ctrl+X do nothing, read-only or not, revealed or not.</li>
- *     <li>Ctrl+V pastes with line breaks removed. A paste that the length limit or the
- *     {@linkplain #setCodePointFilter code point filter} would change is refused whole, since a password silently cut
- *     short is worse than none.</li>
+ *     <li>Ctrl+V pastes with line breaks removed. A paste that still holds a control character, such as a tab, or
+ *     that the length limit or the {@linkplain #setCodePointFilter code point filter} would change is refused whole,
+ *     since a password silently cut short is worse than none.</li>
  *     <li>Ctrl+Left, Ctrl+Right, Ctrl+Backspace and Ctrl+Delete treat the whole text as one word, and a double click
  *     selects everything, so the caret does not show where spaces are.</li>
  *     <li>Typed characters are consumed while the box has focus, read-only included, so they stop at the box and do

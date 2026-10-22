@@ -69,7 +69,8 @@ import java.util.function.UnaryOperator;
  *
  * <p>Every user edit that would change the text fires {@link TextBox#MODIFY} and then {@link TextBox#EDIT} when a
  * handler for either is on its path. While the handlers run the box still holds the text and selection from before
- * the edit; a canceled {@code MODIFY} ends the edit there. The final text then has its line breaks dropped, is cut to
+ * the edit; a canceled {@code MODIFY} ends the edit there. The final text then has its line breaks and other control
+ * characters dropped, is cut to
  * the length limit and goes through the internal filter, and the caret goes as many characters from its end as the
  * edit left it, with nothing selected. With neither handler on the path the edit applies directly, without putting
  * the old text back first. Every change reports {@link TextBox#EDITED} and then {@link TextBox#MODIFIED}. Enter fires
@@ -207,7 +208,8 @@ public final class TextBoxImpl extends BuiltInComponent<TextBox> implements Text
 
     @Override
     public TextBox setText(final String text) {
-        final String clean = PlainEdits.truncate(sanitize(Objects.requireNonNull(text, "text")), this.maxLength);
+        final String clean = PlainEdits.truncate(FieldText.singleLine(Objects.requireNonNull(text, "text")),
+                this.maxLength);
         if (!this.buffer.contentEquals(clean)) {
             final String previous = this.buffer.toString();
             this.buffer.set(clean);
@@ -309,7 +311,8 @@ public final class TextBoxImpl extends BuiltInComponent<TextBox> implements Text
      * Sets a filter for the parts of Strata that hold a box privately, such as a spinner's field. After an edit's
      * {@link TextBox#EDIT} handlers, the filter gets the text the edit produced and returns the text to keep: the
      * same string to accept it, another string to replace it, or {@code null} to reject the edit. Replaced text is
-     * cleaned of line breaks and cut to the length limit, and the caret keeps its distance from the end of the text.
+     * cleaned of line breaks and control characters and cut to the length limit, and the caret keeps its distance
+     * from the end of the text.
      * {@link #setText} is not filtered.
      *
      * @param filter the filter, or {@code null} for none
@@ -495,7 +498,7 @@ public final class TextBoxImpl extends BuiltInComponent<TextBox> implements Text
         final boolean applied;
         this.completing = true;
         try {
-            applied = this.edits.edit(start, end, sanitize(suggestion.text()));
+            applied = this.edits.edit(start, end, FieldText.singleLine(suggestion.text()));
         } finally {
             this.completing = false;
         }
@@ -721,7 +724,7 @@ public final class TextBoxImpl extends BuiltInComponent<TextBox> implements Text
             return;
         }
         final int codePoint = event.codePoint();
-        if (Character.isISOControl(codePoint)) {
+        if (!FieldText.isTypeable(codePoint)) {
             return;
         }
         // Ctrl+Space asks for suggestions; an engine that also types its space must not insert it
@@ -754,13 +757,6 @@ public final class TextBoxImpl extends BuiltInComponent<TextBox> implements Text
 
     private int codePoints() {
         return this.buffer.codePointCount(0, this.buffer.length());
-    }
-
-    /**
-     * Single line only: newlines are dropped, as Wintergreen did for pasted text.
-     */
-    static String sanitize(final String text) {
-        return text.replace("\r", "").replace("\n", "");
     }
 
     @Override
@@ -854,7 +850,7 @@ public final class TextBoxImpl extends BuiltInComponent<TextBox> implements Text
         @Override
         public void paste(final int start, final int end) {
             TextBoxImpl.this.environment().clipboardText()
-                    .map(TextBoxImpl::sanitize)
+                    .map(FieldText::singleLine)
                     .ifPresent(text -> TextBoxImpl.this.edits.edit(start, end, text));
         }
 
@@ -886,7 +882,7 @@ public final class TextBoxImpl extends BuiltInComponent<TextBox> implements Text
 
         @Override
         public String clean(final String text) {
-            return sanitize(text);
+            return FieldText.singleLine(text);
         }
 
         @Override

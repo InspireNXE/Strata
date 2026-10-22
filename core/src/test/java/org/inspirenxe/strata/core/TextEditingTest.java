@@ -17,6 +17,7 @@ package org.inspirenxe.strata.core;
 
 import org.inspirenxe.strata.api.ComponentFactory;
 import org.inspirenxe.strata.api.control.attribute.text.TextInput;
+import org.inspirenxe.strata.api.control.field.PasswordTextBox;
 import org.inspirenxe.strata.api.control.field.TextArea;
 import org.inspirenxe.strata.api.control.field.TextBox;
 import org.inspirenxe.strata.api.input.Key;
@@ -39,6 +40,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
  */
 class TextEditingTest {
     private static final Modifiers ALT = Modifiers.of(Modifier.ALT);
+    private static final Modifiers CONTROL = Modifiers.of(Modifier.CONTROL);
 
     private final TestHost test = new TestHost(300, 200);
     private final ComponentFactory ui = this.test.factory();
@@ -47,6 +49,11 @@ class TextEditingTest {
         final boolean handled = this.test.host().key(key, KeyAction.PRESS, modifiers);
         this.test.host().key(key, KeyAction.RELEASE, modifiers);
         return handled;
+    }
+
+    private void paste(final String text) {
+        this.test.platform().clipboard().set(text);
+        this.press(Key.V, CONTROL);
     }
 
     private void type(final String text) {
@@ -197,6 +204,59 @@ class TextEditingTest {
             assertEquals(9, area.caret(), "Up starts again from the end of the text, past the short row");
             TextEditingTest.this.press(Key.UP, Modifiers.NONE);
             assertEquals(6, area.caret(), "and keeps that column, not the one from before");
+        }
+    }
+
+    @Nested
+    class PastedText {
+
+        @Test
+        void aTextBoxDropsControlCharactersAndEveryLineBreakFromAPaste() {
+            final TextBox box = TextEditingTest.this.showBox("");
+
+            TextEditingTest.this.paste("a\tb\u0000c\u001Bd\ne\u2028f\u0085g");
+
+            assertEquals("abcdefg", box.text());
+        }
+
+        @Test
+        void aTextBoxDropsControlCharactersFromTextSetByCode() {
+            final TextBox box = TextEditingTest.this.showBox("");
+
+            box.setText("one\ttwo\u2029three");
+
+            assertEquals("onetwothree", box.text());
+        }
+
+        @Test
+        void aTextAreaBreaksLinesAtEveryLineSeparatorItIsGiven() {
+            final TextArea area = TextEditingTest.this.showArea("");
+
+            TextEditingTest.this.paste("a\u2028b\u2029c\u0085d\r\ne");
+
+            assertEquals("a\nb\nc\nd\ne", area.text());
+        }
+
+        @Test
+        void aTextAreaKeepsTabsButDropsOtherControlCharacters() {
+            final TextArea area = TextEditingTest.this.showArea("");
+
+            TextEditingTest.this.paste("a\tb\u0000c\u001Bd");
+
+            assertEquals("a\tbcd", area.text());
+        }
+
+        @Test
+        void aPasswordBoxRefusesAPasteWithAControlCharacterWhole() {
+            final PasswordTextBox box = TextEditingTest.this.ui.passwordTextBox().setAnchor(Anchor.TOP_LEFT);
+            TextEditingTest.this.test.show(box);
+            box.requestFocus();
+
+            TextEditingTest.this.paste("pa\tss");
+            assertEquals(0, box.length(), "a tab is never typed, so a password with one is refused");
+
+            TextEditingTest.this.paste("pass\r\n");
+            assertEquals(4, box.length(), "line breaks are still removed");
         }
     }
 }

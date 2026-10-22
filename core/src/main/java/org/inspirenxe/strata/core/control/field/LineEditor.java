@@ -219,9 +219,9 @@ final class LineEditor {
     }
 
     /**
-     * Types a code point over the selection; control characters are ignored.
+     * Types a code point over the selection; control characters and line and paragraph separators are ignored.
      *
-     * @return false for a control character, which the field leaves alone
+     * @return false for a code point the field leaves alone
      */
     boolean type(final int codePoint) {
         return this.editor.type(codePoint);

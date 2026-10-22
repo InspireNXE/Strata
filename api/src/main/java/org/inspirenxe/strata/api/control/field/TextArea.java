@@ -32,7 +32,8 @@ import java.util.Objects;
  * <p>It edits like a {@link TextBox}, with these differences. Enter and keypad Enter insert a new line. Up and Down
  * move the caret a row, keeping its horizontal position across short rows, and Page Up and Page Down move it a
  * page. Home and End go to the start and end of the row, and with Ctrl to the start and end of the text. A triple
- * click selects the line. Pasted text keeps its line breaks, and {@code \r\n} and {@code \r} become {@code \n}.</p>
+ * click selects the line. Pasted text keeps its line breaks and tabs: {@code \r\n} and every other line break, such
+ * as {@code \r} or the line separator U+2028, become {@code \n}, and other control characters are dropped.</p>
  *
  * <p>With wrapping on, which is the default, a line too long for the width breaks after the last space that fits,
  * or between characters when a word alone is too wide. A space where the line breaks stays at the end of the row.
@@ -55,7 +56,8 @@ import java.util.Objects;
  *     cutting or pasting, unless {@code MODIFY} was canceled. The value is the whole text the edit would produce.
  *     While handlers run, the area still holds the text and selection from before the edit. Cancel the event to
  *     reject the edit and keep the text and selection as they were, or set another text to rewrite it; the value must
- *     not be set to null. The final text has its {@code \r\n} and {@code \r} turned into {@code \n} and is cut to
+ *     not be set to null. The final text has its line breaks turned into {@code \n} and its control characters other
+ *     than tabs dropped, as pasted text does, and is cut to
  *     {@link #maxLength()} before it applies, and the caret goes as many characters before its end as the edit left
  *     it, with nothing selected. An edit that would leave the text as it is, such as typing into a full area, fires
  *     nothing, and a read-only area fires nothing. Fires only for the user's actions: {@link #setText} and
@@ -135,7 +137,8 @@ public interface TextArea extends Component<TextArea>, Focusable<TextArea>, HasC
      * Replaces the text, cut to the length limit, puts the caret at its end and scrolls to the top.
      * {@link #EDITED} fires if the text changed; {@link #EDIT} does not.
      *
-     * @param text the new text; {@code \r\n} and {@code \r} become {@code \n}
+     * @param text the new text; its line breaks become {@code \n} and its control characters other than tabs are
+     *     dropped, as pasted text's are
      * @return this text area
      */
     TextArea setText(String text);
