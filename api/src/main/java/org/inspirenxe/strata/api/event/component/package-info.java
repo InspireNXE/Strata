@@ -14,11 +14,12 @@
  * limitations under the License.
  */
 /**
- * The events every component fires about drawing and sizing itself: {@code Component.PAINT},
- * {@code Component.PAINTED} and {@code Component.MEASURED}.
+ * The events every component fires about drawing and sizing itself, {@code Component.PAINT},
+ * {@code Component.PAINTED} and {@code Component.MEASURED}, and about joining and leaving a shown tree,
+ * {@code Component.ATTACHED} and {@code Component.DETACHED}.
  *
- * <p>A component fires them only when it has a handler for them, and reuses one event object for each, so they cost
- * nothing otherwise and allocate nothing per frame. They do not bubble.</p>
+ * <p>A component fires them only when it has a handler for them, so they cost nothing otherwise. The drawing and
+ * sizing events reuse one event object for each and allocate nothing per frame. None of them bubble.</p>
  *
  * <p>Only Strata creates events. Do not implement these interfaces.</p>
  */

@@ -148,4 +148,14 @@ public interface ComponentHooks {
      * @param descendant the component inside this one that gained focus
      */
     void descendantFocused(Component<?> descendant);
+
+    /**
+     * Forwards to {@code CustomComponent.onAttached}.
+     */
+    void attached();
+
+    /**
+     * Forwards to {@code CustomComponent.onDetached}.
+     */
+    void detached();
 }

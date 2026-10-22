@@ -158,10 +158,14 @@ public final class ContainerNode extends Node implements ContainerPeer {
         node.setContent(content);
         node.setPaintSequence(++this.topSequence);
         this.paintOrderValid = false;
-        if (root != null) {
-            root.attachTree(node);
+        try {
+            if (root != null) {
+                root.attachTree(node);
+            }
+        } finally {
+            // The child is in even when an ATTACHED handler threw
+            this.invalidateLayout();
         }
-        this.invalidateLayout();
     }
 
     @Override
@@ -265,12 +269,16 @@ public final class ContainerNode extends Node implements ContainerPeer {
         this.paintOrderValid = false;
         this.hooks().childRemoved(node.facade());
         final Root root = this.root();
-        if (root != null) {
-            root.detachTree(node);
+        try {
+            if (root != null) {
+                root.detachTree(node);
+            }
+        } finally {
+            // The child is out even when a DETACHED or focus handler threw
+            node.setParent(null);
+            node.setContent(false);
+            this.invalidateLayout();
         }
-        node.setParent(null);
-        node.setContent(false);
-        this.invalidateLayout();
     }
 
     @Override

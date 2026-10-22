@@ -314,8 +314,10 @@ public final class Root {
     /**
      * Replaces the tree, closing every overlay and the tooltip first. The theme is checked against every node of the
      * new tree before anything changes, so a theme that lacks a required key fails first. The old tree is detached,
-     * which clears its hover, press and focus state, and then every component in it that the new tree did not take
-     * hears {@link BuiltInComponent#onReleased()}.
+     * which fires its {@link Component#DETACHED} events and clears its hover, press and focus state, the new one is
+     * attached, which fires its {@link Component#ATTACHED} events, and then every component in the old tree that the
+     * new tree did not take hears {@link BuiltInComponent#onReleased()}. A handler that throws on the way does not
+     * stop any of this; its exception is thrown at the end.
      *
      * @param content the new top node, or {@code null} to empty the root
      * @throws IllegalArgumentException if {@code content} is already in a container or another root
@@ -331,18 +333,25 @@ public final class Root {
         this.overlays.closeAll();
         this.closeTooltip();
         this.tooltipPending = null;
-        if (this.content != null) {
-            this.detachTree(this.content);
-        }
         final Node previous = this.content;
-        this.content = content;
-        if (content != null) {
-            this.attachTree(content);
+        // A DETACHED or ATTACHED handler that throws still leaves the new tree in place and the old one released
+        try {
+            if (previous != null) {
+                this.detachTree(previous);
+            }
+        } finally {
+            this.content = content;
+            try {
+                if (content != null) {
+                    this.attachTree(content);
+                }
+            } finally {
+                if (previous != null) {
+                    release(previous);
+                }
+                this.requestLayout();
+            }
         }
-        if (previous != null) {
-            release(previous);
-        }
-        this.requestLayout();
     }
 
     /**
@@ -411,11 +420,41 @@ public final class Root {
         return tops;
     }
 
+    /**
+     * Attaches a subtree: checks the theme, attaches each node, sets the properties of the bindings that joined, and
+     * then runs each node's attach hook and {@link Component#ATTACHED} handlers, parents first. A hook or handler that
+     * throws does not stop the rest of the subtree from hearing it; the first failure is thrown once every node has.
+     */
     void attachTree(final Node subtree) {
         this.validateTheme(this.theme, subtree);
         visit(subtree, node -> node.attach(this));
         this.treeChanged();
         this.evaluateAttachedBindings();
+        final RuntimeException[] failure = new RuntimeException[1];
+        visit(subtree, node -> {
+            if (node.root() == this) {
+                collect(failure, node::fireAttached);
+            }
+        });
+        if (failure[0] != null) {
+            throw failure[0];
+        }
+    }
+
+    /**
+     * Runs an action, keeping the first exception it throws in {@code failure} and adding later ones to it as
+     * suppressed, so a walk over a tree goes on past a failing node.
+     */
+    private static void collect(final RuntimeException[] failure, final Runnable action) {
+        try {
+            action.run();
+        } catch (final RuntimeException e) {
+            if (failure[0] == null) {
+                failure[0] = e;
+            } else {
+                failure[0].addSuppressed(e);
+            }
+        }
     }
 
     /**
@@ -462,27 +501,21 @@ public final class Root {
     }
 
     /**
-     * Detaches a subtree: clears the hover, focus, tooltip and press state that points into it, then detaches each
-     * node. A focus-lost handler that throws does not stop the rest of the subtree from being detached; the first
-     * such failure is thrown once every node is detached.
+     * Detaches a subtree: first runs each node's {@link Component#DETACHED} handlers and detach hook, children first,
+     * while the subtree is still attached, then clears the hover, focus, tooltip and press state that points into it
+     * and detaches each node. A handler, hook or focus-lost handler that throws does not stop the rest of the subtree
+     * from being detached; the first such failure is thrown once every node is detached.
      */
     void detachTree(final Node subtree) {
         final RuntimeException[] failure = new RuntimeException[1];
+        visitChildrenFirst(subtree, node -> collect(failure, node::fireDetached));
         visit(subtree, node -> {
             if (node == this.hovered) {
                 this.hovered = null;
                 this.hoverLive = false;
             }
             if (node == this.focused) {
-                try {
-                    this.changeFocus(null);
-                } catch (final RuntimeException e) {
-                    if (failure[0] == null) {
-                        failure[0] = e;
-                    } else {
-                        failure[0].addSuppressed(e);
-                    }
-                }
+                collect(failure, () -> this.changeFocus(null));
             }
             if (node == this.tooltipOwner) {
                 this.tooltipOwner = null;
@@ -539,6 +572,15 @@ public final class Root {
                 visit(child, action);
             }
         }
+    }
+
+    private static void visitChildrenFirst(final Node node, final Consumer<Node> action) {
+        if (node instanceof ContainerNode container) {
+            for (final Node child : List.copyOf(container.childNodes())) {
+                visitChildrenFirst(child, action);
+            }
+        }
+        action.accept(node);
     }
 
     /**
@@ -1749,13 +1791,19 @@ public final class Root {
         if (node.parentNode() != null || node.root() != null) {
             throw new IllegalArgumentException(content + " is already part of a tree");
         }
+        // Checked first, so a theme that lacks a key opens nothing
+        this.validateTheme(this.theme, node);
         final Layer layer = new Layer(node, anchor, modal, toast, expiresAt);
         // Remember focus before the dialog makes it unfocusable
         layer.previousFocus = modal ? this.focused : null;
-        this.attachTree(node);
-        this.layers.add(layer);
-        this.treeChanged();
-        this.requestLayout();
+        try {
+            this.attachTree(node);
+        } finally {
+            // Open even when an ATTACHED handler threw, so closing it detaches the content again
+            this.layers.add(layer);
+            this.treeChanged();
+            this.requestLayout();
+        }
         if (modal) {
             this.layout();
             final List<Node> order = this.tabOrder();

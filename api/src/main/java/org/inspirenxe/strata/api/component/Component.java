@@ -17,6 +17,8 @@ package org.inspirenxe.strata.api.component;
 
 import org.inspirenxe.strata.api.event.EventTarget;
 import org.inspirenxe.strata.api.event.EventType;
+import org.inspirenxe.strata.api.event.Subscription;
+import org.inspirenxe.strata.api.event.component.LifecycleEvent;
 import org.inspirenxe.strata.api.event.component.MeasureEvent;
 import org.inspirenxe.strata.api.event.component.PaintEvent;
 import org.inspirenxe.strata.api.geometry.Insets;
@@ -28,7 +30,9 @@ import org.inspirenxe.strata.api.state.PropertyKey;
 import org.inspirenxe.strata.api.state.Source;
 import org.inspirenxe.strata.api.state.State;
 
+import java.util.Objects;
 import java.util.Optional;
+import java.util.function.Supplier;
 
 /**
  * An element of a Strata UI tree.
@@ -100,6 +104,24 @@ public interface Component<T extends Component<T>> extends EventTarget<T>, Enabl
     EventType<MeasureEvent> MEASURED = EventType.direct("measured", MeasureEvent.class);
 
     /**
+     * Fired when the component joins a tree a host is showing: when it is added to an attached container or
+     * composite, when it is in a screen's tree as the screen opens or is rebuilt, and when it is in an overlay's
+     * content as the overlay opens. Every component of the subtree that joins hears it, each parent before its
+     * children, once the subtree's {@linkplain #bind bindings} have set their properties. A kept component that joins
+     * again, such as a page a navigation view shows again, hears it again. See {@link LifecycleEvent}.
+     */
+    EventType<LifecycleEvent> ATTACHED = EventType.direct("attached", LifecycleEvent.class);
+
+    /**
+     * Fired when the component leaves a tree a host is showing: when it or an ancestor is removed from an attached
+     * container or composite, as an expander does with its content when it collapses and a navigation view with the
+     * page it stops showing, when its overlay closes, and when its screen closes or is rebuilt. Every component of the
+     * subtree that leaves hears it, children before their parent, while it is still attached and before its bindings
+     * stop. See {@link LifecycleEvent}.
+     */
+    EventType<LifecycleEvent> DETACHED = EventType.direct("detached", LifecycleEvent.class);
+
+    /**
      * Whether the component is enabled, as {@link #isEnabled()} and {@link #setEnabled} say. Binds one way.
      */
     PropertyKey<Component<?>, Boolean> ENABLED = PropertyKey.of("component.enabled", Component::isEnabled,
@@ -149,11 +171,50 @@ public interface Component<T extends Component<T>> extends EventTarget<T>, Enabl
 
     /**
      * Returns whether the component is in a tree that a host is showing. Hover, focus and press state only change
-     * while attached, and the theme is only applied once attached.
+     * while attached, and the theme is only applied once attached. {@link #ATTACHED} and {@link #DETACHED} say when
+     * this changes.
      *
      * @return true while attached to a host
      */
     boolean isAttached();
+
+    /**
+     * Runs something for as long as the component is attached, every time it is attached. The supplier is called
+     * when the component is attached, and at once if it is attached now, and the subscription it returns is removed
+     * when the component is detached. A component that is attached again calls the supplier again, so
+     *
+     * <pre>{@code
+     * chart.whileAttached(() -> prices.subscribe(chart::add));
+     * }</pre>
+     *
+     * <p>listens to a feed whenever the chart shows and stops whenever it goes, however often that happens. Each call
+     * adds one more thing to run, and nothing takes it away again; it costs nothing while the component is detached.
+     * The supplier runs from an {@link #ATTACHED} handler and the subscription is removed from a {@link #DETACHED}
+     * handler, both at the default priority.</p>
+     *
+     * @param start starts what to run and returns how to stop it; must not return null
+     * @return this component
+     * @throws NullPointerException if {@code start} returns null
+     */
+    default T whileAttached(final Supplier<? extends Subscription> start) {
+        Objects.requireNonNull(start, "start");
+        final Subscription[] running = new Subscription[1];
+        if (this.isAttached()) {
+            running[0] = Objects.requireNonNull(start.get(), "start returned null");
+        }
+        this.onEvent(DETACHED, event -> {
+            final Subscription stop = running[0];
+            running[0] = null;
+            if (stop != null) {
+                stop.unsubscribe();
+            }
+        });
+        return this.onEvent(ATTACHED, event -> {
+            if (running[0] == null) {
+                running[0] = Objects.requireNonNull(start.get(), "start returned null");
+            }
+        });
+    }
 
     // State
 

@@ -152,6 +152,16 @@ interface NodeHooks {
     void descendantFocused(Component<?> descendant);
 
     /**
+     * Tells the component it joined a tree a host is showing, before its {@code ATTACHED} handlers run.
+     */
+    void attached();
+
+    /**
+     * Tells the component it is leaving a tree a host is showing, after its {@code DETACHED} handlers ran.
+     */
+    void detached();
+
+    /**
      * Tells the component that its own enabled flag changed, either way, not through an ancestor. Runs after the
      * tree took the change and before {@link #disabled()}.
      */

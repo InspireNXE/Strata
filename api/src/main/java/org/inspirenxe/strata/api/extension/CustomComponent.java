@@ -59,6 +59,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.function.Consumer;
+import java.util.function.Supplier;
 
 /**
  * Base class for new kinds of component. Strata's own controls are not built on it, so a component that is an
@@ -265,6 +266,24 @@ public abstract class CustomComponent<T extends Component<T>> implements Compone
      * @param theme the host's theme, with the text style patches of the containers around the component applied
      */
     protected void onApplyTheme(final Theme theme) {
+    }
+
+    /**
+     * Called when the component joins a tree a host is showing, every time it does, as {@link Component#ATTACHED}
+     * describes: after {@link #onApplyTheme} and after its bindings set their properties, and before its
+     * {@code ATTACHED} handlers. Start what the component needs only while it shows here, such as a subscription to a
+     * feed, and stop it in {@link #onDetached()}. A composite's private parts are attached after it. The default does
+     * nothing.
+     */
+    protected void onAttached() {
+    }
+
+    /**
+     * Called when the component leaves a tree a host is showing, every time it does, as {@link Component#DETACHED}
+     * describes: after its {@code DETACHED} handlers, while it is still attached and before its bindings stop. A
+     * composite's private parts are detached before it. The default does nothing.
+     */
+    protected void onDetached() {
     }
 
     /**
@@ -560,6 +579,16 @@ public abstract class CustomComponent<T extends Component<T>> implements Compone
         public void descendantFocused(final Component<?> descendant) {
             CustomComponent.this.descendantFocusedHook(descendant);
         }
+
+        @Override
+        public void attached() {
+            CustomComponent.this.onAttached();
+        }
+
+        @Override
+        public void detached() {
+            CustomComponent.this.onDetached();
+        }
     }
 
     // ------------------------------------------------------------------
@@ -584,6 +613,11 @@ public abstract class CustomComponent<T extends Component<T>> implements Compone
     @Override
     public final boolean isAttached() {
         return this.peer.isAttached();
+    }
+
+    @Override
+    public final T whileAttached(final Supplier<? extends Subscription> start) {
+        return Component.super.whileAttached(start);
     }
 
     @Override

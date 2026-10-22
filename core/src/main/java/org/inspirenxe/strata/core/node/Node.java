@@ -50,6 +50,7 @@ import org.inspirenxe.strata.core.event.ControlEventImpl;
 import org.inspirenxe.strata.core.event.EventDispatcher;
 import org.inspirenxe.strata.core.event.EventImpl;
 import org.inspirenxe.strata.core.event.EventRouter;
+import org.inspirenxe.strata.core.event.LifecycleEventImpl;
 import org.inspirenxe.strata.core.event.MeasureEventImpl;
 import org.inspirenxe.strata.core.event.PaintEventImpl;
 import org.inspirenxe.strata.core.event.RequestEventImpl;
@@ -95,6 +96,8 @@ public class Node implements ComponentPeer {
 
     private ContainerNode parent;
     private Root root;
+    // Whether the attach hook and ATTACHED ran since the last detach, so attach and detach always come in pairs
+    private boolean attachedFired;
     private EventDispatcher dispatcher;
     // By key name, made on the first bind
     private Map<String, Binding<?>> bindings;
@@ -909,6 +912,49 @@ public class Node implements ComponentPeer {
                 binding.attach(root.bindingQueue());
                 root.bindingAttached(binding);
             }
+        }
+    }
+
+    /**
+     * Runs the component's attach hook and then its {@link Component#ATTACHED} handlers, if it has any. Does nothing
+     * while the node is detached, or if this already ran since the node was last {@linkplain #fireDetached()
+     * detached}, so a subtree that a binding attached during another attach hears it once. {@link Root} calls this for
+     * each node of a subtree it attached, parents first, after the bindings set their properties.
+     */
+    final void fireAttached() {
+        if (this.root == null || this.attachedFired) {
+            return;
+        }
+        this.attachedFired = true;
+        this.hooks.attached();
+        final EventDispatcher handlers = this.dispatcher;
+        if (handlers != null && handlers.hasHandlers(Component.ATTACHED)) {
+            final LifecycleEventImpl event = new LifecycleEventImpl(this.facade);
+            event.setCauses(this.ui.causes());
+            handlers.fire(Component.ATTACHED, event);
+        }
+    }
+
+    /**
+     * Runs the component's {@link Component#DETACHED} handlers, if it has any, and then its detach hook, which runs
+     * even if a handler throws. Does nothing unless {@link #fireAttached()} ran since the last time, so every detach a
+     * component hears follows an attach it heard. {@link Root} calls this for each node of a subtree it is about to
+     * detach, children first, while the node is still attached.
+     */
+    final void fireDetached() {
+        if (!this.attachedFired) {
+            return;
+        }
+        this.attachedFired = false;
+        try {
+            final EventDispatcher handlers = this.dispatcher;
+            if (handlers != null && handlers.hasHandlers(Component.DETACHED)) {
+                final LifecycleEventImpl event = new LifecycleEventImpl(this.facade);
+                event.setCauses(this.ui.causes());
+                handlers.fire(Component.DETACHED, event);
+            }
+        } finally {
+            this.hooks.detached();
         }
     }
 

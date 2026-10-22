@@ -58,6 +58,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.function.Consumer;
+import java.util.function.Supplier;
 
 /**
  * Base class of Strata's own leaf controls, the counterpart of the public
@@ -239,6 +240,22 @@ public abstract class BuiltInComponent<T extends Component<T>> implements Compon
      * @param theme the host's theme, with the text style patches of the containers around the component applied
      */
     protected void onApplyTheme(final Theme theme) {
+    }
+
+    /**
+     * Called when the component joins a tree a host is showing, every time it does, as
+     * {@code CustomComponent.onAttached} is: after the theme is applied and the bindings set their properties, and
+     * before its {@code ATTACHED} handlers. The default does nothing.
+     */
+    protected void onAttached() {
+    }
+
+    /**
+     * Called when the component leaves a tree a host is showing, every time it does, as
+     * {@code CustomComponent.onDetached} is: after its {@code DETACHED} handlers, while it is still attached. Unlike
+     * {@link #onReleased()}, it runs for a kept component too, which may be attached again. The default does nothing.
+     */
+    protected void onDetached() {
     }
 
     /**
@@ -557,6 +574,16 @@ public abstract class BuiltInComponent<T extends Component<T>> implements Compon
         }
 
         @Override
+        public void attached() {
+            BuiltInComponent.this.onAttached();
+        }
+
+        @Override
+        public void detached() {
+            BuiltInComponent.this.onDetached();
+        }
+
+        @Override
         public void enabledChanged() {
             BuiltInComponent.this.onEnabledChanged();
         }
@@ -599,6 +626,11 @@ public abstract class BuiltInComponent<T extends Component<T>> implements Compon
     @Override
     public final boolean isAttached() {
         return this.node.isAttached();
+    }
+
+    @Override
+    public final T whileAttached(final Supplier<? extends Subscription> start) {
+        return Component.super.whileAttached(start);
     }
 
     @Override

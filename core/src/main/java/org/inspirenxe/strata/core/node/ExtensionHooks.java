@@ -118,6 +118,16 @@ final class ExtensionHooks implements NodeHooks {
     }
 
     @Override
+    public void attached() {
+        this.hooks.attached();
+    }
+
+    @Override
+    public void detached() {
+        this.hooks.detached();
+    }
+
+    @Override
     public void enabledChanged() {
     }
 
