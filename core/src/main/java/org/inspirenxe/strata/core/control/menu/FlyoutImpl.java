@@ -66,6 +66,8 @@ public final class FlyoutImpl extends BuiltInComposite<Flyout> implements Flyout
     private Component<?> content;
     private boolean lightDismiss;
     private final PopupSession session;
+    // How open() opens: the way it last opened, at an anchor or in an area, or at the pointer before that
+    private Function<Root, Overlay> lastOpener;
 
     // Theme
     private Paint background;
@@ -171,6 +173,7 @@ public final class FlyoutImpl extends BuiltInComposite<Flyout> implements Flyout
             this.ui.overlays();
             return this;
         }
+        this.lastOpener = opener;
         final Component<?> returnFocus = root.focused() == null ? null : root.focused().facade();
         this.session.start(opener.apply(root), returnFocus);
         // Lay the popup out now, so focus and keys find the content before the next frame
@@ -183,6 +186,20 @@ public final class FlyoutImpl extends BuiltInComposite<Flyout> implements Flyout
     @Override
     public Flyout openAt(final float x, final float y) {
         return this.open(new Rect(x, y, 0f, 0f));
+    }
+
+    @Override
+    public Flyout open() {
+        if (this.lastOpener != null) {
+            return this.show(this.lastOpener);
+        }
+        final Root root = this.hostRoot();
+        if (root == null) {
+            // The factory has no host; this throws the same exception any overlay would
+            this.ui.overlays();
+            return this;
+        }
+        return this.openAt(root.pointerX(), root.pointerY());
     }
 
     @Override

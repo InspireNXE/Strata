@@ -41,6 +41,7 @@ import org.inspirenxe.strata.core.control.Rings;
 import org.inspirenxe.strata.core.node.BuiltInComponent;
 import org.inspirenxe.strata.core.node.ComponentFactoryImpl;
 import org.inspirenxe.strata.core.node.Node;
+import org.inspirenxe.strata.core.node.Root;
 import org.inspirenxe.strata.core.text.TextLine;
 
 import java.util.ArrayList;
@@ -93,6 +94,8 @@ public final class MenuImpl extends BuiltInComponent<Menu> implements Menu, Core
     private MenuBarImpl bar;
     // The width of what opened the menu through openBelow, kept until it closes
     private float anchorWidth;
+    // Where open() opens: the anchor of the last time it opened, or the pointer before that
+    private Rect lastAnchor;
     private final PopupSession session;
     private MenuImpl openSubmenu;
     private int highlighted;
@@ -288,6 +291,7 @@ public final class MenuImpl extends BuiltInComponent<Menu> implements Menu, Core
         if (this.isOpen() || this.items.isEmpty()) {
             return this;
         }
+        this.lastAnchor = anchor;
         final Component<?> returnFocus = this.parent == null ? this.focusedComponent() : null;
         this.highlighted = -1;
         this.session.start(this.ui.overlays().popup(this, anchor), returnFocus);
@@ -303,6 +307,20 @@ public final class MenuImpl extends BuiltInComponent<Menu> implements Menu, Core
     @Override
     public Menu openAt(final float x, final float y) {
         return this.open(new Rect(x, y, 0f, 0f));
+    }
+
+    @Override
+    public Menu open() {
+        if (this.lastAnchor != null) {
+            return this.open(this.lastAnchor);
+        }
+        final Root root = this.hostRoot();
+        if (root == null) {
+            // The factory has no host; this throws the same exception any overlay would
+            this.ui.overlays();
+            return this;
+        }
+        return this.openAt(root.pointerX(), root.pointerY());
     }
 
     @Override

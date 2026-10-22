@@ -1113,6 +1113,24 @@ public final class Root {
         }
     }
 
+    /**
+     * Returns where the pointer was last seen, from the last pointer input; 0 before any.
+     *
+     * @return the x in root coordinates
+     */
+    public float pointerX() {
+        return this.pointerX;
+    }
+
+    /**
+     * Returns where the pointer was last seen, from the last pointer input; 0 before any.
+     *
+     * @return the y in root coordinates
+     */
+    public float pointerY() {
+        return this.pointerY;
+    }
+
     private void handlePointerLeft() {
         this.pointerInside = false;
         if (this.hovered != null) {

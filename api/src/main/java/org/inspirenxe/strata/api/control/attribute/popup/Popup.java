@@ -22,7 +22,8 @@ import org.inspirenxe.strata.api.geometry.Rect;
  * {@link org.inspirenxe.strata.api.control.menu.Menu} or a {@link org.inspirenxe.strata.api.control.menu.Flyout}. A
  * {@link org.inspirenxe.strata.api.control.button.DropDownButton} opens any popup below itself.
  *
- * <p>A popup is opened with {@link #open(Rect)} or {@link #openAt(float, float)}, never added to a container. While
+ * <p>A popup is opened with {@link #open(Rect)}, {@link #openAt(float, float)} or {@link #open()}, never added to a
+ * container. While
  * open it is the whole content of a popup overlay (see {@link org.inspirenxe.strata.api.overlay.Overlays#popup}),
  * so it has no parent and its events reach only the handlers registered on it, not the screen behind it.</p>
  *
@@ -59,6 +60,18 @@ public interface Popup<S extends Popup<S>> extends Openable<S> {
      * @throws IllegalStateException if the factory's host has no screen yet
      */
     S openAt(float x, float y);
+
+    /**
+     * Opens the popup where it last opened: at the rectangle or point of its last {@link #open(Rect)} or
+     * {@link #openAt(float, float)}, or wherever else its kind last opened it, such as a flyout's area. A popup that
+     * never opened opens at the pointer, as {@code openAt} would at the pointer's position. Does nothing if it is
+     * already open or has nothing to show.
+     *
+     * @return this popup
+     * @throws IllegalStateException if the factory's host has no screen yet
+     */
+    @Override
+    S open();
 
     /**
      * Closes the popup and reports {@link Closable#CLOSED}. Does nothing if it is not open.
