@@ -158,6 +158,23 @@ public interface Canvas {
     void text(TextSpan span, float x, float y);
 
     /**
+     * Draws one run of text with a direction, with the top-left corner of its line box at the given point. Core calls
+     * this only when the platform's {@link Capabilities#shapesRightToLeft()} is true, and only for a run that the
+     * bidirectional algorithm put right to left: the span then holds the run in logical order, and the engine must
+     * order and shape it right to left, joining letters where the script does, and draw it as wide as
+     * {@link org.inspirenxe.strata.api.text.TextMetrics#width} measures the span. Left-to-right runs still come
+     * through {@link #text(TextSpan, float, float)}. The span holds no line breaks and no inline element.
+     *
+     * @param span the run's text, in logical order, and its style
+     * @param x the run's left edge
+     * @param y the top of the line box (not the baseline)
+     * @param rightToLeft true for a run that reads right to left
+     */
+    default void text(final TextSpan span, final float x, final float y, final boolean rightToLeft) {
+        this.text(span, x, y);
+    }
+
+    /**
      * Limits drawing to a rectangle, intersected with the current clip, until the matching {@link #popClip()}.
      *
      * @param rect the area drawing is limited to, in the current transform

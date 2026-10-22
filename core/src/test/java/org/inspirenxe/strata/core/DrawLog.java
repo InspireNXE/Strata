@@ -34,7 +34,7 @@ import java.util.Locale;
  * the opacities.
  * Clips, layers and cursor requests are left out. Numbers print without a fraction when they are whole.
  */
-public final class DrawLog implements Canvas {
+public class DrawLog implements Canvas {
     private final List<String> lines = new ArrayList<>();
     private final List<TextStyle> textStyles = new ArrayList<>();
 

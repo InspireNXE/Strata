@@ -74,6 +74,7 @@ public final class CanvasPainter implements Painter {
     private Canvas canvas;
     private boolean slicesSprites;
     private boolean drawsShapes;
+    private boolean shapesRightToLeft;
     // Device pixels per unit of the host, and the product of the scales in progress
     private float pixelsPerUnit = 1f;
     private float scale = 1f;
@@ -128,7 +129,9 @@ public final class CanvasPainter implements Painter {
      * @return this painter
      */
     public CanvasPainter begin(final Canvas canvas, final Capabilities capabilities, final float pixelsPerUnit) {
-        return this.begin(canvas, capabilities.slicesSprites(), capabilities.drawsShapes(), pixelsPerUnit);
+        this.begin(canvas, capabilities.slicesSprites(), capabilities.drawsShapes(), pixelsPerUnit);
+        this.shapesRightToLeft = capabilities.shapesRightToLeft();
+        return this;
     }
 
     private CanvasPainter begin(final Canvas canvas, final boolean slicesSprites, final boolean drawsShapes,
@@ -136,6 +139,7 @@ public final class CanvasPainter implements Painter {
         this.canvas = canvas;
         this.slicesSprites = slicesSprites;
         this.drawsShapes = drawsShapes;
+        this.shapesRightToLeft = false;
         this.pixelsPerUnit = pixelsPerUnit;
         this.scale = 1f;
         this.fallback.begin(canvas);
@@ -512,6 +516,24 @@ public final class CanvasPainter implements Painter {
     private static void checkSize(final Size size) {
         if (!(size.width() > 0f) || !(size.height() > 0f)) {
             throw new IllegalArgumentException("Sprite size must be positive: " + size);
+        }
+    }
+
+    /**
+     * Draws a run the bidirectional algorithm put right to left: in logical order with its direction to an engine
+     * that {@linkplain Capabilities#shapesRightToLeft() shapes right-to-left text}, or else the reversed span as plain
+     * text.
+     *
+     * @param logical the run in logical order
+     * @param reversed the run with its characters reversed and its brackets mirrored
+     * @param x the run's left edge
+     * @param y the top of its line box
+     */
+    public void rightToLeftText(final TextSpan logical, final TextSpan reversed, final float x, final float y) {
+        if (this.shapesRightToLeft) {
+            this.canvas.text(logical, x, y, true);
+        } else {
+            this.canvas.text(reversed, x, y);
         }
     }
 

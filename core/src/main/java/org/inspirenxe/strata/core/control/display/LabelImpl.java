@@ -15,6 +15,7 @@
  */
 package org.inspirenxe.strata.core.control.display;
 
+import org.inspirenxe.strata.core.text.BidiRuns;
 import org.inspirenxe.strata.api.control.display.Label;
 import org.inspirenxe.strata.api.extension.MeasureContext;
 import org.inspirenxe.strata.api.extension.Painter;
@@ -76,8 +77,13 @@ public final class LabelImpl extends BuiltInComponent<Label> implements Label, M
     // The height of the characters, which each line is at least as tall as
     private float lineHeight;
 
-    // Shortened lines for the last bounds width
+    // Each line in drawing order, by the bidirectional algorithm, and the direction they were ordered for
+    private final List<BidiRuns> lineRuns = new ArrayList<>();
+    private boolean runsRightToLeft;
+
+    // Shortened lines for the last bounds width, and each in drawing order
     private final List<List<TextSpan>> shownLines;
+    private final List<BidiRuns> shownRuns = new ArrayList<>();
     private final List<Float> shownWidths;
     private float shownForWidth;
 
@@ -298,12 +304,17 @@ public final class LabelImpl extends BuiltInComponent<Label> implements Label, M
         final float maxWidth = this.wrap ? availableWidth / this.textScale : Float.POSITIVE_INFINITY;
 
         this.lines.clear();
+        this.lineRuns.clear();
         this.lineWidths.clear();
         this.shownForWidth = Float.NaN;
+        // The label's direction is each line's paragraph direction
+        final boolean rightToLeft = this.isRightToLeft();
+        this.runsRightToLeft = rightToLeft;
         float width = 0f;
         for (final List<TextSpan> line : RichText.wrap(runs, maxWidth, metrics)) {
             final float lineWidth = RichText.width(line, metrics);
             this.lines.add(line);
+            this.lineRuns.add(BidiRuns.of(line, rightToLeft));
             this.lineWidths.add(lineWidth);
             width = Math.max(width, lineWidth);
         }
@@ -356,15 +367,18 @@ public final class LabelImpl extends BuiltInComponent<Label> implements Label, M
     private void shorten(final float width) {
         final TextMetrics metrics = this.environment().text();
         this.shownLines.clear();
+        this.shownRuns.clear();
         this.shownWidths.clear();
         for (int i = 0; i < this.lines.size(); i++) {
             final List<TextSpan> line = this.lines.get(i);
             if (this.lineWidths.get(i) <= width) {
                 this.shownLines.add(line);
+                this.shownRuns.add(this.lineRuns.get(i));
                 this.shownWidths.add(this.lineWidths.get(i));
             } else {
                 final List<TextSpan> shortened = RichText.ellipsize(line, width, metrics);
                 this.shownLines.add(shortened);
+                this.shownRuns.add(BidiRuns.of(shortened, this.runsRightToLeft));
                 this.shownWidths.add(RichText.width(shortened, metrics));
             }
         }
@@ -376,7 +390,7 @@ public final class LabelImpl extends BuiltInComponent<Label> implements Label, M
      */
     private void drawLines() {
         final boolean shortened = this.overflow == TextOverflow.ELLIPSIS;
-        final List<List<TextSpan>> shown = shortened ? this.shownLines : this.lines;
+        final List<BidiRuns> shown = shortened ? this.shownRuns : this.lineRuns;
         final List<Float> widths = shortened ? this.shownWidths : this.lineWidths;
         final float scale = this.textScale;
         final float left = this.paintBounds.x() / scale;

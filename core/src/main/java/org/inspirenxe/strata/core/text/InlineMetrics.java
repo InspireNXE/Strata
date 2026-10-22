@@ -130,9 +130,34 @@ public final class InlineMetrics implements TextMetrics {
     }
 
     /**
-     * Draws a line of spans from left to right, each centered on the line: characters by the line's text height, so
-     * spans of different styles keep a shared top as they do without elements, and each element by its own height.
-     * Allocates nothing for spans that are not elements.
+     * Draws a line of spans in the order the bidirectional algorithm gives, each centered on the line: characters by
+     * the line's text height, so spans of different styles keep a shared top as they do without elements, and each
+     * element by its own height. Allocates nothing for spans that are not elements.
+     *
+     * @param painter the painter
+     * @param runs the line, in drawing order
+     * @param x the left edge
+     * @param y the top of the line
+     * @param lineHeight the line's height, from {@link #lineHeight(List, TextStyle)} or taller
+     * @param textHeight the line's text height, from {@link #textHeight}
+     */
+    public void draw(final Painter painter, final BidiRuns runs, final float x, final float y,
+                     final float lineHeight, final float textHeight) {
+        final List<TextSpan> spans = runs.spans();
+        final float textTop = y + (lineHeight - textHeight) * 0.5f;
+        float left = x;
+        for (int i = 0; i < spans.size(); i++) {
+            final TextSpan span = spans.get(i);
+            runs.draw(painter, i, left, span.element() == null ? textTop : y + (lineHeight - this.height(span)) * 0.5f);
+            if (i + 1 < spans.size()) {
+                left += this.width(span);
+            }
+        }
+    }
+
+    /**
+     * Draws a line of spans that is already in drawing order, as {@link #draw(Painter, BidiRuns, float, float, float,
+     * float)} draws one, with every span left to right.
      *
      * @param painter the painter
      * @param spans the line

@@ -25,17 +25,21 @@ import java.util.List;
 
 /**
  * One line of resolved text, measured once so it can be drawn without allocating. Controls make one per caption
- * during measure and draw it during paint. Line breaks are not honored; the spans are drawn one after another. A
- * line that holds inline elements is tall enough for them, and each span is centered on it as
- * {@link InlineMetrics#draw} centers them.
+ * during measure and draw it during paint. Line breaks are not honored; the spans are drawn one after another, in the
+ * visual order the bidirectional algorithm gives through {@link BidiRuns}. A line that holds inline elements is tall
+ * enough for them, and each span is centered on it as {@link InlineMetrics#draw} centers them.
  */
 public final class TextLine {
     /**
      * A line with no text and no height.
      */
-    public static final TextLine EMPTY = new TextLine(List.of(), new float[0], new float[0], 0f, 0f, Float.NaN);
+    public static final TextLine EMPTY = new TextLine(List.of(), BidiRuns.of(List.of(), null), null, new float[0],
+            new float[0], 0f, 0f, Float.NaN);
 
     private final List<TextSpan> spans;
+    // The spans in drawing order, and the paragraph direction they were ordered in
+    private final BidiRuns runs;
+    private final Boolean paragraph;
     private final float[] offsets;
     // How far below the line's top each span is drawn
     private final float[] tops;
@@ -43,9 +47,11 @@ public final class TextLine {
     private final float height;
     private final float baseline;
 
-    private TextLine(final List<TextSpan> spans, final float[] offsets, final float[] tops, final float width,
-                     final float height, final float baseline) {
+    private TextLine(final List<TextSpan> spans, final BidiRuns runs, final Boolean paragraph, final float[] offsets,
+                     final float[] tops, final float width, final float height, final float baseline) {
         this.spans = spans;
+        this.runs = runs;
+        this.paragraph = paragraph;
         this.offsets = offsets;
         this.tops = tops;
         this.width = width;
@@ -66,6 +72,20 @@ public final class TextLine {
     }
 
     /**
+     * Resolves text and measures it, ordering it for a paragraph of a known direction.
+     *
+     * @param text the text
+     * @param base the style plain parts are drawn in
+     * @param metrics the engine's text metrics
+     * @param rightToLeft true when the control that draws the line runs right to left
+     * @return the line
+     */
+    public static TextLine of(final Text text, final TextStyle base, final TextMetrics metrics,
+                              final boolean rightToLeft) {
+        return TextLine.of(text.resolve(base), base, metrics, rightToLeft);
+    }
+
+    /**
      * Measures spans that are already resolved.
      *
      * @param spans the spans
@@ -74,6 +94,30 @@ public final class TextLine {
      * @return the line
      */
     public static TextLine of(final List<TextSpan> spans, final TextStyle base, final TextMetrics metrics) {
+        return TextLine.of(spans, base, metrics, (Boolean) null);
+    }
+
+    /**
+     * Measures spans that are already resolved, ordering them for a paragraph of a known direction.
+     *
+     * @param spans the spans, in reading order
+     * @param base the style whose line height the line is at least as tall as
+     * @param metrics the engine's text metrics
+     * @param rightToLeft true when the control that draws the line runs right to left
+     * @return the line
+     */
+    public static TextLine of(final List<TextSpan> spans, final TextStyle base, final TextMetrics metrics,
+                              final boolean rightToLeft) {
+        return TextLine.of(spans, base, metrics, Boolean.valueOf(rightToLeft));
+    }
+
+    /**
+     * Measures spans for a paragraph whose direction is given, or follows its first letter that has one when null.
+     */
+    private static TextLine of(final List<TextSpan> logical, final TextStyle base, final TextMetrics metrics,
+                               final Boolean paragraph) {
+        final BidiRuns runs = BidiRuns.of(logical, paragraph);
+        final List<TextSpan> spans = runs.spans();
         final InlineMetrics inline = InlineMetrics.of(metrics);
         final float textHeight = inline.textHeight(spans, base);
         final float height = inline.lineHeight(spans, base);
@@ -87,13 +131,13 @@ public final class TextLine {
             x += inline.width(span);
         }
         final float baseline = (height - textHeight) * 0.5f + inline.ascent(base);
-        return new TextLine(List.copyOf(spans), offsets, tops, x, height, baseline);
+        return new TextLine(List.copyOf(logical), runs, paragraph, offsets, tops, x, height, baseline);
     }
 
     /**
      * Returns the spans.
      *
-     * @return the spans, in drawing order
+     * @return the spans, in reading order
      */
     public List<TextSpan> spans() {
         return this.spans;
@@ -149,7 +193,7 @@ public final class TextLine {
         if (this.width <= maxWidth) {
             return this;
         }
-        return TextLine.of(RichText.ellipsize(this.spans, maxWidth, metrics), base, metrics);
+        return TextLine.of(RichText.ellipsize(this.spans, maxWidth, metrics), base, metrics, this.paragraph);
     }
 
     /**
@@ -161,7 +205,7 @@ public final class TextLine {
      */
     public void draw(final Painter painter, final float x, final float y) {
         for (int i = 0; i < this.offsets.length; i++) {
-            painter.text(this.spans.get(i), x + this.offsets[i], y + this.tops[i]);
+            this.runs.draw(painter, i, x + this.offsets[i], y + this.tops[i]);
         }
     }
 }
