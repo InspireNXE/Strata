@@ -48,6 +48,7 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -394,6 +395,16 @@ class ButtonPaneEventsTest {
         }
 
         @Test
+        void contentItCannotTakeLeavesTheOldContent() {
+            this.show();
+            this.expander.setExpanded(true);
+            final Component<?> inside = this.expander.content();
+            assertThrows(IllegalArgumentException.class, () -> this.expander.setContent(this.form));
+            assertSame(inside, this.expander.content());
+            assertSame(this.expander, inside.parent());
+        }
+
+        @Test
         void cancelingLeavesItCollapsed() {
             this.show();
             this.expander.onEvent(Expander.EXPAND, event -> event.cancel());
@@ -581,6 +592,33 @@ class ButtonPaneEventsTest {
             this.drag(182, 300);
             assertEquals(List.of(0.9f), this.requests);
             assertEquals(List.of("0.5->0.9"), this.heard);
+        }
+
+        @Test
+        void aSideItCannotTakeLeavesTheOldSide() {
+            this.show();
+            final Component<?> first = this.split.first();
+            assertThrows(IllegalArgumentException.class, () -> this.split.setFirst(this.form));
+            assertSame(first, this.split.first());
+            assertSame(this.split, first.parent());
+        }
+
+        @Test
+        void aPositionFromALengthGivesTheFirstSideThatLength() {
+            this.show();
+            final List<String> missed = new ArrayList<>();
+            for (int width = 300; width <= 420; width++) {
+                this.split.setWidth(width);
+                final float space = width - SplitPane.DIVIDER_SIZE;
+                for (int length = 0; length <= space; length++) {
+                    this.split.setPosition(length / space);
+                    ButtonPaneEventsTest.this.test.host().layout();
+                    if (this.split.first().bounds().width() != length) {
+                        missed.add(width + ":" + length);
+                    }
+                }
+            }
+            assertEquals(List.of(), missed);
         }
 
         @Test

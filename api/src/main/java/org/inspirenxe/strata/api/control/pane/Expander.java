@@ -131,7 +131,8 @@ public interface Expander extends Component<Expander>, Focusable<Expander>, HasC
      *
      * @param content the component to show below the header, or null for none; it must not have a parent
      * @return this expander
-     * @throws IllegalArgumentException if {@code content} already has a parent
+     * @throws IllegalArgumentException if {@code content} already has a parent, is a host's content, or is this
+     *     expander or one of its ancestors; the expander is left as it was
      */
     Expander setContent(Component<?> content);
 

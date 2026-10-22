@@ -35,6 +35,7 @@ import org.inspirenxe.strata.api.text.TextMetrics;
 import org.inspirenxe.strata.api.text.TextStyle;
 import org.inspirenxe.strata.api.theme.Paint;
 import org.inspirenxe.strata.api.theme.Theme;
+import org.inspirenxe.strata.core.control.Adoption;
 import org.inspirenxe.strata.core.control.Rings;
 import org.inspirenxe.strata.core.node.BuiltInComposite;
 import org.inspirenxe.strata.core.node.ComponentFactoryImpl;
@@ -114,8 +115,11 @@ public final class ExpanderImpl extends BuiltInComposite<Expander> implements Ex
 
     @Override
     public Expander setContent(final Component<?> content) {
-        if (content != null && this.nodeOf(content).parentNode() != null && content != this.content) {
-            throw new IllegalArgumentException(content + " already has a parent");
+        if (content == this.content) {
+            return this;
+        }
+        if (content != null) {
+            Adoption.require(this.node(), this.nodeOf(content));
         }
         if (this.content != null && this.expanded) {
             this.removeChild(this.content);

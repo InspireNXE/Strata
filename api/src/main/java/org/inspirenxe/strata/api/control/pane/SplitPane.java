@@ -124,7 +124,8 @@ public interface SplitPane extends Component<SplitPane>, HasCursor<SplitPane>, H
      *
      * @param first the new component, or null for none; it must not have a parent
      * @return this pane
-     * @throws IllegalArgumentException if {@code first} already has a parent
+     * @throws IllegalArgumentException if {@code first} already has a parent, is a host's content, or is this pane
+     *     or one of its ancestors; the pane is left as it was
      */
     SplitPane setFirst(Component<?> first);
 
@@ -140,7 +141,8 @@ public interface SplitPane extends Component<SplitPane>, HasCursor<SplitPane>, H
      *
      * @param second the new component, or null for none; it must not have a parent
      * @return this pane
-     * @throws IllegalArgumentException if {@code second} already has a parent
+     * @throws IllegalArgumentException if {@code second} already has a parent, is a host's content, or is this pane
+     *     or one of its ancestors; the pane is left as it was
      */
     SplitPane setSecond(Component<?> second);
 

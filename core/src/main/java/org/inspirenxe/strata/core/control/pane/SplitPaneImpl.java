@@ -32,6 +32,7 @@ import org.inspirenxe.strata.api.layout.Anchor;
 import org.inspirenxe.strata.api.layout.Orientation;
 import org.inspirenxe.strata.api.theme.Paint;
 import org.inspirenxe.strata.api.theme.Theme;
+import org.inspirenxe.strata.core.control.Adoption;
 import org.inspirenxe.strata.core.node.BuiltInComponent;
 import org.inspirenxe.strata.core.node.BuiltInComposite;
 import org.inspirenxe.strata.core.node.ComponentFactoryImpl;
@@ -109,14 +110,21 @@ public final class SplitPaneImpl extends BuiltInComposite<SplitPane> implements 
         return this;
     }
 
+    /**
+     * Puts a new side in place of an old one, after checking that the pane can take it, so a side it cannot take
+     * leaves the pane as it was.
+     */
     private Component<?> swap(final Component<?> old, final Component<?> next) {
-        if (next != null && next != old && this.nodeOf(next).parentNode() != null) {
-            throw new IllegalArgumentException(next + " already has a parent");
+        if (next == old) {
+            return next;
         }
-        if (old != null && old != next) {
+        if (next != null) {
+            Adoption.require(this.node(), this.nodeOf(next));
+        }
+        if (old != null) {
             this.removeChild(old);
         }
-        if (next != null && next != old) {
+        if (next != null) {
             this.addContent(next);
         }
         this.invalidateLayout();
@@ -193,6 +201,18 @@ public final class SplitPaneImpl extends BuiltInComposite<SplitPane> implements 
         return Math.max(0f, Math.min(1f, length / this.space));
     }
 
+    /**
+     * Returns the length of the first side for the last arrange's space: the space times the position, rounded down
+     * to a whole unit, except that a product within a thousandth of a unit of a whole number counts as that number.
+     * A position worked out from a length, as a drag does, comes back as that length although the division and the
+     * multiplication in floats may leave the product a hair under it.
+     */
+    private float firstLength() {
+        final double product = (double) this.space * this.position;
+        final double whole = Math.rint(product);
+        return (float) (Math.abs(product - whole) < 1e-3 ? whole : Math.floor(product));
+    }
+
     float firstStart() {
         return this.horizontal() ? this.bounds().x() : this.bounds().y();
     }
@@ -216,7 +236,7 @@ public final class SplitPaneImpl extends BuiltInComposite<SplitPane> implements 
     protected void arrange(final ArrangeContext context, final Rect bounds) {
         final boolean across = this.horizontal();
         this.space = Math.max(0f, (across ? bounds.width() : bounds.height()) - DIVIDER_SIZE);
-        final float firstLength = (float) Math.floor(this.space * this.position);
+        final float firstLength = this.firstLength();
         final Rect firstRect;
         final Rect dividerRect;
         final Rect secondRect;
