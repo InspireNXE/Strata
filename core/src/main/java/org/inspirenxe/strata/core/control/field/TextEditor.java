@@ -492,6 +492,63 @@ final class TextEditor {
         return true;
     }
 
+    // ------------------------------------------------------------------
+    // The default context menu's items, which act as the user and say when they would do something
+    // ------------------------------------------------------------------
+
+    boolean canCut() {
+        return this.hasSelection() && this.host.allowsCopy() && !this.host.isReadOnly();
+    }
+
+    boolean canCopy() {
+        return this.hasSelection() && this.host.allowsCopy();
+    }
+
+    boolean canPaste() {
+        return !this.host.isReadOnly() && this.host.environment().clipboardText().filter(text -> !text.isEmpty())
+                .isPresent();
+    }
+
+    boolean canDelete() {
+        return this.hasSelection() && !this.host.isReadOnly();
+    }
+
+    boolean canSelectAll() {
+        return this.buffer.length() > 0;
+    }
+
+    void cutSelection() {
+        this.cut();
+    }
+
+    void copySelection() {
+        this.copy();
+    }
+
+    void pasteOverSelection() {
+        if (!this.host.isReadOnly()) {
+            this.host.paste(this.selectionStart(), this.selectionEnd());
+        }
+    }
+
+    void deleteSelected() {
+        if (this.canDelete()) {
+            this.deleteSelection();
+        }
+    }
+
+    void selectEverything() {
+        this.host.selectAll();
+    }
+
+    boolean undoEdit() {
+        return this.host.undo();
+    }
+
+    boolean redoEdit() {
+        return this.host.redo();
+    }
+
     private void copy() {
         if (this.hasSelection() && this.host.allowsCopy()) {
             this.host.copy(this.selectionStart(), this.selectionEnd());

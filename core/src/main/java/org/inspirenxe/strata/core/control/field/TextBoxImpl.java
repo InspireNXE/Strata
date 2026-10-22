@@ -211,6 +211,8 @@ public final class TextBoxImpl extends BuiltInComponent<TextBox> implements Text
         this.displaySpans = new TextSpan[0];
         this.displayX = new float[0];
         this.setCursor(CursorKind.TEXT);
+        this.setContextMenu(TextMenus.create(ui, this.editor.editor(), this.editor::settle, this::canUndo,
+                this::canRedo));
         this.setMinSize(20f, 0f);
     }
 

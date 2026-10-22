@@ -133,7 +133,8 @@ class ContextMenuTest {
     @Test
     void theMenuKeyAndShiftF10OpenBelowTheFocusedComponent() {
         final Menu menu = this.menu("edit");
-        final TextBox box = this.ui.textBox();
+        // Without its own default menu, the box shows the panel's
+        final TextBox box = this.ui.textBox().setContextMenu(null);
         final StackPanel panel = this.ui.stackPanel().add(this.ui.button("Above")).add(box);
         panel.setContextMenu(menu);
         this.test.show(panel.setAnchor(Anchor.TOP_LEFT));

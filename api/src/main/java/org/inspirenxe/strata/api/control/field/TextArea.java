@@ -84,6 +84,10 @@ import java.util.Objects;
  *         .onEvent(TextArea.EDITED, event -> item.setNotes(event.value()));
  * }</pre>
  *
+ * <p>It has a default {@linkplain #contextMenu() context menu}: Undo, Redo, Cut, Copy, Paste, Delete and Select
+ * all, captioned from the {@code strata.edit.*} translation keys, each enabled only while it would do
+ * something and acting as the matching key does. {@code setContextMenu(null)} removes it.</p>
+ *
  * <p>Get one from {@link org.inspirenxe.strata.api.ComponentFactory#textArea()}. Do not implement this
  * interface.</p>
  */

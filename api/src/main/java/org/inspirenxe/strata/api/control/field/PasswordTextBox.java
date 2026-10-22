@@ -141,6 +141,10 @@ import java.util.function.IntPredicate;
  * at least 20 tall, though a smaller height set on it applies. The eye is a
  * square one line tall at the right of the text area, 2 units from the text.</p>
  *
+ * <p>It has a default {@linkplain #contextMenu() context menu} of Paste, Delete and Select all, captioned from the
+ * {@code strata.edit.*} translation keys, each enabled only while it would do something; it has no Undo, Redo,
+ * Cut or Copy. {@code setContextMenu(null)} removes it.</p>
+ *
  * <p>Get one from {@link org.inspirenxe.strata.api.ComponentFactory#passwordTextBox()}. Do not implement this
  * interface.</p>
  */

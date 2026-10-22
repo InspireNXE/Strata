@@ -282,6 +282,7 @@ public final class TextAreaImpl extends BuiltInComponent<TextArea> implements Te
         this.viewport = Rect.ZERO;
         this.visualsDirty = true;
         this.setCursor(CursorKind.TEXT);
+        this.setContextMenu(TextMenus.create(ui, this.editor, this.editor::settle, this::canUndo, this::canRedo));
         this.setMinSize(20f, 20f);
     }
 

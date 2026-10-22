@@ -32,7 +32,8 @@ import java.util.Optional;
  * pointer opens the popup at the pointer, with {@link Popup#openAt}; a key opens it below the component, with
  * {@link Popup#open}. A right click opens it on the release, or on the press where the platform's conventions say
  * buttons act on the press, and only when nothing consumed the click or press. Any {@link Popup} is accepted: a menu,
- * a flyout, or a popup of a developer's own.</p>
+ * a flyout, or a popup of a developer's own. Text boxes, text areas and password boxes start with a default menu of
+ * editing commands.</p>
  *
  * <p>To give a custom component a context menu, extend {@link org.inspirenxe.strata.api.extension.CustomComponent}
  * and declare {@code implements HasContextMenu<Self>}: the class already has these methods. Do not implement this

@@ -178,6 +178,7 @@ public final class PasswordTextBoxImpl extends BuiltInComposite<PasswordTextBox>
         this.placeholder = Text.empty();
         this.placeholderLine = TextLine.EMPTY;
         this.setCursor(CursorKind.TEXT);
+        this.setContextMenu(TextMenus.create(ui, this.editor.editor(), this.editor::settle, null, null));
         this.setMinSize(20f, 0f);
         this.eye = new RevealEye(ui, this);
         this.addChild(this.eye);
