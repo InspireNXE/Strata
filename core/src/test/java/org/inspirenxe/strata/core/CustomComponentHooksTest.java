@@ -629,6 +629,10 @@ class CustomComponentHooksTest {
             return new Size(width + padding.horizontal(), height + padding.vertical());
         }
 
+        void clip(final boolean clip) {
+            this.setChildClipping(clip);
+        }
+
         @Override
         protected void arrange(final ArrangeContext context, final Rect bounds) {
             this.box = this.contentBox();
@@ -655,6 +659,18 @@ class CustomComponentHooksTest {
             assertEquals(new Rect(2, 2, 10, 5), first.bounds());
             assertEquals(new Rect(2, 7, 20, 5), second.bounds());
             assertEquals(24f, column.desiredWidth());
+        }
+
+        @Test
+        void clipsChildrenReadsTheSettingFromEitherSide() {
+            final Column column = new Column(CustomComponentHooksTest.this.ui);
+            assertTrue(column.clipsChildren());
+
+            column.clip(false);
+            assertFalse(column.clipsChildren(), "the subclass's setting is what callers read");
+
+            column.setClipChildren(true);
+            assertTrue(column.clipsChildren());
         }
 
         @Test
