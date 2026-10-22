@@ -267,6 +267,12 @@ public final class PasswordTextBoxImpl extends BuiltInComposite<PasswordTextBox>
     }
 
     @Override
+    protected void onEnabledChanged() {
+        // The mask or the shown text is drawn in another style now
+        this.forgetDrawn();
+    }
+
+    @Override
     protected void onDisabled() {
         this.setRevealed(false);
         this.eye.sync();

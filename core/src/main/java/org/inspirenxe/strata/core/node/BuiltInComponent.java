@@ -63,8 +63,8 @@ import java.util.function.Consumer;
  * {@link org.inspirenxe.strata.api.extension.CustomComponent} that developers extend. It offers the same hooks and
  * helpers under the same names, so a control reads the same either way, and adds what only core may use: its own
  * {@link #node()}, the nodes of other components through {@link #nodeOf}, the host's {@link #hostRoot()},
- * {@link #isFocusFromPress()}, {@link #activatesOnPress()}, and the {@link #onDisabled()}, {@link #onReleased()} and
- * {@link #onPressWithin} hooks.
+ * {@link #isFocusFromPress()}, {@link #activatesOnPress()}, and the {@link #onEnabledChanged()},
+ * {@link #onDisabled()}, {@link #onReleased()} and {@link #onPressWithin} hooks.
  *
  * <p>The component holds no state of its own. Its constructor makes the {@link Node} behind it and hands it a private
  * {@link NodeHooks} that calls the protected hooks here; every {@link Component} method is {@code final} and forwards
@@ -247,6 +247,14 @@ public abstract class BuiltInComponent<T extends Component<T>> implements Compon
      */
     protected TextInputKind textInputKind() {
         return TextInputKind.TEXT;
+    }
+
+    /**
+     * Called after this component's own enabled flag changed, either way, so it can restyle what it caches or pass
+     * the state on to its private parts. Enabling or disabling an ancestor does not call it. It runs before
+     * {@link #onDisabled()}. The default does nothing.
+     */
+    protected void onEnabledChanged() {
     }
 
     /**
@@ -530,6 +538,11 @@ public abstract class BuiltInComponent<T extends Component<T>> implements Compon
         @Override
         public void descendantFocused(final Component<?> descendant) {
             BuiltInComponent.this.descendantFocusedHook(descendant);
+        }
+
+        @Override
+        public void enabledChanged() {
+            BuiltInComponent.this.onEnabledChanged();
         }
 
         @Override

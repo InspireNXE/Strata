@@ -464,10 +464,12 @@ public final class ColorPickerImpl extends BuiltInComposite<ColorPicker> impleme
     }
 
     @Override
+    protected void onEnabledChanged() {
+        this.field.setEnabled(this.isEnabled());
+    }
+
+    @Override
     protected void paint(final Painter painter, final Rect bounds) {
-        if (this.field.isEnabled() != this.isEnabled()) {
-            this.field.setEnabled(this.isEnabled());
-        }
         if (this.columnsDirty) {
             this.columnsDirty = false;
             for (int i = 0; i < this.columns.length; i++) {

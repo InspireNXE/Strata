@@ -589,6 +589,12 @@ public final class TextBoxImpl extends BuiltInComponent<TextBox> implements Text
     }
 
     @Override
+    protected void onEnabledChanged() {
+        // The text is drawn in another style now
+        this.editor.invalidate();
+    }
+
+    @Override
     protected Size measure(final MeasureContext context, final float availableWidth, final float availableHeight) {
         this.lineHeight = Math.max(context.text().lineHeight(this.textStyle), context.text().lineHeight(this.disabledTextStyle));
         this.placeholderLine = TextLine.of(this.placeholder, this.placeholderStyle, context.text());

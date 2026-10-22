@@ -934,6 +934,7 @@ public class Node implements ComponentPeer {
         if (this.enabled != enabled) {
             this.enabled = enabled;
             this.treeChanged();
+            this.hooks.enabledChanged();
             if (!enabled) {
                 this.hooks.disabled();
             }

@@ -292,10 +292,12 @@ public final class SpinnerImpl extends BuiltInComposite<Spinner> implements Spin
     }
 
     @Override
+    protected void onEnabledChanged() {
+        this.field.setEnabled(this.isEnabled());
+    }
+
+    @Override
     protected void paint(final Painter painter, final Rect bounds) {
-        if (this.field.isEnabled() != this.isEnabled()) {
-            this.field.setEnabled(this.isEnabled());
-        }
         final float half = (float) Math.floor(this.buttons.height() * 0.5f);
         final Rect up = new Rect(this.buttons.x(), this.buttons.y(), this.buttons.width(), half);
         final Rect down = new Rect(this.buttons.x(), this.buttons.y() + half, this.buttons.width(), this.buttons.height() - half);

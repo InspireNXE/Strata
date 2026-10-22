@@ -32,8 +32,9 @@ import java.util.Set;
  * The calls a {@link Node} makes into its component. A {@link BuiltInComponent} hands the node a private instance
  * that calls its protected hooks. A developer's {@code CustomComponent} hands its peer the public
  * {@link org.inspirenxe.strata.api.extension.peer.ComponentHooks}, which {@link ExtensionHooks} adapts to this
- * interface. Calls that only Strata's own controls answer, {@link #disabled()}, {@link #released()} and
- * {@link #pressedWithin}, do nothing for a developer's component, so they never widen the public extension API.
+ * interface. Calls that only Strata's own controls answer, {@link #enabledChanged()}, {@link #disabled()},
+ * {@link #released()} and {@link #pressedWithin}, do nothing for a developer's component, so they never widen the
+ * public extension API.
  */
 interface NodeHooks {
 
@@ -142,6 +143,12 @@ interface NodeHooks {
      * @param descendant the component that gained focus
      */
     void descendantFocused(Component<?> descendant);
+
+    /**
+     * Tells the component that its own enabled flag changed, either way, not through an ancestor. Runs after the
+     * tree took the change and before {@link #disabled()}.
+     */
+    void enabledChanged();
 
     /**
      * Tells the component it was disabled itself, not through an ancestor.

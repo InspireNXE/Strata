@@ -32,8 +32,8 @@ import java.util.Set;
 
 /**
  * The hooks of a developer's {@code CustomComponent}, as a node calls them. Each call forwards to the public
- * {@link ComponentHooks} the component gave its peer, except {@link #disabled()}, {@link #released()} and
- * {@link #pressedWithin}, which only Strata's own controls answer and which do nothing here.
+ * {@link ComponentHooks} the component gave its peer, except {@link #enabledChanged()}, {@link #disabled()},
+ * {@link #released()} and {@link #pressedWithin}, which only Strata's own controls answer and which do nothing here.
  */
 final class ExtensionHooks implements NodeHooks {
     private final ComponentHooks hooks;
@@ -110,6 +110,10 @@ final class ExtensionHooks implements NodeHooks {
     @Override
     public void descendantFocused(final Component<?> descendant) {
         this.hooks.descendantFocused(descendant);
+    }
+
+    @Override
+    public void enabledChanged() {
     }
 
     @Override
