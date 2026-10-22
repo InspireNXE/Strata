@@ -17,6 +17,7 @@ package org.inspirenxe.strata.core;
 
 import org.inspirenxe.strata.api.ComponentFactory;
 import org.inspirenxe.strata.api.control.attribute.value.Ranged;
+import org.inspirenxe.strata.api.control.field.Slider;
 import org.inspirenxe.strata.api.control.field.Spinner;
 import org.inspirenxe.strata.api.input.Key;
 import org.inspirenxe.strata.api.input.KeyAction;
@@ -97,6 +98,33 @@ class NumericFieldsTest {
             NumericFieldsTest.this.key(Key.UP);
 
             assertEquals(List.of(), this.heard);
+        }
+    }
+
+    @Nested
+    class SliderSnapping {
+
+        @Test
+        void aSnappedValueIsTheDecimalOnTheGrid() {
+            final Slider slider = NumericFieldsTest.this.ui.slider().setStep(0.1);
+
+            slider.setValue(0.3);
+            assertEquals(0.3, slider.value());
+
+            slider.setRange(-1, 1).setValue(0.7);
+            assertEquals(0.7, slider.value());
+        }
+
+        @Test
+        void aKeyStepLandsOnTheDecimalToo() {
+            final Slider slider = NumericFieldsTest.this.ui.slider().setStep(0.1).setValue(0.2);
+            slider.setAnchor(Anchor.TOP_LEFT);
+            NumericFieldsTest.this.test.show(slider);
+            slider.requestFocus();
+
+            NumericFieldsTest.this.key(Key.RIGHT);
+
+            assertEquals(0.3, slider.value());
         }
     }
 }

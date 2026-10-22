@@ -37,6 +37,7 @@ import org.inspirenxe.strata.core.node.BuiltInComponent;
 import org.inspirenxe.strata.core.node.ComponentFactoryImpl;
 import org.inspirenxe.strata.core.text.TextLine;
 
+import java.math.BigDecimal;
 import java.util.Objects;
 import java.util.Set;
 import java.util.function.DoubleFunction;
@@ -46,7 +47,8 @@ import java.util.function.DoubleFunction;
  * track and spans the slider across it. A pointer position maps to the value whose thumb would be centered on it,
  * along the track's axis only. A vertical slider swaps the desired width and height and counts from the bottom.
  *
- * <p>Snapping: a value is clamped to the range, then moved to the nearest {@code min + k * step}; if the maximum is
+ * <p>Snapping: a value is clamped to the range, then moved to the nearest {@code min + k * step}, worked out in
+ * decimal from the two numbers as written so that steps such as 0.1 land on the decimals they name; if the maximum is
  * nearer to the requested value than that grid point, the maximum is used instead, so the maximum is always
  * reachable. The label is clipped to the bounds, and its text is measured when it changes, during painting, through
  * the environment's text metrics. The thumb's rectangle is kept from frame to frame and made again only when it
@@ -221,7 +223,12 @@ public final class SliderImpl extends BuiltInComponent<Slider> implements Slider
         if (this.step <= 0d) {
             return clamped;
         }
-        final double snapped = Math.min(this.min + Math.round((clamped - this.min) / this.step) * this.step, this.max);
+        // In decimal, so a step of 0.1 snaps to 0.3 and not to 0.30000000000000004
+        final long steps = Math.round((clamped - this.min) / this.step);
+        final double grid = BigDecimal.valueOf(this.min)
+                .add(BigDecimal.valueOf(this.step).multiply(BigDecimal.valueOf(steps)))
+                .doubleValue();
+        final double snapped = Math.min(grid, this.max);
         return this.max - clamped < Math.abs(clamped - snapped) ? this.max : snapped;
     }
 
