@@ -593,9 +593,7 @@ public class Node implements ComponentPeer {
     @Override
     public final boolean isHandled(final EventType<?> type) {
         // Control events stop at the first composite above, as EventRouter.next does
-        final Class<?> eventClass = type.eventClass();
-        final boolean input = eventClass != RequestEvent.class && eventClass != ValueRequestEvent.class
-                && eventClass != ControlEvent.class && eventClass != ValueEvent.class;
+        final boolean input = EventRouter.isInput(type);
         for (Node node = this; node != null; node = type.bubbles() ? EventRouter.next(node, this, input) : null) {
             final EventDispatcher handlers = node.dispatcher;
             if (handlers != null && handlers.hasHandlers(type)) {

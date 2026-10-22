@@ -121,16 +121,6 @@ public abstract class EventImpl implements Event {
     }
 
     /**
-     * Returns whether each component the event passes runs its default behavior for it. Input events do; a
-     * control's request and report events do not, since only the control that fired them acts.
-     *
-     * @return true for input events
-     */
-    protected boolean runsDefaultActions() {
-        return true;
-    }
-
-    /**
      * Clears the canceled and stopped flags, the snapshots and the current component, for an event object that is
      * fired again.
      */

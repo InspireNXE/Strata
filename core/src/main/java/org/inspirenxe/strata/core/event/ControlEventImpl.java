@@ -52,9 +52,4 @@ public class ControlEventImpl<C> extends EventImpl implements ControlEvent<C> {
     public final C control() {
         return this.control;
     }
-
-    @Override
-    protected final boolean runsDefaultActions() {
-        return false;
-    }
 }

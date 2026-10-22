@@ -17,6 +17,8 @@ package org.inspirenxe.strata.core.event;
 
 import org.inspirenxe.strata.api.component.ComponentSnapshot;
 import org.inspirenxe.strata.api.event.EventType;
+import org.inspirenxe.strata.api.event.control.ControlEvent;
+import org.inspirenxe.strata.api.event.control.RequestEvent;
 import org.inspirenxe.strata.core.node.Node;
 
 /**
@@ -50,6 +52,7 @@ public final class EventRouter {
             EventRouter.takeSnapshots(type, event, target);
         }
 
+        final boolean input = EventRouter.isInput(type);
         Node node = target;
         while (node != null) {
             event.setCurrent(node.facade());
@@ -58,16 +61,30 @@ public final class EventRouter {
             if (dispatcher != null) {
                 dispatcher.fire(type, event);
             }
-            if (!event.isCancelled() && event.runsDefaultActions()) {
+            if (!event.isCancelled() && input) {
                 node.defaultAction(type, event);
             }
 
             if (!type.bubbles() || event.isPropagationStopped()) {
                 break;
             }
-            node = EventRouter.next(node, target, event.runsDefaultActions());
+            node = EventRouter.next(node, target, input);
         }
         return event;
+    }
+
+    /**
+     * Returns whether a type is an input event's, as opposed to a control's request or report: one whose event class
+     * is not a {@link RequestEvent} or a {@link ControlEvent}. Each component an input event passes runs its default
+     * behavior for it, and the event climbs to the root. A request or report runs no default behavior, since only the
+     * control that fired it acts, and stops where {@link #next} says. This is the one place that tells them apart.
+     *
+     * @param type the event type
+     * @return true for an input event's type
+     */
+    public static boolean isInput(final EventType<?> type) {
+        final Class<?> eventClass = type.eventClass();
+        return !RequestEvent.class.isAssignableFrom(eventClass) && !ControlEvent.class.isAssignableFrom(eventClass);
     }
 
     /**
@@ -102,7 +119,7 @@ public final class EventRouter {
     private static void takeSnapshots(final EventType<?> type, final EventImpl event, final Node target) {
         final boolean bubbles = type.bubbles();
         int wanting = 0;
-        final boolean input = event.runsDefaultActions();
+        final boolean input = EventRouter.isInput(type);
         for (Node node = target; node != null; node = bubbles ? EventRouter.next(node, target, input) : null) {
             if (EventRouter.wantsSnapshots(node, type)) {
                 wanting++;
