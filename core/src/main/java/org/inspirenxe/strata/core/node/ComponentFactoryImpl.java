@@ -17,6 +17,7 @@ package org.inspirenxe.strata.core.node;
 
 import org.inspirenxe.strata.api.ComponentFactory;
 import org.inspirenxe.strata.api.UiThread;
+import org.inspirenxe.strata.core.animation.AnimatorImpl;
 import org.inspirenxe.strata.core.frame.UiThreadImpl;
 import org.inspirenxe.strata.api.event.cause.CauseStack;
 import org.inspirenxe.strata.core.event.CauseStackImpl;
@@ -261,6 +262,14 @@ public final class ComponentFactoryImpl implements ComponentFactory {
     @Override
     public Theme theme() {
         return this.theme.get();
+    }
+
+    @Override
+    public AnimatorImpl animator() {
+        if (this.root == null) {
+            throw new IllegalStateException("This factory has no host yet");
+        }
+        return this.root.animator();
     }
 
     @Override

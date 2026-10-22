@@ -68,6 +68,7 @@ import org.inspirenxe.strata.api.control.pane.Tab;
 import org.inspirenxe.strata.api.control.pane.TabBar;
 import org.inspirenxe.strata.api.control.window.MessageBox;
 import org.inspirenxe.strata.api.control.window.Window;
+import org.inspirenxe.strata.api.animation.Animator;
 import org.inspirenxe.strata.api.event.cause.CauseStack;
 import org.inspirenxe.strata.api.extension.CustomComponent;
 import org.inspirenxe.strata.api.extension.peer.ComponentHooks;
@@ -152,6 +153,15 @@ public interface ComponentFactory {
      * @return the host's UI thread
      */
     UiThread uiThread();
+
+    /**
+     * Returns the animator of the host this factory belongs to, whose animations follow the platform's clock and
+     * stop when the host's screen closes.
+     *
+     * @return the host's animator
+     * @throws IllegalStateException if the factory has no host yet
+     */
+    Animator animator();
 
     /**
      * Makes an {@link AnchorPanel}.

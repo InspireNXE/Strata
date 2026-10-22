@@ -44,6 +44,7 @@ import org.inspirenxe.strata.api.text.Text;
 import org.inspirenxe.strata.api.theme.Paint;
 import org.inspirenxe.strata.api.theme.Theme;
 import org.inspirenxe.strata.api.theme.ThemeException;
+import org.inspirenxe.strata.core.animation.AnimatorImpl;
 import org.inspirenxe.strata.core.event.CharEventImpl;
 import org.inspirenxe.strata.core.event.ControlEventImpl;
 import org.inspirenxe.strata.core.event.DragEventImpl;
@@ -161,6 +162,7 @@ public final class Root {
     private final Origin.User user;
     private final UiThreadImpl uiThread;
     private final FrameRequests frames;
+    private final AnimatorImpl animator;
     private Screen screen;
 
     private Theme theme;
@@ -222,6 +224,7 @@ public final class Root {
         this.frames = new FrameRequests();
         this.uiThread.register(this.frames);
         this.bindingQueue = new BindingQueue(this.frames::request);
+        this.animator = new AnimatorImpl(platform::clock, ui::causes, this.frames, this.uiThread);
         this.attachedBindings = new ArrayList<>();
         this.modifiers = Modifiers.NONE;
         this.layoutRequested = true;
@@ -236,6 +239,15 @@ public final class Root {
      */
     public UiThreadImpl uiThread() {
         return this.uiThread;
+    }
+
+    /**
+     * Returns the host's animator.
+     *
+     * @return the animator
+     */
+    public AnimatorImpl animator() {
+        return this.animator;
     }
 
     /**

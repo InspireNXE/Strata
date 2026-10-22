@@ -60,7 +60,9 @@ import java.util.Optional;
  *
  * <p>Every input, {@link #flush}, {@link #layout} and {@link #render} first lets the platform's
  * {@link UiThreadImpl} note the calling thread as the UI thread, if it has none yet and the platform names none.
- * {@link #flush} then runs the tasks waiting in that UI thread's queue, before anything else of the frame.</p>
+ * {@link #flush} then runs the tasks waiting in that UI thread's queue, builds a screen that asked to be built again,
+ * steps the root's animations and evaluates dirty bindings, in that order. Closing the screen stops its
+ * animations where they are.</p>
  *
  * <p>Whether a frame is needed and when the next timed change is due come from the root: see
  * {@link Root#render} and {@link Root#nextFrameNanos()}.</p>
@@ -180,6 +182,8 @@ public final class ScreenHostImpl implements ScreenHost {
         this.screen = null;
         this.handle = null;
         this.title = Text.empty();
+        // The screen's motion stops where it is, so nothing writes to a closed tree
+        this.root.animator().stopAll();
         try {
             closing.closed();
         } finally {
@@ -355,6 +359,8 @@ public final class ScreenHostImpl implements ScreenHost {
         this.uiThread.runQueued();
         this.rebuildIfNeeded();
         // Step 2 of the frame, firing recorded continuous requests, goes here once coalescing is built (design 4.14)
+        // Between steps 2 and 3 (design 4.51): animations step, so the bindings see where they are
+        this.root.animator().step();
         this.root.flushBindings();
     }
 

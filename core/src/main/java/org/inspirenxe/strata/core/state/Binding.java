@@ -19,6 +19,7 @@ import org.inspirenxe.strata.api.component.Component;
 import org.inspirenxe.strata.api.event.EventType;
 import org.inspirenxe.strata.api.event.Subscription;
 import org.inspirenxe.strata.api.event.cause.CauseFrame;
+import org.inspirenxe.strata.api.event.cause.CauseKey;
 import org.inspirenxe.strata.api.event.cause.CauseKeys;
 import org.inspirenxe.strata.api.event.cause.CauseStack;
 import org.inspirenxe.strata.api.event.cause.Origin;
@@ -32,6 +33,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Supplier;
@@ -54,9 +56,19 @@ import java.util.function.Supplier;
  * reports that fire after attach before its first evaluation, so a value the control had before it read the source,
  * such as a combo box selecting its first item when the items arrive, never replaces the state's.</p>
  *
+ * <p>A report fired by a step of an animation that has not reached its end, which puts {@link #IN_MOTION}, is not
+ * written back either. The binding hands itself to the animation instead, which calls {@link #writeBack()} once it
+ * ends or stops, so the state hears where the property came to rest and not every value on the way.</p>
+ *
  * @param <V> the type of the property's value
  */
 public final class Binding<V> {
+    /**
+     * Put by every step of an animation but its last, with the animation as the value, so bindings leave its
+     * reports until it ends.
+     */
+    public static final CauseKey<Deferral> IN_MOTION = CauseKey.of("strata:in_motion", Deferral.class);
+
     private final Component<?> component;
     private final PropertyKey<Object, V> key;
     private final Source<V> source;
@@ -237,10 +249,40 @@ public final class Binding<V> {
                 || event.origin() instanceof Origin.Binding(final Object written) && written == this.source) {
             return;
         }
+        final Optional<Deferral> motion = this.causes.get().context(IN_MOTION);
+        if (motion.isPresent()) {
+            motion.get().defer(this);
+            return;
+        }
+        this.writeBack();
+    }
+
+    /**
+     * Writes the property's value to the state unless they are equal, as a report does, for a report an animation
+     * deferred. Does nothing for a one-way binding, or one that is detached or not evaluated since it attached. Call on
+     * the UI thread.
+     */
+    public void writeBack() {
+        if (this.writable == null || !this.evaluated || this.queue == null) {
+            return;
+        }
         final V value = this.key.reader().apply(this.component);
         if (!Objects.equals(this.writable.peek(), value)) {
             this.writable.set(value);
         }
+    }
+
+    /**
+     * Something running that bindings leave their write-backs with until it ends: an animation.
+     */
+    public interface Deferral {
+        /**
+         * Keeps a binding to write back once the animation ends or stops. A binding deferred twice is written back
+         * once.
+         *
+         * @param binding the binding
+         */
+        void defer(Binding<?> binding);
     }
 
     /**
