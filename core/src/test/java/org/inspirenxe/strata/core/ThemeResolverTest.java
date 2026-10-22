@@ -173,6 +173,14 @@ class ThemeResolverTest {
     }
 
     @Test
+    void aFileNestedTooDeeplyIsSkipped() {
+        final MapSource source = new MapSource()
+                .file(MOD, "{ \"parent\": \"strata:flat\", \"paints\": { \"a\": \"#000001\" } }")
+                .file(MOD, "{ \"paints\": { \"a\": " + "[".repeat(100_000) + " } }");
+        assertEquals(Paint.solid(0xFF000001), resolve(source, ThemeRef.of(MOD)).paint("a").orElseThrow());
+    }
+
+    @Test
     void eachKeyRecordsTheLayerThatSetItLast() {
         final MapSource source = new MapSource()
                 .base(ENGINE, Theme.builder("engine")
