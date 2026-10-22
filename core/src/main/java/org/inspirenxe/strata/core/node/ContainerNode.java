@@ -334,11 +334,12 @@ public final class ContainerNode extends Node implements ContainerPeer {
 
     /**
      * Children are tested from the top of the drawing order down. A clipping container's children can only be hit
-     * inside its child clip, and nothing can be hit outside its bounds.
+     * inside its child clip, and nothing can be hit outside its bounds. A container with empty bounds paints none of
+     * its children, so none of them can be hit either.
      */
     @Override
     public Node hitTest(final float x, final float y) {
-        if (!this.isVisible() || !this.isEnabled()) {
+        if (!this.isVisible() || !this.isEnabled() || this.bounds().isEmpty()) {
             return null;
         }
         final boolean inside = this.bounds().contains(x, y);

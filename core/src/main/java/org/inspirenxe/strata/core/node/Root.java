@@ -64,6 +64,7 @@ import org.inspirenxe.strata.spi.Platform;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.EnumMap;
+import java.util.EnumSet;
 import java.util.IdentityHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -88,11 +89,14 @@ import java.util.function.Consumer;
  * popup above the layer it lands on, except those opened without light dismiss, and then goes nowhere if any
  * closed. Otherwise it focuses the pressed node or its nearest focusable ancestor and clears focus if there is none,
  * then tells the pressed node and each of its ancestors through {@link NodeHooks#pressedWithin}, innermost first,
- * and only then fires the press. Each button is tracked on its own. A drag starts
- * once the pointer moves more than {@link #DRAG_THRESHOLD} units from the press on either axis, and its events go to
- * the pressed node wherever the pointer is. A release fires a click only when it ends no drag and lands inside the
- * pressed node, which must still be enabled. After a scroll that a node handled, hover is worked out again, since
- * content may have moved under the pointer.</p>
+ * and only then fires the press. Each button is tracked on its own. A press that closed popups or hit a dialog's
+ * backdrop uses up its release too. A press of a button that is still held, because the engine lost its release,
+ * first ends the old press with a release and no click. A drag starts once the pointer moves more than
+ * {@link #DRAG_THRESHOLD} units from the press on either axis, and its events go to the pressed node wherever the
+ * pointer is, carrying the press's button and click count in their cause. A release fires a click only when it ends
+ * no drag and lands inside the pressed node, which must still be visible and enabled, as must every ancestor. After a
+ * scroll that a node handled, hover is worked out again, since content may have moved under the pointer; the first
+ * frame after the tree changes does the same while the pointer is inside the host.</p>
  *
  * <p>Keyboard rules: key events go to the focused node, or else to the top dialog, or else to the content. An
  * unhandled Escape press closes the top overlay that is not a toast. An unhandled Tab press or repeat without Ctrl
@@ -133,6 +137,8 @@ public final class Root {
     private final ClickCounter clickCounter;
     private final KeyRepeater keyRepeater;
     private final Map<MouseButton, Press> presses;
+    // Buttons whose press closed popups or hit a dialog's backdrop, so their release is swallowed too
+    private final Set<MouseButton> swallowedReleases;
     private final List<Layer> layers;
     private final List<Node> arrangeRequests;
     private final OverlaysImpl overlays;
@@ -149,6 +155,9 @@ public final class Root {
     private boolean layoutRequested;
 
     private Node hovered;
+    // Set when the tree changed, so the next frame works hover out again at the pointer's last position
+    private boolean hoverStale;
+    private boolean pointerInside;
     private Node focused;
     // The node a focus change in progress assigned but has not told yet; it never had focus to lose
     private Node focusArriving;
@@ -183,6 +192,7 @@ public final class Root {
         this.clickCounter = new ClickCounter();
         this.keyRepeater = new KeyRepeater();
         this.presses = new EnumMap<>(MouseButton.class);
+        this.swallowedReleases = EnumSet.noneOf(MouseButton.class);
         this.layers = new ArrayList<>();
         this.arrangeRequests = new ArrayList<>();
         this.overlays = new OverlaysImpl();
@@ -461,6 +471,8 @@ public final class Root {
 
     void treeChanged() {
         this.tabOrder = null;
+        // What is under the pointer may have changed though the pointer did not move
+        this.hoverStale = true;
         if (this.focused != null && !this.canFocus(this.focused)) {
             this.changeFocus(null);
         }
@@ -673,6 +685,12 @@ public final class Root {
         this.expireToasts();
         this.showPendingTooltip();
         this.layout();
+        if (this.hoverStale && this.pointerInside) {
+            this.updateHover(this.pointerX, this.pointerY, this.modifiers);
+            this.updateTooltip();
+            this.layout();
+        }
+        this.hoverStale = false;
         final CanvasPainter frame = this.painter.begin(canvas, this.platform.capabilities().slicesSprites());
         if (this.content != null) {
             this.content.paint(frame);
@@ -776,21 +794,26 @@ public final class Root {
     private boolean handlePointerMoved(final float x, final float y, final Modifiers modifiers) {
         this.pointerX = x;
         this.pointerY = y;
+        this.pointerInside = true;
         this.updateModifiers(modifiers, null, null);
 
         boolean dragging = false;
         for (final Map.Entry<MouseButton, Press> entry : this.presses.entrySet()) {
             final Press press = entry.getValue();
             final Node target = press.target;
-            if (!press.dragging && (Math.abs(x - press.startX) > DRAG_THRESHOLD || Math.abs(y - press.startY) > DRAG_THRESHOLD)) {
-                press.dragging = true;
-                target.fire(InputEvents.DRAG_START, new DragEventImpl(target.facade(), press.startX, press.startY, modifiers,
-                        entry.getKey(), press.clicks, press.startX, press.startY, 0f, 0f));
-            }
-            if (press.dragging && target.root() == this) {
-                target.fire(InputEvents.DRAG, new DragEventImpl(target.facade(), x, y, modifiers, entry.getKey(),
-                        press.clicks, press.startX, press.startY, x - press.lastX, y - press.lastY));
-                dragging = true;
+            // Drags carry the button and click count of the press that started them, as presses and releases do
+            try (CauseFrame _ = this.ui.causes().pushFrame().put(CauseKeys.BUTTON, entry.getKey())
+                    .put(CauseKeys.CLICKS, press.clicks)) {
+                if (!press.dragging && (Math.abs(x - press.startX) > DRAG_THRESHOLD || Math.abs(y - press.startY) > DRAG_THRESHOLD)) {
+                    press.dragging = true;
+                    target.fire(InputEvents.DRAG_START, new DragEventImpl(target.facade(), press.startX, press.startY,
+                            modifiers, entry.getKey(), press.clicks, press.startX, press.startY, 0f, 0f));
+                }
+                if (press.dragging && target.root() == this) {
+                    target.fire(InputEvents.DRAG, new DragEventImpl(target.facade(), x, y, modifiers, entry.getKey(),
+                            press.clicks, press.startX, press.startY, x - press.lastX, y - press.lastY));
+                    dragging = true;
+                }
             }
             press.lastX = x;
             press.lastY = y;
@@ -833,29 +856,40 @@ public final class Root {
     private boolean pointerPressed(final float x, final float y, final MouseButton button, final Modifiers modifiers) {
         this.pointerX = x;
         this.pointerY = y;
+        this.pointerInside = true;
+        this.swallowedReleases.remove(button);
+        final Press stale = this.presses.remove(button);
+        if (stale != null) {
+            // The engine lost the release of the button's last press, so end that press first
+            this.endPress(stale, button, stale.lastX, stale.lastY, modifiers, false);
+        }
         this.updateHover(x, y, modifiers);
 
         final Node target = this.hovered;
         final int pressedLayer = target == null ? -1 : this.layerOf(target);
         boolean dismissed = false;
-        for (int i = this.layers.size() - 1; i > pressedLayer; i--) {
-            final Layer layer = this.layers.get(i);
+        // From a copy, since closing one layer can close others through their handlers
+        final List<Layer> layers = List.copyOf(this.layers);
+        for (int i = layers.size() - 1; i > pressedLayer; i--) {
+            final Layer layer = layers.get(i);
             if (layer.modal) {
                 break;
             }
-            if (layer.isToast() || !layer.lightDismiss) {
+            if (!layer.open || layer.isToast() || !layer.lightDismiss) {
                 continue;
             }
             layer.close();
             dismissed = true;
         }
         if (dismissed) {
+            this.swallowedReleases.add(button);
             this.updateHover(x, y, modifiers);
             return true;
         }
 
         if (target == null) {
             if (this.topDialog() != null) {
+                this.swallowedReleases.add(button);
                 return true;
             }
             this.changeFocus(null);
@@ -886,18 +920,31 @@ public final class Root {
     private boolean pointerReleased(final float x, final float y, final MouseButton button, final Modifiers modifiers) {
         this.pointerX = x;
         this.pointerY = y;
+        this.pointerInside = true;
 
         final Press press = this.presses.remove(button);
         if (press == null) {
-            return false;
+            // The release of a press that closed popups or hit a dialog's backdrop is used up with it
+            return this.swallowedReleases.remove(button);
         }
+        this.endPress(press, button, x, y, modifiers, true);
+        this.updateHover(x, y, modifiers);
+        return true;
+    }
 
+    /**
+     * Ends a press that was taken out of the tracked presses: clears the target's pressed state unless another button
+     * still holds it, fires the release, and then either ends the drag or, when {@code mayClick} is true and the
+     * release lands inside the target while it and every ancestor are visible and enabled, fires a click.
+     */
+    private void endPress(final Press press, final MouseButton button, final float x, final float y,
+                          final Modifiers modifiers, final boolean mayClick) {
         final Node target = press.target;
         if (this.presses.values().stream().noneMatch(other -> other.target == target)) {
             target.setPressed(false);
         }
         if (target.root() != this) {
-            return true;
+            return;
         }
 
         try (CauseFrame _ = this.ui.causes().pushFrame().put(CauseKeys.CLICKS, press.clicks)) {
@@ -906,12 +953,22 @@ public final class Root {
             if (press.dragging) {
                 target.fire(InputEvents.DRAG_END, new DragEventImpl(target.facade(), x, y, modifiers, button,
                         press.clicks, press.startX, press.startY, x - press.lastX, y - press.lastY));
-            } else if (target.root() == this && target.isEnabled() && target.bounds().contains(x, y)) {
+            } else if (mayClick && target.root() == this && isUsable(target) && target.bounds().contains(x, y)) {
                 target.fire(InputEvents.CLICK, new PointerButtonEventImpl(target.facade(), x, y, modifiers, button,
                         press.clicks));
             }
         }
-        this.updateHover(x, y, modifiers);
+    }
+
+    /**
+     * Returns whether a node and every ancestor are visible and enabled.
+     */
+    private static boolean isUsable(final Node node) {
+        for (Node candidate = node; candidate != null; candidate = candidate.parentNode()) {
+            if (!candidate.isVisible() || !candidate.isEnabled()) {
+                return false;
+            }
+        }
         return true;
     }
 
@@ -938,6 +995,7 @@ public final class Root {
                                  final ScrollKind kind, final Modifiers modifiers) {
         this.pointerX = x;
         this.pointerY = y;
+        this.pointerInside = true;
         this.updateModifiers(modifiers, null, null);
         this.updateHover(x, y, modifiers);
         if (this.hovered == null) {
@@ -964,11 +1022,13 @@ public final class Root {
     }
 
     private void handlePointerLeft() {
+        this.pointerInside = false;
         if (this.hovered != null) {
             final Node old = this.hovered;
             this.hovered = null;
             old.setHovered(false);
-            old.fire(InputEvents.POINTER_EXIT, new PointerEventImpl(old.facade(), this.pointerX, this.pointerY, Modifiers.NONE));
+            old.fire(InputEvents.POINTER_EXIT, new PointerEventImpl(old.facade(), this.pointerX, this.pointerY,
+                    this.modifiers));
         }
         this.updateTooltip();
     }
@@ -1013,6 +1073,7 @@ public final class Root {
 
     private void updateHover(final float x, final float y, final Modifiers modifiers) {
         this.layout();
+        this.hoverStale = false;
         final Node next = this.hitTest(x, y);
         if (next == this.hovered) {
             return;
