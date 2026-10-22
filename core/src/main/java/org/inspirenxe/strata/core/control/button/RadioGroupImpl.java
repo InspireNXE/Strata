@@ -74,14 +74,19 @@ public final class RadioGroupImpl<T> implements RadioGroup<T> {
     }
 
     /**
-     * Makes the selected button the group's only tab stop, or the first button while none is selected, so Tab
-     * enters and leaves the group in one step and the arrows move inside it.
+     * Makes the selected button the group's only tab stop, or the first enabled button while none is selected, so
+     * Tab enters and leaves the group in one step and the arrows move inside it. A button whose tabbable flag is not
+     * what the group last set, because code called {@code setTabbable} on it, keeps its own setting from then on.
      */
-    private void updateTabStops() {
-        final RadioButtonImpl stop = this.selected != null ? this.selected
-                : this.buttons.isEmpty() ? null : this.buttons.getFirst();
+    void updateTabStops() {
+        RadioButtonImpl stop = this.selected;
+        for (int i = 0; stop == null && i < this.buttons.size(); i++) {
+            if (this.buttons.get(i).isEnabled()) {
+                stop = this.buttons.get(i);
+            }
+        }
         for (final RadioButtonImpl button : this.buttons) {
-            button.setTabbable(button == stop);
+            button.groupTabStop(button == stop);
         }
     }
 

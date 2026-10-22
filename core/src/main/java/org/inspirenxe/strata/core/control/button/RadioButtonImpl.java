@@ -73,6 +73,9 @@ public final class RadioButtonImpl extends BuiltInComponent<RadioButton> impleme
     private final RectCache markArea = new RectCache();
     private final Rings.Ring ring = new Rings.Ring();
     private final Activation activation;
+    // What the group last made the tabbable flag, null before it set one, and whether code took the flag over
+    private Boolean groupTabbable;
+    private boolean ownTabbable;
 
     /**
      * Creates a button in a group.
@@ -115,6 +118,26 @@ public final class RadioButtonImpl extends BuiltInComponent<RadioButton> impleme
         this.text = Objects.requireNonNull(text, "text");
         this.invalidateLayout();
         return this;
+    }
+
+    /**
+     * Makes the button its group's tab stop or not, unless code has set its tabbable flag since the group last did.
+     */
+    void groupTabStop(final boolean tabbable) {
+        if (this.ownTabbable) {
+            return;
+        }
+        if (this.groupTabbable != null && this.isTabbable() != this.groupTabbable) {
+            this.ownTabbable = true;
+            return;
+        }
+        this.groupTabbable = tabbable;
+        this.setTabbable(tabbable);
+    }
+
+    @Override
+    protected void onEnabledChanged() {
+        this.group.updateTabStops();
     }
 
     @Override

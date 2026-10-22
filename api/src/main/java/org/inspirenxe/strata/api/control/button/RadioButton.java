@@ -39,7 +39,7 @@ import java.util.Objects;
  * look.</p>
  *
  * <p>It is focusable and shows the hand cursor, and Tab stops at it when it is its group's selected button, or its
- * group's first while none is selected, as {@link RadioGroup} says. It measures and lays out like a
+ * group's first enabled button while none is selected, as {@link RadioGroup} says. It measures and lays out like a
  * {@link CheckBox}: a square box the caption's line height plus 8 units on a side, rounded to a whole unit, and the
  * caption 4 units to its right.</p>
  *
