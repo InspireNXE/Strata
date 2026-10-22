@@ -155,7 +155,9 @@ public interface Avatar extends Component<Avatar>, HasCursor<Avatar>, HasTooltip
      * Shows a value through its {@linkplain org.inspirenxe.strata.api.appearance.Appearances appearance}: its icon
      * as the picture unless a sprite or visual is set, its name for the initials unless a name or initials are set,
      * and its tooltip, asked anew each time the pointer arrives. Setting a tooltip afterwards replaces the value's
-     * until the next {@code setValue}. The icon and the name are read when the value is set. A value with no
+     * until the next {@code setValue}. A value with a tooltip replaces the tooltip shown; one without, and
+     * {@code null}, remove the previous value's tooltip and keep a tooltip set with {@code setTooltip}. The icon and
+     * the name are read when the value is set. A value with no
      * appearance has no icon and no tooltip, and its name is {@link String#valueOf(Object)}, so
      * {@code setValue("Ana Lima")} shows {@code AL}.
      *

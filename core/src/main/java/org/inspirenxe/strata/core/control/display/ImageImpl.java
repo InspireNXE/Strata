@@ -101,6 +101,7 @@ public final class ImageImpl extends BuiltInComponent<Image> implements Image {
         this.sprite = Objects.requireNonNull(sprite, "sprite");
         this.visual = null;
         this.value = null;
+        this.showValueTooltip();
         return this;
     }
 
@@ -114,6 +115,7 @@ public final class ImageImpl extends BuiltInComponent<Image> implements Image {
         this.visual = Objects.requireNonNull(visual, "visual");
         this.sprite = null;
         this.value = null;
+        this.showValueTooltip();
         return this.setImageSize(visual.size().width(), visual.size().height());
     }
 
@@ -131,25 +133,30 @@ public final class ImageImpl extends BuiltInComponent<Image> implements Image {
             this.setImageSize(icon.size().width(), icon.size().height());
         }
         this.value = value;
-        this.valueTooltip = this.tooltip();
-        this.refreshTooltip();
+        this.showValueTooltip();
         return this;
     }
 
     /**
-     * Shows the value's tooltip, unless a tooltip was set since the value's was.
+     * Shows the tooltip of the value just set: it replaces the tooltip shown when the value has one, and otherwise
+     * removes the previous value's tooltip and leaves a tooltip set with {@code setTooltip} in place.
      */
-    private void refreshTooltip() {
-        if (this.value == null || this.tooltip() != this.valueTooltip && this.tooltip() != null) {
-            return;
+    private void showValueTooltip() {
+        final Tooltip next = this.value == null ? null : Strata.appearances().tooltipOf(this.value).orElse(null);
+        if (next != null || this.tooltip() == this.valueTooltip) {
+            this.setTooltip(next);
         }
-        this.valueTooltip = Strata.appearances().tooltipOf(this.value).orElse(null);
-        this.setTooltip(this.valueTooltip);
+        this.valueTooltip = next;
     }
 
+    /**
+     * Asks the value for its tooltip again while the one shown is the value's.
+     */
     @Override
     protected void onPointerEnter(final PointerEvent event) {
-        this.refreshTooltip();
+        if (this.value != null && this.tooltip() == this.valueTooltip) {
+            this.showValueTooltip();
+        }
     }
 
     @Override

@@ -98,8 +98,10 @@ public interface Image extends Component<Image>, HasCursor<Image>, HasTooltip<Im
     /**
      * Shows a value through its {@linkplain org.inspirenxe.strata.api.appearance.Appearances appearance}: its icon, at
      * the icon's natural size, or nothing if it has none, and its tooltip, asked anew each time the pointer arrives.
-     * Setting a tooltip afterwards replaces the value's until the next {@code setValue}. Setting a sprite or a visual
-     * clears the value.
+     * Setting a tooltip afterwards replaces the value's until the next {@code setValue}. A value with a tooltip
+     * replaces the tooltip shown; one without, and {@code null}, remove the previous value's tooltip and keep a
+     * tooltip set with {@code setTooltip}. Setting a sprite or a visual clears the value, and its tooltip the same
+     * way.
      *
      * @param value the value, or {@code null} to show nothing
      * @return this image
