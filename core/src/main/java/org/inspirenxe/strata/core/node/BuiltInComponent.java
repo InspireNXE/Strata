@@ -76,7 +76,8 @@ import java.util.function.Supplier;
  *
  * <p>The methods of {@link Focusable}, {@link HasCursor} and {@link HasTooltip} are here too, and the node ignores
  * them on a subclass that does not declare the interface. A subclass that implements {@link Focusable} starts out
- * focusable and tabbable.</p>
+ * focusable and tabbable, and one that keeps focus on a part, as a table does on its list, names it with
+ * {@link #setFocusDelegate}.</p>
  *
  * @param <T> the type callers see the component as
  */
@@ -809,12 +810,33 @@ public abstract class BuiltInComponent<T extends Component<T>> implements Compon
     // ------------------------------------------------------------------
 
     /**
+     * Makes one of this control's parts take focus for it, as a table's inner list does. From then on the
+     * {@link Focusable} methods here work on the delegate: {@link #requestFocus()} focuses it, {@link #isFocused()}
+     * is true while it has focus, the tab order holds it in place of this control, and a press on this control's other
+     * parts focuses it. The root fires {@code FOCUS_GAINED} and {@code FOCUS_LOST} on this control too, after the
+     * delegate, so its {@link #onFocusGained} and {@link #onFocusLost} run. This control's own node stops taking focus.
+     *
+     * @param delegate the part that takes focus, made by the same factory
+     */
+    protected final void setFocusDelegate(final Component<?> delegate) {
+        this.node.setFocusDelegate(this.nodeOf(delegate));
+    }
+
+    /**
+     * Returns the node the {@link Focusable} methods work on: the focus delegate, or this component's own node.
+     */
+    private Node focusNode() {
+        final Node delegate = this.node.focusDelegate();
+        return delegate != null ? delegate : this.node;
+    }
+
+    /**
      * Returns whether the component can take keyboard focus. See {@link Focusable#isFocusable()}.
      *
      * @return true if focusable; always false unless the subclass implements {@link Focusable}
      */
     public final boolean isFocusable() {
-        return this.node.isFocusable();
+        return this.focusNode().isFocusable();
     }
 
     /**
@@ -824,7 +846,7 @@ public abstract class BuiltInComponent<T extends Component<T>> implements Compon
      * @return this component
      */
     public final T setFocusable(final boolean focusable) {
-        this.node.setFocusable(focusable);
+        this.focusNode().setFocusable(focusable);
         return this.self();
     }
 
@@ -834,7 +856,7 @@ public abstract class BuiltInComponent<T extends Component<T>> implements Compon
      * @return true if tabbable
      */
     public final boolean isTabbable() {
-        return this.node.isTabbable();
+        return this.focusNode().isTabbable();
     }
 
     /**
@@ -844,7 +866,7 @@ public abstract class BuiltInComponent<T extends Component<T>> implements Compon
      * @return this component
      */
     public final T setTabbable(final boolean tabbable) {
-        this.node.setTabbable(tabbable);
+        this.focusNode().setTabbable(tabbable);
         return this.self();
     }
 
@@ -854,7 +876,7 @@ public abstract class BuiltInComponent<T extends Component<T>> implements Compon
      * @return the tab index; 0 by default
      */
     public final int tabIndex() {
-        return this.node.tabIndex();
+        return this.focusNode().tabIndex();
     }
 
     /**
@@ -864,7 +886,7 @@ public abstract class BuiltInComponent<T extends Component<T>> implements Compon
      * @return this component
      */
     public final T setTabIndex(final int tabIndex) {
-        this.node.setTabIndex(tabIndex);
+        this.focusNode().setTabIndex(tabIndex);
         return this.self();
     }
 
@@ -874,7 +896,7 @@ public abstract class BuiltInComponent<T extends Component<T>> implements Compon
      * @return true while focused
      */
     public final boolean isFocused() {
-        return this.node.isFocused();
+        return this.focusNode().isFocused();
     }
 
     /**
@@ -883,7 +905,7 @@ public abstract class BuiltInComponent<T extends Component<T>> implements Compon
      * @return true if the component now has focus; always false unless the subclass implements {@link Focusable}
      */
     public final boolean requestFocus() {
-        return this.node.requestFocus();
+        return this.focusNode().requestFocus();
     }
 
     /**

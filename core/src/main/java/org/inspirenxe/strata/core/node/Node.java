@@ -126,6 +126,8 @@ public class Node implements ComponentPeer {
     private boolean hovered;
     private boolean pressed;
     private boolean focused;
+    private Node focusDelegate;
+    private Node focusOwner;
 
     // Layout inputs
     private Insets margin;
@@ -1130,6 +1132,40 @@ public class Node implements ComponentPeer {
 
     final void setFocused(final boolean focused) {
         this.focused = focused;
+    }
+
+    /**
+     * Returns the node that takes focus for this one, such as a table's inner list, which core's
+     * {@code BuiltInComponent.setFocusDelegate} set.
+     *
+     * @return the delegate, or {@code null} when this node takes focus itself
+     */
+    public final Node focusDelegate() {
+        return this.focusDelegate;
+    }
+
+    /**
+     * Returns the node this one takes focus for, the reverse of {@link #focusDelegate()}. The root fires
+     * {@code FOCUS_GAINED} and {@code FOCUS_LOST} on it too.
+     *
+     * @return the owner, or {@code null} when this node is no other node's delegate
+     */
+    public final Node focusOwner() {
+        return this.focusOwner;
+    }
+
+    /**
+     * Makes another node take focus for this one, and this node stop taking it itself.
+     */
+    final void setFocusDelegate(final Node delegate) {
+        if (this.focusDelegate != null) {
+            this.focusDelegate.focusOwner = null;
+        }
+        this.focusDelegate = delegate;
+        delegate.focusOwner = this;
+        this.focusable = false;
+        this.tabbable = false;
+        this.treeChanged();
     }
 
     // ------------------------------------------------------------------

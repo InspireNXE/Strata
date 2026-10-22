@@ -16,6 +16,7 @@
 package org.inspirenxe.strata.api.control.collection;
 
 import org.inspirenxe.strata.api.component.Component;
+import org.inspirenxe.strata.api.component.Focusable;
 import org.inspirenxe.strata.api.component.HasCursor;
 import org.inspirenxe.strata.api.component.HasTooltip;
 import org.inspirenxe.strata.api.control.attribute.item.Activatable;
@@ -50,6 +51,10 @@ import java.util.function.Function;
  *
  * <p>Items are told apart by their key, the item itself unless {@linkplain #setKeyFunction set} otherwise, and the
  * tree remembers which keys are expanded across {@link #setItems} calls.</p>
+ *
+ * <p>The tree is focusable and tabbable, and keeps focus on its rows: {@link #requestFocus()} focuses the rows,
+ * {@link #isFocused()} is true while they have focus, and the tab order holds the tree once.
+ * {@link Focusable#FOCUS_GAINED} and {@link Focusable#FOCUS_LOST} fire on the tree.</p>
  *
  * <p>The tree fires its own events. The selection and activation events carry row indexes, so read the item with
  * {@code tree.shownItems().get(e.value())}. The row list is private to the tree: its {@link ListView} events never
@@ -95,8 +100,8 @@ import java.util.function.Function;
  *
  * @param <T> the type of the items
  */
-public interface TreeView<T> extends Component<TreeView<T>>, HasCursor<TreeView<T>>, HasTooltip<TreeView<T>>,
-        ItemSource<T, TreeView<T>>, CellSource<T, TreeView<T>>,
+public interface TreeView<T> extends Component<TreeView<T>>, Focusable<TreeView<T>>, HasCursor<TreeView<T>>,
+        HasTooltip<TreeView<T>>, ItemSource<T, TreeView<T>>, CellSource<T, TreeView<T>>,
         MultiSelection<T, TreeView<T>>, Activatable<TreeView<T>>, RowView<TreeView<T>> {
     /**
      * Style key for the expand arrows (paint, optional).

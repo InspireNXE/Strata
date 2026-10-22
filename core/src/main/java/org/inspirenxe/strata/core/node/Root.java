@@ -98,7 +98,8 @@ import java.util.function.Consumer;
  * popup above the layer it lands on, except those opened without light dismiss, and then goes nowhere if any
  * closed. A press on a disabled node goes no further either: it fires nothing, runs no hook, leaves focus alone and
  * uses up its release, so nothing behind the node acts. Otherwise the press focuses the pressed node or its nearest
- * focusable ancestor and clears focus if there is none, then tells the pressed node and each of its ancestors
+ * focusable ancestor, where an ancestor whose {@linkplain Node#focusDelegate() focus delegate} can take focus counts
+ * as that delegate, and clears focus if there is none, then tells the pressed node and each of its ancestors
  * through {@link NodeHooks#pressedWithin}, innermost first, and only then fires the press. Each button is tracked on
  * its own. A press that closed popups or hit a dialog's backdrop uses up its release too. A press of a button that
  * is still held, because the engine lost its release, first ends the old press with a release and no click. A drag
@@ -1799,6 +1800,10 @@ public final class Root {
             if (this.canFocus(candidate)) {
                 return candidate;
             }
+            final Node delegate = candidate.focusDelegate();
+            if (delegate != null && this.canFocus(delegate)) {
+                return delegate;
+            }
         }
         return null;
     }
@@ -1821,6 +1826,8 @@ public final class Root {
      * {@code FOCUS_GAINED}. A focus-lost handler may move focus again, as a field that refuses to let go does: that
      * change runs to the end, and this one stops there, so the node it was moving to never hears that it gained or
      * lost focus. A focus-lost handler that throws still lets the new node gain focus before the exception goes on.
+     * A node that is another's {@linkplain Node#focusDelegate() focus delegate} has its owner hear each event right
+     * after it, and the owner hears {@code FOCUS_GAINED} only while the delegate still has focus.
      */
     private void changeFocus(final Node next) {
         if (next == this.focused) {
@@ -1839,6 +1846,11 @@ public final class Root {
                     this.platform.textInput().stop();
                 }
                 lost.fire(Focusable.FOCUS_LOST, new FocusEventImpl(lost.facade(), next == null ? null : next.facade()));
+                // The control a delegate takes focus for hears it too
+                final Node owner = lost.focusOwner();
+                if (owner != null) {
+                    owner.fire(Focusable.FOCUS_LOST, new FocusEventImpl(owner.facade(), next == null ? null : next.facade()));
+                }
             }
         } finally {
             if (this.focused == next) {
@@ -1856,6 +1868,10 @@ public final class Root {
             this.platform.textInput().start(next.bounds(), next.textInputKind());
         }
         next.fire(Focusable.FOCUS_GAINED, new FocusEventImpl(next.facade(), lost == null ? null : lost.facade()));
+        final Node owner = next.focusOwner();
+        if (owner != null && this.focused == next) {
+            owner.fire(Focusable.FOCUS_GAINED, new FocusEventImpl(owner.facade(), lost == null ? null : lost.facade()));
+        }
         for (Node ancestor = next.parentNode(); ancestor != null && this.focused == next; ancestor = ancestor.parentNode()) {
             ancestor.hooks().descendantFocused(next.facade());
         }

@@ -16,6 +16,7 @@
 package org.inspirenxe.strata.api.control.collection;
 
 import org.inspirenxe.strata.api.component.Component;
+import org.inspirenxe.strata.api.component.Focusable;
 import org.inspirenxe.strata.api.component.HasCursor;
 import org.inspirenxe.strata.api.component.HasTooltip;
 import org.inspirenxe.strata.api.control.attribute.item.Activatable;
@@ -52,6 +53,10 @@ import java.util.function.Function;
  * flipping on each click, and the title shows an arrow. Text columns sort by their text, ignoring case, unless
  * given another comparator. Sorting changes only the order the rows are shown in: {@link #items()} keeps the order
  * they were set in, while {@link #shownItems()} and every row index follow the order on screen.</p>
+ *
+ * <p>The table is focusable and tabbable, and keeps focus on its body: {@link #requestFocus()} focuses the body,
+ * {@link #isFocused()} is true while the body has focus, a press on the header focuses it too, and the tab order
+ * holds the table once. {@link Focusable#FOCUS_GAINED} and {@link Focusable#FOCUS_LOST} fire on the table.</p>
  *
  * <p>The table fires its own events. The selection and activation events carry row indexes in the shown order, so
  * read the item with {@code table.shownItems().get(e.value())}. The body list is private to the table: its
@@ -106,8 +111,8 @@ import java.util.function.Function;
  *
  * @param <T> the type of the items
  */
-public interface TableView<T> extends Component<TableView<T>>, HasCursor<TableView<T>>, HasTooltip<TableView<T>>,
-        ItemSource<T, TableView<T>>,
+public interface TableView<T> extends Component<TableView<T>>, Focusable<TableView<T>>, HasCursor<TableView<T>>,
+        HasTooltip<TableView<T>>, ItemSource<T, TableView<T>>,
         MultiSelection<T, TableView<T>>, Activatable<TableView<T>>, RowView<TableView<T>> {
     /**
      * Style key for the header behind each title (paint, required).

@@ -55,6 +55,7 @@ abstract class ListBackedControl<T, E, S extends Component<S> & RowView<S> & Mul
         super(ui);
         this.list = new ListViewImpl<>(ui, this::row);
         this.list.setAnchor(Anchor.FILL);
+        this.setFocusDelegate(this.list);
         this.list.route(this::userSelect, this::userActivate, (index, previous) -> {
             if (this.reportsSelection()) {
                 this.report(SELECTED, index, previous);
