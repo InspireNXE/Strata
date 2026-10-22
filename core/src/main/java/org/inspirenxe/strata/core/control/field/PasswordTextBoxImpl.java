@@ -39,6 +39,7 @@ import org.inspirenxe.strata.api.input.Modifiers;
 import org.inspirenxe.strata.api.input.MouseButton;
 import org.inspirenxe.strata.api.input.TextInputKind;
 import org.inspirenxe.strata.api.layout.Anchor;
+import org.inspirenxe.strata.api.layout.HorizontalAlignment;
 import org.inspirenxe.strata.api.text.Text;
 import org.inspirenxe.strata.api.text.TextMetrics;
 import org.inspirenxe.strata.api.text.TextSpan;
@@ -103,6 +104,7 @@ public final class PasswordTextBoxImpl extends BuiltInComposite<PasswordTextBox>
     private Insets themePadding;
     private boolean readOnly;
     private boolean selectAllOnFocus;
+    private HorizontalAlignment textAlignment;
     private int maskCodePoint;
     private boolean revealable;
     private boolean revealed;
@@ -153,6 +155,7 @@ public final class PasswordTextBoxImpl extends BuiltInComposite<PasswordTextBox>
         this.buffer = new SecretBuffer();
         this.editor = new LineEditor(this.buffer, new TextBoundaries(this.buffer), new Editing());
         this.maxLength = Integer.MAX_VALUE;
+        this.textAlignment = HorizontalAlignment.LEFT;
         this.textPadding = TextBoxImpl.DEFAULT_PADDING;
         this.themePadding = TextBoxImpl.DEFAULT_PADDING;
         this.maskCodePoint = DEFAULT_MASK;
@@ -476,6 +479,18 @@ public final class PasswordTextBoxImpl extends BuiltInComposite<PasswordTextBox>
     public PasswordTextBox setPlaceholder(final Text placeholder) {
         this.placeholder = Objects.requireNonNull(placeholder, "placeholder");
         this.invalidateLayout();
+        return this;
+    }
+
+    @Override
+    public HorizontalAlignment textAlignment() {
+        return this.textAlignment;
+    }
+
+    @Override
+    public PasswordTextBox setTextAlignment(final HorizontalAlignment alignment) {
+        this.textAlignment = Objects.requireNonNull(alignment, "alignment");
+        this.editor.setAlignment(alignment);
         return this;
     }
 
@@ -853,6 +868,11 @@ public final class PasswordTextBoxImpl extends BuiltInComposite<PasswordTextBox>
                 box.selectedDrawnFor = box.drawn;
             }
             painter.text(box.selectedDrawn, originX, y);
+        }
+
+        @Override
+        public float placeholderWidth() {
+            return PasswordTextBoxImpl.this.placeholderLine.width();
         }
 
         @Override

@@ -32,6 +32,7 @@ import org.inspirenxe.strata.api.geometry.Size;
 import org.inspirenxe.strata.api.input.Key;
 import org.inspirenxe.strata.api.input.Modifiers;
 import org.inspirenxe.strata.api.input.MouseButton;
+import org.inspirenxe.strata.api.layout.HorizontalAlignment;
 import org.inspirenxe.strata.api.layout.ScrollPanel;
 import org.inspirenxe.strata.api.text.Text;
 import org.inspirenxe.strata.api.text.TextHighlighter;
@@ -131,6 +132,9 @@ public final class TextAreaImpl extends BuiltInComponent<TextArea> implements Te
     private Insets themePadding;
     private boolean readOnly;
     private boolean acceptsTab;
+    private HorizontalAlignment textAlignment;
+    // How much of a row's free room goes before it: 0 for left, 0.5 for center, 1 for right
+    private float alignment;
 
     private float scrollX;
     private float scrollY;
@@ -173,6 +177,10 @@ public final class TextAreaImpl extends BuiltInComponent<TextArea> implements Te
     // Each row as drawn: one span per styled segment it crosses, and where each starts on the row
     private TextSpan[][] rowSpans;
     private float[][] rowSpanX;
+    private float[] rowWidth;
+    // How far each row is shifted right by the alignment, worked out with the viewport
+    private float[] rowShift;
+    private float shiftedFor;
     private final StyledText styled;
     private TextHighlighter highlighter;
     private float widestRow;
@@ -251,6 +259,10 @@ public final class TextAreaImpl extends BuiltInComponent<TextArea> implements Te
         this.rowSoft = new boolean[8];
         this.rowSpans = new TextSpan[8][];
         this.rowSpanX = new float[8][];
+        this.rowWidth = new float[8];
+        this.rowShift = new float[8];
+        this.shiftedFor = Float.NaN;
+        this.textAlignment = HorizontalAlignment.LEFT;
         this.styled = new StyledText();
         this.highlighter = TextHighlighter.NONE;
         this.selectionX0 = new float[8];
@@ -581,6 +593,24 @@ public final class TextAreaImpl extends BuiltInComponent<TextArea> implements Te
     }
 
     @Override
+    public HorizontalAlignment textAlignment() {
+        return this.textAlignment;
+    }
+
+    @Override
+    public TextArea setTextAlignment(final HorizontalAlignment alignment) {
+        this.textAlignment = Objects.requireNonNull(alignment, "alignment");
+        this.alignment = switch (alignment) {
+            case CENTER -> 0.5f;
+            case RIGHT -> 1f;
+            case LEFT, STRETCH -> 0f;
+        };
+        this.shiftedFor = Float.NaN;
+        this.visualsDirty = true;
+        return this;
+    }
+
+    @Override
     public TextArea setAcceptsTab(final boolean accepts) {
         this.acceptsTab = accepts;
         return this;
@@ -673,6 +703,7 @@ public final class TextAreaImpl extends BuiltInComponent<TextArea> implements Te
                 this.barShown = true;
             }
             this.visualsDirty = true;
+            this.shiftedFor = Float.NaN;
         }
         final float bottomGutter = this.horizontalBarShown ? GUTTER : 0f;
         this.viewport = Rects.reuse(this.viewport, inner.x(), inner.y(), inner.width() - (this.barShown ? GUTTER : 0f),
@@ -689,6 +720,22 @@ public final class TextAreaImpl extends BuiltInComponent<TextArea> implements Te
         this.horizontalTrack = Rects.reuse(this.horizontalTrack, inner.x(), inner.bottom() - ScrollPanel.BAR_WIDTH,
                 this.viewport.width(), ScrollPanel.BAR_WIDTH);
         this.horizontalBar.update(this.horizontalTrack, this.viewport.width(), Math.max(wide, this.viewport.width()));
+        this.alignRows(Math.max(wide, this.viewport.width()));
+    }
+
+    /**
+     * Works out how far each row is shifted by the alignment within a width: the viewport's, or the widest row's when
+     * that is wider. Only after the rows or the width changed.
+     */
+    private void alignRows(final float span) {
+        if (span == this.shiftedFor) {
+            return;
+        }
+        this.shiftedFor = span;
+        for (int row = 0; row < this.rowCount; row++) {
+            this.rowShift[row] = this.alignment == 0f ? 0f
+                    : Math.round(Math.max(0f, span - (this.rowWidth[row] + 1f)) * this.alignment);
+        }
     }
 
     /**
@@ -733,6 +780,8 @@ public final class TextAreaImpl extends BuiltInComponent<TextArea> implements Te
             this.rowSoft = Arrays.copyOf(this.rowSoft, grown);
             this.rowSpans = Arrays.copyOf(this.rowSpans, grown);
             this.rowSpanX = Arrays.copyOf(this.rowSpanX, grown);
+            this.rowWidth = Arrays.copyOf(this.rowWidth, grown);
+            this.rowShift = Arrays.copyOf(this.rowShift, grown);
             this.selectionX0 = Arrays.copyOf(this.selectionX0, grown);
             this.selectionX1 = Arrays.copyOf(this.selectionX1, grown);
             this.selectedRects = Arrays.copyOf(this.selectedRects, grown);
@@ -749,6 +798,7 @@ public final class TextAreaImpl extends BuiltInComponent<TextArea> implements Te
         this.rowSpans[this.rowCount] = spans;
         this.rowSpanX[this.rowCount] = offsets;
         final float rowWidth = StyledText.extent(metrics, spans, offsets);
+        this.rowWidth[this.rowCount] = rowWidth;
         this.widestRow = Math.max(this.widestRow, rowWidth);
         this.rowCount++;
     }
@@ -795,7 +845,7 @@ public final class TextAreaImpl extends BuiltInComponent<TextArea> implements Te
         this.ensureRows();
         final int row = Math.max(0, Math.min(this.rowCount - 1,
                 (int) Math.floor((localY - this.textPadding.top() + this.scrollY) / this.lineHeight)));
-        return this.indexOnRow(row, localX - this.textPadding.left() + this.scrollX);
+        return this.indexOnRow(row, localX - this.textPadding.left() + this.scrollX - this.rowShift[row]);
     }
 
     private void updateVisuals() {
@@ -842,11 +892,12 @@ public final class TextAreaImpl extends BuiltInComponent<TextArea> implements Te
             this.glide.stop();
         }
         final float view = this.viewport.width();
-        if (this.caretX - this.scrollX > view - 1f) {
-            this.scrollX = this.caretX - view + 1f;
+        final float caretX = this.caretX + this.rowShift[this.caretRow];
+        if (caretX - this.scrollX > view - 1f) {
+            this.scrollX = caretX - view + 1f;
         }
-        if (this.caretX - this.scrollX < 0f) {
-            this.scrollX = this.caretX;
+        if (caretX - this.scrollX < 0f) {
+            this.scrollX = caretX;
         }
         this.scrollX = Math.max(0f, Math.min(this.scrollX, this.maxScrollX));
     }
@@ -885,7 +936,7 @@ public final class TextAreaImpl extends BuiltInComponent<TextArea> implements Te
             this.repaintAfter(this.editor.untilBlink(this.look.blinkMillis()));
         }
         if (this.isFocused() && this.isEnabled() && !this.readOnly && this.editor.caretShown(this.look.blinkMillis())) {
-            float x = this.viewport.x() + this.caretX - this.scrollX;
+            float x = this.viewport.x() + this.rowShift[this.caretRow] + this.caretX - this.scrollX;
             if (this.wrap) {
                 // A caret in the spaces that hang past the end of a wrapped row stops at the edge
                 x = Math.min(x, this.viewport.right() - 1f);
@@ -917,7 +968,9 @@ public final class TextAreaImpl extends BuiltInComponent<TextArea> implements Te
         final float offset = Math.round(this.scrollY);
         if (this.buffer.length() == 0) {
             if (!this.placeholderLine.isEmpty() && !(this.look.hidePlaceholder() && this.isFocused())) {
-                this.placeholderLine.draw(this.painter, this.viewport.x(), this.viewport.y() - offset);
+                final float shift = this.alignment == 0f ? 0f
+                        : Math.round(Math.max(0f, this.viewport.width() - this.placeholderLine.width()) * this.alignment);
+                this.placeholderLine.draw(this.painter, this.viewport.x() + shift, this.viewport.y() - offset);
             }
             return;
         }
@@ -929,14 +982,15 @@ public final class TextAreaImpl extends BuiltInComponent<TextArea> implements Te
             Arrays.fill(this.selectedSpansFor, null);
             this.selectedSpansStyle = selectedStyle;
         }
-        this.drawnX = originX;
         for (int row = first; row <= last; row++) {
             final float y = this.viewport.y() + row * this.lineHeight - offset;
+            final float rowX = originX + this.rowShift[row];
+            this.drawnX = rowX;
             this.drawnY = y;
             this.drawnSpans = this.rowSpans[row];
             this.drawnOffsets = this.rowSpanX[row];
             if (this.selectionX1[row] > this.selectionX0[row]) {
-                this.selectedRects[row] = Rects.reuse(this.selectedRects[row], originX + this.selectionX0[row], y,
+                this.selectedRects[row] = Rects.reuse(this.selectedRects[row], rowX + this.selectionX0[row], y,
                         this.selectionX1[row] - this.selectionX0[row], this.lineHeight);
                 final Rect selected = this.selectedRects[row];
                 this.look.selection().paint(this.painter, selected);
@@ -1326,7 +1380,7 @@ public final class TextAreaImpl extends BuiltInComponent<TextArea> implements Te
 
         @Override
         public float caretX() {
-            return TextAreaImpl.this.caretX;
+            return TextAreaImpl.this.caretX + TextAreaImpl.this.rowShift[TextAreaImpl.this.caretRow];
         }
 
         @Override
@@ -1336,7 +1390,7 @@ public final class TextAreaImpl extends BuiltInComponent<TextArea> implements Te
             if (target < 0) {
                 return 0;
             }
-            return target >= area.rowCount ? area.buffer.length() : area.indexOnRow(target, x);
+            return target >= area.rowCount ? area.buffer.length() : area.indexOnRow(target, x - area.rowShift[target]);
         }
 
         @Override

@@ -21,6 +21,7 @@ import org.inspirenxe.strata.api.component.HasTooltip;
 import org.inspirenxe.strata.api.control.attribute.value.Ranged;
 import org.inspirenxe.strata.api.control.attribute.value.Stepped;
 import org.inspirenxe.strata.api.control.button.Button;
+import org.inspirenxe.strata.api.layout.HorizontalAlignment;
 
 /**
  * A number in a text field, with buttons to step it up and down.
@@ -173,6 +174,23 @@ public interface Spinner extends Component<Spinner>, HasCursor<Spinner>, HasTool
      * @throws IllegalArgumentException if {@code decimals} is outside 0 to 9
      */
     Spinner setDecimals(int decimals);
+
+    /**
+     * Returns how the value's text sits in the field left of the step buttons.
+     *
+     * @return the alignment; {@link HorizontalAlignment#LEFT} by default
+     */
+    HorizontalAlignment textAlignment();
+
+    /**
+     * Sets how the value's text sits in the field left of the step buttons, as on a text box, so a column of
+     * spinners can line their numbers up at the right. {@link HorizontalAlignment#STRETCH} counts as
+     * {@link HorizontalAlignment#LEFT}.
+     *
+     * @param alignment the alignment
+     * @return this spinner
+     */
+    Spinner setTextAlignment(HorizontalAlignment alignment);
 
     /**
      * Raises the value by one step, as the up button does, without firing {@link #CHANGE}. Does nothing while

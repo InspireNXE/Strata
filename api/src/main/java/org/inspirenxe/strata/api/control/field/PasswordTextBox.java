@@ -25,6 +25,7 @@ import org.inspirenxe.strata.api.event.control.ControlEvent;
 import org.inspirenxe.strata.api.event.control.RequestEvent;
 import org.inspirenxe.strata.api.event.control.ValueEvent;
 import org.inspirenxe.strata.api.event.control.ValueRequestEvent;
+import org.inspirenxe.strata.api.layout.HorizontalAlignment;
 import org.inspirenxe.strata.api.state.PropertyKey;
 import org.inspirenxe.strata.api.text.Text;
 
@@ -328,6 +329,23 @@ public interface PasswordTextBox extends Component<PasswordTextBox>, Focusable<P
      * @return this box
      */
     PasswordTextBox setSelectAllOnFocus(boolean selectAll);
+
+    /**
+     * Returns how text narrower than the box sits in it.
+     *
+     * @return the alignment; {@link HorizontalAlignment#LEFT} by default
+     */
+    HorizontalAlignment textAlignment();
+
+    /**
+     * Sets how the mask or the shown text sits in the box when it is narrower than the room left of the eye, as on a
+     * text box. The caret and the placeholder align with it. {@link HorizontalAlignment#STRETCH} counts as
+     * {@link HorizontalAlignment#LEFT}.
+     *
+     * @param alignment the alignment
+     * @return this box
+     */
+    PasswordTextBox setTextAlignment(HorizontalAlignment alignment);
 
     /**
      * Sets which code points the user may type or paste. Typing a code point the filter refuses does nothing, and a

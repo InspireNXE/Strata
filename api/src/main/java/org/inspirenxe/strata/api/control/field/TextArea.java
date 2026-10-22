@@ -22,6 +22,7 @@ import org.inspirenxe.strata.api.component.HasTooltip;
 import org.inspirenxe.strata.api.control.attribute.text.TextEntry;
 import org.inspirenxe.strata.api.control.attribute.text.TextInput;
 import org.inspirenxe.strata.api.geometry.Insets;
+import org.inspirenxe.strata.api.layout.HorizontalAlignment;
 import org.inspirenxe.strata.api.text.Text;
 
 import java.util.Objects;
@@ -312,6 +313,23 @@ public interface TextArea extends Component<TextArea>, Focusable<TextArea>, HasC
      * @return the column, from 0
      */
     int columnOf(int index);
+
+    /**
+     * Returns how each row sits in the area's width.
+     *
+     * @return the alignment; {@link HorizontalAlignment#LEFT} by default
+     */
+    HorizontalAlignment textAlignment();
+
+    /**
+     * Sets how each row sits in the area's width, or in the widest row's when the area does not wrap and that row is
+     * wider. The caret, the selection and the placeholder align with the text. {@link HorizontalAlignment#STRETCH}
+     * counts as {@link HorizontalAlignment#LEFT}.
+     *
+     * @param alignment the alignment
+     * @return this text area
+     */
+    TextArea setTextAlignment(HorizontalAlignment alignment);
 
     /**
      * Returns whether Tab types a tab character.

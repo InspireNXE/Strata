@@ -22,6 +22,7 @@ import org.inspirenxe.strata.api.extension.Painter;
 import org.inspirenxe.strata.api.geometry.Rect;
 import org.inspirenxe.strata.api.input.Key;
 import org.inspirenxe.strata.api.input.Modifiers;
+import org.inspirenxe.strata.api.layout.HorizontalAlignment;
 import org.inspirenxe.strata.api.text.TextMetrics;
 import org.inspirenxe.strata.api.text.TextSpan;
 import org.inspirenxe.strata.api.text.TextStyle;
@@ -39,6 +40,10 @@ import org.inspirenxe.strata.api.theme.Paint;
  *
  * <p>The rectangles it draws are kept from frame to frame and made again only when what they cover moves, so a
  * frame that repeats the last one allocates nothing.</p>
+ *
+ * <p>Text narrower than the content box, with one unit for the caret, is shifted by the field's alignment: all the
+ * free room for right, half of it for center, rounded to whole units. Wider text starts at the left and scrolls, so
+ * alignment never hides the caret. The placeholder is aligned the same way by its own width.</p>
  */
 final class LineEditor {
     /**
@@ -55,6 +60,11 @@ final class LineEditor {
     private final Runnable drawPlain;
     private final Runnable drawSelected;
     private float scrollX;
+    // How much of the free room goes before the text: 0 for left, 0.5 for center, 1 for right
+    private float alignment;
+    // Worked out in paint: how far the text and the placeholder are shifted from the content box's left
+    private float shift;
+    private float placeholderShift;
     private FieldLook look = FieldLook.plain(Paint.NONE, Paint.NONE);
     private TextStyle underscoreStyle;
     private TextSpan underscore;
@@ -167,6 +177,17 @@ final class LineEditor {
     }
 
     /**
+     * Sets how text narrower than the field sits in it; {@code STRETCH} counts as left.
+     */
+    void setAlignment(final HorizontalAlignment alignment) {
+        this.alignment = switch (alignment) {
+            case CENTER -> 0.5f;
+            case RIGHT -> 1f;
+            case LEFT, STRETCH -> 0f;
+        };
+    }
+
+    /**
      * Returns whether the caret is in the shown half of its blink.
      */
     boolean caretShown() {
@@ -218,7 +239,7 @@ final class LineEditor {
     private int indexAt(final float textX) {
         final TextMetrics metrics = this.owner.environment().text();
         this.updateVisuals(metrics);
-        final float x = textX + this.scrollX;
+        final float x = textX + this.scrollX - this.shift;
         return x <= 0f ? 0 : this.owner.indexForX(metrics, x);
     }
 
@@ -265,6 +286,10 @@ final class LineEditor {
         this.selectionPaint = look.selection();
         this.updateVisuals(this.owner.environment().text());
         this.revealCaret();
+        final float view = contentBox.width();
+        this.shift = Math.round(Math.max(0f, view - (this.textWidth + 1f)) * this.alignment);
+        this.placeholderShift = this.alignment == 0f ? 0f
+                : Math.round(Math.max(0f, view - this.owner.placeholderWidth()) * this.alignment);
 
         this.painter = painter;
         try {
@@ -284,7 +309,7 @@ final class LineEditor {
             this.owner.repaintAfter(this.editor.untilBlink(look.blinkMillis()));
         }
         if (showCaret && this.caretShown()) {
-            final float atX = contentBox.x() + this.caretX - this.scrollX;
+            final float atX = contentBox.x() + this.shift + this.caretX - this.scrollX;
             if (look.underscoreCaret() && this.editor.caret() == this.buffer.length()) {
                 if (this.underscore == null || !textStyle.equals(this.underscoreStyle)) {
                     this.underscoreStyle = textStyle;
@@ -305,9 +330,9 @@ final class LineEditor {
      * lambda per frame.
      */
     private void drawContent() {
-        final float originX = this.contentBox.x() - this.scrollX;
+        final float originX = this.contentBox.x() + this.shift - this.scrollX;
         if (!this.editor.hasSelection()) {
-            this.owner.drawText(this.painter, originX, this.contentBox.x(), this.textY, null);
+            this.owner.drawText(this.painter, originX, this.contentBox.x() + this.placeholderShift, this.textY, null);
             return;
         }
         final float reach = this.look.selectionExtend();
@@ -316,7 +341,7 @@ final class LineEditor {
         final Rect selected = this.selectedRect;
         this.selectionPaint.paint(this.painter, selected);
         if (this.look.selectedText() == null) {
-            this.owner.drawText(this.painter, originX, this.contentBox.x(), this.textY, null);
+            this.owner.drawText(this.painter, originX, this.contentBox.x() + this.placeholderShift, this.textY, null);
             return;
         }
         // The text outside the selection as it is, and inside it in the selected style
@@ -331,12 +356,13 @@ final class LineEditor {
     }
 
     private void drawPlainText() {
-        this.owner.drawText(this.painter, this.contentBox.x() - this.scrollX, this.contentBox.x(), this.textY, null);
+        this.owner.drawText(this.painter, this.contentBox.x() + this.shift - this.scrollX,
+                this.contentBox.x() + this.placeholderShift, this.textY, null);
     }
 
     private void drawSelectedText() {
-        this.owner.drawText(this.painter, this.contentBox.x() - this.scrollX, this.contentBox.x(), this.textY,
-                this.look.selectedText());
+        this.owner.drawText(this.painter, this.contentBox.x() + this.shift - this.scrollX,
+                this.contentBox.x() + this.placeholderShift, this.textY, this.look.selectedText());
     }
 
     /**
@@ -394,5 +420,10 @@ final class LineEditor {
          * @param style the style to draw the text in instead of its own, or null to keep its own
          */
         void drawText(Painter painter, float originX, float left, float y, TextStyle style);
+
+        /**
+         * The width of the placeholder as last measured, for aligning it.
+         */
+        float placeholderWidth();
     }
 }

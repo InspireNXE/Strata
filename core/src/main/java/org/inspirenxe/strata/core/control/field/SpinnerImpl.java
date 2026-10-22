@@ -31,6 +31,7 @@ import org.inspirenxe.strata.api.geometry.Rect;
 import org.inspirenxe.strata.api.geometry.Size;
 import org.inspirenxe.strata.api.input.MouseButton;
 import org.inspirenxe.strata.api.layout.Anchor;
+import org.inspirenxe.strata.api.layout.HorizontalAlignment;
 import org.inspirenxe.strata.api.text.TextStyle;
 import org.inspirenxe.strata.api.theme.Paint;
 import org.inspirenxe.strata.api.theme.Theme;
@@ -178,6 +179,17 @@ public final class SpinnerImpl extends BuiltInComposite<Spinner> implements Spin
         this.decimals = decimals;
         this.updatePattern();
         return this.setValue(this.value);
+    }
+
+    @Override
+    public HorizontalAlignment textAlignment() {
+        return this.field.textAlignment();
+    }
+
+    @Override
+    public Spinner setTextAlignment(final HorizontalAlignment alignment) {
+        this.field.setTextAlignment(alignment);
+        return this;
     }
 
     @Override

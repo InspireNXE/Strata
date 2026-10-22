@@ -26,6 +26,7 @@ import org.inspirenxe.strata.api.event.control.RequestEvent;
 import org.inspirenxe.strata.api.event.control.ValueEvent;
 import org.inspirenxe.strata.api.event.control.ValueRequestEvent;
 import org.inspirenxe.strata.api.geometry.Insets;
+import org.inspirenxe.strata.api.layout.HorizontalAlignment;
 import org.inspirenxe.strata.api.text.Text;
 
 import java.util.ArrayList;
@@ -445,6 +446,24 @@ public interface TextBox extends Component<TextBox>, Focusable<TextBox>, HasCurs
      * @return this box
      */
     TextBox setSelectAllOnFocus(boolean selectAll);
+
+    /**
+     * Returns how text narrower than the box sits in it.
+     *
+     * @return the alignment; {@link HorizontalAlignment#LEFT} by default
+     */
+    HorizontalAlignment textAlignment();
+
+    /**
+     * Sets how text narrower than the box sits in it, such as a column of prices aligned right. The caret and the
+     * placeholder align with it. Text wider than the box starts at the left and scrolls sideways as before, so a
+     * short value aligned right stays at the right. {@link HorizontalAlignment#STRETCH} counts as
+     * {@link HorizontalAlignment#LEFT}.
+     *
+     * @param alignment the alignment
+     * @return this box
+     */
+    TextBox setTextAlignment(HorizontalAlignment alignment);
 
     /**
      * Sets what offers suggestions as the user types, and closes the suggestion list if it is open. The box asks

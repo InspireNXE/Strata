@@ -35,6 +35,7 @@ import org.inspirenxe.strata.api.input.KeyAction;
 import org.inspirenxe.strata.api.input.Modifiers;
 import org.inspirenxe.strata.api.input.MouseButton;
 import org.inspirenxe.strata.api.layout.Anchor;
+import org.inspirenxe.strata.api.layout.HorizontalAlignment;
 import org.inspirenxe.strata.api.overlay.Overlay;
 import org.inspirenxe.strata.api.text.Text;
 import org.inspirenxe.strata.api.text.TextHighlighter;
@@ -125,6 +126,7 @@ public final class TextBoxImpl extends BuiltInComponent<TextBox> implements Text
     private UnaryOperator<String> filter;
     private boolean readOnly;
     private boolean selectAllOnFocus;
+    private HorizontalAlignment textAlignment;
 
     // Suggestions
     private SuggestionProvider suggestionProvider;
@@ -181,6 +183,7 @@ public final class TextBoxImpl extends BuiltInComponent<TextBox> implements Text
         this.editor = new LineEditor(this.buffer, this.boundaries, new Editing());
         this.edits = new PlainEdits(this.buffer, this.boundaries, this.editor.editor(), new Edits());
         this.maxLength = Integer.MAX_VALUE;
+        this.textAlignment = HorizontalAlignment.LEFT;
         this.textPadding = DEFAULT_PADDING;
         this.themePadding = DEFAULT_PADDING;
         this.maxVisibleSuggestions = DEFAULT_MAX_VISIBLE_SUGGESTIONS;
@@ -433,6 +436,18 @@ public final class TextBoxImpl extends BuiltInComponent<TextBox> implements Text
         if (readOnly) {
             this.hideSuggestions();
         }
+        return this;
+    }
+
+    @Override
+    public HorizontalAlignment textAlignment() {
+        return this.textAlignment;
+    }
+
+    @Override
+    public TextBox setTextAlignment(final HorizontalAlignment alignment) {
+        this.textAlignment = Objects.requireNonNull(alignment, "alignment");
+        this.editor.setAlignment(alignment);
         return this;
     }
 
@@ -951,6 +966,11 @@ public final class TextBoxImpl extends BuiltInComponent<TextBox> implements Text
             for (int i = 0; i < spans.length; i++) {
                 painter.text(spans[i], originX + box.displayX[i], y);
             }
+        }
+
+        @Override
+        public float placeholderWidth() {
+            return TextBoxImpl.this.placeholderLine.width();
         }
 
         @Override
