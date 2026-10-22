@@ -27,6 +27,8 @@ import org.inspirenxe.strata.api.input.MouseButton;
 import org.inspirenxe.strata.api.input.ScrollKind;
 import org.inspirenxe.strata.api.overlay.Overlay;
 import org.inspirenxe.strata.api.screen.Screen;
+import org.inspirenxe.strata.api.transfer.DropEffect;
+import org.inspirenxe.strata.api.transfer.Transfer;
 import org.inspirenxe.strata.core.StrataCore;
 import org.inspirenxe.strata.core.host.ScreenHostImpl;
 import org.inspirenxe.strata.core.input.ClickCounter;
@@ -39,6 +41,7 @@ import org.inspirenxe.strata.spi.Translator;
 
 import java.time.Clock;
 import java.util.ArrayList;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
@@ -353,6 +356,55 @@ public final class ScreenTester implements AutoCloseable {
         this.host.pointerMoved(x + dx, y + dy, Modifiers.NONE);
         this.host.pointerButton(x + dx, y + dy, MouseButton.LEFT, false, Modifiers.NONE);
         return this.frame();
+    }
+
+    /**
+     * Drags one component onto another with the left button: presses at the source's center, moves past the drag
+     * threshold, then to the target's center, and releases there. A source that starts a transfer, such as a list
+     * whose rows drag or a text box pressed inside its selection, drops it on the target, as for a person.
+     *
+     * @param source the component to press
+     * @param target the component to release over
+     * @return this tester
+     * @throws AssertionError if a person could not press the source or point at the target
+     */
+    public ScreenTester dragTo(final Component<?> source, final Component<?> target) {
+        final float[] from = this.reachable(source, "drag", true);
+        final float[] to = this.reachable(target, "drop on", false);
+        this.separate(MouseButton.LEFT, from[0], from[1]);
+        this.host.pointerMoved(from[0], from[1], Modifiers.NONE);
+        this.host.pointerButton(from[0], from[1], MouseButton.LEFT, true, Modifiers.NONE);
+        this.pressed(MouseButton.LEFT, from[0], from[1]);
+        final float step = Root.DRAG_THRESHOLD + 1f;
+        final float dx = to[0] - from[0];
+        final float dy = to[1] - from[1];
+        final float length = (float) Math.hypot(dx, dy);
+        if (length > step) {
+            this.host.pointerMoved(from[0] + dx / length * step, from[1] + dy / length * step, Modifiers.NONE);
+        } else {
+            this.host.pointerMoved(from[0] + step, from[1], Modifiers.NONE);
+        }
+        this.host.pointerMoved(to[0], to[1], Modifiers.NONE);
+        this.host.pointerButton(to[0], to[1], MouseButton.LEFT, false, Modifiers.NONE);
+        return this.frame();
+    }
+
+    /**
+     * Drops a transfer from another application on a component, as files dragged from the desktop: the drag enters
+     * at the component's center, allowing every effect, and drops there.
+     *
+     * @param target the component to drop on
+     * @param transfer what is dropped
+     * @return the effect the component under the point took, or empty when nothing took it
+     * @throws AssertionError if a person could not point at the component
+     */
+    public Optional<DropEffect> drop(final Component<?> target, final Transfer transfer) {
+        Objects.requireNonNull(transfer, "transfer");
+        final float[] at = this.reachable(target, "drop on", false);
+        this.host.dragEntered(at[0], at[1], transfer, EnumSet.allOf(DropEffect.class), Modifiers.NONE);
+        final Optional<DropEffect> taken = this.host.dropped(at[0], at[1], transfer, Modifiers.NONE);
+        this.frame();
+        return taken;
     }
 
     /**
