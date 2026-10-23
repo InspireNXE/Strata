@@ -17,6 +17,7 @@ package org.inspirenxe.strata.api.extension.peer;
 
 import org.inspirenxe.strata.api.component.Component;
 import org.inspirenxe.strata.api.geometry.Insets;
+import org.inspirenxe.strata.api.text.TextStylePatch;
 
 import java.util.List;
 
@@ -122,6 +123,20 @@ public interface ContainerPeer extends ComponentPeer {
      * @param padding the padding, or {@code null} for the container's default
      */
     void setPadding(Insets padding);
+
+    /**
+     * See {@link org.inspirenxe.strata.api.component.Container#textStyle()}.
+     *
+     * @return the patch, or {@code null} for none
+     */
+    TextStylePatch textStyle();
+
+    /**
+     * See {@link org.inspirenxe.strata.api.component.Container#setTextStyle(TextStylePatch)}.
+     *
+     * @param patch the patch, or {@code null} for none
+     */
+    void setTextStyle(TextStylePatch patch);
 
     /**
      * See {@link org.inspirenxe.strata.api.component.Container#clipsChildren()}.

@@ -40,12 +40,15 @@ import org.inspirenxe.strata.api.text.Text;
  *     {@code AbsolutePanel} the one pressed comes to the front. It is raised before the press is delivered, whatever
  *     handlers then do with the press.</li>
  *     <li>Dragging the title bar moves the window by its {@linkplain #setOffset offset}, kept inside the slot its
- *     parent gives it, while it {@linkplain #setMovable is movable}.</li>
+ *     parent gives it, while it {@linkplain #setMovable is movable}. A window the user moved or resized stays inside
+ *     that slot when it later shrinks or moves, as when the screen gets smaller; an offset set from code is kept as
+ *     set.</li>
  *     <li>A click on the close button {@linkplain #close closes} it while it {@linkplain #setClosable is
  *     closable}. So does an Escape press that nothing inside consumed, if a handler for {@link #CLOSE} or
  *     {@link #CLOSED} is registered on the window or an ancestor, or the window is shown in an overlay; otherwise
  *     Escape goes on to the engine, which usually closes the screen. Either way the window fires {@link #CLOSE}
- *     first.</li>
+ *     first. An unclosable window consumes that Escape press without closing or firing anything, so the overlay
+ *     showing it stays open.</li>
  *     <li>While the window {@linkplain #setResizable is resizable}, dragging the grip, a {@value #GRIP_SIZE}-unit
  *     square in the bottom-right corner, resizes it with its top-left corner in place. With
  *     {@linkplain #setEdgeResizable edge resizing} on, dragging any edge within {@value #EDGE_SIZE} units resizes it
@@ -54,10 +57,23 @@ import org.inspirenxe.strata.api.text.Text;
  *     never below the width its title bar asks for or the bar's height plus the grip, and inside the slot its parent
  *     gives it. Each resize sets the window's {@linkplain #setSize fixed size} and moves it by its
  *     {@linkplain #setOffset offset}, so its alignment in the slot no longer matters. The pointer shows
- *     {@link org.inspirenxe.strata.api.component.CursorKind#RESIZE_ALL} over the grip and the corners, and
+ *     {@link org.inspirenxe.strata.api.component.CursorKind#RESIZE_DIAGONAL_DOWN} over the grip and the top left
+ *     corner, {@code RESIZE_DIAGONAL_UP} over the other two corners, and
  *     {@code RESIZE_HORIZONTAL} or {@code RESIZE_VERTICAL} over an edge. A child under the grip or an edge that
  *     consumes the press, such as a button, takes it instead, and one with its own cursor shows that.</li>
  * </ul>
+ *
+ * <h2>Active, maximized and collapsed</h2>
+ * <p>A window is {@linkplain #isActive() active} while focus is within it, or, while focus is in none of the
+ * windows beside it in its parent, when it is the one of them pressed last, or the frontmost when none was pressed. An
+ * inactive window draws its title bar with {@value #STYLE_TITLE_INACTIVE}.</p>
+ * <p>A {@linkplain #setMaximizable maximizable} window shows a button left of the close button, a square outline, and
+ * a click on it or a double click on the title bar {@linkplain #setMaximized maximizes} it: it fills its slot, and
+ * keeps its size, alignment and offset to go back to when it is restored the same way. A maximized window neither
+ * moves nor resizes. A {@linkplain #setCollapsible collapsible} window shows a button left of those, an arrow, and a
+ * click on it {@linkplain #setCollapsed collapses} it to its title bar alone: its children are hidden until it
+ * expands again, and it does not resize. The buttons are drawn in the close button's styles, each
+ * {@value #BUTTON_WIDTH} units wide, and right to left they sit right of the close button, mirrored with it.</p>
  *
  * <h2>Events</h2>
  * <ul>
@@ -73,6 +89,9 @@ import org.inspirenxe.strata.api.text.Text;
  *     <li>{@link #RESIZE}: Requested on each move of a resize drag that would change the window's size. Cancel it to
  *     keep the size for that move, or set another size.</li>
  *     <li>{@link #RESIZED}: Reported after each resize by the user.</li>
+ *     <li>{@link #MAXIMIZE} and {@link #COLLAPSE}: Requested when the user maximizes or restores, or collapses or
+ *     expands, the window, with the new state. Cancel to keep it as it is.</li>
+ *     <li>{@link #MAXIMIZED} and {@link #COLLAPSED}: Reported after each change, from code too.</li>
  * </ul>
  *
  * <h2>Theme keys</h2>
@@ -89,6 +108,8 @@ import org.inspirenxe.strata.api.text.Text;
  *     2 by 2 squares in a triangle against the bottom-right corner. Nothing is drawn if it is missing.</li>
  *     <li>{@value #STYLE_GRIP_HOVERED} (paint, optional): the grip while the pointer is over the grip or an edge that
  *     resizes, and during a resize. Falls back to {@value #STYLE_GRIP}.</li>
+ *     <li>{@value #STYLE_TITLE_INACTIVE} (paint, optional): the title bar while the window is not
+ *     {@linkplain #isActive() active}. Falls back to {@value #STYLE_TITLE_BAR}.</li>
  *     <li>{@value #STYLE_TITLE_PADDING} (insets, optional): the space around the title in the title bar. Defaults to
  *     {@value #TITLE_PADDING} on every side.</li>
  *     <li>{@value #STYLE_PADDING} (insets, optional): the space between the window's edges, below the title bar, and
@@ -140,6 +161,14 @@ public interface Window extends Container<Window>, Titled<Window>, Closable<Wind
      */
     String STYLE_TITLE_PADDING = "window.title.padding";
     /**
+     * Style key for the title bar of a window that is not active (paint, optional).
+     */
+    String STYLE_TITLE_INACTIVE = "window.title.inactive";
+    /**
+     * The width of each title bar button, the close button included, in UI units.
+     */
+    float BUTTON_WIDTH = 12f;
+    /**
      * Style key for the space between the window's edges, below the title bar, and its content (insets,
      * optional). Defaults to 3 on every side. Padding set with {@link #setPadding} wins over it.
      */
@@ -172,6 +201,25 @@ public interface Window extends Container<Window>, Titled<Window>, Closable<Wind
      * slot for a stretched window, is layout and fires nothing.
      */
     EventType<ValueEvent<Window, Size>> RESIZED = EventType.valueReport("window.resized");
+    /**
+     * Requested when the user maximizes or restores the window, by its button or a double click on its title bar.
+     * The value is the new state, true for maximized. Cancel it to keep the window as it is, or set the other state.
+     * Fires only for the user's actions.
+     */
+    EventType<ValueRequestEvent<Window, Boolean>> MAXIMIZE = EventType.valueRequest("window.maximize");
+    /**
+     * Reported after the window was maximized or restored, by the user or from code. The value is the new state.
+     */
+    EventType<ValueEvent<Window, Boolean>> MAXIMIZED = EventType.valueReport("window.maximized");
+    /**
+     * Requested when the user collapses or expands the window by its button. The value is the new state, true for
+     * collapsed. Cancel it to keep the window as it is, or set the other state. Fires only for the user's actions.
+     */
+    EventType<ValueRequestEvent<Window, Boolean>> COLLAPSE = EventType.valueRequest("window.collapse");
+    /**
+     * Reported after the window collapsed or expanded, by the user or from code. The value is the new state.
+     */
+    EventType<ValueEvent<Window, Boolean>> COLLAPSED = EventType.valueReport("window.collapsed");
 
     /**
      * Returns the title.
@@ -197,9 +245,9 @@ public interface Window extends Container<Window>, Titled<Window>, Closable<Wind
 
     /**
      * Sets whether the window can be closed by its close button and Escape. An unclosable window shows no close
-     * button.
+     * button, and an Escape press it would have closed on is consumed, as the class description says.
      *
-     * @param closable false to hide the close button and ignore Escape
+     * @param closable false to hide the close button and keep Escape from closing the window
      * @return this window
      */
     Window setClosable(boolean closable);
@@ -267,6 +315,79 @@ public interface Window extends Container<Window>, Titled<Window>, Closable<Wind
      * @return this window
      */
     Window setRaiseOnPress(boolean raiseOnPress);
+
+    /**
+     * Returns whether the window is the active one: focus is within it, or, with focus in none of the windows beside
+     * it in its parent, it is the one of them pressed last, or the frontmost when none was pressed.
+     *
+     * @return true while active
+     */
+    boolean isActive();
+
+    /**
+     * Returns whether the user can maximize the window.
+     *
+     * @return true after {@code setMaximizable(true)}; false for a new window
+     */
+    boolean isMaximizable();
+
+    /**
+     * Shows or hides the maximize button, and lets a double click on the title bar maximize, or not. A window
+     * already maximized stays so. A new layout runs.
+     *
+     * @param maximizable true to let the user maximize it
+     * @return this window
+     */
+    Window setMaximizable(boolean maximizable);
+
+    /**
+     * Returns whether the window fills its slot.
+     *
+     * @return true while maximized
+     */
+    boolean isMaximized();
+
+    /**
+     * Maximizes the window, so it fills its slot, or restores it to the size, alignment and offset it had, without
+     * asking {@link #MAXIMIZE}. Fires {@link #MAXIMIZED} if the state changed. Works whether or not it is
+     * maximizable.
+     *
+     * @param maximized true to fill the slot
+     * @return this window
+     */
+    Window setMaximized(boolean maximized);
+
+    /**
+     * Returns whether the user can collapse the window to its title bar.
+     *
+     * @return true after {@code setCollapsible(true)}; false for a new window
+     */
+    boolean isCollapsible();
+
+    /**
+     * Shows or hides the collapse button. A window already collapsed stays so. A new layout runs.
+     *
+     * @param collapsible true to let the user collapse it
+     * @return this window
+     */
+    Window setCollapsible(boolean collapsible);
+
+    /**
+     * Returns whether the window shows its title bar alone.
+     *
+     * @return true while collapsed
+     */
+    boolean isCollapsed();
+
+    /**
+     * Collapses the window to its title bar, hiding its children, or expands it again, showing the children it hid,
+     * without asking {@link #COLLAPSE}. Fires {@link #COLLAPSED} if the state changed. A child added while collapsed
+     * is not hidden by it, and is cut away with the rest of the content area. Works whether or not it is collapsible.
+     *
+     * @param collapsed true for the title bar alone
+     * @return this window
+     */
+    Window setCollapsed(boolean collapsed);
 
     /**
      * Closes the window: reports {@link #CLOSED}, then closes the overlay showing it, if it is in one. A window that

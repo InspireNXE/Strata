@@ -15,12 +15,15 @@
  */
 package org.inspirenxe.strata.core.node;
 
+import org.inspirenxe.strata.api.animation.Animator;
 import org.inspirenxe.strata.api.component.Component;
 import org.inspirenxe.strata.api.component.CursorKind;
 import org.inspirenxe.strata.api.component.Focusable;
+import org.inspirenxe.strata.api.component.HasContextMenu;
 import org.inspirenxe.strata.api.component.HasCursor;
 import org.inspirenxe.strata.api.component.HasTooltip;
 import org.inspirenxe.strata.api.component.Tooltip;
+import org.inspirenxe.strata.api.control.attribute.popup.Popup;
 import org.inspirenxe.strata.api.event.Event;
 import org.inspirenxe.strata.api.event.EventHandler;
 import org.inspirenxe.strata.api.event.EventType;
@@ -37,6 +40,7 @@ import org.inspirenxe.strata.api.event.input.KeyEvent;
 import org.inspirenxe.strata.api.event.input.PointerButtonEvent;
 import org.inspirenxe.strata.api.event.input.PointerEvent;
 import org.inspirenxe.strata.api.event.input.ScrollEvent;
+import org.inspirenxe.strata.api.event.input.TransferEvent;
 import org.inspirenxe.strata.api.extension.ArrangeContext;
 import org.inspirenxe.strata.api.extension.Environment;
 import org.inspirenxe.strata.api.extension.MeasureContext;
@@ -45,26 +49,30 @@ import org.inspirenxe.strata.api.geometry.Insets;
 import org.inspirenxe.strata.api.geometry.Rect;
 import org.inspirenxe.strata.api.geometry.Size;
 import org.inspirenxe.strata.api.input.TextInputKind;
+import org.inspirenxe.strata.api.layout.FlowDirection;
 import org.inspirenxe.strata.api.layout.HorizontalAlignment;
 import org.inspirenxe.strata.api.layout.VerticalAlignment;
 import org.inspirenxe.strata.api.state.PropertyKey;
 import org.inspirenxe.strata.api.state.Source;
 import org.inspirenxe.strata.api.theme.Border;
+import org.inspirenxe.strata.api.text.TextStyle;
 import org.inspirenxe.strata.api.theme.Paint;
 import org.inspirenxe.strata.api.theme.Theme;
+import org.inspirenxe.strata.core.layout.Flow;
 
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.function.Consumer;
+import java.util.function.Supplier;
 
 /**
  * Base class of Strata's own leaf controls, the counterpart of the public
  * {@link org.inspirenxe.strata.api.extension.CustomComponent} that developers extend. It offers the same hooks and
  * helpers under the same names, so a control reads the same either way, and adds what only core may use: its own
  * {@link #node()}, the nodes of other components through {@link #nodeOf}, the host's {@link #hostRoot()},
- * {@link #isFocusFromPress()}, {@link #activatesOnPress()}, and the {@link #onDisabled()}, {@link #onReleased()} and
- * {@link #onPressWithin} hooks.
+ * {@link #isFocusFromPress()}, {@link #activatesOnPress()}, and the {@link #onEnabledChanged()},
+ * {@link #onDisabled()}, {@link #onReleased()} and {@link #onPressWithin} hooks.
  *
  * <p>The component holds no state of its own. Its constructor makes the {@link Node} behind it and hands it a private
  * {@link NodeHooks} that calls the protected hooks here; every {@link Component} method is {@code final} and forwards
@@ -73,7 +81,8 @@ import java.util.function.Consumer;
  *
  * <p>The methods of {@link Focusable}, {@link HasCursor} and {@link HasTooltip} are here too, and the node ignores
  * them on a subclass that does not declare the interface. A subclass that implements {@link Focusable} starts out
- * focusable and tabbable.</p>
+ * focusable and tabbable, and one that keeps focus on a part, as a table does on its list, names it with
+ * {@link #setFocusDelegate}.</p>
  *
  * @param <T> the type callers see the component as
  */
@@ -138,6 +147,16 @@ public abstract class BuiltInComponent<T extends Component<T>> implements Compon
     }
 
     /**
+     * Returns the host's animator while this component is attached, for a control's own motion (design 4.51).
+     *
+     * @return the animator, or {@code null} while detached, so motion then jumps to its end
+     */
+    protected final Animator motionAnimator() {
+        final Root root = this.node.root();
+        return root == null ? null : root.animator();
+    }
+
+    /**
      * Returns whether the focus change being reported comes from a pointer press, so a focus hook can tell a click
      * from keyboard or code focus. See {@link Root#isFocusFromPress()}.
      *
@@ -193,6 +212,27 @@ public abstract class BuiltInComponent<T extends Component<T>> implements Compon
     protected abstract Size measure(MeasureContext context, float availableWidth, float availableHeight);
 
     /**
+     * Returns the smallest size the content can work in, as {@code CustomComponent.measureMinimum} does. The default
+     * returns {@link Size#ZERO}.
+     *
+     * @param context text measurement and the children's minimums
+     * @return the smallest size of the content
+     */
+    protected Size measureMinimum(final MeasureContext context) {
+        return Size.ZERO;
+    }
+
+    /**
+     * Returns the distance from the top of the bounds to the baseline of the first line of text, as
+     * {@code CustomComponent.baseline} does. The default returns NaN, for no baseline.
+     *
+     * @return the baseline in UI units, or NaN for none
+     */
+    protected float baseline() {
+        return Float.NaN;
+    }
+
+    /**
      * Draws the component over its background and border and under its children. The default draws nothing.
      *
      * @param painter what to draw with; valid only during this call
@@ -214,9 +254,25 @@ public abstract class BuiltInComponent<T extends Component<T>> implements Compon
      * Reads paints and text styles from the theme, on attach and after every theme change, before the next layout.
      * The default does nothing.
      *
-     * @param theme the host's theme
+     * @param theme the host's theme, with the text style patches of the containers around the component applied
      */
     protected void onApplyTheme(final Theme theme) {
+    }
+
+    /**
+     * Called when the component joins a tree a host is showing, every time it does, as
+     * {@code CustomComponent.onAttached} is: after the theme is applied and the bindings set their properties, and
+     * before its {@code ATTACHED} handlers. The default does nothing.
+     */
+    protected void onAttached() {
+    }
+
+    /**
+     * Called when the component leaves a tree a host is showing, every time it does, as
+     * {@code CustomComponent.onDetached} is: after its {@code DETACHED} handlers, while it is still attached. Unlike
+     * {@link #onReleased()}, it runs for a kept component too, which may be attached again. The default does nothing.
+     */
+    protected void onDetached() {
     }
 
     /**
@@ -236,6 +292,14 @@ public abstract class BuiltInComponent<T extends Component<T>> implements Compon
      */
     protected TextInputKind textInputKind() {
         return TextInputKind.TEXT;
+    }
+
+    /**
+     * Called after this component's own enabled flag changed, either way, so it can restyle what it caches or pass
+     * the state on to its private parts. Enabling or disabling an ancestor does not call it. It runs before
+     * {@link #onDisabled()}. The default does nothing.
+     */
+    protected void onEnabledChanged() {
     }
 
     /**
@@ -262,6 +326,21 @@ public abstract class BuiltInComponent<T extends Component<T>> implements Compon
      * @param target the component the press is aimed at
      */
     protected void onPressWithin(final Component<?> target) {
+    }
+
+    /**
+     * Called once a frame while a drag that carries a transfer holds the pointer over this component or a component
+     * inside it, from the deepest component under the pointer up until one returns true. A control that scrolls
+     * moves one step toward the edge of its viewport the pointer is near, as {@code EdgeScroll} works it out, and
+     * returns true; the root then asks for the next frame, so scrolling goes on while the pointer stays still. The
+     * default does nothing and returns false.
+     *
+     * @param x the pointer's x, in the host's coordinates
+     * @param y the pointer's y, in the host's coordinates
+     * @return true if the component scrolled
+     */
+    protected boolean onEdgeScroll(final float x, final float y) {
+        return false;
     }
 
     /**
@@ -334,6 +413,47 @@ public abstract class BuiltInComponent<T extends Component<T>> implements Compon
      * @param event the event
      */
     protected void onDragEnd(final DragEvent event) {
+    }
+
+    /**
+     * Default behavior for {@link InputEvents#DRAG_ENTER}. The default does nothing.
+     *
+     * @param event the event
+     */
+    protected void onDragEnter(final TransferEvent event) {
+    }
+
+    /**
+     * Default behavior for {@link InputEvents#DRAG_OVER}. Accept the drag here with {@link TransferEvent#accept} to
+     * take the drop. The default does nothing.
+     *
+     * @param event the event
+     */
+    protected void onDragOver(final TransferEvent event) {
+    }
+
+    /**
+     * Default behavior for {@link InputEvents#DRAG_EXIT}. The default does nothing.
+     *
+     * @param event the event
+     */
+    protected void onDragExit(final TransferEvent event) {
+    }
+
+    /**
+     * Default behavior for {@link InputEvents#DROP}. The default does nothing.
+     *
+     * @param event the event
+     */
+    protected void onDrop(final TransferEvent event) {
+    }
+
+    /**
+     * Default behavior for {@link InputEvents#TRANSFER_DONE}, on the source of a drag. The default does nothing.
+     *
+     * @param event the event
+     */
+    protected void onTransferDone(final TransferEvent event) {
     }
 
     /**
@@ -432,6 +552,16 @@ public abstract class BuiltInComponent<T extends Component<T>> implements Compon
             this.onDrag((DragEvent) event);
         } else if (type == InputEvents.DRAG_END) {
             this.onDragEnd((DragEvent) event);
+        } else if (type == InputEvents.DRAG_ENTER) {
+            this.onDragEnter((TransferEvent) event);
+        } else if (type == InputEvents.DRAG_OVER) {
+            this.onDragOver((TransferEvent) event);
+        } else if (type == InputEvents.DRAG_EXIT) {
+            this.onDragExit((TransferEvent) event);
+        } else if (type == InputEvents.DROP) {
+            this.onDrop((TransferEvent) event);
+        } else if (type == InputEvents.TRANSFER_DONE) {
+            this.onTransferDone((TransferEvent) event);
         } else if (type == InputEvents.SCROLL) {
             this.onScroll((ScrollEvent) event);
         } else if (type == InputEvents.KEY) {
@@ -454,6 +584,16 @@ public abstract class BuiltInComponent<T extends Component<T>> implements Compon
         @Override
         public Size measure(final MeasureContext context, final float availableWidth, final float availableHeight) {
             return BuiltInComponent.this.measure(context, availableWidth, availableHeight);
+        }
+
+        @Override
+        public Size measureMinimum(final MeasureContext context) {
+            return BuiltInComponent.this.measureMinimum(context);
+        }
+
+        @Override
+        public float baseline() {
+            return BuiltInComponent.this.baseline();
         }
 
         @Override
@@ -517,6 +657,21 @@ public abstract class BuiltInComponent<T extends Component<T>> implements Compon
         }
 
         @Override
+        public void attached() {
+            BuiltInComponent.this.onAttached();
+        }
+
+        @Override
+        public void detached() {
+            BuiltInComponent.this.onDetached();
+        }
+
+        @Override
+        public void enabledChanged() {
+            BuiltInComponent.this.onEnabledChanged();
+        }
+
+        @Override
         public void disabled() {
             BuiltInComponent.this.onDisabled();
         }
@@ -530,6 +685,11 @@ public abstract class BuiltInComponent<T extends Component<T>> implements Compon
         public void pressedWithin(final Component<?> target) {
             BuiltInComponent.this.onPressWithin(target);
         }
+
+        @Override
+        public boolean edgeScroll(final float x, final float y) {
+            return BuiltInComponent.this.onEdgeScroll(x, y);
+        }
     }
 
     // ------------------------------------------------------------------
@@ -537,8 +697,19 @@ public abstract class BuiltInComponent<T extends Component<T>> implements Compon
     // ------------------------------------------------------------------
 
     @Override
-    public final Component<?> parent() {
-        return this.node.parent();
+    public final Optional<String> id() {
+        return this.node.id();
+    }
+
+    @Override
+    public final T setId(final String id) {
+        this.node.setId(id);
+        return this.self();
+    }
+
+    @Override
+    public final Optional<Component<?>> parent() {
+        return Optional.ofNullable(this.node.parent());
     }
 
     @Override
@@ -554,6 +725,16 @@ public abstract class BuiltInComponent<T extends Component<T>> implements Compon
     @Override
     public final boolean isAttached() {
         return this.node.isAttached();
+    }
+
+    @Override
+    public final T whileAttached(final Supplier<? extends Subscription> start) {
+        return Component.super.whileAttached(start);
+    }
+
+    @Override
+    public final boolean isFocusWithin() {
+        return this.node.isFocusWithin();
     }
 
     @Override
@@ -650,6 +831,38 @@ public abstract class BuiltInComponent<T extends Component<T>> implements Compon
     }
 
     @Override
+    public final FlowDirection flowDirection() {
+        return this.node.flowDirection();
+    }
+
+    @Override
+    public final T setFlowDirection(final FlowDirection direction) {
+        this.node.setFlowDirection(direction);
+        return this.self();
+    }
+
+    /**
+     * Returns whether the component's content runs right to left, as {@link #flowDirection()} says. Controls whose
+     * parts sit at a side, or whose keys move one way, read this when they place, draw and handle them.
+     *
+     * @return true for {@link FlowDirection#RIGHT_TO_LEFT}
+     */
+    protected final boolean isRightToLeft() {
+        return this.node.flowDirection() == FlowDirection.RIGHT_TO_LEFT;
+    }
+
+    /**
+     * Returns a rectangle worked out as for left to right, mirrored inside the bounds while the component runs right
+     * to left, as {@link Component#setFlowDirection} mirrors children. Left to right it comes back as it is.
+     *
+     * @param rect the rectangle, in the host's coordinates
+     * @return the rectangle as drawn
+     */
+    protected final Rect flow(final Rect rect) {
+        return this.isRightToLeft() ? Flow.mirror(rect, this.node.bounds()) : rect;
+    }
+
+    @Override
     public final Rect bounds() {
         return this.node.bounds();
     }
@@ -662,6 +875,17 @@ public abstract class BuiltInComponent<T extends Component<T>> implements Compon
     @Override
     public final float desiredHeight() {
         return this.node.desiredHeight();
+    }
+
+    @Override
+    public final float opacity() {
+        return this.node.opacity();
+    }
+
+    @Override
+    public final T setOpacity(final float opacity) {
+        this.node.setOpacity(opacity);
+        return this.self();
     }
 
     @Override
@@ -694,9 +918,36 @@ public abstract class BuiltInComponent<T extends Component<T>> implements Compon
         return this.self();
     }
 
+    @Override
+    public final T unbind(final PropertyKey<? super T, ?> key) {
+        this.node.unbind(key);
+        return this.self();
+    }
+
     // ------------------------------------------------------------------
     // Focusable, HasCursor and HasTooltip, for subclasses that declare them. The node ignores these on the rest.
     // ------------------------------------------------------------------
+
+    /**
+     * Makes one of this control's parts take focus for it, as a table's inner list does. From then on the
+     * {@link Focusable} methods here work on the delegate: {@link #requestFocus()} focuses it, {@link #isFocused()}
+     * is true while it has focus, the tab order holds it in place of this control, and a press on this control's other
+     * parts focuses it. The root fires {@code FOCUS_GAINED} and {@code FOCUS_LOST} on this control too, after the
+     * delegate, so its {@link #onFocusGained} and {@link #onFocusLost} run. This control's own node stops taking focus.
+     *
+     * @param delegate the part that takes focus, made by the same factory
+     */
+    protected final void setFocusDelegate(final Component<?> delegate) {
+        this.node.setFocusDelegate(this.nodeOf(delegate));
+    }
+
+    /**
+     * Returns the node the {@link Focusable} methods work on: the focus delegate, or this component's own node.
+     */
+    private Node focusNode() {
+        final Node delegate = this.node.focusDelegate();
+        return delegate != null ? delegate : this.node;
+    }
 
     /**
      * Returns whether the component can take keyboard focus. See {@link Focusable#isFocusable()}.
@@ -704,7 +955,7 @@ public abstract class BuiltInComponent<T extends Component<T>> implements Compon
      * @return true if focusable; always false unless the subclass implements {@link Focusable}
      */
     public final boolean isFocusable() {
-        return this.node.isFocusable();
+        return this.focusNode().isFocusable();
     }
 
     /**
@@ -714,7 +965,7 @@ public abstract class BuiltInComponent<T extends Component<T>> implements Compon
      * @return this component
      */
     public final T setFocusable(final boolean focusable) {
-        this.node.setFocusable(focusable);
+        this.focusNode().setFocusable(focusable);
         return this.self();
     }
 
@@ -724,7 +975,7 @@ public abstract class BuiltInComponent<T extends Component<T>> implements Compon
      * @return true if tabbable
      */
     public final boolean isTabbable() {
-        return this.node.isTabbable();
+        return this.focusNode().isTabbable();
     }
 
     /**
@@ -734,7 +985,7 @@ public abstract class BuiltInComponent<T extends Component<T>> implements Compon
      * @return this component
      */
     public final T setTabbable(final boolean tabbable) {
-        this.node.setTabbable(tabbable);
+        this.focusNode().setTabbable(tabbable);
         return this.self();
     }
 
@@ -744,7 +995,7 @@ public abstract class BuiltInComponent<T extends Component<T>> implements Compon
      * @return the tab index; 0 by default
      */
     public final int tabIndex() {
-        return this.node.tabIndex();
+        return this.focusNode().tabIndex();
     }
 
     /**
@@ -754,7 +1005,7 @@ public abstract class BuiltInComponent<T extends Component<T>> implements Compon
      * @return this component
      */
     public final T setTabIndex(final int tabIndex) {
-        this.node.setTabIndex(tabIndex);
+        this.focusNode().setTabIndex(tabIndex);
         return this.self();
     }
 
@@ -764,7 +1015,7 @@ public abstract class BuiltInComponent<T extends Component<T>> implements Compon
      * @return true while focused
      */
     public final boolean isFocused() {
-        return this.node.isFocused();
+        return this.focusNode().isFocused();
     }
 
     /**
@@ -773,16 +1024,16 @@ public abstract class BuiltInComponent<T extends Component<T>> implements Compon
      * @return true if the component now has focus; always false unless the subclass implements {@link Focusable}
      */
     public final boolean requestFocus() {
-        return this.node.requestFocus();
+        return this.focusNode().requestFocus();
     }
 
     /**
      * Returns the cursor shown over this component. See {@link HasCursor#cursor()}.
      *
-     * @return the cursor, or {@code null} to use the nearest ancestor's
+     * @return the cursor, or empty to use the nearest ancestor's
      */
-    public final CursorKind cursor() {
-        return this.node.cursor();
+    public final Optional<CursorKind> cursor() {
+        return Optional.ofNullable(this.node.cursor());
     }
 
     /**
@@ -799,20 +1050,50 @@ public abstract class BuiltInComponent<T extends Component<T>> implements Compon
     /**
      * Returns the tooltip. See {@link HasTooltip#tooltip()}.
      *
-     * @return the tooltip, or {@code null} for none
+     * @return the tooltip, or empty for none
      */
-    public final Tooltip tooltip() {
-        return this.node.tooltip();
+    public final Optional<Tooltip> tooltip() {
+        return Optional.ofNullable(this.node.tooltip());
     }
 
     /**
      * Sets the tooltip. See {@link HasTooltip#setTooltip(Tooltip)}.
      *
-     * @param tooltip the tooltip, or {@code null} for none
+     * @param tooltip the tooltip
      * @return this component
      */
     public final T setTooltip(final Tooltip tooltip) {
-        this.node.setTooltip(tooltip);
+        this.node.setTooltip(Objects.requireNonNull(tooltip, "tooltip"));
+        return this.self();
+    }
+
+    /**
+     * Removes the tooltip. See {@link HasTooltip#clearTooltip()}.
+     *
+     * @return this component
+     */
+    public final T clearTooltip() {
+        this.node.setTooltip(null);
+        return this.self();
+    }
+
+    /**
+     * Returns the context menu. See {@link HasContextMenu#contextMenu()}.
+     *
+     * @return the popup, or empty for none
+     */
+    public final Optional<Popup<?>> contextMenu() {
+        return Optional.ofNullable(this.node.contextMenu());
+    }
+
+    /**
+     * Sets the context menu. See {@link HasContextMenu#setContextMenu(Popup)}.
+     *
+     * @param popup the popup, or {@code null} for none
+     * @return this component
+     */
+    public final T setContextMenu(final Popup<?> popup) {
+        this.node.setContextMenu(popup);
         return this.self();
     }
 
@@ -823,14 +1104,51 @@ public abstract class BuiltInComponent<T extends Component<T>> implements Compon
     /**
      * Returns the theme applied to this component, for reading styles outside {@link #onApplyTheme}.
      *
-     * @return the host's theme, or {@code null} before the component is first attached
+     * @return the host's theme, with the {@linkplain org.inspirenxe.strata.api.component.Container#setTextStyle text
+     *     style patches} of the containers around the component applied, or empty before the component is
+     *     first attached
      */
-    protected final Theme theme() {
-        return this.node.theme();
+    protected final Optional<Theme> theme() {
+        return Optional.ofNullable(this.node.theme());
     }
 
     /**
-     * Returns whether the pointer is over this component and not over a child of it.
+     * Turns one of this component's own style states on or off, as {@code CustomComponent.setStyleState} does.
+     *
+     * @param state the state's name; any name but {@code disabled}, {@code pressed}, {@code hovered} and
+     *              {@code focused}, which the node sets
+     * @param on whether the state is on
+     * @throws IllegalArgumentException if the name is empty or one the node sets
+     */
+    protected final void setStyleState(final String state, final boolean on) {
+        this.node.setStyleState(state, on);
+    }
+
+    /**
+     * Looks up a paint for this component's style states, as {@code CustomComponent.stylePaint} does.
+     *
+     * @param key the style key
+     * @param fallback returned when the theme has none of the keys tried, or the component was never attached
+     * @return the paint
+     */
+    protected final Paint stylePaint(final String key, final Paint fallback) {
+        return this.node.stylePaint(key, fallback);
+    }
+
+    /**
+     * Looks up a text style for this component's style states, as {@code CustomComponent.styleText} does.
+     *
+     * @param key the style key
+     * @param fallback returned when the theme has none of the keys tried, or the component was never attached
+     * @return the text style
+     */
+    protected final TextStyle styleText(final String key, final TextStyle fallback) {
+        return this.node.styleText(key, fallback);
+    }
+
+    /**
+     * Returns whether the pointer is over this component and not over a child of it. A component that is disabled,
+     * or inside a disabled one, is never hovered.
      *
      * @return true while hovered
      */
@@ -932,6 +1250,34 @@ public abstract class BuiltInComponent<T extends Component<T>> implements Compon
      */
     protected final void invalidateLayout() {
         this.node.invalidateLayout();
+    }
+
+    /**
+     * Asks the host for a frame because the look changed and the layout did not, as
+     * {@code CustomComponent.repaint()} does. Reports, layout and the root's hover, press and focus changes already
+     * ask; call it for a change of look that none of them covers.
+     */
+    protected final void repaint() {
+        this.node.repaint();
+    }
+
+    /**
+     * Asks for the next frame the host's frame rate allows, as {@code CustomComponent.repaintNextFrame()} does, for a
+     * look that moves with the clock such as a sliding caption.
+     */
+    protected final void repaintNextFrame() {
+        this.node.repaintNextFrame();
+    }
+
+    /**
+     * Tells the host that the look changes by itself after a time, as {@code CustomComponent.repaintAfter} does:
+     * the caret's next blink or a step of a busy indicator. Call it from {@link #paint}, for the next change only.
+     *
+     * @param millis the delay in milliseconds, by the platform's clock; 0 is {@link #repaint()}
+     * @throws IllegalArgumentException if {@code millis} is negative
+     */
+    protected final void repaintAfter(final long millis) {
+        this.node.repaintAfter(millis);
     }
 
     /**

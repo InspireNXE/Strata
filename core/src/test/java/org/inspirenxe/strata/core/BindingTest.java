@@ -65,6 +65,7 @@ import org.inspirenxe.strata.api.geometry.Size;
 import org.inspirenxe.strata.api.input.Key;
 import org.inspirenxe.strata.api.input.KeyAction;
 import org.inspirenxe.strata.api.input.Modifiers;
+import org.inspirenxe.strata.api.layout.AbsolutePanel;
 import org.inspirenxe.strata.api.layout.GridLength;
 import org.inspirenxe.strata.api.layout.StackPanel;
 import org.inspirenxe.strata.api.state.PropertyKey;
@@ -86,6 +87,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -756,7 +758,7 @@ class BindingTest {
             final InfoBar bar = BindingTest.this.ui.infoBar().bind(InfoBar.SEVERITY, severity);
             BindingTest.this.test.show(BindingTest.this.ui.stackPanel().add(avatar).add(progress).add(note).add(bar));
             assertEquals(3, avatar.badge());
-            assertEquals(Tooltip.text("3 unread"), avatar.tooltip());
+            assertEquals(Tooltip.text("3 unread"), avatar.tooltip().orElseThrow());
             assertTrue(progress.isIndeterminate());
             assertTrue(note.isReadOnly());
             assertEquals(InfoBar.Severity.ERROR, bar.severity());
@@ -766,7 +768,7 @@ class BindingTest {
             severity.set(InfoBar.Severity.SUCCESS);
             BindingTest.this.flush();
             assertEquals(0, avatar.badge());
-            assertEquals(Tooltip.text("0 unread"), avatar.tooltip());
+            assertEquals(Tooltip.text("0 unread"), avatar.tooltip().orElseThrow());
             assertFalse(progress.isIndeterminate());
             assertEquals(InfoBar.Severity.SUCCESS, bar.severity());
         }
@@ -833,6 +835,30 @@ class BindingTest {
         protected void onClick(final PointerButtonEvent event) {
             this.request(RATE, Math.min(this.stars + 1, 5), this::setStars);
             event.consume();
+        }
+    }
+
+    @Nested
+    class SourceFailures {
+        @Test
+        void aBindingWhoseSourceThrowsFirstStillFollowsWhatItRead() {
+            final State<Integer> gate = State.of(-1);
+            final Label label = BindingTest.this.ui.label();
+            label.bind(HasText.TEXT, () -> {
+                final int value = gate.get();
+                if (value < 0) {
+                    throw new IllegalStateException("not ready");
+                }
+                return Text.of("v" + value);
+            });
+            final AbsolutePanel panel = BindingTest.this.ui.absolutePanel();
+            BindingTest.this.test.show(panel);
+
+            assertThrows(IllegalStateException.class, () -> panel.add(label, 0, 0));
+            gate.set(5);
+            BindingTest.this.flush();
+
+            assertEquals("v5", label.text().plain());
         }
     }
 }

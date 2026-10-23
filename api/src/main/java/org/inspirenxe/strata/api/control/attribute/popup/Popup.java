@@ -22,7 +22,8 @@ import org.inspirenxe.strata.api.geometry.Rect;
  * {@link org.inspirenxe.strata.api.control.menu.Menu} or a {@link org.inspirenxe.strata.api.control.menu.Flyout}. A
  * {@link org.inspirenxe.strata.api.control.button.DropDownButton} opens any popup below itself.
  *
- * <p>A popup is opened with {@link #open(Rect)} or {@link #openAt(float, float)}, never added to a container. While
+ * <p>A popup is opened with {@link #open(Rect)}, {@link #openAt(float, float)} or {@link #open()}, never added to a
+ * container. While
  * open it is the whole content of a popup overlay (see {@link org.inspirenxe.strata.api.overlay.Overlays#popup}),
  * so it has no parent and its events reach only the handlers registered on it, not the screen behind it.</p>
  *
@@ -31,7 +32,12 @@ import org.inspirenxe.strata.api.geometry.Rect;
  *
  * <p>A popup opened from code never asks {@link Openable#OPEN}. Whatever opens it for the user, such as a drop-down
  * button or a menu bar, asks on its own behalf. A popup reports {@link Openable#OPENED} each time it opens and
- * {@link Closable#CLOSED} each time it closes, for any reason, and never asks {@link Closable#CLOSE}.</p>
+ * {@link Closable#CLOSED} each time it closes, for any reason.</p>
+ *
+ * <p>When the user closes it with Escape or a press outside it, the popup asks {@link Closable#CLOSE} first, with the
+ * user as the origin, so a handler that cancels keeps it open, as a flyout holding an unsaved form may; the key or
+ * press is used up either way. A press outside that a refusing popup keeps also keeps the popups under it open.
+ * {@link #close()} from code, and a popup closed because the one it opened from closed, ask nothing.</p>
  *
  * <p>Do not implement this interface.</p>
  *
@@ -59,6 +65,18 @@ public interface Popup<S extends Popup<S>> extends Openable<S> {
      * @throws IllegalStateException if the factory's host has no screen yet
      */
     S openAt(float x, float y);
+
+    /**
+     * Opens the popup where it last opened: at the rectangle or point of its last {@link #open(Rect)} or
+     * {@link #openAt(float, float)}, or wherever else its kind last opened it, such as a flyout's area. A popup that
+     * never opened opens at the pointer, as {@code openAt} would at the pointer's position. Does nothing if it is
+     * already open or has nothing to show.
+     *
+     * @return this popup
+     * @throws IllegalStateException if the factory's host has no screen yet
+     */
+    @Override
+    S open();
 
     /**
      * Closes the popup and reports {@link Closable#CLOSED}. Does nothing if it is not open.

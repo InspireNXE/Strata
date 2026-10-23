@@ -17,12 +17,15 @@ package org.inspirenxe.strata.api.control.collection;
 
 import org.inspirenxe.strata.api.component.Component;
 import org.inspirenxe.strata.api.component.Focusable;
+import org.inspirenxe.strata.api.component.HasContextMenu;
 import org.inspirenxe.strata.api.component.HasCursor;
 import org.inspirenxe.strata.api.component.HasTooltip;
 import org.inspirenxe.strata.api.control.attribute.item.ItemSource;
 import org.inspirenxe.strata.api.control.attribute.item.SingleSelection;
 import org.inspirenxe.strata.api.control.attribute.popup.Closable;
 import org.inspirenxe.strata.api.control.attribute.popup.Openable;
+import org.inspirenxe.strata.api.control.attribute.value.Validatable;
+import org.inspirenxe.strata.api.text.Text;
 
 import java.util.List;
 import java.util.Optional;
@@ -32,27 +35,31 @@ import java.util.function.Function;
  * A drop-down: shows the selected option and opens a list of all options to pick from.
  *
  * <p>A left click opens the list as a popup below the box (above it if there is more room there), at least as wide as
- * the box. A click on an option selects it and closes the list; a click anywhere else, or Escape, closes it without
- * changing the selection. The list shows at most {@linkplain #setMaxVisibleOptions the maximum} rows and scrolls
- * the rest.</p>
+ * the box. A click on an option selects it and closes the list; a click anywhere else, Escape, or focus leaving the
+ * box, as Tab does, closes it without changing the selection. The list shows at most
+ * {@linkplain #setMaxVisibleOptions the maximum} rows and scrolls the rest.</p>
  *
  * <p>While focused and closed: Up and Down select the previous and next option, Home and End the first and last,
  * and Enter, keypad Enter, Space or Alt+Down open the list. The open list takes no focus, so the keys stay with the
  * box: Up and Down move the highlight without wrapping, Enter, keypad Enter or Space selects it, and Escape closes.
- * Held arrows repeat; Enter, Space and Alt+Down do not. A box with no options takes no keys, and a disabled box
+ * Held arrows repeat; Enter, Space and Alt+Down do not. Typing an option's first letters selects it, or highlights
+ * it in the open list, as {@link #setTypeAhead} describes. A box with no options takes no keys, and a disabled box
  * ignores input.</p>
  *
  * <p>Options are drawn with the {@linkplain #setLabelFunction label function}. The one that
  * {@link org.inspirenxe.strata.api.ComponentFactory#comboBox()} sets shows each option by its appearance's name, or
  * by {@link String#valueOf(Object)} when it has no appearance. When options are set, the selection moves to the
- * option with the selected option's {@linkplain #setKeyFunction key}, or to the first option if there is none.
- * Code can clear the selection with {@link #clearSelection()}; the box then shows no text until something is
- * selected.</p>
+ * option with the selected option's {@linkplain #setKeyFunction key}, or clears if no option has it, as
+ * {@link ItemSource} describes. A box that has never had a selection selects its first option when it gets options;
+ * once an option was selected, or code called {@link #select} or {@link #clearSelection()}, new options never select
+ * one by themselves. With nothing selected the box shows its {@linkplain #setPlaceholder placeholder}, or no
+ * text.</p>
  *
  * <p>The selection events carry option indexes, so read the option from the box:
  * {@code box.items().get(e.value())}. The open list is private to the box and fires no events of its own. The box
- * reports {@link Closable#CLOSED} each time the list closes, however it closed, and never fires
- * {@link Closable#CLOSE}.</p>
+ * reports {@link Closable#CLOSED} each time the list closes, however it closed. Before Escape or a press outside the
+ * list closes it, the box asks {@link Closable#CLOSE}, and a handler that cancels keeps the list open; choosing an
+ * option, or {@code close()} from code, asks nothing.</p>
  *
  * <p>The box is focusable and tabbable and shows the hand cursor. It asks for its widest option plus padding and
  * the arrow, and one line plus 3 units above and below.</p>
@@ -65,11 +72,11 @@ import java.util.function.Function;
  *     closed if it has no options left. Fires only for the user's actions.</li>
  *     <li>{@link Openable#OPENED}: Told after the list opened. Fires for {@link #open()} called from code too.</li>
  *     <li>{@link SingleSelection#SELECT}: Asked before the user changes the selection: a click on a row of the open
- *     list, Enter or Space on the highlighted row of the open list, or the Up, Down, Home and End keys on the closed
- *     box. A choice from the open list closes it before this fires. Moving the highlight in the open list does not fire
- *     it, and neither does a choice of the option already selected. The value is the index of the option about to be
- *     selected. A handler may rewrite it to another option's index; an index outside the options is ignored. Fires only
- *     for the user's actions.</li>
+ *     list, Enter or Space on the highlighted row of the open list, or the Up, Down, Home and End keys and
+ *     type-ahead on the closed box. A choice from the open list closes it before this fires. Moving the highlight in
+ *     the open list does not fire it, and neither does a choice of the option already selected. The value is the index
+ *     of the option about to be selected. A handler may rewrite it to another option's index; an index outside the
+ *     options is ignored. Fires only for the user's actions.</li>
  *     <li>{@link SingleSelection#SELECTED}: Told after the selection changed. The value is the selected index, -1 once
  *     nothing is selected, and the previous value is the index before. It also fires when {@link #setItems} keeps
  *     the index but the option there is no longer equal to the one before, so the value can equal the previous value.
@@ -88,6 +95,8 @@ import java.util.function.Function;
  *     to the default style.</li>
  *     <li>{@value #STYLE_TEXT_DISABLED} (text style, optional): the selected option when disabled. Falls back to
  *     {@value #STYLE_TEXT}.</li>
+ *     <li>{@value org.inspirenxe.strata.api.control.field.TextBox#STYLE_PLACEHOLDER} (text style, optional): the
+ *     {@linkplain #setPlaceholder placeholder}. Falls back to {@value #STYLE_TEXT}.</li>
  *     <li>The row keys of {@link ListView} and the scroll bar keys of
  *     {@link org.inspirenxe.strata.api.layout.ScrollPanel}, for the open list.</li>
  *     <li>{@value #STYLE_PADDING} (insets, optional): the space between the box's edges and its shown value on the
@@ -106,8 +115,8 @@ import java.util.function.Function;
  * @param <T> the type of the options
  */
 public interface ComboBox<T> extends Component<ComboBox<T>>, Focusable<ComboBox<T>>, HasCursor<ComboBox<T>>,
-        HasTooltip<ComboBox<T>>, ItemSource<T, ComboBox<T>>,
-        SingleSelection<T, ComboBox<T>>, Openable<ComboBox<T>> {
+        HasTooltip<ComboBox<T>>, HasContextMenu<ComboBox<T>>, ItemSource<T, ComboBox<T>>,
+        SingleSelection<T, ComboBox<T>>, Openable<ComboBox<T>>, Validatable<ComboBox<T>> {
     /**
      * Style key for the box (paint, required).
      */
@@ -120,6 +129,12 @@ public interface ComboBox<T> extends Component<ComboBox<T>>, Focusable<ComboBox<
      * Style key for the box when disabled (paint, optional).
      */
     String STYLE_DISABLED = "combobox.disabled";
+    /**
+     * Style key for the box while it is enabled and its validation is an error, in place of the normal and hovered
+     * ones (paint, optional). Without it the box draws its usual face with a one-unit outline in
+     * {@value Validatable#STYLE_ERROR}.
+     */
+    String STYLE_INVALID = "combobox.invalid";
     /**
      * Style key for the background of the open list (paint, required).
      */
@@ -151,11 +166,14 @@ public interface ComboBox<T> extends Component<ComboBox<T>>, Focusable<ComboBox<
     List<T> items();
 
     /**
-     * Replaces the options and closes the list. The selection moves to the option with the selected option's key, or
-     * to the first one. {@link SingleSelection#SELECTED} fires if the selected option or its index changed.
+     * Closes the list, then replaces the options, so a {@link Closable#CLOSED} handler sees the options and the
+     * selection from before. The selection moves to the option with the selected option's key, or clears if none
+     * has it. A box that has never had a selection, and that code has not cleared, selects the first option.
+     * {@link SingleSelection#SELECTED} fires if the selected option or its index changed.
      *
      * @param items the options; the box keeps a copy
      * @return this box
+     * @throws NullPointerException if an option is null
      */
     @Override
     ComboBox<T> setItems(List<? extends T> items);
@@ -168,6 +186,46 @@ public interface ComboBox<T> extends Component<ComboBox<T>>, Focusable<ComboBox<
      * @return this box
      */
     ComboBox<T> setLabelFunction(Function<? super T, ?> labelFunction);
+
+    /**
+     * Returns the placeholder.
+     *
+     * @return the hint shown while nothing is selected; empty for none, which is the default
+     */
+    Text placeholder();
+
+    /**
+     * Sets the hint the box shows while nothing is selected, such as "Pick a country", drawn in the
+     * {@value org.inspirenxe.strata.api.control.field.TextBox#STYLE_PLACEHOLDER} style. The box asks for room for
+     * it as for an option. A box that should start with nothing selected and show it calls {@link #clearSelection()}
+     * before its options arrive, since a box that never had a selection selects its first option.
+     *
+     * @param placeholder the hint, or empty for none
+     * @return this box
+     */
+    ComboBox<T> setPlaceholder(Text placeholder);
+
+    /**
+     * Does the same as {@link #setPlaceholder(Text)} with literal text.
+     *
+     * @param placeholder the hint, or empty for none
+     * @return this box
+     */
+    default ComboBox<T> setPlaceholder(final String placeholder) {
+        return this.setPlaceholder(Text.of(placeholder));
+    }
+
+    /**
+     * Sets the names that type-ahead matches while the box has focus, or turns it off. It works as
+     * {@link ListView#setTypeAhead} describes. On a closed box the match is selected without opening the list,
+     * through {@link SingleSelection#SELECT}; on an open box the highlight moves to it, and Enter or Space picks it.
+     *
+     * @param name returns what an option is called: a {@link org.inspirenxe.strata.api.text.Text}, or any other
+     *     value, named by its appearance's name. By default what the {@linkplain #setLabelFunction label function}
+     *     shows. Null turns type-ahead off.
+     * @return this box
+     */
+    ComboBox<T> setTypeAhead(Function<? super T, ?> name);
 
     /**
      * Returns the selected option.
@@ -198,7 +256,7 @@ public interface ComboBox<T> extends Component<ComboBox<T>>, Focusable<ComboBox<
     /**
      * Selects the first option with the same key as the given one, or nothing if there is none.
      *
-     * @param item the option
+     * @param item the option, or null to select nothing
      * @return this box
      */
     @Override

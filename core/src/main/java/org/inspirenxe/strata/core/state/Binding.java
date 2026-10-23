@@ -19,21 +19,19 @@ import org.inspirenxe.strata.api.component.Component;
 import org.inspirenxe.strata.api.event.EventType;
 import org.inspirenxe.strata.api.event.Subscription;
 import org.inspirenxe.strata.api.event.cause.CauseFrame;
+import org.inspirenxe.strata.api.event.cause.CauseKey;
 import org.inspirenxe.strata.api.event.cause.CauseKeys;
 import org.inspirenxe.strata.api.event.cause.CauseStack;
 import org.inspirenxe.strata.api.event.cause.Origin;
 import org.inspirenxe.strata.api.event.control.ControlEvent;
+import org.inspirenxe.strata.api.state.Conversion;
 import org.inspirenxe.strata.api.state.PropertyKey;
 import org.inspirenxe.strata.api.state.Source;
 
 import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
-import java.util.Set;
-import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.Optional;
 import java.util.function.Supplier;
 
 /**
@@ -46,6 +44,12 @@ import java.util.function.Supplier;
  * dependencies are replaced by what it read, and the value is written to the property unless the property already
  * equals it.</p>
  *
+ * <p>The binding reads the property through the key's {@link PropertyKey#check() check}, so a
+ * {@linkplain PropertyKey#convert converted} key compares and writes back the model's value, and writes nothing back
+ * while the property's value does not convert. While it does not, a component that is a {@link ConversionTarget}
+ * shows the conversion's message as an error, which the binding takes away once a report converts again, once it
+ * writes the state's value, and when it is {@linkplain #release released}.</p>
+ *
  * <p>When the source is a state and the key has reports, the binding also handles each report on the component,
  * at the highest priority, so after the component's other handlers and before the handlers of the ancestors the
  * report bubbles to, and writes the property's value to the state unless the two are equal. It writes inside a
@@ -54,21 +58,31 @@ import java.util.function.Supplier;
  * reports that fire after attach before its first evaluation, so a value the control had before it read the source,
  * such as a combo box selecting its first item when the items arrive, never replaces the state's.</p>
  *
+ * <p>A report fired by a step of an animation that has not reached its end, which puts {@link #IN_MOTION}, is not
+ * written back either. The binding hands itself to the animation instead, which calls {@link #writeBack()} once it
+ * ends or stops, so the state hears where the property came to rest and not every value on the way.</p>
+ *
  * @param <V> the type of the property's value
  */
-public final class Binding<V> {
+public final class Binding<V> extends Dependent {
+    /**
+     * Put by every step of an animation but its last, with the animation as the value, so bindings leave its
+     * reports until it ends.
+     */
+    public static final CauseKey<Deferral> IN_MOTION = CauseKey.of("strata:in_motion", Deferral.class);
     private final Component<?> component;
     private final PropertyKey<Object, V> key;
     private final Source<V> source;
     private final StateImpl<V> writable;
-    private final AtomicBoolean dirty;
-    private final Set<StateImpl<?>> dependencies;
-    private volatile BindingQueue queue;
     private final List<Subscription> reportSubscriptions;
     private final Supplier<CauseStack> causes;
     private final Origin.Binding origin;
     // Whether the source was read since the last attach; reports are not written back until it was
     private boolean evaluated;
+    // Whether the component shows a conversion error this binding gave it
+    private boolean marked;
+    // The state's version after this binding last wrote the control's value to it, or -1
+    private long echo = -1L;
 
     /**
      * Creates a binding that does nothing until attached.
@@ -88,8 +102,6 @@ public final class Binding<V> {
         this.origin = new Origin.Binding(source);
         this.writable = source instanceof StateImpl<V> state && !key.reports().isEmpty() ? state : null;
         this.reportSubscriptions = new ArrayList<>(key.reports().size());
-        this.dirty = new AtomicBoolean();
-        this.dependencies = new HashSet<>();
     }
 
     /**
@@ -107,7 +119,7 @@ public final class Binding<V> {
      * @return true between {@link #attach} and {@link #detach}
      */
     public boolean isAttached() {
-        return this.queue != null;
+        return this.isLive();
     }
 
     /**
@@ -118,17 +130,16 @@ public final class Binding<V> {
      * @param queue the queue of the root the component joined
      */
     public void attach(final BindingQueue queue) {
-        if (this.queue != null) {
+        if (this.isLive()) {
             return;
         }
-        this.queue = Objects.requireNonNull(queue, "queue");
         this.evaluated = false;
         if (this.writable != null) {
             for (final EventType<? extends ControlEvent<?>> report : this.key.reports()) {
                 this.reportSubscriptions.add(this.subscribe(report));
             }
         }
-        this.invalidate();
+        this.join(queue);
     }
 
     private <E extends ControlEvent<?>> Subscription subscribe(final EventType<E> report) {
@@ -141,99 +152,117 @@ public final class Binding<V> {
      * binding any more. Does nothing if not attached. Call on the UI thread.
      */
     public void detach() {
-        if (this.queue == null) {
+        if (!this.leave()) {
             return;
         }
-        this.queue = null;
         for (final Subscription subscription : this.reportSubscriptions) {
             subscription.unsubscribe();
         }
         this.reportSubscriptions.clear();
-        for (final StateImpl<?> dependency : this.dependencies) {
-            dependency.removeDependent(this);
-        }
-        this.dependencies.clear();
-        this.dirty.set(false);
     }
 
     /**
-     * Marks the binding dirty and queues it, unless it is detached or already dirty. Any thread may call this.
+     * Ends the binding for good, when the component unbinds the key or binds it again: detaches it and takes away the
+     * conversion error it showed, if any. Call on the UI thread.
      */
-    void invalidate() {
-        final BindingQueue queue = this.queue;
-        if (queue != null && this.dirty.compareAndSet(false, true)) {
-            queue.enqueue(this);
-        }
+    public void release() {
+        this.detach();
+        this.unmark();
     }
 
     /**
-     * Forgets that the binding is dirty without evaluating it, when a flush gives up on a cycle.
+     * Evaluates the source and sets the property, if the binding is dirty and attached. Call on the UI thread. If the
+     * source throws, the binding still follows the states it read before throwing, so a change to one of them
+     * evaluates it again, and the exception goes on to the caller.
      */
-    void discard() {
-        this.dirty.set(false);
-    }
-
-    /**
-     * Evaluates the source and sets the property, if the binding is dirty and attached. Call on the UI thread.
-     */
+    @Override
     public void evaluate() {
-        if (this.queue == null || !this.dirty.compareAndSet(true, false)) {
+        if (!this.takeDirty()) {
             return;
         }
-        final Tracking.Frame frame = Tracking.begin();
-        final V value;
-        try {
-            value = this.source.get();
-        } finally {
-            Tracking.end(frame);
-        }
+        final V value = this.read(this.source);
         this.evaluated = true;
-        this.follow(frame.reads());
+        if (this.writable != null && this.writable.version() == this.echo) {
+            // The state holds what this binding took from the control, which the control may show in its own way,
+            // such as "100" in a field whose state kept 10 because "100" does not convert
+            return;
+        }
         this.write(value);
     }
 
-    /**
-     * Replaces the dependencies with the states the source just read. A state that changed after the source read
-     * it, before this binding was its dependent, marks the binding dirty again, so no change is missed.
-     */
-    private void follow(final Map<StateImpl<?>, Long> reads) {
-        for (final Iterator<StateImpl<?>> it = this.dependencies.iterator(); it.hasNext(); ) {
-            final StateImpl<?> dependency = it.next();
-            if (!reads.containsKey(dependency)) {
-                dependency.removeDependent(this);
-                it.remove();
-            }
-        }
-        for (final Map.Entry<StateImpl<?>, Long> read : reads.entrySet()) {
-            final StateImpl<?> state = read.getKey();
-            if (this.dependencies.add(state)) {
-                state.addDependent(this);
-            }
-            if (state.version() != read.getValue()) {
-                this.invalidate();
-            }
-        }
-    }
-
     private void write(final V value) {
-        if (Objects.equals(this.key.reader().apply(this.component), value)) {
+        // A converted key compares in the model's terms, so "05" in a field bound to 5 is left as the user typed it
+        if (this.key.check().apply(this.component) instanceof Conversion.Valid<? extends V> current
+                && Objects.equals(current.value(), value)) {
             return;
         }
         // Its own reports carry this origin, so reported() leaves them alone, and the control's requests do not fire
         try (CauseFrame ignored = this.causes.get().pushFrame().put(CauseKeys.ORIGIN, this.origin)) {
             this.key.writer().accept(this.component, value);
         }
+        // The control shows the state's value now, so it is valid again
+        this.unmark();
     }
 
     private void reported(final ControlEvent<?> event) {
-        if (!this.evaluated || this.queue == null || event.target() != this.component
-                || event.origin() instanceof final Origin.Binding binding && binding.source() == this.source) {
+        if (!this.evaluated || !this.isLive() || event.target() != this.component
+                || event.origin() instanceof Origin.Binding binding && binding.source() == this.source) {
             return;
         }
-        final V value = this.key.reader().apply(this.component);
-        if (!Objects.equals(this.writable.peek(), value)) {
-            this.writable.set(value);
+        final Optional<Deferral> motion = this.causes.get().context(IN_MOTION);
+        if (motion.isPresent()) {
+            motion.get().defer(this);
+            return;
         }
+        this.writeBack();
+    }
+
+    /**
+     * Writes the property's value to the state unless they are equal, as a report does, for a report an animation
+     * deferred. A value that does not convert is not written, so the state keeps its last valid value, and a
+     * {@link ConversionTarget} shows the conversion's message until a value converts again. Does nothing for a
+     * one-way binding, or one that is detached or not evaluated since it attached. Call on the UI thread.
+     */
+    public void writeBack() {
+        if (this.writable == null || !this.evaluated || !this.isLive()) {
+            return;
+        }
+        final Conversion<? extends V> conversion = this.key.check().apply(this.component);
+        if (conversion instanceof Conversion.Valid<? extends V> valid) {
+            this.unmark();
+            if (!Objects.equals(this.writable.peek(), valid.value())) {
+                this.writable.set(valid.value());
+                this.echo = this.writable.version();
+            }
+        } else if (conversion instanceof Conversion.Invalid<? extends V> invalid) {
+            if (this.component instanceof final ConversionTarget target) {
+                this.marked = true;
+                target.setConversionError(invalid.message());
+            }
+        }
+    }
+
+    /**
+     * Takes away the conversion error this binding showed, if it showed one.
+     */
+    private void unmark() {
+        if (this.marked && this.component instanceof final ConversionTarget target) {
+            this.marked = false;
+            target.setConversionError(null);
+        }
+    }
+
+    /**
+     * Something running that bindings leave their write-backs with until it ends: an animation.
+     */
+    public interface Deferral {
+        /**
+         * Keeps a binding to write back once the animation ends or stops. A binding deferred twice is written back
+         * once.
+         *
+         * @param binding the binding
+         */
+        void defer(Binding<?> binding);
     }
 
     /**

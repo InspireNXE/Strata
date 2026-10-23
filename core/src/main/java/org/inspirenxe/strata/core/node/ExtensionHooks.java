@@ -32,8 +32,9 @@ import java.util.Set;
 
 /**
  * The hooks of a developer's {@code CustomComponent}, as a node calls them. Each call forwards to the public
- * {@link ComponentHooks} the component gave its peer, except {@link #disabled()}, {@link #released()} and
- * {@link #pressedWithin}, which only Strata's own controls answer and which do nothing here.
+ * {@link ComponentHooks} the component gave its peer, except {@link #enabledChanged()}, {@link #disabled()},
+ * {@link #released()}, {@link #pressedWithin} and {@link #edgeScroll}, which only Strata's own controls answer and
+ * which do nothing here.
  */
 final class ExtensionHooks implements NodeHooks {
     private final ComponentHooks hooks;
@@ -45,6 +46,16 @@ final class ExtensionHooks implements NodeHooks {
     @Override
     public Size measure(final MeasureContext context, final float availableWidth, final float availableHeight) {
         return this.hooks.measure(context, availableWidth, availableHeight);
+    }
+
+    @Override
+    public Size measureMinimum(final MeasureContext context) {
+        return this.hooks.measureMinimum(context);
+    }
+
+    @Override
+    public float baseline() {
+        return this.hooks.baseline();
     }
 
     @Override
@@ -108,6 +119,20 @@ final class ExtensionHooks implements NodeHooks {
     }
 
     @Override
+    public void attached() {
+        this.hooks.attached();
+    }
+
+    @Override
+    public void detached() {
+        this.hooks.detached();
+    }
+
+    @Override
+    public void enabledChanged() {
+    }
+
+    @Override
     public void disabled() {
     }
 
@@ -117,5 +142,10 @@ final class ExtensionHooks implements NodeHooks {
 
     @Override
     public void pressedWithin(final Component<?> target) {
+    }
+
+    @Override
+    public boolean edgeScroll(final float x, final float y) {
+        return false;
     }
 }

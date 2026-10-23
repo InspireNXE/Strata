@@ -16,9 +16,11 @@
 package org.inspirenxe.strata.api.state;
 
 import org.inspirenxe.strata.api.Strata;
+import org.inspirenxe.strata.api.event.Subscription;
 
 import java.util.Objects;
 import java.util.function.BiFunction;
+import java.util.function.Consumer;
 
 /**
  * A cell that holds one value and tells the bindings that read it when it changes. State lives in a plain class,
@@ -101,4 +103,25 @@ public interface State<T> extends Source<T> {
      * @param value the new value; may be null
      */
     void set(T value);
+
+    /**
+     * Calls a listener after each change of the value, for code outside any screen, such as a settings class that
+     * saves itself. The listener runs once per change, after the value is stored, on the thread that called
+     * {@link #set}, and gets the value that call stored; setting a value equal to the current one is no change. It is
+     * not called for the value the state holds now. Listeners run in the order they subscribed, after the state has
+     * marked its bindings for an update. A listener that throws stops the listeners after it, and the exception goes
+     * to the caller of {@code set}, which has already stored the value.
+     *
+     * <p>The state holds the listener until the subscription is closed, so a listener that refers to a screen keeps
+     * the screen alive. Screen code uses {@link org.inspirenxe.strata.api.ComponentFactory#watch} instead, which
+     * calls on the UI thread and stops when the screen closes.</p>
+     *
+     * <pre>{@code
+     * final Subscription saving = settings.volume.subscribe(volume -> settings.save());
+     * }</pre>
+     *
+     * @param listener called with each new value; may be called from any thread that sets the state
+     * @return a subscription that removes the listener; any thread may close it
+     */
+    Subscription subscribe(Consumer<? super T> listener);
 }

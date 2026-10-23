@@ -160,7 +160,7 @@ class ExtensionTest {
 
         assertEquals(2, counter.count());
         assertEquals(new Rect(3, 3, TestPlatform.CHAR_WIDTH, 9f), counter.bounds());
-        assertTrue(counter.parent() instanceof AbsolutePanel);
+        assertTrue(counter.parent().orElseThrow() instanceof AbsolutePanel);
     }
 
     /**

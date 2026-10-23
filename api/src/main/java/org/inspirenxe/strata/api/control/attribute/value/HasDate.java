@@ -33,6 +33,10 @@ import java.util.function.Predicate;
  * filter limits only the user: a date the filter refuses draws disabled and cannot be picked or typed, but code may
  * still set it. Clearing is always allowed from code.</p>
  *
+ * <p>Dates run from 1 January of year 1 to 31 December 9999, so a year always fits four digits. A date outside those,
+ * set from code or given as an end of the range, is moved to the nearer of them, and a range with an open end stops
+ * there too.</p>
+ *
  * <p>Dates carry no zone. A screen shows what the user picked, and the project decides what zone it means.</p>
  *
  * <pre>{@code
@@ -100,10 +104,11 @@ public interface HasDate<S extends HasDate<S>> extends EventTarget<S> {
     Optional<LocalDate> maxDate();
 
     /**
-     * Sets the range of dates, both ends included, and moves a date outside it to the nearest end.
+     * Sets the range of dates, both ends included, and moves a date outside it to the nearest end. An end outside the
+     * supported dates is moved inside them, and the getters return it as moved.
      *
-     * @param min the earliest date, or null for no limit
-     * @param max the latest date, or null for no limit
+     * @param min the earliest date, or null for no limit but the first supported date
+     * @param max the latest date, or null for no limit but the last supported date
      * @return this control
      * @throws IllegalArgumentException if both are given and {@code min} is after {@code max}
      */

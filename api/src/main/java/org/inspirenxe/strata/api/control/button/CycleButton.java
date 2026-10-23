@@ -17,6 +17,7 @@ package org.inspirenxe.strata.api.control.button;
 
 import org.inspirenxe.strata.api.component.Component;
 import org.inspirenxe.strata.api.component.Focusable;
+import org.inspirenxe.strata.api.component.HasContextMenu;
 import org.inspirenxe.strata.api.component.HasCursor;
 import org.inspirenxe.strata.api.component.HasTooltip;
 import org.inspirenxe.strata.api.control.attribute.item.ItemSource;
@@ -32,7 +33,8 @@ import java.util.function.Function;
  *
  * <p>A left click, or Enter, keypad Enter or Space while the button has focus (not repeated), selects the next value,
  * and the first after the last. A right click, or Shift held with any of those, selects the previous value, and the
- * last before the first.
+ * last before the first. On a platform whose conventions say buttons act on the press, the press of either button
+ * steps instead of the click.
  * The button consumes those inputs. A disabled button ignores them and draws its disabled face. A step that lands on
  * the value already selected, as with a single value, changes nothing and fires no events.</p>
  *
@@ -75,8 +77,8 @@ import java.util.function.Function;
  *
  * @param <T> the type of the values
  */
-public interface CycleButton<T> extends Component<CycleButton<T>>, Focusable<CycleButton<T>>,
-        HasCursor<CycleButton<T>>, HasTooltip<CycleButton<T>>, HasText<CycleButton<T>>,
+public interface CycleButton<T> extends Component<CycleButton<T>>, Focusable<CycleButton<T>>, HasCursor<CycleButton<T>>,
+        HasTooltip<CycleButton<T>>, HasContextMenu<CycleButton<T>>, HasText<CycleButton<T>>,
         ItemSource<T, CycleButton<T>>, SingleSelection<T, CycleButton<T>> {
 
     /**
@@ -90,7 +92,7 @@ public interface CycleButton<T> extends Component<CycleButton<T>>, Focusable<Cyc
     /**
      * Replaces the label that comes before the value. A new layout runs.
      *
-     * @param text the label, on one line, or an empty string for none
+     * @param text the label, on one line, or {@link Text#empty()} for none
      * @return this button
      */
     @Override

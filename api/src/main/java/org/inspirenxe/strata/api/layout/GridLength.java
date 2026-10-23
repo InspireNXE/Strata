@@ -19,9 +19,9 @@ package org.inspirenxe.strata.api.layout;
  * How big a {@link GridPanel} row or column is.
  *
  * <p>The grid first gives fixed tracks their size and auto tracks the size of their largest child. Whatever width
- * (or height) remains is then shared among weighted tracks in proportion to their weights. When the grid is
- * measured without a size limit, weighted tracks take the smallest size that fits their children while keeping
- * their proportions.</p>
+ * (or height) remains is then shared among weighted tracks in proportion to their weights, each kept within the
+ * size limits of its children as {@link GridPanel} describes. When the grid is measured without a size limit,
+ * weighted tracks take the smallest size that fits their children while keeping their proportions.</p>
  */
 public sealed interface GridLength {
     /**
@@ -43,7 +43,7 @@ public sealed interface GridLength {
      *
      * @param size the size in UI units
      * @return the fixed length
-     * @throws IllegalArgumentException if {@code size} is negative
+     * @throws IllegalArgumentException if {@code size} is negative, infinite or NaN
      */
     static GridLength fixed(final float size) {
         return new Fixed(size);
@@ -54,7 +54,7 @@ public sealed interface GridLength {
      *
      * @param weight the share; a track of weight 2 gets twice the space of a track of weight 1
      * @return the weighted length
-     * @throws IllegalArgumentException if {@code weight} is not positive
+     * @throws IllegalArgumentException if {@code weight} is not positive, or is infinite or NaN
      */
     static GridLength weighted(final float weight) {
         return new Weighted(weight);
@@ -70,17 +70,17 @@ public sealed interface GridLength {
     /**
      * A track of a fixed size, whatever its children need.
      *
-     * @param size the size in UI units, not negative
+     * @param size the size in UI units, finite and not negative
      */
     record Fixed(float size) implements GridLength {
         /**
          * Checks the size.
          *
-         * @throws IllegalArgumentException if {@code size} is negative
+         * @throws IllegalArgumentException if {@code size} is negative, infinite or NaN
          */
         public Fixed {
-            if (size < 0f) {
-                throw new IllegalArgumentException("Fixed size must not be negative: " + size);
+            if (!(size >= 0f) || Float.isInfinite(size)) {
+                throw new IllegalArgumentException("Fixed size must be finite and not negative: " + size);
             }
         }
     }
@@ -88,17 +88,17 @@ public sealed interface GridLength {
     /**
      * A track that takes a share of the space left after fixed and auto tracks.
      *
-     * @param weight the share, positive
+     * @param weight the share, positive and finite
      */
     record Weighted(float weight) implements GridLength {
         /**
          * Checks the weight.
          *
-         * @throws IllegalArgumentException if {@code weight} is not positive
+         * @throws IllegalArgumentException if {@code weight} is not positive, or is infinite or NaN
          */
         public Weighted {
-            if (weight <= 0f) {
-                throw new IllegalArgumentException("Weight must be positive: " + weight);
+            if (!(weight > 0f) || Float.isInfinite(weight)) {
+                throw new IllegalArgumentException("Weight must be positive and finite: " + weight);
             }
         }
     }

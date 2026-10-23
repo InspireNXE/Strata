@@ -387,6 +387,44 @@ class NavigationViewTest {
         }
 
         @Test
+        void footerItemsGoInAtAnIndexAndClearTogether() {
+            final NavigationView view = NavigationViewTest.this.ui.navigationView()
+                    .addItem(NavigationViewTest.this.ui.navigationItem("General"))
+                    .addFooterItem(NavigationViewTest.this.ui.navigationItem("Sign out"))
+                    .addFooterItem(0, NavigationViewTest.this.ui.navigationItem("Settings"));
+            NavigationViewTest.this.test.show(view);
+            assertEquals(List.of("General", "Settings", "Sign out"),
+                    view.allItems().stream().map(item -> item.text().plain()).toList());
+            assertThrows(IndexOutOfBoundsException.class,
+                    () -> view.addFooterItem(3, NavigationViewTest.this.ui.navigationItem("Late")));
+            view.select(2);
+            view.clearFooterItems();
+            assertEquals(List.of(), view.footerItems());
+            assertEquals(1, view.items().size());
+            assertEquals(-1, view.selectedIndex());
+        }
+
+        @Test
+        void aPageThatFailsToBuildLeavesTheSelectionAndIsTriedAgain() {
+            final AtomicInteger built = new AtomicInteger();
+            final NavigationView view = NavigationViewTest.this.ui.navigationView()
+                    .addItem("General", ui -> ui.label("General page"))
+                    .addItem("Broken", ui -> {
+                        if (built.incrementAndGet() == 1) {
+                            throw new IllegalStateException("not yet");
+                        }
+                        return ui.label("Fixed page");
+                    });
+            NavigationViewTest.this.test.show(view);
+            view.select(0);
+            assertThrows(IllegalStateException.class, () -> view.select(1));
+            assertEquals(0, view.selectedIndex());
+            view.select(1);
+            assertEquals(1, view.selectedIndex());
+            assertEquals(2, built.get());
+        }
+
+        @Test
         void passTheirEventsOutOfTheView() {
             final Button save = NavigationViewTest.this.ui.button("Save");
             final NavigationView view = NavigationViewTest.this.ui.navigationView().addItem("General", ui -> save);
@@ -534,7 +572,7 @@ class NavigationViewTest {
             // An item's text is its tooltip
             NavigationViewTest.this.test.host().pointerMoved(10, 30, Modifiers.NONE);
             final Component<?> hovered = NavigationViewTest.this.test.host().root().hovered().facade();
-            assertEquals(Tooltip.text(NavigationViewTest.this.item("General").text()), ((HasTooltip<?>) hovered).tooltip());
+            assertEquals(Tooltip.text(NavigationViewTest.this.item("General").text()), ((HasTooltip<?>) hovered).tooltip().orElseThrow());
         }
 
         @Test

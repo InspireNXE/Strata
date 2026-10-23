@@ -15,10 +15,13 @@
  */
 package org.inspirenxe.strata.api.control.button;
 
+import org.inspirenxe.strata.api.command.Command;
 import org.inspirenxe.strata.api.component.Component;
 import org.inspirenxe.strata.api.component.Focusable;
+import org.inspirenxe.strata.api.component.HasContextMenu;
 import org.inspirenxe.strata.api.component.HasCursor;
 import org.inspirenxe.strata.api.component.HasTooltip;
+import org.inspirenxe.strata.api.control.attribute.command.HasCommand;
 import org.inspirenxe.strata.api.control.attribute.text.HasText;
 import org.inspirenxe.strata.api.control.attribute.value.Toggle;
 import org.inspirenxe.strata.api.text.Text;
@@ -30,7 +33,8 @@ import java.util.Objects;
  * caption to its right.
  *
  * <p>A left click anywhere on it flips it, and so does Enter, keypad Enter or Space while it has focus (not
- * repeated). It consumes those inputs. Each flip by the user fires {@link Toggle#TOGGLE}, and every change fires
+ * repeated). On a platform whose conventions say toggles act on the press, the left press flips it instead of the
+ * click. It consumes those inputs. Each flip by the user fires {@link Toggle#TOGGLE}, and every change fires
  * {@link Toggle#TOGGLED}. A disabled switch does neither and draws its disabled look.</p>
  *
  * <p>It is focusable and tabbable and shows the hand cursor. With the theme's default paddings, the track is the
@@ -65,11 +69,15 @@ import java.util.Objects;
  *         .onEvent(Toggle.TOGGLED, event -> settings.setPvp(event.value()));
  * }</pre>
  *
+ * <p>Its caption marks a mnemonic with an underscore, as {@link Button} describes: Alt with the letter focuses and
+ * flips the switch.</p>
+ *
  * <p>Get one from {@link org.inspirenxe.strata.api.ComponentFactory#toggleSwitch(String)}. Do not implement this
  * interface.</p>
  */
 public interface ToggleSwitch extends Component<ToggleSwitch>, Focusable<ToggleSwitch>, HasCursor<ToggleSwitch>,
-        HasTooltip<ToggleSwitch>, HasText<ToggleSwitch>, Toggle<ToggleSwitch> {
+        HasTooltip<ToggleSwitch>, HasContextMenu<ToggleSwitch>, HasText<ToggleSwitch>, Toggle<ToggleSwitch>,
+        HasCommand<Command.Toggle, ToggleSwitch> {
     /**
      * Style key for the track when off (paint, required).
      */
@@ -117,6 +125,11 @@ public interface ToggleSwitch extends Component<ToggleSwitch>, Focusable<ToggleS
      * this right in from its right end when on. Defaults to 2 on every side.
      */
     String STYLE_KNOB_PADDING = "toggle.knob.padding";
+    /**
+     * Style key for how long the knob takes to slide to its other end, in milliseconds (metric, optional). The
+     * track's color changes at once. Defaults to 0: the knob jumps.
+     */
+    String STYLE_ANIMATION = "toggle.animation";
 
     /**
      * Returns the caption.

@@ -22,6 +22,7 @@ import org.inspirenxe.strata.api.component.Component;
 import org.inspirenxe.strata.api.component.Tooltip;
 import org.inspirenxe.strata.api.control.button.CycleButton;
 import org.inspirenxe.strata.api.control.collection.ComboBox;
+import org.inspirenxe.strata.api.control.display.Avatar;
 import org.inspirenxe.strata.api.control.display.Image;
 import org.inspirenxe.strata.api.control.display.Label;
 import org.inspirenxe.strata.api.event.Subscription;
@@ -31,6 +32,7 @@ import org.inspirenxe.strata.api.text.InlineVisual;
 import org.inspirenxe.strata.api.text.Text;
 import org.inspirenxe.strata.api.text.TextSpan;
 import org.inspirenxe.strata.api.text.TextStyle;
+import org.inspirenxe.strata.api.theme.SpriteId;
 import org.inspirenxe.strata.api.visual.Visual;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
@@ -42,7 +44,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
-import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -170,7 +171,7 @@ class AppearanceTest {
         final List<TextSpan> spans = label.text().resolve(TextStyle.DEFAULT);
         assertEquals(new InlineVisual(new Icon("kiwi")), spans.get(0).element());
         assertEquals(" KIWI", spans.get(1).text());
-        assertEquals(Tooltip.text("Fresh kiwi"), label.tooltip());
+        assertEquals(Tooltip.text("Fresh kiwi"), label.tooltip().orElseThrow());
     }
 
     @Test
@@ -183,7 +184,7 @@ class AppearanceTest {
         final Label row = assertInstanceOf(Label.class, test.factory().cell(new Fruit("fig")));
         test.show(test.factory().absolutePanel().add(row, 0, 0));
         test.host().pointerMoved(row.bounds().x() + 2, row.bounds().y() + 2, Modifiers.NONE);
-        assertEquals(Tooltip.text("asked 2"), row.tooltip());
+        assertEquals(Tooltip.text("asked 2"), row.tooltip().orElseThrow());
     }
 
     @Test
@@ -206,13 +207,51 @@ class AppearanceTest {
         this.register(Fruit.class, fruits());
         final TestHost test = new TestHost(200, 100);
         final Image image = test.factory().image((Object) new Fruit("lime"));
-        assertEquals(new Icon("lime"), image.visual());
+        assertEquals(new Icon("lime"), image.visual().orElseThrow());
         assertEquals(12f, image.imageWidth());
-        assertEquals(Tooltip.text("Fresh lime"), image.tooltip());
+        assertEquals(Tooltip.text("Fresh lime"), image.tooltip().orElseThrow());
         image.setTooltip("Mine");
         image.setValue(new Fruit("pear"));
-        assertEquals(Tooltip.text("Fresh pear"), image.tooltip());
+        assertEquals(Tooltip.text("Fresh pear"), image.tooltip().orElseThrow());
         image.setVisual(new Icon("plain"));
-        assertNull(image.value());
+        assertEquals(Optional.empty(), image.value());
+    }
+
+    @Test
+    void clearingAnImagesValueDropsItsTooltip() {
+        this.register(Fruit.class, fruits());
+        final TestHost test = new TestHost(200, 100);
+        final Image image = test.factory().image((Object) new Fruit("lime"));
+        image.setValue(null);
+        assertEquals(Optional.empty(), image.tooltip());
+        image.setValue(new Fruit("pear"));
+        image.setSprite(SpriteId.of("test", "plain"));
+        assertEquals(Optional.empty(), image.tooltip());
+        image.setValue(new Fruit("fig"));
+        image.setVisual(new Icon("plain"));
+        assertEquals(Optional.empty(), image.tooltip());
+    }
+
+    @Test
+    void aValueWithNoTooltipKeepsTheImagesOwn() {
+        final TestHost test = new TestHost(200, 100);
+        final Image image = test.factory().image().setTooltip("Mine");
+        image.setValue("plain");
+        assertEquals(Tooltip.text("Mine"), image.tooltip().orElseThrow());
+        image.setValue(null);
+        assertEquals(Tooltip.text("Mine"), image.tooltip().orElseThrow());
+    }
+
+    @Test
+    void clearingAnAvatarsValueDropsItsTooltipButKeepsItsOwn() {
+        this.register(Fruit.class, fruits());
+        final TestHost test = new TestHost(200, 100);
+        final Avatar avatar = test.factory().avatar(new Fruit("lime"));
+        assertEquals(Tooltip.text("Fresh lime"), avatar.tooltip().orElseThrow());
+        avatar.setValue(null);
+        assertEquals(Optional.empty(), avatar.tooltip());
+        avatar.setTooltip("Mine");
+        avatar.setValue("plain");
+        assertEquals(Tooltip.text("Mine"), avatar.tooltip().orElseThrow());
     }
 }

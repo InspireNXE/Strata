@@ -15,8 +15,10 @@
  */
 package org.inspirenxe.strata.api.control.menu;
 
+import org.inspirenxe.strata.api.command.Command;
+import org.inspirenxe.strata.api.component.Enableable;
+import org.inspirenxe.strata.api.control.attribute.command.HasCommand;
 import org.inspirenxe.strata.api.control.attribute.text.HasText;
-import org.inspirenxe.strata.api.text.Text;
 
 /**
  * A menu entry that runs a command when chosen, with an optional shortcut hint drawn at its right.
@@ -29,41 +31,27 @@ import org.inspirenxe.strata.api.text.Text;
  * copy.setEnabled(selection.isPresent());
  * }</pre>
  *
+ * <p>An item can show a {@linkplain #setCommand command} instead: it takes the command's text, is enabled while
+ * the command is and its own flag is set, shows the command's stroke as its hint while no hint text is set, and
+ * runs the command after {@link Menu#CHOSEN} when chosen. A menu bar runs the commands of its menus from their
+ * shortcuts.</p>
+ *
+ * <p>Its caption marks a mnemonic with an underscore, as {@link org.inspirenxe.strata.api.control.button.Button}
+ * describes: Alt with the letter chooses the item while its menu is open, as the letter alone does.</p>
+ *
  * <p>Get one from {@link org.inspirenxe.strata.api.ComponentFactory#menuItem(String)} or make one with
  * {@link Menu#addItem(String, Runnable)}. Do not implement this interface.</p>
  */
-public non-sealed interface MenuItem extends MenuEntry, HasText<MenuItem> {
+public non-sealed interface MenuItem extends MenuEntry, HasText<MenuItem>, HasShortcut<MenuItem>,
+        Enableable<MenuItem>, HasCommand<Command.Action, MenuItem> {
 
     /**
-     * Returns the shortcut hint.
-     *
-     * @return the hint, never null; empty when there is none
-     */
-    Text shortcut();
-
-    /**
-     * Sets the hint drawn at the right of the item, such as {@code "Ctrl+C"}. It is only text and binds no key.
-     *
-     * @param shortcut the hint, or empty text for none
-     * @return this item
-     */
-    MenuItem setShortcut(Text shortcut);
-
-    /**
-     * Does the same as {@link #setShortcut(Text)} with literal text.
-     *
-     * @param shortcut the hint, or an empty string for none
-     * @return this item
-     */
-    default MenuItem setShortcut(final String shortcut) {
-        return this.setShortcut(Text.of(shortcut));
-    }
-
-    /**
-     * Returns whether the item can be chosen.
+     * Returns whether the item can be chosen: it was not disabled with {@link #setEnabled}, and its command, if it has
+     * one, is enabled now.
      *
      * @return true by default
      */
+    @Override
     boolean isEnabled();
 
     /**
@@ -72,6 +60,7 @@ public non-sealed interface MenuItem extends MenuEntry, HasText<MenuItem> {
      * @param enabled true to enable it
      * @return this item
      */
+    @Override
     MenuItem setEnabled(boolean enabled);
 
     /**

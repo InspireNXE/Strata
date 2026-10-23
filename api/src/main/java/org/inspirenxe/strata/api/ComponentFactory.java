@@ -16,6 +16,7 @@
 package org.inspirenxe.strata.api;
 
 import org.inspirenxe.strata.api.appearance.Appearances;
+import org.inspirenxe.strata.api.command.Shortcuts;
 import org.inspirenxe.strata.api.component.Component;
 import org.inspirenxe.strata.api.component.registry.ComponentId;
 import org.inspirenxe.strata.api.component.registry.ComponentRegistry;
@@ -25,6 +26,7 @@ import org.inspirenxe.strata.api.control.button.CheckBox;
 import org.inspirenxe.strata.api.control.button.CycleButton;
 import org.inspirenxe.strata.api.control.button.DropDownButton;
 import org.inspirenxe.strata.api.control.button.RadioGroup;
+import org.inspirenxe.strata.api.control.button.ToggleButton;
 import org.inspirenxe.strata.api.control.button.ToggleSwitch;
 import org.inspirenxe.strata.api.control.collection.ComboBox;
 import org.inspirenxe.strata.api.control.collection.GridView;
@@ -55,6 +57,7 @@ import org.inspirenxe.strata.api.control.menu.Menu;
 import org.inspirenxe.strata.api.control.menu.MenuBar;
 import org.inspirenxe.strata.api.control.menu.MenuItem;
 import org.inspirenxe.strata.api.control.menu.MenuSeparator;
+import org.inspirenxe.strata.api.control.menu.RadioMenuItem;
 import org.inspirenxe.strata.api.control.menu.SubmenuItem;
 import org.inspirenxe.strata.api.control.pane.Expander;
 import org.inspirenxe.strata.api.control.pane.NavigationEntry;
@@ -68,11 +71,15 @@ import org.inspirenxe.strata.api.control.pane.Tab;
 import org.inspirenxe.strata.api.control.pane.TabBar;
 import org.inspirenxe.strata.api.control.window.MessageBox;
 import org.inspirenxe.strata.api.control.window.Window;
+import org.inspirenxe.strata.api.animation.Animator;
+import org.inspirenxe.strata.api.event.Subscription;
 import org.inspirenxe.strata.api.event.cause.CauseStack;
 import org.inspirenxe.strata.api.extension.CustomComponent;
+import org.inspirenxe.strata.api.file.FileDialogs;
 import org.inspirenxe.strata.api.extension.peer.ComponentHooks;
 import org.inspirenxe.strata.api.extension.peer.ComponentPeer;
 import org.inspirenxe.strata.api.extension.peer.ContainerPeer;
+import org.inspirenxe.strata.api.input.KeyStroke;
 import org.inspirenxe.strata.api.layout.AbsolutePanel;
 import org.inspirenxe.strata.api.layout.AnchorPanel;
 import org.inspirenxe.strata.api.layout.GridPanel;
@@ -80,16 +87,21 @@ import org.inspirenxe.strata.api.layout.Orientation;
 import org.inspirenxe.strata.api.layout.ScrollPanel;
 import org.inspirenxe.strata.api.layout.Spacer;
 import org.inspirenxe.strata.api.layout.StackPanel;
+import org.inspirenxe.strata.api.layout.WrapPanel;
 import org.inspirenxe.strata.api.overlay.Overlays;
+import org.inspirenxe.strata.api.state.Source;
+import org.inspirenxe.strata.api.state.State;
 import org.inspirenxe.strata.api.text.Text;
 import org.inspirenxe.strata.api.theme.SpriteId;
 import org.inspirenxe.strata.api.theme.Theme;
+import org.inspirenxe.strata.api.transfer.Transfer;
 import org.inspirenxe.strata.api.visual.Visual;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.Optional;
+import java.util.function.Consumer;
 import java.util.function.Function;
 
 /**
@@ -97,11 +109,11 @@ import java.util.function.Function;
  * {@link org.inspirenxe.strata.api.screen.Screen#build}, and custom components take it in their constructor.
  *
  * <p>A component belongs to the factory that made it and can only join trees shown by that factory's host. There
- * is deliberately no static way to get a factory: mod loaders layer class loaders, and passing the factory along
+ * is deliberately no static way to get a factory: plugin systems layer class loaders, and passing the factory along
  * keeps every tree tied to the host that shows it.</p>
  *
- * <p>Each call returns a new component, detached and with default settings. Call factories on the UI thread
- * only.</p>
+ * <p>Each call returns a new component, detached and with default settings. A tree may be built on any thread
+ * and added on the {@linkplain #uiThread() UI thread}; once attached, its components are the UI thread's.</p>
  *
  * <p>What the named methods make ({@link #button()}, {@link #listView()} and the rest) is Strata's own and is never
  * an instance of {@link org.inspirenxe.strata.api.extension.CustomComponent}; a component that is one was written
@@ -137,12 +149,113 @@ public interface ComponentFactory {
 
     /**
      * Returns the cause stack of the UI thread, for opening a frame around a change made for someone else, such as
-     * an update another player made through the server. On an engine with its own cause stack, such as Sponge, it is
-     * backed by that stack.
+     * an update another user made through a server. On an engine with its own cause stack, it is backed by that
+     * stack.
      *
      * @return the cause stack
      */
     CauseStack causes();
+
+    /**
+     * Returns the UI thread of the host this factory belongs to, which every host of its platform shares. Hand work
+     * from another thread to it before touching an attached component.
+     *
+     * @return the host's UI thread
+     */
+    UiThread uiThread();
+
+    /**
+     * Returns the animator of the host this factory belongs to, whose animations follow the platform's clock and
+     * stop when the host's screen closes.
+     *
+     * @return the host's animator
+     * @throws IllegalStateException if the factory has no host yet
+     */
+    Animator animator();
+
+    /**
+     * Reads the clipboard of the host's platform in every format it holds, as {@code Environment.clipboard()}
+     * describes.
+     *
+     * @return the clipboard's content, or empty if it holds nothing or the engine has no clipboard
+     */
+    Optional<Transfer> clipboard();
+
+    /**
+     * Puts a transfer on the clipboard of the host's platform, as {@code Environment.setClipboard} describes: the
+     * engine gets every format but the local ones, and this process gets the whole transfer back.
+     *
+     * @param transfer what to put on the clipboard
+     */
+    void setClipboard(Transfer transfer);
+
+    /**
+     * Returns the component the pointer would hit at a point of the host, as a drop handler or a test needs. The
+     * host lays out first if anything changed. The search runs as the pointer's does: through the open overlays from
+     * the top, where a dialog hides every layer below it, then the content. The tooltip is never found. A hidden
+     * component and everything inside it is skipped. A disabled component, or one inside a disabled component, can
+     * be found, since it takes the press there. Where a container that clips its children cuts a child off, the
+     * container is found.
+     *
+     * @param x the x, in the host's coordinates
+     * @param y the y, in the host's coordinates
+     * @return the deepest component there, or empty over nothing, over a dialog's backdrop or before the factory has
+     *     a host
+     * @throws IllegalStateException off the UI thread once Strata knows which thread that is
+     */
+    Optional<Component<?>> componentAt(float x, float y);
+
+    /**
+     * Returns the file dialogs of the host's platform, for opening and saving files.
+     *
+     * @return the dialogs, which report themselves as not supported on an engine without them
+     */
+    FileDialogs fileDialogs();
+
+    /**
+     * Calls a listener when a source's value changes, for screen code that acts on a change, such as saving a setting
+     * or sending it to a server. The source is tracked as a {@linkplain Component#bind binding's} is: every state it
+     * reads is followed, and when one of them changes, the source is read again before the next frame is laid out,
+     * on the UI thread, with the bindings. The listener gets the new value if it differs from the last one, as
+     * {@link java.util.Objects#equals} says, so a computed source that comes out the same calls nothing. Several
+     * changes in one frame cost one call.
+     *
+     * <pre>{@code
+     * ui.watch(model.volume, volume -> server.sendVolume(volume));
+     * }</pre>
+     *
+     * <p>The source is read once now, for the states it reads and the value to compare with, and the listener is not
+     * called for that value. A source must not set states or change components, as {@link Source} says; the listener
+     * may do both. The watch stops when the screen open in this factory's host closes or is built again, so screen
+     * code needs no cleanup; one made while no screen is open stops when the next screen closes. Close the
+     * subscription to stop it sooner.</p>
+     *
+     * @param <T> the type of the value
+     * @param source the source, a {@link State} or a lambda that computes from states
+     * @param listener called on the UI thread with each new value
+     * @return a subscription that stops the watch; close it on the UI thread
+     * @throws IllegalStateException if this factory has no host yet
+     */
+    <T> Subscription watch(Source<T> source, Consumer<? super T> listener);
+
+    /**
+     * Returns the commands the host this factory belongs to runs from their shortcuts.
+     *
+     * @return the host's shortcuts
+     */
+    Shortcuts shortcuts();
+
+    /**
+     * Returns how a key stroke reads on this host's platform, such as "Ctrl+Shift+S", for a shortcut hint. Modifiers
+     * are named through the translation keys {@code strata.modifier.control}, {@code strata.modifier.alt},
+     * {@code strata.modifier.shift} and {@code strata.modifier.super}, in that order, joined by
+     * {@code strata.modifier.separator}, so a translator can give the platform's own symbols. A
+     * {@linkplain KeyStroke#shortcut shortcut} stroke names the platform's shortcut modifier.
+     *
+     * @param stroke the stroke
+     * @return the text, translated when it is resolved
+     */
+    Text keyText(KeyStroke stroke);
 
     /**
      * Makes an {@link AnchorPanel}.
@@ -172,6 +285,21 @@ public interface ComponentFactory {
      * @return a new grid panel
      */
     GridPanel gridPanel();
+
+    /**
+     * Makes a {@link WrapPanel} that fills rows.
+     *
+     * @return a new wrap panel laying out children left to right and wrapping onto new rows
+     */
+    WrapPanel wrapPanel();
+
+    /**
+     * Makes a {@link WrapPanel} with the given orientation, as {@code wrapPanel().setOrientation(orientation)} does.
+     *
+     * @param orientation the direction each line fills in
+     * @return a new wrap panel
+     */
+    WrapPanel wrapPanel(Orientation orientation);
 
     /**
      * Makes an {@link AbsolutePanel}.
@@ -245,6 +373,16 @@ public interface ComponentFactory {
      * @return a new label
      */
     Label cellLabel(Text text);
+
+    /**
+     * Makes a {@linkplain #cellLabel(Text) cell label} with no text, as {@code cellLabel("")} does, for a cell factory
+     * that sets the text later.
+     *
+     * @return a new label
+     */
+    default Label cellLabel() {
+        return this.cellLabel("");
+    }
 
     /**
      * Does the same as {@link #cellLabel(Text)} with literal text.
@@ -362,7 +500,8 @@ public interface ComponentFactory {
     Image image(Visual visual);
 
     /**
-     * Makes an {@link Image} of a value's icon, with the value's tooltip; see {@link Image#setValue}.
+     * Makes an {@link Image} of a value's icon, with the value's tooltip; see {@link Image#setValue}. For an image
+     * with no value, call {@link #image()}: {@code image(null)} does not compile, since three overloads take null.
      *
      * @param value the value
      * @return a new image
@@ -716,6 +855,33 @@ public interface ComponentFactory {
     <T> RadioGroup<T> radioGroup();
 
     /**
+     * Makes a {@link ToggleButton}, off, with no caption, as {@code toggleButton("")} does.
+     *
+     * @return a new toggle button
+     */
+    default ToggleButton toggleButton() {
+        return this.toggleButton("");
+    }
+
+    /**
+     * Makes a {@link ToggleButton} that is off.
+     *
+     * @param text the caption
+     * @return a new toggle button
+     */
+    ToggleButton toggleButton(Text text);
+
+    /**
+     * Does the same as {@link #toggleButton(Text)} with literal text.
+     *
+     * @param text the caption
+     * @return a new toggle button
+     */
+    default ToggleButton toggleButton(final String text) {
+        return this.toggleButton(Text.of(text));
+    }
+
+    /**
      * Makes a {@link ToggleSwitch}, off, with no caption, as {@code toggleSwitch("")} does.
      *
      * @return a new switch
@@ -873,6 +1039,34 @@ public interface ComponentFactory {
      */
     default MenuItem menuItem(final String text) {
         return this.menuItem(Text.of(text));
+    }
+
+    /**
+     * Makes an enabled {@link RadioMenuItem} that is not selected, in no group, with no text and an action that does
+     * nothing, as {@code radioMenuItem("")} does.
+     *
+     * @return a new item
+     */
+    default RadioMenuItem radioMenuItem() {
+        return this.radioMenuItem("");
+    }
+
+    /**
+     * Makes an enabled {@link RadioMenuItem} that is not selected, in no group, with an action that does nothing.
+     *
+     * @param text the item's text
+     * @return a new item
+     */
+    RadioMenuItem radioMenuItem(Text text);
+
+    /**
+     * Does the same as {@link #radioMenuItem(Text)} with literal text.
+     *
+     * @param text the item's text
+     * @return a new item
+     */
+    default RadioMenuItem radioMenuItem(final String text) {
+        return this.radioMenuItem(Text.of(text));
     }
 
     /**

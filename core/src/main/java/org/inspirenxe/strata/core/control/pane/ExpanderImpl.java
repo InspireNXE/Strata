@@ -15,6 +15,8 @@
  */
 package org.inspirenxe.strata.core.control.pane;
 
+import org.inspirenxe.strata.core.text.TextLine;
+import org.inspirenxe.strata.api.animation.Animator;
 import org.inspirenxe.strata.api.component.Component;
 import org.inspirenxe.strata.api.component.CursorKind;
 import org.inspirenxe.strata.api.control.pane.Expander;
@@ -35,18 +37,28 @@ import org.inspirenxe.strata.api.text.TextMetrics;
 import org.inspirenxe.strata.api.text.TextStyle;
 import org.inspirenxe.strata.api.theme.Paint;
 import org.inspirenxe.strata.api.theme.Theme;
+import org.inspirenxe.strata.core.control.Adoption;
+import org.inspirenxe.strata.core.control.Motion;
+import org.inspirenxe.strata.core.control.RectCache;
 import org.inspirenxe.strata.core.control.Rings;
 import org.inspirenxe.strata.core.node.BuiltInComposite;
 import org.inspirenxe.strata.core.node.ComponentFactoryImpl;
-import org.inspirenxe.strata.core.text.TextLine;
+import org.inspirenxe.strata.core.node.MnemonicTarget;
+import org.inspirenxe.strata.core.text.MnemonicLine;
 
 import java.util.Objects;
+import java.util.Optional;
 
 /**
- * The core {@link Expander}. The content is a child only while expanded. The expander shows the hand cursor while
- * the pointer is over the header, and no cursor of its own elsewhere.
+ * The core {@link Expander}. The content is a child while expanded, and while it shrinks away after collapsing. The
+ * expander shows the hand cursor while the pointer is over the header, and no cursor of its own elsewhere.
+ *
+ * <p>Over the theme's {@value Expander#STYLE_ANIMATION} metric a {@link Motion} moves how much of the content shows,
+ * from 0 to 1, and the expander measures the header plus that share of the content's height. The content is arranged
+ * at its full height below the header and, while the share moves, clipped to the expander's bounds below the
+ * header. With the metric at 0, or while detached, the share jumps and the content comes and goes at once.</p>
  */
-public final class ExpanderImpl extends BuiltInComposite<Expander> implements Expander {
+public final class ExpanderImpl extends BuiltInComposite<Expander> implements Expander, MnemonicTarget {
     /**
      * The space around the header's arrow and title when the theme sets no {@value #STYLE_HEADER_PADDING}: 4 at
      * the sides and 3 at the top and bottom.
@@ -60,9 +72,22 @@ public final class ExpanderImpl extends BuiltInComposite<Expander> implements Ex
     private Insets headerPadding = DEFAULT_HEADER_PADDING;
 
     private Text title;
+    private Component<?> headerComponent;
     private Component<?> content;
     private boolean expanded;
+    // Whether the content is a child: while expanded, and while it shrinks away
+    private boolean shown;
+    // How much of the content's height shows, from 0 to 1
+    private float reveal;
+    private long animationMillis;
+    private final Motion revealMotion = new Motion(this::revealed);
+    // The content's outer height, as last measured
+    private float contentHeight;
+    private final RectCache clipRect = new RectCache();
     private float headerHeight;
+    // Kept between frames
+    private final RectCache headRect = new RectCache();
+    private final Rings.Arrow arrow = new Rings.Arrow();
     private float pointerY;
 
     // Theme
@@ -72,8 +97,8 @@ public final class ExpanderImpl extends BuiltInComposite<Expander> implements Ex
     private TextStyle disabledTextStyle;
 
     // Computed during measure
-    private TextLine span;
-    private TextLine disabledSpan;
+    private MnemonicLine span;
+    private MnemonicLine disabledSpan;
     private float lineHeight;
 
     /**
@@ -90,7 +115,7 @@ public final class ExpanderImpl extends BuiltInComposite<Expander> implements Ex
         this.headerHovered = Paint.NONE;
         this.textStyle = TextStyle.DEFAULT;
         this.disabledTextStyle = TextStyle.DEFAULT;
-        this.span = TextLine.EMPTY;
+        this.span = MnemonicLine.EMPTY;
         this.disabledSpan = this.span;
         this.pointerY = Float.NaN;
     }
@@ -108,20 +133,51 @@ public final class ExpanderImpl extends BuiltInComposite<Expander> implements Ex
     }
 
     @Override
-    public Component<?> content() {
-        return this.content;
+    public Optional<Component<?>> header() {
+        return Optional.ofNullable(this.headerComponent);
+    }
+
+    /**
+     * Puts a component in the header as content, first among the children so Tab reaches it before the content.
+     */
+    @Override
+    public Expander setHeader(final Component<?> header) {
+        if (header == this.headerComponent) {
+            return this;
+        }
+        if (header != null) {
+            Adoption.require(this.node(), this.nodeOf(header));
+        }
+        if (this.headerComponent != null) {
+            this.removeChild(this.headerComponent);
+        }
+        this.headerComponent = header;
+        if (header != null) {
+            this.insertContent(0, header);
+        }
+        this.invalidateLayout();
+        return this;
+    }
+
+    @Override
+    public Optional<Component<?>> content() {
+        return Optional.ofNullable(this.content);
     }
 
     @Override
     public Expander setContent(final Component<?> content) {
-        if (content != null && this.nodeOf(content).parentNode() != null && content != this.content) {
-            throw new IllegalArgumentException(content + " already has a parent");
+        if (content == this.content) {
+            return this;
         }
-        if (this.content != null && this.expanded) {
+        if (content != null) {
+            Adoption.require(this.node(), this.nodeOf(content));
+        }
+        if (this.content != null && this.shown) {
             this.removeChild(this.content);
         }
         this.content = content;
-        if (content != null && this.expanded) {
+        this.shown = content != null && this.expanded;
+        if (this.shown) {
             this.addContent(content);
         }
         this.invalidateLayout();
@@ -139,23 +195,45 @@ public final class ExpanderImpl extends BuiltInComposite<Expander> implements Ex
             return this;
         }
         this.expanded = expanded;
-        if (this.content != null) {
-            if (expanded) {
-                this.addContent(this.content);
-            } else {
-                this.removeChild(this.content);
-            }
+        if (expanded && this.content != null && !this.shown) {
+            this.shown = true;
+            this.addContent(this.content);
         }
+        final float to = expanded ? 1f : 0f;
+        final Animator animator = this.content != null ? this.motionAnimator() : null;
+        if (animator != null && this.animationMillis > 0L && this.reveal != to) {
+            this.setChildClipping(true);
+        }
+        this.revealMotion.move(animator, this.animationMillis, this.reveal, to);
         this.invalidateLayout();
         this.report(EXPANDED, expanded, !expanded);
         return this;
     }
 
+    /**
+     * Applies one step of the content's growth: lays out again, and once the content has shrunk away after
+     * collapsing, takes it out of the children. Clipping stops when the share comes to rest.
+     */
+    private void revealed(final float share) {
+        this.reveal = share;
+        if (!this.revealMotion.isMoving() && (share == 0f || share == 1f)) {
+            this.setChildClipping(false);
+        }
+        if (share == 0f && !this.expanded && this.shown) {
+            this.shown = false;
+            if (this.content != null) {
+                this.removeChild(this.content);
+            }
+        }
+        this.invalidateLayout();
+    }
+
     @Override
-    public void toggle() {
+    public Expander toggle() {
         if (this.isEnabled()) {
             this.setExpanded(!this.expanded);
         }
+        return this;
     }
 
     /**
@@ -179,36 +257,71 @@ public final class ExpanderImpl extends BuiltInComposite<Expander> implements Ex
         this.textStyle = theme.textStyleOr(STYLE_TEXT, TextStyle.DEFAULT);
         this.disabledTextStyle = theme.textStyleOr(STYLE_TEXT_DISABLED, this.textStyle);
         this.headerPadding = theme.insetsOr(STYLE_HEADER_PADDING, DEFAULT_HEADER_PADDING);
+        this.animationMillis = Motion.millis(theme, STYLE_ANIMATION);
     }
 
     @Override
     protected Size measure(final MeasureContext context, final float availableWidth, final float availableHeight) {
         final TextMetrics metrics = context.text();
-        this.span = TextLine.of(this.title, this.textStyle, metrics);
-        this.disabledSpan = TextLine.of(this.title, this.disabledTextStyle, metrics);
-        this.lineHeight = Math.max(this.span.height(), this.disabledSpan.height());
-        this.headerHeight = this.lineHeight + this.headerPadding.vertical();
-        final float headerWidth = this.headerPadding.left() + Rings.ARROW_LONG + ARROW_GAP
-                + Math.max(this.span.width(), this.disabledSpan.width()) + this.headerPadding.right();
-        if (!this.expanded || this.content == null) {
+        this.span = MnemonicLine.of(this.title, this.textStyle, metrics);
+        this.disabledSpan = MnemonicLine.of(this.title, this.disabledTextStyle, metrics);
+        this.lineHeight = Math.max(this.span.plain().height(), this.disabledSpan.plain().height());
+        final float lead = this.headerPadding.left() + Rings.ARROW_LONG + ARROW_GAP;
+        final float headerWidth;
+        if (this.headerComponent != null) {
+            final Size head = context.measure(this.headerComponent,
+                    Math.max(0f, availableWidth - lead - this.headerPadding.right()), Float.POSITIVE_INFINITY);
+            this.headerHeight = Math.max(this.lineHeight, head.height()) + this.headerPadding.vertical();
+            headerWidth = lead + head.width() + this.headerPadding.right();
+        } else {
+            this.headerHeight = this.lineHeight + this.headerPadding.vertical();
+            headerWidth = lead + Math.max(this.span.plain().width(), this.disabledSpan.plain().width())
+                    + this.headerPadding.right();
+        }
+        if (!this.shown || this.content == null) {
             return new Size(headerWidth, this.headerHeight);
         }
         final float below = Float.isInfinite(availableHeight) ? availableHeight : Math.max(0f, availableHeight - this.headerHeight);
         final Size inner = context.measure(this.content, availableWidth, below);
-        return new Size(Math.max(headerWidth, inner.width()), this.headerHeight + inner.height());
+        this.contentHeight = inner.height();
+        final float share = this.reveal >= 1f ? inner.height() : inner.height() * this.reveal;
+        return new Size(Math.max(headerWidth, inner.width()), this.headerHeight + share);
     }
 
     @Override
     protected void arrange(final ArrangeContext context, final Rect bounds) {
-        if (this.expanded && this.content != null) {
-            context.arrange(this.content, new Rect(bounds.x(), bounds.y() + this.headerHeight, bounds.width(),
-                    Math.max(0f, bounds.height() - this.headerHeight)));
+        if (this.headerComponent != null) {
+            final Insets padding = this.headerPadding;
+            final float lead = padding.left() + Rings.ARROW_LONG + ARROW_GAP;
+            context.arrange(this.headerComponent, new Rect(bounds.x() + lead, bounds.y() + padding.top(),
+                    Math.max(0f, bounds.width() - lead - padding.right()),
+                    Math.max(0f, this.headerHeight - padding.vertical())));
         }
+        if (this.shown && this.content != null) {
+            final float room = Math.max(0f, bounds.height() - this.headerHeight);
+            // While it grows or shrinks the content keeps its full height and is cut at the bottom
+            context.arrange(this.content, new Rect(bounds.x(), bounds.y() + this.headerHeight, bounds.width(),
+                    this.reveal >= 1f ? room : Math.max(room, this.contentHeight)));
+        }
+    }
+
+    /**
+     * Clips below the header while the content grows or shrinks. With a header component, which is a child too, it
+     * clips to the whole bounds instead, which cuts the content in the same place, since it sits below the header.
+     */
+    @Override
+    protected Rect childClip() {
+        final Rect bounds = this.bounds();
+        if (this.headerComponent != null) {
+            return bounds;
+        }
+        return this.clipRect.at(bounds.x(), bounds.y() + this.headerHeight, bounds.width(),
+                Math.max(0f, bounds.height() - this.headerHeight));
     }
 
     @Override
     protected void paint(final Painter painter, final Rect bounds) {
-        final Rect head = new Rect(bounds.x(), bounds.y(), bounds.width(), this.headerHeight);
+        final Rect head = this.headRect.at(bounds.x(), bounds.y(), bounds.width(), this.headerHeight);
         final boolean lit = this.isFocused() || this.isHovered() && this.overHeader(this.pointerY);
         (lit ? this.headerHovered : this.header).paint(painter, head);
         final boolean enabled = this.isEnabled();
@@ -216,15 +329,25 @@ public final class ExpanderImpl extends BuiltInComposite<Expander> implements Ex
         final Insets padding = this.headerPadding;
         final float innerY = head.y() + padding.top();
         final float innerHeight = head.height() - padding.vertical();
-        final float arrowX = head.x() + padding.left();
+        // Right to left the arrow sits at the right, pointing left while closed, and the title before it
+        final boolean rightToLeft = this.isRightToLeft();
+        final float arrowX = rightToLeft ? head.right() - padding.left() - Rings.ARROW_LONG : head.x() + padding.left();
         if (this.expanded) {
-            Rings.down(painter, color, arrowX, innerY + (innerHeight - Rings.ARROW_SHORT) * 0.5f);
+            this.arrow.down(painter, color, arrowX, innerY + (innerHeight - Rings.ARROW_SHORT) * 0.5f);
+        } else if (rightToLeft) {
+            this.arrow.left(painter, color, arrowX + (Rings.ARROW_LONG - Rings.ARROW_SHORT) * 0.5f,
+                    innerY + (innerHeight - Rings.ARROW_LONG) * 0.5f);
         } else {
-            Rings.right(painter, color, arrowX + (Rings.ARROW_LONG - Rings.ARROW_SHORT) * 0.5f,
+            this.arrow.right(painter, color, arrowX + (Rings.ARROW_LONG - Rings.ARROW_SHORT) * 0.5f,
                     innerY + (innerHeight - Rings.ARROW_LONG) * 0.5f);
         }
-        (enabled ? this.span : this.disabledSpan).draw(painter, arrowX + Rings.ARROW_LONG + ARROW_GAP,
-                innerY + (innerHeight - this.lineHeight) * 0.5f);
+        if (this.headerComponent == null) {
+            final TextLine title = (enabled ? this.span : this.disabledSpan)
+                    .line(this.hostRoot() != null && this.hostRoot().showsMnemonics());
+            title.draw(painter,
+                    rightToLeft ? arrowX - ARROW_GAP - title.width() : arrowX + Rings.ARROW_LONG + ARROW_GAP,
+                    innerY + (innerHeight - this.lineHeight) * 0.5f);
+        }
     }
 
     private boolean overHeader(final float y) {
@@ -239,7 +362,8 @@ public final class ExpanderImpl extends BuiltInComposite<Expander> implements Ex
 
     @Override
     protected void onClick(final PointerButtonEvent event) {
-        if (event.button() == MouseButton.LEFT && this.overHeader(event.y())) {
+        // A control in the header component that used the click keeps it
+        if (event.button() == MouseButton.LEFT && !event.isHandled() && this.overHeader(event.y())) {
             this.userToggle();
             event.consume();
         }
@@ -257,5 +381,19 @@ public final class ExpanderImpl extends BuiltInComposite<Expander> implements Ex
     @Override
     protected Object snapshotState() {
         return new Expander.State(this.expanded, this.title);
+    }
+
+    @Override
+    public boolean hasMnemonic(final int mnemonic) {
+        return this.headerComponent == null && this.span.mnemonic() == mnemonic;
+    }
+
+    /**
+     * Expands or collapses the expander for the user, as a click on its header does, for Alt with the title's
+     * mnemonic.
+     */
+    @Override
+    public void activateMnemonic(final int mnemonic) {
+        this.userToggle();
     }
 }

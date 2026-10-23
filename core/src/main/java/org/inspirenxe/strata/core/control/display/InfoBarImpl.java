@@ -66,7 +66,9 @@ import java.util.Set;
  * then the action at its desired size. If that is wider than the space inside the padding, beside the close button
  * and the icon, the title and the message wrap to the width of that column, one below the other, and the action is
  * measured with the column's width and goes {@link #GAP} below them; the bar then asks for the whole width it is
- * offered. With an infinite width the bar always takes one line. The icon, a square one line of the message's style
+ * offered. With an infinite width nothing wraps: the bar takes one line unless the title or the message holds a line
+ * break, and then the lines stack the same way in a column as wide as the widest of them and the action, and the
+ * bar asks for that column with its chrome. The icon, a square one line of the message's style
  * tall, and the close button, {@link #CLOSE_WIDTH} wide and a line of its style tall, are centered on the line, or on
  * the first line when the text wraps.</p>
  *
@@ -422,20 +424,28 @@ public final class InfoBarImpl extends BuiltInComposite<InfoBar> implements Info
             this.iconY = (height - this.iconSize) * 0.5f;
             width = chrome + oneLine;
         } else {
-            final float column = Math.max(0f, availableWidth - chrome - left - right);
+            // Unbounded, the lines stay as the breaks in the text make them
+            final boolean unbounded = Float.isInfinite(availableWidth);
+            final float wrapAt = Math.max(0f, availableWidth - chrome - left - right);
+            final List<List<TextSpan>> titleLines = unbounded || titleRuns.isEmpty() ? titleWhole
+                    : RichText.wrap(titleRuns, wrapAt, metrics);
+            final List<List<TextSpan>> textLines = unbounded || textRuns.isEmpty() ? textWhole
+                    : RichText.wrap(textRuns, wrapAt, metrics);
             float y = 0f;
-            for (final List<TextSpan> line : titleRuns.isEmpty() ? List.<List<TextSpan>>of()
-                    : RichText.wrap(titleRuns, column, metrics)) {
+            float widest = actionSize.width();
+            for (final List<TextSpan> line : titleLines) {
                 final TextLine made = TextLine.of(line, this.titleStyle, metrics);
                 this.place(made, left, y);
                 y += made.height();
+                widest = Math.max(widest, made.width());
             }
-            for (final List<TextSpan> line : textRuns.isEmpty() ? List.<List<TextSpan>>of()
-                    : RichText.wrap(textRuns, column, metrics)) {
+            for (final List<TextSpan> line : textLines) {
                 final TextLine made = TextLine.of(line, this.textStyle, metrics);
                 this.place(made, left, y);
                 y += made.height();
+                widest = Math.max(widest, made.width());
             }
+            final float column = unbounded ? widest : wrapAt;
             if (this.action != null) {
                 actionSize = context.measure(this.action, column, availableHeight);
                 this.actionX = left;
@@ -446,7 +456,7 @@ public final class InfoBarImpl extends BuiltInComposite<InfoBar> implements Info
             this.closeY = Math.max(0f, (first - close.height()) * 0.5f);
             this.iconY = Math.max(0f, (first - this.iconSize) * 0.5f);
             height = Math.max(y, Math.max(this.closeY + close.height(), this.iconY + this.iconSize));
-            width = availableWidth;
+            width = unbounded ? chrome + left + column + right : availableWidth;
         }
         return new Size(width, height + this.padding.vertical());
     }

@@ -18,6 +18,7 @@ package org.inspirenxe.strata.api;
 import org.inspirenxe.strata.api.appearance.Appearances;
 import org.inspirenxe.strata.api.screen.ScreenController;
 import org.inspirenxe.strata.api.component.registry.ComponentRegistry;
+import org.inspirenxe.strata.api.state.ConverterFactory;
 import org.inspirenxe.strata.api.state.StateFactory;
 import org.inspirenxe.strata.api.text.TextFactory;
 import org.inspirenxe.strata.api.theme.ThemeRegistry;
@@ -27,7 +28,7 @@ import java.util.ServiceLoader;
 
 /**
  * Services that work before any screen exists, such as making {@link org.inspirenxe.strata.api.text.Text} in a static
- * field, registering appearances, themes and components, making states, and opening screens. They come from Strata's core, a
+ * field, registering appearances, themes and components, making states, opening screens and reaching the UI thread. They come from Strata's core, a
  * {@link Provider} found on the class path with {@link ServiceLoader} the first time one is asked for. Every method
  * may be called from any thread; what the returned objects allow is documented on each of them.
  */
@@ -78,6 +79,17 @@ public final class Strata {
     }
 
     /**
+     * Returns the factory that makes the number {@linkplain org.inspirenxe.strata.api.state.Converter converters}
+     * that {@link org.inspirenxe.strata.api.state.Converters} hands out.
+     *
+     * @return the factory
+     * @throws IllegalStateException if Strata's core is not on the class path, or more than one provider is
+     */
+    public static ConverterFactory converters() {
+        return Strata.provider().converters();
+    }
+
+    /**
      * Returns the components registered for the process, which any
      * {@link ComponentFactory#create(Class) ComponentFactory} makes by type or id.
      *
@@ -99,6 +111,19 @@ public final class Strata {
      */
     public static ScreenController screens() {
         return Strata.provider().screens();
+    }
+
+    /**
+     * Returns the UI thread of the platform that {@link #screens()} opens screens on, for handing work to it from
+     * another thread. Code that holds a {@link ComponentFactory} can use {@link ComponentFactory#uiThread()} instead,
+     * which is its host's.
+     *
+     * @return the UI thread
+     * @throws IllegalStateException if Strata's core is not on the class path, more than one provider is, or no
+     *     adapter has handed over a controller whose platform core knows
+     */
+    public static UiThread uiThread() {
+        return Strata.provider().uiThread();
     }
 
     /**
@@ -137,6 +162,13 @@ public final class Strata {
         StateFactory states();
 
         /**
+         * Returns the converter factory.
+         *
+         * @return the factory, the same one every time
+         */
+        ConverterFactory converters();
+
+        /**
          * Returns the component registry.
          *
          * @return the registry, the same one every time
@@ -150,6 +182,15 @@ public final class Strata {
          * @throws IllegalStateException if no adapter has handed one over, with a message saying what to do
          */
         ScreenController screens();
+
+        /**
+         * Returns the UI thread of the platform whose controller the engine adapter handed over.
+         *
+         * @return the UI thread
+         * @throws IllegalStateException if no adapter has handed over a controller whose platform is known, with a
+         *     message saying what to do
+         */
+        UiThread uiThread();
     }
 
     private static Provider provider() {

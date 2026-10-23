@@ -17,6 +17,7 @@ package org.inspirenxe.strata.api.control.button;
 
 import org.inspirenxe.strata.api.component.Component;
 import org.inspirenxe.strata.api.component.Focusable;
+import org.inspirenxe.strata.api.component.HasContextMenu;
 import org.inspirenxe.strata.api.component.HasCursor;
 import org.inspirenxe.strata.api.component.HasTooltip;
 import org.inspirenxe.strata.api.control.attribute.text.HasText;
@@ -29,15 +30,18 @@ import java.util.Objects;
 /**
  * One choice in a {@link RadioGroup}: a box that is selected or not, with a caption to its right.
  *
- * <p>A left click selects it, and so does Enter, keypad Enter or Space while it has focus (not repeated). Clicking a
- * selected button leaves it selected. Arrow keys move the selection through the group, as {@link RadioGroup}
+ * <p>A left click selects it, and so does Enter, keypad Enter or Space while it has focus (not repeated). On a
+ * platform whose conventions say radio buttons act on the press, the left press selects it instead of the click.
+ * Clicking a selected button leaves it selected. Arrow keys move the selection through the group, as {@link RadioGroup}
  * describes. It consumes those inputs. Each selection by the user fires {@link Toggle#TOGGLE} with true on the
  * button about to be selected. Every change fires {@link Toggle#TOGGLED} on each button whose state changed, then
  * {@link SingleSelection#SELECTED} on the group. A disabled button does none of this and draws its disabled
  * look.</p>
  *
- * <p>It is focusable and tabbable and shows the hand cursor. It measures and lays out like a {@link CheckBox}: a
- * square box the caption's line height plus 8 units on a side, the caption 4 units to its right.</p>
+ * <p>It is focusable and shows the hand cursor, and Tab stops at it when it is its group's selected button, or its
+ * group's first enabled button while none is selected, as {@link RadioGroup} says. It measures and lays out like a
+ * {@link CheckBox}: a square box the caption's line height plus 8 units on a side, rounded to a whole unit, and the
+ * caption 4 units to its right.</p>
  *
  * <h2>Theme keys</h2>
  * <ul>
@@ -59,10 +63,13 @@ import java.util.Objects;
  *     {@value #STYLE_TEXT}.</li>
  * </ul>
  *
+ * <p>Its caption marks a mnemonic with an underscore, as {@link Button} describes: Alt with the letter focuses and
+ * selects the button.</p>
+ *
  * <p>Get one from {@link RadioGroup#add}. Do not implement this interface.</p>
  */
 public interface RadioButton extends Component<RadioButton>, Focusable<RadioButton>, HasCursor<RadioButton>,
-        HasTooltip<RadioButton>, HasText<RadioButton>, Toggle<RadioButton> {
+        HasTooltip<RadioButton>, HasContextMenu<RadioButton>, HasText<RadioButton>, Toggle<RadioButton> {
     /**
      * Style key for the box when not selected (paint, required).
      */
@@ -124,7 +131,8 @@ public interface RadioButton extends Component<RadioButton>, Focusable<RadioButt
     RadioButton setText(Text text);
 
     /**
-     * Returns the group this button belongs to.
+     * Returns the group that made this button. A button {@linkplain RadioGroup#remove removed} from it still returns
+     * it, is no longer in its {@linkplain RadioGroup#buttons() buttons}, and can no longer be selected.
      *
      * @return the group that made it
      */

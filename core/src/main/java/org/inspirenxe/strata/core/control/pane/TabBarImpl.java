@@ -15,6 +15,7 @@
  */
 package org.inspirenxe.strata.core.control.pane;
 
+import org.inspirenxe.strata.core.layout.Flow;
 import org.inspirenxe.strata.api.component.CursorKind;
 import org.inspirenxe.strata.api.component.HasCursor;
 import org.inspirenxe.strata.api.component.HasTooltip;
@@ -36,10 +37,14 @@ import org.inspirenxe.strata.api.text.TextMetrics;
 import org.inspirenxe.strata.api.text.TextStyle;
 import org.inspirenxe.strata.api.theme.Paint;
 import org.inspirenxe.strata.api.theme.Theme;
+import org.inspirenxe.strata.core.control.Activation;
 import org.inspirenxe.strata.core.control.Caption;
+import org.inspirenxe.strata.core.control.RectCache;
 import org.inspirenxe.strata.core.node.BuiltInComponent;
 import org.inspirenxe.strata.core.node.BuiltInComposite;
 import org.inspirenxe.strata.core.node.ComponentFactoryImpl;
+import org.inspirenxe.strata.core.node.MnemonicTarget;
+import org.inspirenxe.strata.core.text.MnemonicLine;
 import org.inspirenxe.strata.core.text.TextLine;
 
 import java.util.ArrayList;
@@ -88,6 +93,11 @@ public final class TabBarImpl extends BuiltInComposite<TabBar> implements TabBar
     }
 
     @Override
+    public Tab tab(final int index) {
+        return this.views.get(Objects.checkIndex(index, this.views.size())).tab;
+    }
+
+    @Override
     public TabBar addTab(final Tab tab) {
         return this.addTab(this.views.size(), tab);
     }
@@ -127,6 +137,29 @@ public final class TabBarImpl extends BuiltInComposite<TabBar> implements TabBar
         } else if (previous > index) {
             this.selectedIndex--;
             this.report(SELECTED, this.selectedIndex, previous);
+        }
+        return this;
+    }
+
+    @Override
+    public TabBar removeTab(final int index) {
+        return this.removeTab(this.tab(index));
+    }
+
+    @Override
+    public TabBar clearTabs() {
+        if (this.views.isEmpty()) {
+            return this;
+        }
+        for (final TabView view : this.views) {
+            this.removeChild(view);
+            view.tab.setBar(null);
+        }
+        this.views.clear();
+        final int previous = this.selectedIndex;
+        this.selectedIndex = -1;
+        if (previous != -1) {
+            this.report(SELECTED, -1, previous);
         }
         return this;
     }
@@ -210,6 +243,9 @@ public final class TabBarImpl extends BuiltInComposite<TabBar> implements TabBar
 
     @Override
     public TabBar setSpacing(final float spacing) {
+        if (!(spacing >= 0f) || Float.isInfinite(spacing)) {
+            throw new IllegalArgumentException("Spacing must be finite and not negative: " + spacing);
+        }
         this.spacing = spacing;
         this.invalidateLayout();
         return this;
@@ -222,15 +258,16 @@ public final class TabBarImpl extends BuiltInComposite<TabBar> implements TabBar
 
     @Override
     protected Size measure(final MeasureContext context, final float availableWidth, final float availableHeight) {
-        float width = 0f;
+        // Tabs share the width equally, so every tab needs room for the widest caption
+        float widest = 0f;
         float height = 0f;
         for (final TabView view : this.views) {
             final Size outer = context.measure(view, Float.POSITIVE_INFINITY, availableHeight);
-            width += outer.width();
+            widest = Math.max(widest, outer.width());
             height = Math.max(height, outer.height());
         }
-        width += this.spacing * Math.max(0, this.views.size() - 1);
-        return new Size(width, height);
+        final int count = this.views.size();
+        return new Size(widest * count + this.spacing * Math.max(0, count - 1), height);
     }
 
     @Override
@@ -253,6 +290,12 @@ public final class TabBarImpl extends BuiltInComposite<TabBar> implements TabBar
     }
 
     @Override
+    protected float baseline() {
+        // Every tab is as tall as the bar and starts at its top, so the first tab's caption gives the baseline
+        return this.views.isEmpty() ? Float.NaN : this.views.get(0).baselineAt(this.desiredHeight());
+    }
+
+    @Override
     protected void onFocusGained(final FocusEvent event) {
         this.keyboardFocus = !this.isFocusFromPress();
     }
@@ -263,7 +306,8 @@ public final class TabBarImpl extends BuiltInComposite<TabBar> implements TabBar
             return;
         }
         this.keyboardFocus = true;
-        final int direction = switch (event.key()) {
+        // Right to left the tabs run from the right, so Left goes to the next one
+        final int direction = switch (Flow.key(event.key(), this.isRightToLeft())) {
             case LEFT -> -1;
             case RIGHT -> 1;
             default -> 0;
@@ -284,7 +328,7 @@ public final class TabBarImpl extends BuiltInComposite<TabBar> implements TabBar
      * The component that draws one tab. It stretches over the slot the bar gives it.
      */
     private static final class TabView extends BuiltInComponent<TabView> implements HasCursor<TabView>,
-            HasTooltip<TabView> {
+            HasTooltip<TabView>, MnemonicTarget {
         private final TabBarImpl bar;
         private final TabImpl tab;
         private Paint normal;
@@ -304,10 +348,14 @@ public final class TabBarImpl extends BuiltInComposite<TabBar> implements TabBar
         private Insets padding;
         private Insets selectedPadding;
         private float lineHeight;
-        private TextLine span;
-        private TextLine selectedSpan;
-        private TextLine disabledSpan;
+        private MnemonicLine span;
+        private MnemonicLine selectedSpan;
+        private MnemonicLine disabledSpan;
         private float textWidth;
+        private final Activation activation;
+        // Kept between frames
+        private final RectCache fillRect = new RectCache();
+        private final RectCache underlineRect = new RectCache();
 
         @SuppressWarnings("this-escape")
         TabView(final ComponentFactoryImpl ui, final TabBarImpl bar, final TabImpl tab) {
@@ -328,9 +376,10 @@ public final class TabBarImpl extends BuiltInComposite<TabBar> implements TabBar
             this.textStyle = TextStyle.DEFAULT;
             this.selectedText = TextStyle.DEFAULT;
             this.disabledText = TextStyle.DEFAULT;
-            this.span = TextLine.EMPTY;
+            this.span = MnemonicLine.EMPTY;
             this.selectedSpan = this.span;
             this.disabledSpan = this.span;
+            this.activation = new Activation(this::activatesOnPress, this::clicked);
             this.setAnchor(Anchor.FILL);
             this.sync();
         }
@@ -340,7 +389,7 @@ public final class TabBarImpl extends BuiltInComposite<TabBar> implements TabBar
          */
         void sync() {
             this.setCursor(this.tab.isEnabled() ? CursorKind.HAND : null);
-            this.setTooltip(this.tab.tooltip().orElse(null));
+            this.tab.tooltip().ifPresentOrElse(this::setTooltip, this::clearTooltip);
             this.invalidateLayout();
         }
 
@@ -372,11 +421,11 @@ public final class TabBarImpl extends BuiltInComposite<TabBar> implements TabBar
         protected Size measure(final MeasureContext context, final float availableWidth, final float availableHeight) {
             final TextMetrics metrics = context.text();
             final Text text = this.tab.text();
-            this.span = TextLine.of(text, this.textStyle, metrics);
-            this.selectedSpan = TextLine.of(text, this.selectedText, metrics);
-            this.disabledSpan = TextLine.of(text, this.disabledText, metrics);
-            this.textWidth = Math.max(this.span.width(), this.selectedSpan.width());
-            this.lineHeight = Math.max(this.span.height(), this.selectedSpan.height());
+            this.span = MnemonicLine.of(text, this.textStyle, metrics);
+            this.selectedSpan = MnemonicLine.of(text, this.selectedText, metrics);
+            this.disabledSpan = MnemonicLine.of(text, this.disabledText, metrics);
+            this.textWidth = Math.max(this.span.plain().width(), this.selectedSpan.plain().width());
+            this.lineHeight = Math.max(this.span.plain().height(), this.selectedSpan.plain().height());
             // Sized for the larger padding, so selecting a tab never moves its neighbors
             final float sides = Math.max(this.padding.left() + this.padding.right(),
                     this.selectedPadding.left() + this.selectedPadding.right());
@@ -385,29 +434,47 @@ public final class TabBarImpl extends BuiltInComposite<TabBar> implements TabBar
             return new Size(this.textWidth + sides, this.lineHeight + ends);
         }
 
+        /**
+         * Returns the caption's baseline in a tab of a given height, with the padding of a tab that is not selected.
+         */
+        float baselineAt(final float height) {
+            final Insets pad = this.padding;
+            return pad.top() + (height - pad.top() - pad.bottom() - this.lineHeight) * 0.5f
+                    + this.environment().text().ascent(this.textStyle);
+        }
+
+        @Override
+        protected float baseline() {
+            return this.baselineAt(this.desiredHeight());
+        }
+
         @Override
         protected void paint(final Painter painter, final Rect bounds) {
             final boolean isSelected = this.index() == this.bar.selectedIndex;
             // A disabled bar draws every tab disabled, keeping the selected one distinct
             final boolean enabled = this.tab.isEnabled() && this.bar.isEnabled();
             final Paint face;
-            final TextLine caption;
+            final MnemonicLine shown;
             if (isSelected) {
                 face = !enabled ? this.selectedDisabled
                         : this.isHovered() || this.bar.isFocused() && this.bar.keyboardFocus ? this.selectedHovered
                         : this.selected;
-                caption = enabled ? this.selectedSpan : this.disabledSpan;
+                shown = enabled ? this.selectedSpan : this.disabledSpan;
             } else if (!enabled) {
                 face = this.disabled;
-                caption = this.disabledSpan;
+                shown = this.disabledSpan;
             } else {
                 face = this.isHovered() ? this.hovered : this.normal;
-                caption = this.span;
+                shown = this.span;
             }
+            final TextLine caption = shown.line(this.hostRoot() != null && this.hostRoot().showsMnemonics());
             face.paint(painter, bounds);
             if (isSelected) {
                 if (this.selectedFill != Paint.NONE) {
-                    this.selectedFill.paint(painter, bounds.shrink(this.selectedFillInsets));
+                    final Insets inset = this.selectedFillInsets;
+                    this.selectedFill.paint(painter, this.fillRect.at(bounds.x() + inset.left(),
+                            bounds.y() + inset.top(), bounds.width() - inset.horizontal(),
+                            bounds.height() - inset.vertical()));
                 }
                 final Paint line = enabled ? this.underline : this.underlineDisabled;
                 if (line != Paint.NONE) {
@@ -415,29 +482,42 @@ public final class TabBarImpl extends BuiltInComposite<TabBar> implements TabBar
                     // Half the spare room on the left, rounded down on whole units
                     final float spare = bounds.width() - width;
                     final float left = bounds.x() + (spare == Math.rint(spare) ? (float) Math.floor(spare / 2f) : spare / 2f);
-                    line.paint(painter, new Rect(left,
-                            bounds.bottom() - 2f, width, 1f));
+                    line.paint(painter, this.underlineRect.at(left, bounds.bottom() - 2f, width, 1f));
                 }
             }
             // Centered in the tab less its state's padding
             final Insets pad = isSelected ? this.selectedPadding : this.padding;
-            this.caption.draw(painter, caption, bounds, pad,
+            if (this.caption.draw(painter, caption, bounds, pad,
                     bounds.y() + pad.top() + (bounds.height() - pad.top() - pad.bottom() - this.lineHeight) * 0.5f,
-                    this.environment().millis());
+                    this.environment().millis())) {
+                this.repaintNextFrame();
+            }
         }
 
         @Override
         protected void onPointerPress(final PointerButtonEvent event) {
-            if (this.activatesOnPress()) {
-                this.clicked(event);
-            }
+            this.activation.press(event);
         }
 
         @Override
         protected void onClick(final PointerButtonEvent event) {
-            if (!this.activatesOnPress()) {
-                this.clicked(event);
+            this.activation.click(event);
+        }
+
+        @Override
+        public boolean hasMnemonic(final int mnemonic) {
+            return this.tab.isEnabled() && this.span.mnemonic() == mnemonic;
+        }
+
+        /**
+         * Selects the tab for the user and gives the bar focus, as Alt with the tab's mnemonic does.
+         */
+        @Override
+        public void activateMnemonic(final int mnemonic) {
+            if (this.bar.requestFocus()) {
+                this.bar.keyboardFocus = true;
             }
+            this.bar.userSelect(this.index());
         }
 
         /**

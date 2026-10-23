@@ -46,10 +46,13 @@ import java.util.function.Predicate;
  * The core {@link DateTimePicker}: one field of date parts, a space and time parts over a {@link SegmentedField},
  * with a private {@link CalendarViewImpl} beside {@link TimeColumns} in its popup.
  *
- * <p>The value is kept to whole minutes, or seconds while they show, and inside the range. When cutting it to the
- * minute or second would leave it before the range's start, it moves up to the next whole one. The calendar in the
- * popup is not focusable, so focus stays in the field; a press on the calendar or a column takes it back. The popup's
- * parts are made the first time it opens and kept.</p>
+ * <p>The value is kept to whole minutes, or seconds while they show, and inside the range, which never reaches past
+ * the dates {@link DateRange} supports. A value is cut to the unit and then clamped to the first and last whole unit
+ * inside the range, so a value cut to before a start that carries seconds moves up to the next whole minute. A typed
+ * draft is allowed between the same two ends. A range too short to hold a whole unit keeps the value at its start.</p>
+ *
+ * <p>The calendar in the popup is not focusable, so focus stays in the field; a press on the calendar or a column
+ * takes it back. The popup's parts are made the first time it opens and kept.</p>
  */
 public final class DateTimePickerImpl extends PickerBase<DateTimePicker, LocalDateTime> implements DateTimePicker {
     private static final Set<String> EXTRA = Set.of(CalendarView.STYLE_DAY_SELECTED, ListView.STYLE_ROW_SELECTED,
@@ -60,9 +63,7 @@ public final class DateTimePickerImpl extends PickerBase<DateTimePicker, LocalDa
     private LocalDateTime max;
     private Predicate<? super LocalDate> filter;
     private DayOfWeek firstDay;
-    private ClockFormat clockFormat;
-    private boolean seconds;
-    private int minuteStep;
+    private final TimeSettings settings;
     private LocalTime defaultTime;
     private CalendarViewImpl calendar;
     private TimeColumns columns;
@@ -77,7 +78,7 @@ public final class DateTimePickerImpl extends PickerBase<DateTimePicker, LocalDa
     public DateTimePickerImpl(final ComponentFactoryImpl ui) {
         super(ui, Text.translatable("strata.datetime.placeholder"));
         this.filter = day -> true;
-        this.minuteStep = 1;
+        this.settings = new TimeSettings();
         this.defaultTime = LocalTime.MIDNIGHT;
         this.rowStyle = TextStyle.DEFAULT;
     }
@@ -112,6 +113,7 @@ public final class DateTimePickerImpl extends PickerBase<DateTimePicker, LocalDa
         if (!Objects.equals(nextTime, previousTime)) {
             this.report(TIME_PICKED, nextTime, previousTime);
         }
+        this.validate();
         return this;
     }
 
@@ -130,9 +132,21 @@ public final class DateTimePickerImpl extends PickerBase<DateTimePicker, LocalDa
         if (min != null && max != null && min.isAfter(max)) {
             throw new IllegalArgumentException("The range must not end before it starts: " + min + " to " + max);
         }
-        this.min = min;
-        this.max = max;
+        this.min = min == null ? null : limit(min);
+        this.max = max == null ? null : limit(max);
         return this.setDateTime(this.value);
+    }
+
+    /**
+     * Moves a range end inside the supported dates.
+     */
+    private static LocalDateTime limit(final LocalDateTime end) {
+        final LocalDateTime first = DateRange.FIRST.atStartOfDay();
+        final LocalDateTime last = DateRange.LAST.atTime(LocalTime.MAX);
+        if (end.isBefore(first)) {
+            return first;
+        }
+        return end.isAfter(last) ? last : end;
     }
 
     @Override
@@ -147,38 +161,69 @@ public final class DateTimePickerImpl extends PickerBase<DateTimePicker, LocalDa
     }
 
     private ChronoUnit unit() {
-        return this.seconds ? ChronoUnit.SECONDS : ChronoUnit.MINUTES;
+        return this.settings.unit();
     }
 
     /**
-     * Cuts a value to the shown unit and keeps it inside the range.
+     * The dates of the range.
+     */
+    private DateRange dates() {
+        return new DateRange(this.min == null ? null : this.min.toLocalDate(), this.max == null ? null : this.max.toLocalDate());
+    }
+
+    /**
+     * The start of the range, or of the supported dates when it has none.
+     */
+    private LocalDateTime start() {
+        return this.min == null ? DateRange.FIRST.atStartOfDay() : this.min;
+    }
+
+    /**
+     * The first whole unit at or after the range's start.
+     */
+    private LocalDateTime firstWhole() {
+        final LocalDateTime start = this.start();
+        final LocalDateTime cut = start.truncatedTo(this.unit());
+        return cut.equals(start) ? cut : cut.plus(1L, this.unit());
+    }
+
+    /**
+     * The last whole unit at or before the range's end, or the end of the supported dates when it has none.
+     */
+    private LocalDateTime lastWhole() {
+        return (this.max == null ? DateRange.LAST.atTime(LocalTime.MAX) : this.max).truncatedTo(this.unit());
+    }
+
+    /**
+     * Cuts a value to the shown unit and clamps it to the first and last whole unit inside the range. A range too
+     * short to hold a whole unit gives its start.
      */
     private LocalDateTime fit(final LocalDateTime value) {
         if (value == null) {
             return null;
         }
-        LocalDateTime fitted = value.truncatedTo(this.unit());
-        if (this.max != null && fitted.isAfter(this.max)) {
-            fitted = this.max.truncatedTo(this.unit());
+        final LocalDateTime first = this.firstWhole();
+        final LocalDateTime last = this.lastWhole();
+        if (first.isAfter(last)) {
+            return this.start();
         }
-        if (this.min != null && fitted.isBefore(this.min)) {
-            final LocalDateTime start = this.min.truncatedTo(this.unit());
-            fitted = start.equals(this.min) ? start : start.plus(1L, this.unit());
+        final LocalDateTime cut = value.truncatedTo(this.unit());
+        if (cut.isBefore(first)) {
+            return first;
         }
-        return fitted;
+        return cut.isAfter(last) ? last : cut;
     }
 
     private LocalDate clampDate(final LocalDate day) {
-        final LocalDate first = this.min == null ? null : this.min.toLocalDate();
-        final LocalDate last = this.max == null ? null : this.max.toLocalDate();
-        if (first != null && day.isBefore(first)) {
-            return first;
-        }
-        return last != null && day.isAfter(last) ? last : day;
+        return this.dates().clamp(day);
     }
 
+    /**
+     * Returns whether the user may take a draft: a whole unit from the first to the last whole one inside the range,
+     * on a date the filter allows.
+     */
     private boolean isAllowed(final LocalDateTime value) {
-        return (this.min == null || !value.isBefore(this.min)) && (this.max == null || !value.isAfter(this.max))
+        return !value.isBefore(this.firstWhole()) && !value.isAfter(this.lastWhole())
                 && this.filter.test(value.toLocalDate());
     }
 
@@ -263,25 +308,24 @@ public final class DateTimePickerImpl extends PickerBase<DateTimePicker, LocalDa
 
     @Override
     public Optional<ClockFormat> clockFormat() {
-        return Optional.ofNullable(this.clockFormat);
+        return this.settings.clockFormat();
     }
 
     @Override
     public DateTimePicker setClockFormat(final ClockFormat format) {
-        this.clockFormat = format;
+        this.settings.setClockFormat(format);
         this.relayoutField();
         return this;
     }
 
     @Override
     public boolean isSecondsShown() {
-        return this.seconds;
+        return this.settings.seconds();
     }
 
     @Override
     public DateTimePicker setSecondsShown(final boolean shown) {
-        if (shown != this.seconds) {
-            this.seconds = shown;
+        if (this.settings.setSeconds(shown)) {
             this.relayoutField();
             this.setDateTime(this.value);
         }
@@ -290,21 +334,18 @@ public final class DateTimePickerImpl extends PickerBase<DateTimePicker, LocalDa
 
     @Override
     public int minuteStep() {
-        return this.minuteStep;
+        return this.settings.minuteStep();
     }
 
     @Override
     public DateTimePicker setMinuteStep(final int minutes) {
-        if (minutes < 1 || minutes > 60 || 60 % minutes != 0) {
-            throw new IllegalArgumentException("The minute step must divide 60: " + minutes);
-        }
-        this.minuteStep = minutes;
+        this.settings.setMinuteStep(minutes);
         this.field.setMinuteStep(minutes);
         return this;
     }
 
     private boolean twelveHour(final DateFormats formats) {
-        return this.clockFormat == null ? formats.isTwelveHour() : this.clockFormat == ClockFormat.H12;
+        return this.settings.twelveHour(formats);
     }
 
     // ------------------------------------------------------------------
@@ -371,7 +412,7 @@ public final class DateTimePickerImpl extends PickerBase<DateTimePicker, LocalDa
 
     @Override
     void layoutField(final DateFormats formats) {
-        this.field.layout(formats, true, true, this.twelveHour(formats), this.seconds);
+        this.field.layout(formats, true, true, this.twelveHour(formats), this.settings.seconds());
     }
 
     @Override
@@ -406,20 +447,21 @@ public final class DateTimePickerImpl extends PickerBase<DateTimePicker, LocalDa
         }
         final DateFormats formats = this.field.formats() != null ? this.field.formats() : DateFormats.current();
         final CalendarViewImpl view = this.calendar;
-        view.setDateRange(this.min == null ? null : this.min.toLocalDate(),
-                this.max == null ? null : this.max.toLocalDate());
+        view.setDateRange(this.dates().min(), this.dates().max());
         view.setDateFilter(this.filter);
         view.setFirstDayOfWeek(this.firstDay);
         view.setDate(this.value == null ? null : this.value.toLocalDate());
         view.setZoom(CalendarView.Zoom.MONTH);
         view.setShownMonth(YearMonth.from(this.value != null ? this.value.toLocalDate() : this.today()));
-        this.columns.build(this.twelveHour(formats), this.seconds, this.minuteStep, formats, this.rowStyle,
+        this.columns.build(this.twelveHour(formats), this.settings.seconds(), this.settings.minuteStep(), formats,
+                this.rowStyle,
                 this.environment().text().lineHeight(this.rowStyle));
         this.columns.show(this.value == null ? null : this.value.toLocalTime(), this.twelveHour(formats));
         return this.popupRow;
     }
 
-    private void syncPopup() {
+    @Override
+    void syncPopup() {
         if (this.popupRow == null || !this.isOpen() || this.field.formats() == null) {
             return;
         }
@@ -440,27 +482,13 @@ public final class DateTimePickerImpl extends PickerBase<DateTimePicker, LocalDa
     }
 
     /**
-     * Sets one part of the time from a row the user pressed, filling an empty value first, and takes focus back.
+     * The draft's date and time without the range or the filter, which the requests and {@link #setDateTime} apply.
      */
-    private void pickPart(final SegmentedField.Kind kind, final int number) {
-        this.loadField();
-        if (this.value == null) {
-            this.fillForPopup();
-        }
-        this.field.setPart(kind, number);
-        final int index = this.field.indexOf(kind);
+    @Override
+    LocalDateTime pickedValue() {
         final LocalDate day = this.field.date(this.today());
         final LocalTime time = this.field.time();
-        if (day != null && time != null) {
-            this.userPick(day.atTime(time));
-        }
-        this.loadField();
-        if (!this.isFocused()) {
-            this.requestFocus();
-        }
-        if (index >= 0) {
-            this.field.setFocus(index);
-        }
+        return day == null || time == null ? null : day.atTime(time);
     }
 
     @Override

@@ -21,6 +21,7 @@ import org.inspirenxe.strata.api.component.Tooltip;
 import org.inspirenxe.strata.api.control.attribute.value.Toggle;
 import org.inspirenxe.strata.api.control.button.Button;
 import org.inspirenxe.strata.api.control.button.CheckBox;
+import org.inspirenxe.strata.api.layout.Anchor;
 import org.inspirenxe.strata.api.control.collection.ListView;
 import org.inspirenxe.strata.api.control.display.Label;
 import org.inspirenxe.strata.api.control.display.Separator;
@@ -403,6 +404,25 @@ class LookCapabilitiesTest {
             final Rect first = cells.get(0).bounds();
             // The column starts at 40; the default cell sits 4 in from each side of its row
             assertEquals(44f, first.x());
+        }
+
+        @Test
+        void aCellWiderThanTheColumnIsClippedToIt() {
+            final Theme theme = flatWith(builder -> builder.metric(ListView.STYLE_ROW_WIDTH, 220f));
+            final TestHost test = new TestHost(new TestPlatform(), theme, 400, 200);
+            final ComponentFactory ui = test.factory();
+            final ListView<String> list = ui.<String>listView(item -> ui.label(item).setAnchor(Anchor.MIDDLE_LEFT))
+                    .setItems(List.of("a".repeat(80)));
+            test.show(ui.absolutePanel().add(list.setSize(300f, 100f), 0, 0));
+            final List<String> clips = new ArrayList<>();
+            test.host().render(new DrawLog() {
+                @Override
+                public void pushClip(final Rect rect) {
+                    clips.add(DrawLog.rect(rect));
+                }
+            });
+            // The rows are clipped to the 220-unit column, not the whole list, so the text stays off the bar
+            assertTrue(clips.contains("40,0 220x100"), clips.toString());
         }
 
         @Test

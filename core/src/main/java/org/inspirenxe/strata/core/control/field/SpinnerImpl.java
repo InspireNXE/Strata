@@ -30,18 +30,26 @@ import org.inspirenxe.strata.api.extension.Painter;
 import org.inspirenxe.strata.api.geometry.Rect;
 import org.inspirenxe.strata.api.geometry.Size;
 import org.inspirenxe.strata.api.input.MouseButton;
+import org.inspirenxe.strata.api.input.ScrollKind;
 import org.inspirenxe.strata.api.layout.Anchor;
+import org.inspirenxe.strata.api.layout.HorizontalAlignment;
+import org.inspirenxe.strata.api.layout.ScrollPanel;
 import org.inspirenxe.strata.api.text.TextStyle;
 import org.inspirenxe.strata.api.theme.Paint;
 import org.inspirenxe.strata.api.theme.Theme;
 import org.inspirenxe.strata.core.control.Rings;
 import org.inspirenxe.strata.core.node.BuiltInComposite;
 import org.inspirenxe.strata.core.node.ComponentFactoryImpl;
+import org.inspirenxe.strata.core.text.Numbers;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
-import java.util.Locale;
 import java.util.regex.Pattern;
+import org.inspirenxe.strata.api.component.Validation;
+import org.inspirenxe.strata.api.text.Text;
+import org.inspirenxe.strata.core.control.Validity;
+import org.inspirenxe.strata.core.state.ConversionTarget;
+import java.util.function.Function;
 
 /**
  * The core {@link Spinner}: a {@link TextBoxImpl} child with the two step buttons painted in a column at the right.
@@ -53,11 +61,24 @@ import java.util.regex.Pattern;
  * for the text and once for the step. Whatever the handlers do, the field then shows the current value.
  * {@link #increment} and {@link #decrement} called from code fire no request.</p>
  *
- * <p>The field is a private {@link TextBoxImpl} whose internal filter keeps out text that could not become a number
- * in the range. The spinner is a composite and not a container, so the field's {@link TextBox} events stop at the
- * spinner.</p>
+ * <p>A step adds the step to the value, then clamps and rounds it. When rounding to the decimals would undo the
+ * step, as a step of 0.25 with no decimals does, the value moves by one unit of the last decimal instead, so a step
+ * moves the value whenever the range leaves room.</p>
+ *
+ * <p>The field is a private {@link TextBoxImpl} that shows the value through {@link Numbers} of the translator's
+ * locale. Its internal filter takes ASCII digits and the locale's, one decimal separator, the locale's or a period,
+ * followed by no more digits than the decimals allow, and a leading minus sign, the locale's or a hyphen, when the
+ * minimum is negative. A measure that finds the translator's locale changed shows the value again in the new one.
+ * Taking the text clamps the number to the range. The spinner is a composite and not a container, so the field's {@link TextBox} events stop
+ * at the spinner.</p>
  */
-public final class SpinnerImpl extends BuiltInComposite<Spinner> implements Spinner {
+public final class SpinnerImpl extends BuiltInComposite<Spinner> implements Spinner, ConversionTarget {
+    /**
+     * How far precise scrolls must add up to, in UI units, for one step: a wheel notch at a scroll panel's default
+     * rate.
+     */
+    public static final float PRECISE_SCROLL_STEP = ScrollPanel.DEFAULT_SCROLL_RATE;
+    private final Validity validity;
     private final TextBoxImpl field;
     private double value;
     private double min;
@@ -65,8 +86,14 @@ public final class SpinnerImpl extends BuiltInComposite<Spinner> implements Spin
     private double step;
     private int decimals;
     private Pattern accepted;
+    private Numbers numbers;
     private float pointerY;
+    // The precise scrolling not yet turned into steps, in UI units
+    private float preciseScroll;
     private Rect buttons;
+    // The halves of the button column, worked out during arrange
+    private Rect upButton;
+    private Rect downButton;
 
     // Theme
     private Paint button;
@@ -83,9 +110,12 @@ public final class SpinnerImpl extends BuiltInComposite<Spinner> implements Spin
     @SuppressWarnings("this-escape")
     public SpinnerImpl(final ComponentFactoryImpl ui) {
         super(ui);
+        this.validity = new Validity(this.node(), this::validated);
         this.max = 100.0;
         this.step = 1.0;
         this.buttons = Rect.ZERO;
+        this.upButton = Rect.ZERO;
+        this.downButton = Rect.ZERO;
         this.button = Paint.NONE;
         this.buttonHovered = Paint.NONE;
         this.buttonDisabled = Paint.NONE;
@@ -94,7 +124,9 @@ public final class SpinnerImpl extends BuiltInComposite<Spinner> implements Spin
         this.field.setInternalFilter(text -> this.accepted.matcher(text).matches() ? text : null);
         this.field.onEvent(TextBox.SUBMITTED, event -> this.commit(true));
         this.field.onEvent(Focusable.FOCUS_LOST, event -> this.commit(true));
+        this.setFocusDelegate(this.field);
         this.addChild(this.field);
+        this.numbers = Numbers.current();
         this.updatePattern();
         this.show();
         this.setCursor(CursorKind.HAND);
@@ -116,6 +148,7 @@ public final class SpinnerImpl extends BuiltInComposite<Spinner> implements Spin
         this.show();
         if (next != previous) {
             this.report(CHANGED, next, previous);
+            this.validity.check();
         }
         return this;
     }
@@ -171,10 +204,21 @@ public final class SpinnerImpl extends BuiltInComposite<Spinner> implements Spin
     }
 
     @Override
+    public HorizontalAlignment textAlignment() {
+        return this.field.textAlignment();
+    }
+
+    @Override
+    public Spinner setTextAlignment(final HorizontalAlignment alignment) {
+        this.field.setTextAlignment(alignment);
+        return this;
+    }
+
+    @Override
     public void increment() {
         if (this.isEnabled()) {
             this.commit(false);
-            this.setValue(this.value + this.step);
+            this.setValue(this.stepped(1));
         }
     }
 
@@ -182,8 +226,22 @@ public final class SpinnerImpl extends BuiltInComposite<Spinner> implements Spin
     public void decrement() {
         if (this.isEnabled()) {
             this.commit(false);
-            this.setValue(this.value - this.step);
+            this.setValue(this.stepped(-1));
         }
+    }
+
+    /**
+     * Returns the value some steps from the current one, clamped and rounded. When rounding to the decimals would
+     * undo the steps, it is the value one unit of the last decimal away instead, so a step finer than the decimals
+     * still moves the value while the range leaves room.
+     */
+    private double stepped(final int steps) {
+        final double target = this.fit(this.value + this.step * steps);
+        if (target != this.value || steps == 0) {
+            return target;
+        }
+        final double unit = BigDecimal.ONE.movePointLeft(this.decimals).doubleValue();
+        return this.fit(this.value + (steps > 0 ? unit : -unit));
     }
 
     /**
@@ -193,7 +251,7 @@ public final class SpinnerImpl extends BuiltInComposite<Spinner> implements Spin
     private void stepBy(final int steps) {
         if (this.isEnabled()) {
             this.commit(true);
-            this.change(this.value + this.step * steps);
+            this.change(this.stepped(steps));
         }
     }
 
@@ -205,7 +263,12 @@ public final class SpinnerImpl extends BuiltInComposite<Spinner> implements Spin
     private void change(final double requested) {
         final double fitted = this.fit(requested);
         if (fitted != this.value) {
-            this.request(CHANGE, fitted, this::setValue);
+            this.request(CHANGE, fitted, value -> {
+                // A handler that rewrote the value to null or NaN leaves it as it is
+                if (value != null && !value.isNaN()) {
+                    this.setValue(value);
+                }
+            });
         }
         this.show();
     }
@@ -220,10 +283,7 @@ public final class SpinnerImpl extends BuiltInComposite<Spinner> implements Spin
     }
 
     private String format(final double value) {
-        if (this.decimals == 0) {
-            return Long.toString(Math.round(value));
-        }
-        return String.format(Locale.ROOT, "%." + this.decimals + "f", value);
+        return this.numbers.format(value, this.decimals);
     }
 
     /**
@@ -239,13 +299,12 @@ public final class SpinnerImpl extends BuiltInComposite<Spinner> implements Spin
      * @param user true to set the value through {@code change}, false to call {@link #setValue} directly
      */
     private void commit(final boolean user) {
-        final double parsed;
-        try {
-            parsed = Double.parseDouble(this.field.text());
-        } catch (final NumberFormatException ignored) {
+        final BigDecimal number = this.numbers.parse(this.field.text(), false);
+        if (number == null) {
             this.show();
             return;
         }
+        final double parsed = number.doubleValue();
         if (user) {
             this.change(parsed);
         } else {
@@ -254,17 +313,58 @@ public final class SpinnerImpl extends BuiltInComposite<Spinner> implements Spin
     }
 
     private void updatePattern() {
-        final String sign = this.min < 0.0 ? "-?" : "";
-        final String fraction = this.decimals > 0 ? "(\\.\\d{0," + this.decimals + "})?" : "";
-        this.accepted = Pattern.compile(sign + "\\d*" + fraction);
+        final String digit = "[0-9" + escaped(this.numbers.zero()) + "-" + escaped((char) (this.numbers.zero() + 9))
+                + "]";
+        final String sign = this.min < 0.0 ? "[-\\x{2212}" + escaped(this.numbers.minus()) + "]?" : "";
+        final String fraction = this.decimals > 0
+                ? "([." + escaped(this.numbers.separator()) + "]" + digit + "{0," + this.decimals + "})?" : "";
+        this.accepted = Pattern.compile(sign + digit + "*" + fraction);
+    }
+
+    /**
+     * Writes a char as a regular expression escape, so a locale's sign or digit can sit in a character class.
+     */
+    private static String escaped(final char c) {
+        return "\\x{" + Integer.toHexString(c) + "}";
     }
 
     // ------------------------------------------------------------------
     // Theme, layout and painting
     // ------------------------------------------------------------------
 
+    // ------------------------------------------------------------------
+    // Validatable
+    // ------------------------------------------------------------------
+
+    @Override
+    public Validation validation() {
+        return this.validity.validation();
+    }
+
+    @Override
+    public Spinner setValidation(final Validation validation) {
+        this.validity.set(validation);
+        return this;
+    }
+
+    @Override
+    public Spinner setValidator(final Function<? super Spinner, Validation> validator) {
+        this.validity.setValidator(validator == null ? null : () -> validator.apply(this));
+        return this;
+    }
+
+    @Override
+    public void setConversionError(final Text message) {
+        this.validity.setConversionError(message);
+    }
+
+    private void validated(final Validation validation, final Validation previous) {
+        this.report(VALIDATED, validation, previous);
+    }
+
     @Override
     protected void onApplyTheme(final Theme theme) {
+        this.validity.applyTheme(theme, null);
         this.button = theme.paintOr(STYLE_BUTTON, theme.paintOr(Button.STYLE_NORMAL, Paint.NONE));
         this.buttonHovered = theme.paintOr(STYLE_BUTTON_HOVERED, theme.paintOr(Button.STYLE_HOVERED, this.button));
         this.buttonDisabled = theme.paintOr(STYLE_BUTTON_DISABLED, theme.paintOr(Button.STYLE_DISABLED, this.button));
@@ -275,6 +375,12 @@ public final class SpinnerImpl extends BuiltInComposite<Spinner> implements Spin
 
     @Override
     protected Size measure(final MeasureContext context, final float availableWidth, final float availableHeight) {
+        final Numbers current = Numbers.current();
+        if (!current.locale().equals(this.numbers.locale())) {
+            this.numbers = current;
+            this.updatePattern();
+            this.show();
+        }
         final Size field = context.measure(this.field, Math.max(0f, availableWidth - BUTTON_WIDTH), availableHeight);
         return new Size(DEFAULT_WIDTH, field.height());
     }
@@ -283,19 +389,38 @@ public final class SpinnerImpl extends BuiltInComposite<Spinner> implements Spin
     protected void arrange(final ArrangeContext context, final Rect bounds) {
         final float fieldWidth = Math.max(0f, bounds.width() - BUTTON_WIDTH);
         context.arrange(this.field, new Rect(bounds.x(), bounds.y(), fieldWidth, bounds.height()));
-        this.buttons = new Rect(bounds.x() + fieldWidth, bounds.y(), bounds.width() - fieldWidth, bounds.height());
+        // Right to left the node mirrors the field to the right, and the buttons go to the left
+        this.buttons = this.flow(new Rect(bounds.x() + fieldWidth, bounds.y(), bounds.width() - fieldWidth,
+                bounds.height()));
+        final float half = (float) Math.floor(this.buttons.height() * 0.5f);
+        this.upButton = new Rect(this.buttons.x(), this.buttons.y(), this.buttons.width(), half);
+        this.downButton = new Rect(this.buttons.x(), this.buttons.y() + half, this.buttons.width(),
+                this.buttons.height() - half);
+    }
+
+    @Override
+    protected void onEnabledChanged() {
+        this.field.setEnabled(this.isEnabled());
+    }
+
+    @Override
+    protected float baseline() {
+        // The field sits at the spinner's top
+        return this.nodeOf(this.field).baseline();
     }
 
     @Override
     protected void paint(final Painter painter, final Rect bounds) {
-        if (this.field.isEnabled() != this.isEnabled()) {
-            this.field.setEnabled(this.isEnabled());
+        this.paintButton(painter, this.upButton, this.value < this.max, true);
+        this.paintButton(painter, this.downButton, this.value > this.min, false);
+    }
+
+    @Override
+    protected void paintOverChildren(final Painter painter, final Rect bounds) {
+        // Around the field and the buttons both, so over the field that covers most of the bounds
+        if (this.isEnabled()) {
+            this.validity.paintOutline(painter, bounds);
         }
-        final float half = (float) Math.floor(this.buttons.height() * 0.5f);
-        final Rect up = new Rect(this.buttons.x(), this.buttons.y(), this.buttons.width(), half);
-        final Rect down = new Rect(this.buttons.x(), this.buttons.y() + half, this.buttons.width(), this.buttons.height() - half);
-        this.paintButton(painter, up, this.value < this.max, true);
-        this.paintButton(painter, down, this.value > this.min, false);
     }
 
     private void paintButton(final Painter painter, final Rect rect, final boolean usable, final boolean upward) {
@@ -332,25 +457,47 @@ public final class SpinnerImpl extends BuiltInComposite<Spinner> implements Spin
         if (event.button() != MouseButton.LEFT || !this.buttons.contains(event.x(), event.y())) {
             return;
         }
-        if (event.y() < this.buttons.y() + (float) Math.floor(this.buttons.height() * 0.5f)) {
-            this.stepBy(1);
-        } else {
-            this.stepBy(-1);
+        final int direction = event.y() < this.buttons.y() + (float) Math.floor(this.buttons.height() * 0.5f) ? 1 : -1;
+        this.stepBy(direction);
+        if (this.hostRoot() != null && this.isEnabled()) {
+            this.hostRoot().startHoldRepeat(this.node(), () -> this.stepBy(direction));
         }
         event.consume();
     }
 
     @Override
+    protected void onPointerRelease(final PointerButtonEvent event) {
+        if (event.button() == MouseButton.LEFT && this.hostRoot() != null) {
+            this.hostRoot().stopHoldRepeat(this.node());
+        }
+    }
+
+    /**
+     * Steps once for each wheel notch, and once for each {@link #PRECISE_SCROLL_STEP} units that precise scrolls add
+     * up to, a notch at a scroll panel's default rate. Precise scrolling left over carries to the next scroll in the
+     * same direction and is dropped when the direction turns or a wheel notch comes.
+     */
+    @Override
     protected void onScroll(final ScrollEvent event) {
         if (!this.isEnabled() || event.scrollY() == 0f) {
             return;
         }
-        if (event.scrollY() > 0f) {
-            this.stepBy(1);
-        } else {
-            this.stepBy(-1);
-        }
         event.consume();
+        if (event.kind() != ScrollKind.PRECISE) {
+            this.preciseScroll = 0f;
+            this.stepBy(event.scrollY() > 0f ? 1 : -1);
+            return;
+        }
+        final float units = event.scrollY() * ScrollPanel.DEFAULT_SCROLL_RATE;
+        if (Math.signum(units) != Math.signum(this.preciseScroll)) {
+            this.preciseScroll = 0f;
+        }
+        this.preciseScroll += units;
+        final int steps = (int) (this.preciseScroll / PRECISE_SCROLL_STEP);
+        if (steps != 0) {
+            this.preciseScroll -= steps * PRECISE_SCROLL_STEP;
+            this.stepBy(steps);
+        }
     }
 
     @Override

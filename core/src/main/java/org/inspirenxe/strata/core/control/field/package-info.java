@@ -20,7 +20,9 @@
  *
  * <p>The text box, the text area and the password box share their editing parts, which are package-private: an
  * {@code EditBuffer}, either a {@code PlainBuffer} or a {@code SecretBuffer} that zeroes a password's chars,
- * {@code TextBoundaries} for code point and word boundaries, and a {@code LineEditor} with the caret, selection,
- * scroll, keys and pointer of a single-line field. The text area keeps its own row handling.</p>
+ * {@code TextBoundaries} for character and word boundaries, and a {@code TextEditor} with the caret, selection, keys
+ * and pointer. A {@code LineEditor} adds the sideways scroll and drawing of a single-line field, and the text area
+ * lays out and draws its own rows. The text box and the text area turn a user's edit into new text through the same
+ * {@code PlainEdits}.</p>
  */
 package org.inspirenxe.strata.core.control.field;

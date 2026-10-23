@@ -40,8 +40,8 @@ import java.util.List;
  *     it a slot. Adding or removing a child schedules one more layout. Do not change anything else from layout.</li>
  *     <li>Keep per-child data in your own map, and drop it in {@link #onChildRemoved}.</li>
  *     <li>Leave drawing children to Strata. {@link #paint} draws under them and {@link #paintOverChildren} over
- *     them. While {@link #clipsChildren()} is true they are clipped to {@link #childClip()}. Children are drawn by
- *     z index and then in the order they were added, raised or lowered: {@link #raiseChild} and
+ *     them. Unless {@link #setChildClipping} turned clipping off, they are clipped to {@link #childClip()}. Children
+ *     are drawn by z index and then in the order they were added, raised or lowered: {@link #raiseChild} and
  *     {@link #lowerChild} change that order, and {@link #insertChild} and {@link #moveChild} change the layout
  *     order.</li>
  * </ul>
@@ -85,7 +85,8 @@ public abstract class CustomComposite<T extends Component<T>> extends CustomComp
     }
 
     /**
-     * Returns the rectangle children are clipped to and hit-tested against while {@link #clipsChildren()} is true. A
+     * Returns the rectangle children are clipped to and hit-tested against, unless {@link #setChildClipping} turned
+     * clipping off. A
      * scroll panel returns its viewport, so nothing draws under its scroll bars. Called during painting and hit
      * testing; return a value computed during layout. The default is the bounds.
      *
@@ -234,16 +235,8 @@ public abstract class CustomComposite<T extends Component<T>> extends CustomComp
     }
 
     /**
-     * Returns whether children are clipped to {@link #childClip()}.
-     *
-     * @return true by default
-     */
-    protected boolean clipsChildren() {
-        return this.containerPeer().clipsChildren();
-    }
-
-    /**
-     * Sets whether children are clipped to {@link #childClip()}.
+     * Sets whether children are clipped to {@link #childClip()}. Children are clipped by default. A
+     * {@link CustomContainer} reports the setting through its public {@code clipsChildren()}.
      *
      * @param clip false to let children draw and be hit outside it
      */

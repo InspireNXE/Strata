@@ -17,6 +17,7 @@ package org.inspirenxe.strata.api.control.pane;
 
 import org.inspirenxe.strata.api.component.Component;
 import org.inspirenxe.strata.api.component.Focusable;
+import org.inspirenxe.strata.api.component.HasContextMenu;
 import org.inspirenxe.strata.api.component.HasCursor;
 import org.inspirenxe.strata.api.component.HasTooltip;
 import org.inspirenxe.strata.api.control.attribute.text.Titled;
@@ -27,6 +28,7 @@ import org.inspirenxe.strata.api.state.PropertyKey;
 import org.inspirenxe.strata.api.text.Text;
 
 import java.util.Objects;
+import java.util.Optional;
 
 /**
  * A titled header that shows or hides the component below it.
@@ -41,6 +43,12 @@ import java.util.Objects;
  * expanded, and the title 4 units after it. The desired size is the wider of the header and the content, and the
  * header's height plus the content's when expanded. The content is placed below the header, across the expander's
  * width, by its own alignment.</p>
+ *
+ * <p>A {@linkplain #setHeader header component}, such as a check box that turns a group of settings on, takes the
+ * title's place after the arrow. The header is then as tall as that component and the padding, at least one line
+ * of the title's style, and the component is placed in the rest of the header's width by its own alignment. A press
+ * on a control in it goes to the control, and a click elsewhere on the header expands or collapses. Its events pass
+ * the expander on to its ancestors.</p>
  *
  * <h2>Theme keys</h2>
  * <ul>
@@ -59,11 +67,14 @@ import java.util.Objects;
  * Expander filters = factory.expander("Filters").setContent(filterPanel).setExpanded(true);
  * }</pre>
  *
+ * <p>Its caption marks a mnemonic with an underscore, as {@link org.inspirenxe.strata.api.control.button.Button}
+ * describes: Alt with the letter focuses the expander and expands or collapses it.</p>
+ *
  * <p>Get one from {@link org.inspirenxe.strata.api.ComponentFactory#expander(String)}. Do not implement this
  * interface.</p>
  */
 public interface Expander extends Component<Expander>, Focusable<Expander>, HasCursor<Expander>, HasTooltip<Expander>,
-        Titled<Expander> {
+        HasContextMenu<Expander>, Titled<Expander> {
     /**
      * Style key for the header (paint, optional).
      */
@@ -85,6 +96,13 @@ public interface Expander extends Component<Expander>, Focusable<Expander>, HasC
      * to 4 at the sides and 3 at the top and bottom.
      */
     String STYLE_HEADER_PADDING = "expander.header.padding";
+    /**
+     * Style key for how long the content takes to grow into view or shrink away, in milliseconds (metric,
+     * optional). While it moves, the expander's height follows it and the content keeps its full size, cut at the
+     * expander's bottom, and a collapsing content stays a child until it has shrunk away. The arrow and
+     * {@link #isExpanded()} change at once. Defaults to 0: the content appears and goes at once.
+     */
+    String STYLE_ANIMATION = "expander.animation";
 
     /**
      * Fired when the user flips the expander by click or key, before it changes. The value is the state it is about
@@ -120,18 +138,38 @@ public interface Expander extends Component<Expander>, Focusable<Expander>, HasC
     Expander setTitle(Text title);
 
     /**
+     * Returns the component shown in the header in place of the title.
+     *
+     * @return the component, or empty for the title, as for a new expander
+     */
+    Optional<Component<?>> header();
+
+    /**
+     * Shows a component in the header after the arrow, in place of the title, or the title again for null. The old
+     * header component is removed from the tree. The title is kept, and still names the expander, but is not drawn
+     * and marks no mnemonic while a component takes its place. A new layout runs.
+     *
+     * @param header the component, or null for the title; it must not have a parent
+     * @return this expander
+     * @throws IllegalArgumentException if {@code header} already has a parent, is a host's content, or is this
+     *     expander or one of its ancestors; the expander is left as it was
+     */
+    Expander setHeader(Component<?> header);
+
+    /**
      * Returns the content.
      *
-     * @return the content, or null if none was set
+     * @return the content, or empty if none was set
      */
-    Component<?> content();
+    Optional<Component<?>> content();
 
     /**
      * Replaces the content. The old content is removed from the tree.
      *
      * @param content the component to show below the header, or null for none; it must not have a parent
      * @return this expander
-     * @throws IllegalArgumentException if {@code content} already has a parent
+     * @throws IllegalArgumentException if {@code content} already has a parent, is a host's content, or is this
+     *     expander or one of its ancestors; the expander is left as it was
      */
     Expander setContent(Component<?> content);
 
@@ -153,8 +191,10 @@ public interface Expander extends Component<Expander>, Focusable<Expander>, HasC
     /**
      * Flips the expander as if its header had been clicked, firing {@link #EXPANDED} but not {@link #EXPAND}. Does
      * nothing while disabled.
+     *
+     * @return this expander
      */
-    void toggle();
+    Expander toggle();
 
     /**
      * An expander's own state in a {@link org.inspirenxe.strata.api.component.ComponentSnapshot}.

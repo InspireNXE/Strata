@@ -48,6 +48,7 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -293,6 +294,31 @@ class ButtonPaneEventsTest {
         }
 
         @Test
+        void tabStopsAtTheSelectedButtonOrElseTheFirst() {
+            this.show();
+            final TestHost test = ButtonPaneEventsTest.this.test;
+            assertEquals(List.of(this.easy), test.tabOrder());
+            this.group.select(2);
+            assertEquals(List.of(this.hard), test.tabOrder());
+            this.hard.requestFocus();
+            ButtonPaneEventsTest.this.key(Key.UP);
+            assertEquals(List.of(this.normal), test.tabOrder());
+            this.group.select(-1);
+            assertEquals(List.of(this.easy), test.tabOrder());
+        }
+
+        @Test
+        void tabLeavesTheGroupFromItsSelectedButton() {
+            this.show();
+            final Button after = ButtonPaneEventsTest.this.ui.button("After");
+            this.column.add(after);
+            this.group.select(1);
+            this.normal.requestFocus();
+            ButtonPaneEventsTest.this.key(Key.TAB);
+            assertSame(after, ButtonPaneEventsTest.this.test.focused());
+        }
+
+        @Test
         void clicksAndArrowsSelect() {
             this.show();
             this.click(this.easy);
@@ -394,12 +420,22 @@ class ButtonPaneEventsTest {
         }
 
         @Test
+        void contentItCannotTakeLeavesTheOldContent() {
+            this.show();
+            this.expander.setExpanded(true);
+            final Component<?> inside = this.expander.content().orElseThrow();
+            assertThrows(IllegalArgumentException.class, () -> this.expander.setContent(this.form));
+            assertSame(inside, this.expander.content().orElseThrow());
+            assertSame(this.expander, inside.parent().orElseThrow());
+        }
+
+        @Test
         void cancelingLeavesItCollapsed() {
             this.show();
             this.expander.onEvent(Expander.EXPAND, event -> event.cancel());
             ButtonPaneEventsTest.this.test.click(5, 5);
             assertFalse(this.expander.isExpanded());
-            assertFalse(this.expander.content().isAttached());
+            assertFalse(this.expander.content().orElseThrow().isAttached());
             assertEquals(List.of(), this.heard);
         }
 
@@ -443,6 +479,30 @@ class ButtonPaneEventsTest {
                     .onEvent(SingleSelection.SELECTED, event -> this.heard.add(event.previous() + "->" + event.value()));
             this.tabs.setWidth(300);
             this.form = ButtonPaneEventsTest.this.form(this.tabs);
+        }
+
+        @Test
+        void tabsCanBeReachedAndRemovedByIndexAndClearedTogether() {
+            this.show();
+            assertEquals("Sell", this.tabs.tab(1).text().plain());
+            assertThrows(IndexOutOfBoundsException.class, () -> this.tabs.tab(3));
+            this.tabs.select(2);
+            this.tabs.removeTab(0);
+            assertEquals(List.of("Sell", "Trade"), this.tabs.tabs().stream().map(tab -> tab.text().plain()).toList());
+            assertThrows(IndexOutOfBoundsException.class, () -> this.tabs.removeTab(2));
+            this.tabs.clearTabs();
+            assertEquals(List.of(), this.tabs.tabs());
+            assertEquals(-1, this.tabs.selectedIndex());
+            assertEquals(List.of("0->2", "2->1", "1->-1"), this.heard);
+        }
+
+        @Test
+        void spacingMustBeANumberThatIsNotNegative() {
+            this.show();
+            assertThrows(IllegalArgumentException.class, () -> this.tabs.setSpacing(Float.NaN));
+            assertThrows(IllegalArgumentException.class, () -> this.tabs.setSpacing(-1f));
+            assertThrows(IllegalArgumentException.class, () -> this.tabs.setSpacing(Float.POSITIVE_INFINITY));
+            assertEquals(0f, this.tabs.spacing());
         }
 
         @Test
@@ -581,6 +641,35 @@ class ButtonPaneEventsTest {
             this.drag(182, 300);
             assertEquals(List.of(0.9f), this.requests);
             assertEquals(List.of("0.5->0.9"), this.heard);
+        }
+
+        @Test
+        void aSideItCannotTakeLeavesTheOldSide() {
+            this.show();
+            final Component<?> first = this.split.first().orElseThrow();
+            assertThrows(IllegalArgumentException.class, () -> this.split.setFirst(this.form));
+            assertSame(first, this.split.first().orElseThrow());
+            assertSame(this.split, first.parent().orElseThrow());
+        }
+
+        @Test
+        void aPositionFromALengthGivesTheFirstSideThatLength() {
+            this.show();
+            // Minimums would hold the sides away from the ends, since they apply on every layout (design 4.57)
+            this.split.setMinSizes(0f, 0f);
+            final List<String> missed = new ArrayList<>();
+            for (int width = 300; width <= 420; width++) {
+                this.split.setWidth(width);
+                final float space = width - SplitPane.DIVIDER_SIZE;
+                for (int length = 0; length <= space; length++) {
+                    this.split.setPosition(length / space);
+                    ButtonPaneEventsTest.this.test.host().layout();
+                    if (this.split.first().orElseThrow().bounds().width() != length) {
+                        missed.add(width + ":" + length);
+                    }
+                }
+            }
+            assertEquals(List.of(), missed);
         }
 
         @Test

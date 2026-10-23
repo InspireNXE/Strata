@@ -15,10 +15,19 @@
  */
 package org.inspirenxe.strata.core.event;
 
+import org.inspirenxe.strata.api.ComponentFactory;
 import org.inspirenxe.strata.api.component.Component;
 import org.inspirenxe.strata.api.event.input.DragEvent;
 import org.inspirenxe.strata.api.input.Modifiers;
 import org.inspirenxe.strata.api.input.MouseButton;
+import org.inspirenxe.strata.api.transfer.DropEffect;
+import org.inspirenxe.strata.api.transfer.Transfer;
+
+import java.util.Collections;
+import java.util.EnumSet;
+import java.util.Objects;
+import java.util.Set;
+import java.util.function.Function;
 
 /**
  * The core {@link DragEvent}. The host sends one when a drag starts, one for each pointer move during it, and one
@@ -31,6 +40,9 @@ public final class DragEventImpl extends PointerEventImpl implements DragEvent {
     private final float startY;
     private final float deltaX;
     private final float deltaY;
+    // Whether startTransfer may be called, and what it asked for
+    private boolean transferOpen;
+    private TransferRequest request;
 
     /**
      * Creates the event.
@@ -86,5 +98,68 @@ public final class DragEventImpl extends PointerEventImpl implements DragEvent {
     @Override
     public float deltaY() {
         return this.deltaY;
+    }
+
+    /**
+     * Lets handlers of this event start a transfer. The root calls it on a drag start event while no other drag of
+     * its host carries a transfer.
+     *
+     * @return this event
+     */
+    public DragEventImpl allowTransfer() {
+        this.transferOpen = true;
+        return this;
+    }
+
+    @Override
+    public void startTransfer(final Transfer transfer, final Set<DropEffect> allowed) {
+        this.start(transfer, allowed, null);
+    }
+
+    @Override
+    public void startTransfer(final Transfer transfer, final Set<DropEffect> allowed,
+                              final Function<ComponentFactory, ? extends Component<?>> image) {
+        this.start(transfer, allowed, Objects.requireNonNull(image, "image"));
+    }
+
+    private void start(final Transfer transfer, final Set<DropEffect> allowed,
+                       final Function<ComponentFactory, ? extends Component<?>> image) {
+        Objects.requireNonNull(transfer, "transfer");
+        Objects.requireNonNull(allowed, "allowed");
+        if (!this.transferOpen) {
+            throw new IllegalStateException(this.request != null ? "This drag already carries a transfer"
+                    : "A transfer starts only from a drag start event, while no other drag carries one");
+        }
+        if (transfer.isEmpty()) {
+            throw new IllegalArgumentException("A drag cannot carry an empty transfer");
+        }
+        if (allowed.isEmpty()) {
+            throw new IllegalArgumentException("A drag must allow at least one drop effect");
+        }
+        this.transferOpen = false;
+        this.request = new TransferRequest(this.current(), transfer, Collections.unmodifiableSet(EnumSet.copyOf(allowed)),
+                image);
+        this.consume();
+    }
+
+    /**
+     * Returns the transfer a handler started.
+     *
+     * @return the request, or {@code null} if no handler started one
+     */
+    public TransferRequest transferRequest() {
+        return this.request;
+    }
+
+    /**
+     * A transfer a drag start handler asked for.
+     *
+     * @param source the component that was current when the handler asked
+     * @param transfer what the drag carries
+     * @param allowed the effects a target may take, never empty
+     * @param image builds the drag image, or {@code null} for none
+     */
+    public record TransferRequest(Component<?> source, Transfer transfer, Set<DropEffect> allowed,
+                                  Function<ComponentFactory, ? extends Component<?>> image) {
     }
 }

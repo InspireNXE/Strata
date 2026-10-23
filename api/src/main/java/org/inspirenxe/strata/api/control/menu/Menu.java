@@ -17,6 +17,7 @@ package org.inspirenxe.strata.api.control.menu;
 
 import org.inspirenxe.strata.api.component.Component;
 import org.inspirenxe.strata.api.component.Focusable;
+import org.inspirenxe.strata.api.component.HasContextMenu;
 import org.inspirenxe.strata.api.component.HasCursor;
 import org.inspirenxe.strata.api.component.HasTooltip;
 import org.inspirenxe.strata.api.control.attribute.popup.Closable;
@@ -36,9 +37,10 @@ import java.util.function.Consumer;
  * A list of commands that opens in a popup, such as a right-click menu or a menu in a {@link MenuBar}.
  *
  * <p>Its entries are {@link MenuEntry}s: {@link MenuItem} commands, {@link CheckMenuItem}s that flip a setting,
- * {@link SubmenuItem}s that open another menu, and {@link MenuSeparator}s. Add them with {@link #addItem(MenuEntry)},
+ * {@link RadioMenuItem}s that pick one of several, {@link SubmenuItem}s that open another menu, and {@link MenuSeparator}s. Add them with {@link #addItem(MenuEntry)},
  * or let the shorthands such as {@link #addItem(String, Runnable)} make them. A shortcut is text drawn at the right of
- * an item; it is only a hint and binds no key.</p>
+ * an item; it is only a hint and binds no key. An item showing a {@linkplain MenuItem#setCommand command} with a
+ * stroke and no hint text shows the stroke, and a menu bar runs that command from it.</p>
  *
  * <p>An open menu takes focus. Hovering an item highlights it, and hovering a submenu item opens the submenu beside
  * it. Up and Down move the highlight past separators and disabled items, wrapping at the ends, and repeat while held.
@@ -46,10 +48,15 @@ import java.util.function.Consumer;
  * already opened the submenu, Right moves focus into it and highlights its first item unless the pointer highlighted
  * one there. Left in a submenu closes it and gives focus back to the menu it opened from. Enter, keypad Enter and Space choose the
  * highlighted item, or open the submenu of a submenu item as Right does. Escape closes the menu it is pressed in,
- * with its submenus, and focus goes back to the menu it opened from. These keys work with any modifiers held, and the
- * menu consumes them. A left click on an item chooses it. Choosing an item, by click or key, closes the whole chain of menus and then runs the item's action.
+ * with its submenus, and focus goes back to the menu it opened from. Home and End highlight the first and last items
+ * that can be chosen. These keys work with any modifiers held, and the menu consumes them. A letter or digit, alone
+ * or with Alt, chooses the one item whose mnemonic it is, or highlights the items that share it in turn; a letter no
+ * item's mnemonic claims highlights the next item whose text starts with it, and goes on to the host when none
+ * does. An item's mnemonics are underlined while Alt is held and once the keyboard opened or moved through the
+ * menu. A left click on an item chooses it. Choosing an item, by click or key, closes the whole chain of menus and then runs the item's action.
  * Clicking outside closes the menus. When the first menu of a chain closes, focus goes back to where it was before
- * the chain opened.</p>
+ * the chain opened. Items are chosen on the click even on a platform whose conventions say buttons act on the press,
+ * since those conventions cover buttons, checkboxes, radio buttons, toggles and tabs.</p>
  *
  * <p>A menu is a component only so it can sit in a popup. Open it with {@link #open} or {@link #openAt} rather than
  * adding it to a container, or give it to a {@link org.inspirenxe.strata.api.control.button.DropDownButton}, which
@@ -59,7 +66,8 @@ import java.util.function.Consumer;
  * <p>A menu is the whole content of its popup and has no parent, so its events ({@link #CHOOSE}, {@link #CHOSEN},
  * {@link Openable#OPENED} and {@link Closable#CLOSED}) reach only the handlers registered on the menu itself. A menu
  * opens only from code, its bar or a drop-down button, and the bar and the button ask on their own behalf, so it
- * never fires {@link Openable#OPEN}. It never fires {@link Closable#CLOSE} either.</p>
+ * never fires {@link Openable#OPEN}. Before Escape or a press outside closes it, it asks {@link Closable#CLOSE}, and a
+ * handler that cancels keeps it open; choosing an item, or {@code close()} from code, asks nothing.</p>
  *
  * <h2>Events</h2>
  * <ul>
@@ -104,7 +112,8 @@ import java.util.function.Consumer;
  *
  * <p>Get one from {@link org.inspirenxe.strata.api.ComponentFactory#menu()}. Do not implement this interface.</p>
  */
-public interface Menu extends Component<Menu>, Focusable<Menu>, HasCursor<Menu>, HasTooltip<Menu>, Popup<Menu> {
+public interface Menu extends Component<Menu>, Focusable<Menu>, HasCursor<Menu>, HasTooltip<Menu>, HasContextMenu<Menu>,
+        Popup<Menu> {
     /**
      * Style key for the menu's background (paint, required).
      */
@@ -142,7 +151,7 @@ public interface Menu extends Component<Menu>, Focusable<Menu>, HasCursor<Menu>,
 
     /**
      * Requested when the user chooses an entry: a click on it, or Enter, keypad Enter or Space while it is
-     * highlighted. The value is the {@link MenuItem} or {@link CheckMenuItem} chosen. Unless a handler cancels the
+     * highlighted. The value is the {@link MenuItem}, {@link CheckMenuItem} or {@link RadioMenuItem} chosen. Unless a handler cancels the
      * request, the menu closes its whole chain, flips a check item and runs the entry's action. A rewritten value
      * that is not one of this menu's items, is disabled, or is a separator or a submenu item is ignored, which leaves
      * the menu open. Submenu items do not fire this event, and a choice in a submenu fires the submenu's event, not

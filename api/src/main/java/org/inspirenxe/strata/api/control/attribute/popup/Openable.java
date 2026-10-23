@@ -20,8 +20,8 @@ import org.inspirenxe.strata.api.event.control.ControlEvent;
 import org.inspirenxe.strata.api.event.control.RequestEvent;
 
 /**
- * A control that opens a popup and closes it again, such as a combo box or a menu. How it opens is particular to
- * each control.
+ * A control that opens a popup and closes it again, such as a combo box or a menu. Code opens it with
+ * {@link #open()}; where and when it can open is particular to each control.
  *
  * <p>Do not implement this interface.</p>
  *
@@ -44,4 +44,12 @@ public interface Openable<S extends Openable<S>> extends Closable<S> {
      * @return true while open; false for a new control
      */
     boolean isOpen();
+
+    /**
+     * Opens it from code and reports {@link #OPENED}, without asking {@link #OPEN}. Does nothing if it is already
+     * open or cannot open now, which each control defines, such as a disabled combo box or a menu with no items.
+     *
+     * @return this control
+     */
+    S open();
 }

@@ -15,6 +15,7 @@
  */
 package org.inspirenxe.strata.api.control.menu;
 
+import org.inspirenxe.strata.api.component.Enableable;
 import org.inspirenxe.strata.api.control.attribute.text.HasText;
 
 import java.util.Optional;
@@ -29,10 +30,14 @@ import java.util.Optional;
  * bar.addMenu(factory.submenuItem("View").setMenu(viewMenu));
  * }</pre>
  *
+ * <p>Its caption marks a mnemonic with an underscore, as {@link org.inspirenxe.strata.api.control.button.Button}
+ * describes: Alt with the letter opens its menu while the menu holding it is open, as the letter alone does, or opens a
+ * menu bar's menu from anywhere in the bar's layer.</p>
+ *
  * <p>Get one from {@link org.inspirenxe.strata.api.ComponentFactory#submenuItem(String)} or make one with
  * {@link Menu#addSubmenu} or {@link MenuBar#addMenu(String, Menu)}. Do not implement this interface.</p>
  */
-public non-sealed interface SubmenuItem extends MenuEntry, HasText<SubmenuItem> {
+public non-sealed interface SubmenuItem extends MenuEntry, HasText<SubmenuItem>, Enableable<SubmenuItem> {
 
     /**
      * Returns the menu it opens.
@@ -42,12 +47,14 @@ public non-sealed interface SubmenuItem extends MenuEntry, HasText<SubmenuItem> 
     Optional<Menu> menu();
 
     /**
-     * Sets the menu it opens, closing the one before if it is open. An item without a menu opens nothing.
+     * Sets the menu it opens, closing the one before if it is open. An item without a menu opens nothing. The menu
+     * before is free to open from somewhere else afterwards.
      *
-     * @param menu the menu
+     * @param menu the menu, or {@code null} for none
      * @return this item
-     * @throws IllegalArgumentException if the item is in a menu or bar and {@code menu} already opens from somewhere
-     *     else, or the item is in a menu and {@code menu} is that menu or one it opens from
+     * @throws IllegalArgumentException if {@code menu} was not made by Strata, the item is in a menu or bar and
+     *     {@code menu} already opens from somewhere else, or the item is in a menu and {@code menu} is that menu or one
+     *     it opens from
      */
     SubmenuItem setMenu(Menu menu);
 
@@ -56,6 +63,7 @@ public non-sealed interface SubmenuItem extends MenuEntry, HasText<SubmenuItem> 
      *
      * @return true by default
      */
+    @Override
     boolean isEnabled();
 
     /**
@@ -64,5 +72,6 @@ public non-sealed interface SubmenuItem extends MenuEntry, HasText<SubmenuItem> 
      * @param enabled true to enable it
      * @return this item
      */
+    @Override
     SubmenuItem setEnabled(boolean enabled);
 }

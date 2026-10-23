@@ -16,10 +16,12 @@
 package org.inspirenxe.strata.api.control.display;
 
 import org.inspirenxe.strata.api.component.Component;
+import org.inspirenxe.strata.api.component.HasContextMenu;
 import org.inspirenxe.strata.api.component.HasCursor;
 import org.inspirenxe.strata.api.component.HasTooltip;
 import org.inspirenxe.strata.api.control.attribute.text.HasText;
 import org.inspirenxe.strata.api.control.attribute.value.Ranged;
+import org.inspirenxe.strata.api.layout.Orientation;
 import org.inspirenxe.strata.api.state.PropertyKey;
 import org.inspirenxe.strata.api.text.Text;
 
@@ -29,6 +31,11 @@ import org.inspirenxe.strata.api.text.Text;
  *
  * <p>It asks for 100 units of width and one line plus 4 units of height; stretch it or give it a size. It is not
  * focusable and has no default behavior for input, so it never fires {@link Ranged#CHANGE}.</p>
+ *
+ * <p>A {@linkplain #setOrientation vertical} bar, such as a health bar or a battery gauge, fills from the bottom up,
+ * as a vertical slider rises, and asks for 100 units of height and its caption's width plus the padding, at least
+ * one line plus 4. Its caption stays level, centered in the bar, and its indeterminate segment slides from the bottom
+ * to the top.</p>
  *
  * <h2>Indeterminate</h2>
  * <p>For work whose length is not known, {@link #setIndeterminate(boolean)} replaces the fill with a segment a
@@ -58,7 +65,22 @@ import org.inspirenxe.strata.api.text.Text;
  * interface.</p>
  */
 public interface ProgressBar extends Component<ProgressBar>, HasCursor<ProgressBar>, HasTooltip<ProgressBar>,
-        HasText<ProgressBar>, Ranged<ProgressBar> {
+        HasContextMenu<ProgressBar>, HasText<ProgressBar>, Ranged<ProgressBar> {
+    /**
+     * Returns which way the bar fills.
+     *
+     * @return the orientation; {@link Orientation#HORIZONTAL} for a new bar
+     */
+    Orientation orientation();
+
+    /**
+     * Sets which way the bar fills: from the left across, or from the bottom up. A new layout runs.
+     *
+     * @param orientation the orientation
+     * @return this bar
+     */
+    ProgressBar setOrientation(Orientation orientation);
+
     /**
      * Style key for the bar's track (paint, required).
      */
@@ -81,6 +103,12 @@ public interface ProgressBar extends Component<ProgressBar>, HasCursor<ProgressB
      * padding. Defaults to 2 on every side.
      */
     String STYLE_PADDING = "progress.padding";
+    /**
+     * Style key for how long the fill takes to ease to a new value, in milliseconds (metric, optional). Only the
+     * drawing moves: {@link #value()} and {@link org.inspirenxe.strata.api.control.attribute.value.Ranged#CHANGED}
+     * change at once. Defaults to 0: the fill jumps.
+     */
+    String STYLE_ANIMATION = "progress.animation";
     /**
      * Whether the bar shows a moving segment instead of its value, as {@link #isIndeterminate()} and
      * {@link #setIndeterminate} say. Binds one way.
@@ -160,7 +188,7 @@ public interface ProgressBar extends Component<ProgressBar>, HasCursor<ProgressB
     /**
      * Sets the caption drawn centered on the bar.
      *
-     * @param text the caption, or an empty string for none
+     * @param text the caption, or {@link Text#empty()} for none
      * @return this bar
      */
     @Override

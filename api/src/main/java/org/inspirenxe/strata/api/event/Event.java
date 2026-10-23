@@ -16,11 +16,8 @@
 package org.inspirenxe.strata.api.event;
 
 import org.inspirenxe.strata.api.component.Component;
-import org.inspirenxe.strata.api.component.ComponentSnapshot;
 import org.inspirenxe.strata.api.event.cause.Cause;
 import org.inspirenxe.strata.api.event.cause.Origin;
-
-import java.util.Optional;
 
 /**
  * Base of every UI event. See the {@linkplain org.inspirenxe.strata.api.event package description} for the order
@@ -28,7 +25,7 @@ import java.util.Optional;
  *
  * <p>An event object is valid only while it is being delivered. Do not keep it and read it later: Strata may reuse
  * objects or make {@link #current()} change. To keep the state a component had when the event fired, take its
- * {@linkplain #snapshotOf(Component) snapshot}, which stays valid.</p>
+ * snapshot from a {@link SnapshotEvent}, which stays valid.</p>
  *
  * <p>Only Strata creates events. Do not implement this interface.</p>
  */
@@ -48,51 +45,6 @@ public interface Event {
      * @return the current component; never null
      */
     Component<?> current();
-
-    /**
-     * Returns the snapshot taken of a component when the event fired, before any handler or default behavior ran.
-     *
-     * <p>Snapshots are lazy: Strata takes them only when a handler for the event's type is on its path. The path
-     * is the target and, for a bubbling type, every ancestor the target had when the event fired. Strata then
-     * snapshots the target and each component on the path that has a handler for the type. Nothing else is
-     * captured. Only cancelable events take snapshots: a control's report fires after its change, so it carries the
-     * value from before the change instead, and paint and measure events take none.</p>
-     *
-     * <p>Each snapshot covers only its own component, not the component's children. A component that joins the
-     * path while the event is being delivered, for example because a handler moved the target to another
-     * container, has no snapshot.</p>
-     *
-     * @param component the component to look up
-     * @return the component's snapshot, or empty if none was taken of it for this event
-     */
-    Optional<ComponentSnapshot> snapshotOf(Component<?> component);
-
-    /**
-     * Returns the snapshot of the {@linkplain #target() target}. Present for every cancelable event that reaches a
-     * handler, except {@link org.inspirenxe.strata.api.component.Component#PAINT}, so such a handler can always call
-     * this.
-     *
-     * @return the target's snapshot; never null
-     * @throws IllegalStateException if no snapshot was taken for this event; see {@link #snapshotOf(Component)}
-     */
-    default ComponentSnapshot snapshot() {
-        return this.snapshotOf(this.target()).orElseThrow(() -> new IllegalStateException(
-                "No snapshot was taken for this event; only cancelable events take snapshots"));
-    }
-
-    /**
-     * Returns the snapshot of the {@linkplain #current() current} component. Present for a cancelable event other
-     * than {@link org.inspirenxe.strata.api.component.Component#PAINT} whose handler is running on the current
-     * component.
-     *
-     * @return the current component's snapshot; never null
-     * @throws IllegalStateException if no snapshot was taken of the current component; see
-     *                               {@link #snapshotOf(Component)}
-     */
-    default ComponentSnapshot currentSnapshot() {
-        return this.snapshotOf(this.current()).orElseThrow(() -> new IllegalStateException(
-                "No snapshot was taken of " + this.current() + " for this event"));
-    }
 
     /**
      * Returns what led to the event: the objects the change passed through and the context, such as who caused it

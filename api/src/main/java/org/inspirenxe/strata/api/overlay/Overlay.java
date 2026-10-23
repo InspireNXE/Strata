@@ -23,8 +23,9 @@ import org.inspirenxe.strata.api.event.control.ControlEvent;
  * One open popup or dialog; see {@link Overlays}.
  *
  * <p>An overlay is not a component, but it reports {@link Closable#CLOSED} and takes handlers of its own. Its events
- * reach only the handlers registered on the overlay itself. It never fires {@link Closable#CLOSE}; a window inside it
- * asks before the user closes it.</p>
+ * reach only the handlers registered on the overlay itself. It never fires {@link Closable#CLOSE}; content that is
+ * {@link Closable}, such as a window, a menu or a flyout, asks before Escape or a press outside closes the overlay,
+ * and a handler that cancels keeps it open.</p>
  *
  * <h2>Events</h2>
  * <ul>
@@ -39,6 +40,9 @@ import org.inspirenxe.strata.api.event.control.ControlEvent;
  * Overlay popup = factory.overlays().popup(list, button.bounds());
  * popup.onEvent(Closable.CLOSED, event -> button.setText("More"));
  * }</pre>
+ *
+ * <p>Use an overlay on the {@linkplain org.inspirenxe.strata.api.UiThread UI thread}. Closing it or registering a
+ * handler on it from another thread while it is open throws {@link IllegalStateException}.</p>
  *
  * <p>Strata provides this object. Do not implement this interface.</p>
  */

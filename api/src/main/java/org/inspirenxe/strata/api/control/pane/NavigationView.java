@@ -18,6 +18,7 @@ package org.inspirenxe.strata.api.control.pane;
 import org.inspirenxe.strata.api.ComponentFactory;
 import org.inspirenxe.strata.api.component.Component;
 import org.inspirenxe.strata.api.component.Focusable;
+import org.inspirenxe.strata.api.component.HasContextMenu;
 import org.inspirenxe.strata.api.component.HasCursor;
 import org.inspirenxe.strata.api.component.HasTooltip;
 import org.inspirenxe.strata.api.control.attribute.item.Activatable;
@@ -167,8 +168,8 @@ import java.util.function.Function;
  * <p>Get one from {@link org.inspirenxe.strata.api.ComponentFactory#navigationView()}. Do not implement this
  * interface.</p>
  */
-public interface NavigationView extends Component<NavigationView>, Focusable<NavigationView>,
-        HasCursor<NavigationView>, HasTooltip<NavigationView>, Titled<NavigationView>,
+public interface NavigationView extends Component<NavigationView>, Focusable<NavigationView>, HasCursor<NavigationView>,
+        HasTooltip<NavigationView>, HasContextMenu<NavigationView>, Titled<NavigationView>,
         SingleSelection<NavigationItem, NavigationView>, Activatable<NavigationView> {
     /**
      * Style key for behind the pane beside the content and the bar of {@code MINIMAL} (paint, optional).
@@ -236,6 +237,12 @@ public interface NavigationView extends Component<NavigationView>, Focusable<Nav
      * side.
      */
     String STYLE_PANE_PADDING = "nav.pane.padding";
+    /**
+     * Style key for how long the pane takes to slide in over the content from the view's left edge, in milliseconds
+     * (metric, optional). The pane is cut to its area while it slides and takes the pointer where it is drawn; it
+     * closes at once. Defaults to 0: the pane appears at once.
+     */
+    String STYLE_ANIMATION = "nav.animation";
     /**
      * The pane's width unless {@link #setPaneWidth} says otherwise, in UI units.
      */
@@ -393,12 +400,30 @@ public interface NavigationView extends Component<NavigationView>, Focusable<Nav
     NavigationView addFooterItem(NavigationEntry entry);
 
     /**
+     * Adds an entry at a place in the footer.
+     *
+     * @param index where it goes: 0 for the first, the number of footer entries for the last
+     * @param entry the entry
+     * @return this view
+     * @throws IndexOutOfBoundsException if the index is negative or greater than the number of footer entries
+     * @throws IllegalArgumentException if the entry belongs to a view or an item already, or was not made by Strata
+     */
+    NavigationView addFooterItem(int index, NavigationEntry entry);
+
+    /**
      * Removes an entry from the footer, as {@link #removeItem} does. Does nothing if the footer does not hold it.
      *
      * @param entry the entry
      * @return this view
      */
     NavigationView removeFooterItem(NavigationEntry entry);
+
+    /**
+     * Removes every entry from the footer, as {@link #removeFooterItem} does. The entries above the footer stay.
+     *
+     * @return this view
+     */
+    NavigationView clearFooterItems();
 
     /**
      * Returns every item of the view in the order selection indexes count them: the items above the footer depth

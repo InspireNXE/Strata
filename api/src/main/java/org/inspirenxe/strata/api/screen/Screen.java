@@ -28,6 +28,10 @@ import org.inspirenxe.strata.api.text.Text;
  *     <li>The host calls {@link #opened} with a handle the screen may keep.</li>
  *     <li>After {@link ScreenHandle#invalidate()}, the host calls {@link #build} again before the next frame and
  *     replaces the whole tree. Focus and hover start over.</li>
+ *     <li>When the user asks to close the screen, with the engine's or the window's close button or a control that
+ *     calls {@link ScreenHandle#requestClose()}, the host calls {@link #closeRequested} first, and the screen stays
+ *     open if it returns false. Closing from code with {@link ScreenHandle#close()}, and an engine that closes the
+ *     screen for reasons of its own, do not ask.</li>
  *     <li>When the screen closes, the host calls {@link #closed} and then detaches the tree.</li>
  * </ol>
  * <p>A screen object may be opened again after it closes; each opening builds a new tree.</p>
@@ -69,12 +73,27 @@ public interface Screen {
 
     /**
      * Returns the screen's title, which engines show or read out, such as in a window's title bar or through a
-     * screen reader. Hosts read it when the screen opens. The default is {@link Text#empty()}.
+     * screen reader. Hosts read it once, when the screen opens; to change the title of an open screen, call
+     * {@link ScreenHandle#setTitle}. The default is {@link Text#empty()}.
      *
      * @return the title
      */
     default Text title() {
         return Text.empty();
+    }
+
+    /**
+     * Called when the user asks to close the screen, before anything closes, so a screen with unsaved changes can
+     * refuse. A screen that refuses usually opens a dialog that asks whether to discard the changes, and calls
+     * {@link ScreenHandle#close()} once the user agrees; {@link #closed} runs only when the screen does close. Hosts
+     * call this for {@link ScreenHandle#requestClose()} and for the engine's or the window's own close button and
+     * keys, never for {@link ScreenHandle#close()}. The default returns true.
+     *
+     * @param handle the handle of this opening, the one passed to {@link #opened}
+     * @return true to let the screen close, false to keep it open
+     */
+    default boolean closeRequested(final ScreenHandle handle) {
+        return true;
     }
 
     /**

@@ -56,7 +56,9 @@ public final class InputEvents {
     public static final EventType<PointerButtonEvent> CLICK = EventType.bubbling("click", PointerButtonEvent.class);
     /**
      * The pointer moved more than 4 units with a button held that went down on the target. Bubbles. Positions are
-     * those of the original press.
+     * those of the original press. A handler may make the drag carry a payload with {@link DragEvent#startTransfer}.
+     * Default behavior: a list with a drag transfer drags its rows, and a text box pressed inside its selection drags
+     * the selected text.
      */
     public static final EventType<DragEvent> DRAG_START = EventType.bubbling("drag_start", DragEvent.class);
     /**
@@ -69,14 +71,48 @@ public final class InputEvents {
      */
     public static final EventType<DragEvent> DRAG_END = EventType.bubbling("drag_end", DragEvent.class);
     /**
+     * A drag that carries a transfer moved onto the target, which is now the deepest component under the pointer, or
+     * its nearest enabled ancestor when that is disabled. Direct. See {@link TransferEvent}.
+     */
+    public static final EventType<TransferEvent> DRAG_ENTER = EventType.direct("drag_enter", TransferEvent.class);
+    /**
+     * A drag that carries a transfer moved over the target. Bubbles from the component {@link #DRAG_ENTER} reached
+     * until a handler {@linkplain TransferEvent#accept accepts} or {@linkplain TransferEvent#reject rejects} it.
+     * Fired on every move, after any {@link #DRAG_EXIT} and {@link #DRAG_ENTER} for it. Default behavior: a list
+     * whose rows are being dragged accepts them over itself, to reorder them, and an editable text box accepts
+     * text.
+     */
+    public static final EventType<TransferEvent> DRAG_OVER = EventType.bubbling("drag_over", TransferEvent.class);
+    /**
+     * A drag that carries a transfer left the target, the target stopped being the component under the pointer, the
+     * pointer left the host, or the drag ended. Direct.
+     */
+    public static final EventType<TransferEvent> DRAG_EXIT = EventType.direct("drag_exit", TransferEvent.class);
+    /**
+     * The drag was released over the component that accepted it last, which is the target. Bubbles. The drop takes
+     * the event's {@linkplain TransferEvent#effect() effect} unless a handler
+     * {@linkplain TransferEvent#reject() rejects} it. Default behavior: a list moves its own dragged rows there, and a text box inserts the text.
+     */
+    public static final EventType<TransferEvent> DROP = EventType.bubbling("drop", TransferEvent.class);
+    /**
+     * The drag the target started a transfer for ended, after the {@link #DROP} if there was one. Direct, on the
+     * source. Its {@linkplain TransferEvent#effect() effect} is what the target took, or empty when nothing took it:
+     * after a {@link org.inspirenxe.strata.api.transfer.DropEffect#MOVE} the source removes what it gave away.
+     */
+    public static final EventType<TransferEvent> TRANSFER_DONE = EventType.direct("transfer_done", TransferEvent.class);
+    /**
      * A wheel or trackpad scrolled over the target. Bubbles, so an outer scrolling container receives scrolls its
      * children do not consume.
      */
     public static final EventType<ScrollEvent> SCROLL = EventType.bubbling("scroll", ScrollEvent.class);
     /**
      * A key went down, repeated or came up. Fired at the focused component or, when nothing has focus, at the
-     * content of the top dialog, or else at the screen's content. Bubbles. If nothing consumes an Escape press, the
-     * top overlay that is not a toast closes. If nothing consumes a Tab press or repeat without Control or Alt, focus
+     * content of the top dialog, or else at the screen's content. Bubbles. If nothing consumes a press or repeat, the
+     * host runs the first enabled command whose shortcut matches it (see
+     * {@link org.inspirenxe.strata.api.command.Shortcuts}), then, where the platform uses mnemonics, Alt with a letter
+     * acts on the control whose caption has that mnemonic (see
+     * {@link org.inspirenxe.strata.api.control.button.Button}), and then Enter or Escape presses a default or cancel
+     * button. If nothing consumes an Escape press, the top overlay that is not a toast closes. If nothing consumes a Tab press or repeat without Control or Alt, focus
      * moves to the next tabbable component (with Shift, the previous). Default behavior: a button presses on Enter or
      * Space; a text box edits and moves its caret.
      */
@@ -86,6 +122,22 @@ public final class InputEvents {
      * behavior: a text box inserts it.
      */
     public static final EventType<CharEvent> CHAR = EventType.bubbling("char", CharEvent.class);
+    /**
+     * Focus entered the target's subtree: the target is an ancestor of the component that gained focus and was not
+     * an ancestor of the one that lost it. Direct. See {@link #FOCUS_EXIT} for the order of the four focus events.
+     * The event's {@code other()} is the component that lost focus. Fired on any component, panels included, and
+     * only on one with a handler for it. No default behavior.
+     */
+    public static final EventType<FocusEvent> FOCUS_ENTER = EventType.direct("focus_enter", FocusEvent.class);
+    /**
+     * Focus left the target's subtree: the target is an ancestor of the component that lost focus and not an
+     * ancestor of the one that gained it. Direct. When focus moves from A to B, {@code FOCUS_LOST} fires on A, then
+     * this on each ancestor of A that is not an ancestor of B, innermost first, then {@link #FOCUS_ENTER} on each
+     * ancestor of B that is not an ancestor of A, outermost first, then {@code FOCUS_GAINED} on B. The event's
+     * {@code other()} is the component that gained focus. Fired on any component, panels included, and only on one
+     * with a handler for it, so a focus change costs nothing more without handlers. No default behavior.
+     */
+    public static final EventType<FocusEvent> FOCUS_EXIT = EventType.direct("focus_exit", FocusEvent.class);
     /**
      * The held modifier keys changed, by a modifier key going down or up or by input arriving with different
      * modifiers. Fired at the screen's content and at the content of each open overlay. Direct. No default

@@ -16,9 +16,12 @@
 package org.inspirenxe.strata.api.control.collection;
 
 import org.inspirenxe.strata.api.component.Component;
+import org.inspirenxe.strata.api.component.Focusable;
+import org.inspirenxe.strata.api.component.HasContextMenu;
 import org.inspirenxe.strata.api.component.HasCursor;
 import org.inspirenxe.strata.api.component.HasTooltip;
 import org.inspirenxe.strata.api.control.attribute.item.Activatable;
+import org.inspirenxe.strata.api.control.attribute.item.CellEditing;
 import org.inspirenxe.strata.api.control.attribute.item.CellSource;
 import org.inspirenxe.strata.api.control.attribute.item.ItemSource;
 import org.inspirenxe.strata.api.control.attribute.item.RowView;
@@ -33,22 +36,30 @@ import org.inspirenxe.strata.api.text.Text;
 import java.util.List;
 import java.util.Optional;
 import java.util.function.Function;
+import java.util.function.Predicate;
 
 /**
  * Items in a hierarchy, each row indented under its parent, with an arrow to show or hide an item's children.
  *
  * <p>The tree asks a children function for an item's children when it needs them, so a large hierarchy costs only
- * what is expanded. The rows shown are the roots and, under each expanded item, its children, depth first. They live
- * in a {@link ListView}, which builds only the rows in view and scrolls, selects and activates the same way.</p>
+ * what is expanded. With {@link #setHasChildren} it asks only when an item opens, and keeps what it got. The rows shown
+ * are the roots and, under each expanded item, its children, depth first. They live in a {@link ListView}, which builds
+ * only the rows in view and scrolls, selects and activates the same way.</p>
  *
  * <p>Each row starts {@linkplain #setIndent indented} by its depth, then shows a 12-unit arrow column, then the cell.
  * The arrow points right for a collapsed item and down for an expanded one, and is missing for an item with no
  * children. Clicking the arrow flips the item. Right expands the selected item or, if it is expanded, selects its
- * first child; Left collapses it or, if it is collapsed, selects its parent. Up, Down, Page Up, Page Down, Home, End
- * and Enter work as in a list.</p>
+ * first child; Left collapses it or, if it is collapsed, selects its parent. Those moves select as Up and Down do, so
+ * in {@link SelectionMode#MULTIPLE} mode they ask {@link MultiSelection#SELECT_MANY} and Shift extends the range.
+ * Up, Down, Page Up, Page Down, Home, End and Enter work as in a list. With a {@linkplain #setCellEditor cell
+ * editor} the cell after the indent and arrow is edited in place, as {@link CellEditing} describes.</p>
  *
  * <p>Items are told apart by their key, the item itself unless {@linkplain #setKeyFunction set} otherwise, and the
  * tree remembers which keys are expanded across {@link #setItems} calls.</p>
+ *
+ * <p>The tree is focusable and tabbable, and keeps focus on its rows: {@link #requestFocus()} focuses the rows,
+ * {@link #isFocused()} is true while they have focus, and the tab order holds the tree once.
+ * {@link Focusable#FOCUS_GAINED} and {@link Focusable#FOCUS_LOST} fire on the tree.</p>
  *
  * <p>The tree fires its own events. The selection and activation events carry row indexes, so read the item with
  * {@code tree.shownItems().get(e.value())}. The row list is private to the tree: its {@link ListView} events never
@@ -94,9 +105,9 @@ import java.util.function.Function;
  *
  * @param <T> the type of the items
  */
-public interface TreeView<T> extends Component<TreeView<T>>, HasCursor<TreeView<T>>, HasTooltip<TreeView<T>>,
-        ItemSource<T, TreeView<T>>, CellSource<T, TreeView<T>>,
-        MultiSelection<T, TreeView<T>>, Activatable<TreeView<T>>, RowView<TreeView<T>> {
+public interface TreeView<T> extends Component<TreeView<T>>, Focusable<TreeView<T>>, HasCursor<TreeView<T>>,
+        HasTooltip<TreeView<T>>, HasContextMenu<TreeView<T>>, ItemSource<T, TreeView<T>>, CellSource<T, TreeView<T>>,
+        MultiSelection<T, TreeView<T>>, Activatable<TreeView<T>>, RowView<TreeView<T>>, CellEditing<T, TreeView<T>> {
     /**
      * Style key for the expand arrows (paint, optional).
      */
@@ -136,10 +147,12 @@ public interface TreeView<T> extends Component<TreeView<T>>, HasCursor<TreeView<
     List<T> items();
 
     /**
-     * Replaces the top-level items, the roots. Expanded keys and the selection carry over to items with the same key.
+     * Replaces the top-level items, the roots. Expanded keys and the selection carry over to items with the same key,
+     * as {@link ItemSource} describes.
      *
      * @param items the new roots, copied
      * @return this tree
+     * @throws NullPointerException if a root is null
      */
     @Override
     TreeView<T> setItems(List<? extends T> items);
@@ -148,10 +161,38 @@ public interface TreeView<T> extends Component<TreeView<T>>, HasCursor<TreeView<
      * Sets how the tree finds an item's children. The rows are worked out again.
      *
      * @param children returns an item's children, in order; an empty list for a leaf. By default every item is a
-     *     leaf.
+     *     leaf. An item that would show under itself, because the children lead back to one of its ancestors, shows
+     *     there as a leaf.
      * @return this tree
      */
     TreeView<T> setChildren(Function<? super T, ? extends List<? extends T>> children);
+
+    /**
+     * Sets how the tree tells whether an item has children without asking for them, for a hierarchy that is loaded
+     * as it opens, such as folders. Without it the tree asks {@linkplain #setChildren the children function} for
+     * every shown item each time it works out the rows, to know whether to draw its arrow. With it the tree asks this
+     * test for the arrow, asks for an item's children only when the item is expanded, and keeps them until
+     * {@link #refresh(Object)} for that item, {@link #refresh()}, {@link #setItems}, {@link #setChildren} or this
+     * method. An item the test passes whose children turn out empty shows no arrow once expanded. A search by
+     * {@link #selectItem} or {@link #selectItems} looks only under items the test passes, and {@link #expandAll()}
+     * asks for the children of every one of them.
+     *
+     * @param hasChildren returns whether an item has children, or {@code null} to ask the children function as
+     *     before, which is the default
+     * @return this tree
+     */
+    TreeView<T> setHasChildren(Predicate<? super T> hasChildren);
+
+    /**
+     * Asks for an item's children again, for when its children or its content changed, and works out and builds
+     * the rows in view again. With {@linkplain #setHasChildren a test for children} the other items keep the
+     * children the tree has; without one, the tree asks every shown item again, as {@link #refresh()} does.
+     *
+     * @param item the item, found by its key
+     * @return this tree
+     */
+    @Override
+    TreeView<T> refresh(T item);
 
     /**
      * Replaces the cell factory. Every row is built again.
@@ -160,14 +201,6 @@ public interface TreeView<T> extends Component<TreeView<T>>, HasCursor<TreeView<
      * @return this tree
      */
     TreeView<T> setCellFactory(Function<? super T, ? extends Component<?>> cellFactory);
-
-    /**
-     * Sets what identifies an item.
-     *
-     * @param keyFunction returns an item's key, compared with {@link Object#equals}
-     * @return this tree
-     */
-    TreeView<T> setKeyFunction(Function<? super T, ?> keyFunction);
 
     /**
      * Works out the rows again and builds them, for when the children of shown items changed.
@@ -238,26 +271,28 @@ public interface TreeView<T> extends Component<TreeView<T>>, HasCursor<TreeView<
      *
      * @param indent the indent in UI units
      * @return this tree
-     * @throws IllegalArgumentException if {@code indent} is negative or infinite
+     * @throws IllegalArgumentException if {@code indent} is negative or not finite
      */
     TreeView<T> setIndent(float indent);
 
     /**
-     * Sets the height of every row.
-     *
-     * @param height the row height in UI units
-     * @return this tree
-     * @throws IllegalArgumentException if {@code height} is not greater than 0 or is infinite
-     */
-    TreeView<T> setRowHeight(float height);
-
-    /**
      * Sets the text shown while there are no roots.
      *
-     * @param placeholder the text, or null for none
+     * @param placeholder the text, or empty for none
      * @return this tree
      */
     TreeView<T> setPlaceholder(Text placeholder);
+
+    /**
+     * Sets the names that type-ahead matches while focus is in the tree, or turns it off. It works as
+     * {@link ListView#setTypeAhead} describes, over the {@linkplain #shownItems() shown rows}; it never expands an
+     * item to look inside it.
+     *
+     * @param name returns what an item is called: a {@link Text}, or any other value, named by its appearance's
+     *     name. By default the item itself. Null turns type-ahead off.
+     * @return this tree
+     */
+    TreeView<T> setTypeAhead(Function<? super T, ?> name);
 
     /**
      * Returns the selected row.

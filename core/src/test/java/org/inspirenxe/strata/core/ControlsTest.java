@@ -251,13 +251,13 @@ class ControlsTest {
         }
 
         @Test
-        void newOptionsKeepAnEqualSelection() {
+        void newOptionsKeepAnEqualSelectionOrSelectNothing() {
             this.show();
             this.combo.select(1);
             this.combo.setItems(List.of("z", "b"));
             assertEquals(1, this.combo.selectedIndex());
             this.combo.setItems(List.of("x", "y"));
-            assertEquals(0, this.combo.selectedIndex());
+            assertEquals(-1, this.combo.selectedIndex());
         }
     }
 

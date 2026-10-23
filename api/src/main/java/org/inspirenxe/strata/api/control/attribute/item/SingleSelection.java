@@ -16,7 +16,7 @@
 package org.inspirenxe.strata.api.control.attribute.item;
 
 /**
- * A control that only ever selects one entry, such as a combo box, a grid, a tab bar, a menu bar or a radio group.
+ * A control that only ever selects one entry, such as a combo box, a tab bar, a menu bar or a radio group.
  * It adds nothing to {@link Selection}; it says that the current entry is the whole selection. Controls that can
  * select several entries implement {@link MultiSelection} instead.
  *

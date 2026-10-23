@@ -15,14 +15,20 @@
  */
 package org.inspirenxe.strata.core.control.collection;
 
+import org.inspirenxe.strata.api.animation.Animator;
+import org.inspirenxe.strata.api.appearance.Appearances;
 import org.inspirenxe.strata.api.component.Component;
+import org.inspirenxe.strata.api.control.attribute.item.CellEditor;
+import org.inspirenxe.strata.api.control.attribute.item.ItemDragging.ItemMove;
 import org.inspirenxe.strata.api.control.attribute.item.SelectionMode;
 import org.inspirenxe.strata.api.control.collection.ListView;
+import org.inspirenxe.strata.api.event.input.CharEvent;
 import org.inspirenxe.strata.api.event.input.DragEvent;
 import org.inspirenxe.strata.api.event.input.KeyEvent;
 import org.inspirenxe.strata.api.event.input.PointerButtonEvent;
 import org.inspirenxe.strata.api.event.input.PointerEvent;
 import org.inspirenxe.strata.api.event.input.ScrollEvent;
+import org.inspirenxe.strata.api.event.input.TransferEvent;
 import org.inspirenxe.strata.api.extension.ArrangeContext;
 import org.inspirenxe.strata.api.extension.MeasureContext;
 import org.inspirenxe.strata.api.extension.Painter;
@@ -31,21 +37,30 @@ import org.inspirenxe.strata.api.geometry.Rect;
 import org.inspirenxe.strata.api.geometry.Size;
 import org.inspirenxe.strata.api.input.Key;
 import org.inspirenxe.strata.api.input.KeyAction;
+import org.inspirenxe.strata.api.input.Modifier;
+import org.inspirenxe.strata.api.input.Modifiers;
 import org.inspirenxe.strata.api.input.MouseButton;
 import org.inspirenxe.strata.api.layout.ScrollPanel;
 import org.inspirenxe.strata.api.text.Text;
 import org.inspirenxe.strata.api.text.TextStyle;
 import org.inspirenxe.strata.api.theme.Paint;
 import org.inspirenxe.strata.api.theme.Theme;
+import org.inspirenxe.strata.api.transfer.DropEffect;
+import org.inspirenxe.strata.api.transfer.Transfer;
 import org.inspirenxe.strata.core.control.Caption;
-import org.inspirenxe.strata.core.control.Rings;
+import org.inspirenxe.strata.core.control.Motion;
+import org.inspirenxe.strata.core.layout.EdgeScroll;
 import org.inspirenxe.strata.core.layout.ScrollTrack;
+import org.inspirenxe.strata.core.layout.ThumbDrag;
 import org.inspirenxe.strata.core.node.BuiltInComposite;
 import org.inspirenxe.strata.core.node.ComponentFactoryImpl;
+import org.inspirenxe.strata.core.node.Root;
 import org.inspirenxe.strata.core.text.TextLine;
 
 import java.util.ArrayList;
+import java.util.BitSet;
 import java.util.Collection;
+import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -57,11 +72,18 @@ import java.util.Set;
 import java.util.TreeSet;
 import java.util.function.Function;
 import java.util.function.IntConsumer;
+import java.util.function.IntUnaryOperator;
 
 /**
  * The core {@link ListView}. Rows are built during arrange, once the viewport is known: rows that scrolled out are
  * removed, rows that scrolled in are built, measured and placed, and the change schedules one more layout. Rows sit
- * inside the list's border widths. A wheel notch scrolls one row and its spacing.
+ * inside the list's border widths. A wheel notch scrolls one row and its spacing. Arrange also makes the rectangles
+ * painting reads, the rows', the edges' and the thumb's, so a frame with nothing new to draw allocates nothing.
+ *
+ * <p>A wheel notch and {@link #scrollToIndex}, which the arrow keys use, glide to their offset over the theme's
+ * {@value ScrollPanel#STYLE_SMOOTH} time through a {@link Motion}; a further notch adds to where the list is headed.
+ * {@link #setScrollY} and the thumb move at once, as everything does when the time is 0, the list is detached, or it
+ * has not been laid out yet.</p>
  *
  * @param <T> the type of the items
  */
@@ -75,10 +97,20 @@ public final class ListViewImpl<T> extends BuiltInComposite<ListView<T>> impleme
 
     private final Map<Integer, Component<?>> rows;
     private final ScrollTrack bar;
+    private final ThumbDrag thumbDrag;
     private final Runnable drawRows;
+    private final Runnable drawDrop;
     private List<T> items;
     private Function<? super T, ? extends Component<?>> cellFactory;
     private Function<? super T, ?> keyFunction;
+    // What type-ahead matches, or null while it is off
+    private Function<? super T, ?> typeAheadName;
+    private final TypeAhead typeAhead;
+    // Editing in place: the list's own editor and session, or the owner's route, and the row kept built while edited
+    private CellEditor<T> cellEditor;
+    private final CellEditSession session;
+    private EditRoute editRoute;
+    private int pinnedRow;
     private float rowHeight;
     private float rowSpacing;
     private int selectedIndex;
@@ -92,21 +124,48 @@ public final class ListViewImpl<T> extends BuiltInComposite<ListView<T>> impleme
     private TextLine placeholderLine = TextLine.EMPTY;
     private boolean rowsStale;
     private int reveal;
+    private boolean dragScroll = true;
+    // Dragging rows: what makes their payload, the rows a drag carries, and where they would land and its line
+    private Function<? super List<T>, Transfer> dragTransfer;
+    private List<Integer> draggedRows;
+    private int dropGap = -1;
+    // A plain press on one of several selected rows of a list whose rows drag, which selects that row alone only on
+    // a release that ended no drag, so a drag can carry them all
+    private int pendingPick = -1;
+    private Rect dropMark;
+    private Paint drop;
 
     // Layout results
     private float scrollY;
+    private long smoothMillis;
+    private final Motion glide = new Motion(offset -> this.scrollTo(offset));
     private float maxScrollY;
+    private boolean arranged;
     private boolean barShown;
     private Rect viewport;
+    // The viewport as drawn: mirrored inside the bounds right to left, where the rows are worked out as for left to
+    // right and the node mirrors them
+    private Rect shownViewport;
+    // Where rows are clipped and hit: the viewport, or the centered column inside it
+    private Rect rowClip;
     private float rowWidth;
     private float rowX;
     // Set for a list the factory made, which follows the theme's row width and edges
     private boolean standalone;
 
+    // Made during arrange for painting: each built row's index and rectangle, its ring once first drawn, the edge
+    // lines and the thumb
+    private int[] paintIndex;
+    private Rect[] paintRect;
+    private Rect[][] paintRing;
+    private int paintCount;
+    private Rect[] edges;
+    private Rect thumbRect;
+    // The selected set as bits, so painting tests a row without boxing its index
+    private final BitSet chosenBits;
+
     // Pointer
     private float pointerY;
-    private boolean dragging;
-    private float dragGrab;
 
     // Theme
     private Paint background;
@@ -148,17 +207,31 @@ public final class ListViewImpl<T> extends BuiltInComposite<ListView<T>> impleme
         super(ui);
         this.rows = new HashMap<>();
         this.bar = new ScrollTrack(true);
+        this.thumbDrag = new ThumbDrag(this.bar, true);
         this.drawRows = this::drawRows;
+        this.drawDrop = () -> this.drop.paint(this.painter, this.dropMark);
         this.items = List.of();
         this.cellFactory = Objects.requireNonNull(cellFactory, "cellFactory");
         this.keyFunction = Function.identity();
+        this.typeAheadName = Function.identity();
+        this.typeAhead = new TypeAhead();
+        this.session = new CellEditSession(ui);
+        this.pinnedRow = -1;
         this.rowHeight = DEFAULT_ROW_HEIGHT;
         this.selectedIndex = -1;
         this.chosen = new TreeSet<>();
+        this.chosenBits = new BitSet();
+        this.paintIndex = new int[0];
+        this.paintRect = new Rect[0];
+        this.paintRing = new Rect[0][];
+        this.edges = new Rect[0];
+        this.thumbRect = Rect.ZERO;
         this.mode = SelectionMode.SINGLE;
         this.anchor = -1;
         this.reveal = -1;
         this.viewport = Rect.ZERO;
+        this.shownViewport = Rect.ZERO;
+        this.rowClip = Rect.ZERO;
         this.background = Paint.NONE;
         this.row = Paint.NONE;
         this.rowHovered = Paint.NONE;
@@ -167,6 +240,7 @@ public final class ListViewImpl<T> extends BuiltInComposite<ListView<T>> impleme
         this.thumbHovered = Paint.NONE;
         this.track = Paint.NONE;
         this.placeholderStyle = TextStyle.DEFAULT;
+        this.placeholder = Text.empty();
     }
 
     // ------------------------------------------------------------------
@@ -180,34 +254,59 @@ public final class ListViewImpl<T> extends BuiltInComposite<ListView<T>> impleme
 
     @Override
     public ListView<T> setItems(final List<? extends T> items) {
+        final List<T> next = Items.copyOf(items);
+        this.replaceItems(next, this.keyMoves(next));
+        return this;
+    }
+
+    /**
+     * Works out where the selected rows move when the items become {@code next}, by key, as
+     * {@link Items#moves} describes. Changes nothing, so an owner can run it before it changes its own state.
+     *
+     * @param next the new items
+     * @return the new index of each selected row, or -1
+     */
+    IntUnaryOperator keyMoves(final List<T> next) {
+        final Set<Integer> rows = new HashSet<>(this.chosen);
+        if (this.selectedIndex >= 0) {
+            rows.add(this.selectedIndex);
+        }
+        return Items.moves(this.items, next, this.keyFunction, rows);
+    }
+
+    /**
+     * Replaces the items and moves each selected row where {@code moves} says, dropping rows it sends to -1. The
+     * current row moves too, or becomes the last selected row if it went. Calls nothing a developer wrote before the
+     * new state is in place, then reports {@code SELECTED_MANY} and {@code SELECTED} as {@link #setItems} does.
+     *
+     * @param next the new items, which the list keeps as they are
+     * @param moves the new index of each selected row, or -1
+     */
+    void replaceItems(final List<T> next, final IntUnaryOperator moves) {
+        this.cancelEdits();
         final Optional<T> before = this.selected();
         final int beforeIndex = this.selectedIndex;
         final List<Integer> beforeSet = List.copyOf(this.chosen);
         final List<T> beforeItems = this.selectedItems();
-        final Set<Object> keys = new HashSet<>();
-        for (final T item : beforeItems) {
-            keys.add(this.keyFunction.apply(item));
-        }
-        final Object currentKey = before.map(this.keyFunction).orElse(null);
-        this.items = List.copyOf(items);
-        int index = -1;
-        this.chosen.clear();
-        for (int i = 0; i < this.items.size(); i++) {
-            final Object key = this.keyFunction.apply(this.items.get(i));
-            if (keys.contains(key)) {
-                this.chosen.add(i);
-            }
-            if (index < 0 && before.isPresent() && Objects.equals(currentKey, key)) {
-                index = i;
+        final TreeSet<Integer> set = new TreeSet<>();
+        for (final int row : this.chosen) {
+            final int moved = moves.applyAsInt(row);
+            if (moved >= 0) {
+                set.add(moved);
             }
         }
-        if (index < 0 && !this.chosen.isEmpty()) {
-            index = this.chosen.last();
+        int index = beforeIndex < 0 ? -1 : moves.applyAsInt(beforeIndex);
+        if (index < 0 && !set.isEmpty()) {
+            index = set.last();
         }
         if (index >= 0 && this.mode == SelectionMode.SINGLE) {
-            this.chosen.clear();
-            this.chosen.add(index);
+            set.clear();
+            set.add(index);
         }
+        this.items = next;
+        this.chosen.clear();
+        this.chosen.addAll(set);
+        this.chosenChanged();
         this.selectedIndex = index;
         this.anchor = index;
         this.rowsStale = true;
@@ -218,13 +317,44 @@ public final class ListViewImpl<T> extends BuiltInComposite<ListView<T>> impleme
         if (index != beforeIndex || !this.selected().equals(before)) {
             this.selectionChanged(beforeIndex);
         }
-        return this;
     }
 
     @Override
     public ListView<T> refresh() {
+        this.cancelEdits();
         this.rowsStale = true;
         this.invalidateLayout();
+        return this;
+    }
+
+    /**
+     * Returns the components built for the rows in view, for an owner that lays them out again or measures them.
+     */
+    Collection<Component<?>> builtRows() {
+        return this.rows.values();
+    }
+
+    @Override
+    public ListView<T> refresh(final T item) {
+        final Object key = this.keyFunction.apply(item);
+        boolean dropped = false;
+        for (final Iterator<Map.Entry<Integer, Component<?>>> it = this.rows.entrySet().iterator(); it.hasNext(); ) {
+            final Map.Entry<Integer, Component<?>> entry = it.next();
+            if (Objects.equals(key, this.keyFunction.apply(this.items.get(entry.getKey())))) {
+                if (entry.getKey() == this.pinnedRow) {
+                    // The row being edited goes back to its cell first, which builds it again anyway
+                    this.cancelEdits();
+                    return this.refresh(item);
+                }
+                it.remove();
+                this.removeChild(entry.getValue());
+                dropped = true;
+            }
+        }
+        if (dropped) {
+            // The next arrange builds the dropped rows again, as rows scrolled into view
+            this.invalidateLayout();
+        }
         return this;
     }
 
@@ -238,6 +368,172 @@ public final class ListViewImpl<T> extends BuiltInComposite<ListView<T>> impleme
     public ListView<T> setKeyFunction(final Function<? super T, ?> keyFunction) {
         this.keyFunction = Objects.requireNonNull(keyFunction, "keyFunction");
         return this;
+    }
+
+    @Override
+    public ListView<T> setTypeAhead(final Function<? super T, ?> name) {
+        this.typeAheadName = name;
+        this.typeAhead.reset();
+        return this;
+    }
+
+    // ------------------------------------------------------------------
+    // Editing in place
+    // ------------------------------------------------------------------
+
+    @Override
+    public ListView<T> setCellEditor(final CellEditor<T> editor) {
+        this.cellEditor = editor;
+        return this;
+    }
+
+    @Override
+    public boolean isEditing() {
+        return this.session.isEditing();
+    }
+
+    @Override
+    public ListView<T> cancelEdit() {
+        this.session.cancel();
+        return this;
+    }
+
+    /**
+     * Makes the owner of this list edit its rows: the list's triggers go to the route, and the list's own editor is
+     * not used.
+     *
+     * @param route starts and cancels the owner's edits
+     */
+    void routeEdits(final EditRoute route) {
+        this.editRoute = Objects.requireNonNull(route, "route");
+    }
+
+    /**
+     * Ends the edit going on, the owner's or the list's own, before the rows change under it.
+     */
+    private void cancelEdits() {
+        if (this.editRoute != null) {
+            this.editRoute.cancel();
+        } else {
+            this.session.cancel();
+        }
+    }
+
+    /**
+     * Starts an edit of a row for the user, through the owner's route or with the list's own editor.
+     *
+     * @param row the row
+     * @param x the pointer's x for a double press, or NaN for a key or a character
+     * @param codePoint the character that started the edit, or -1
+     * @param modifiers the modifiers held
+     * @return true if the row is editable, so the trigger is used up even when a handler cancels the edit
+     */
+    private boolean startEdit(final int row, final float x, final int codePoint, final Modifiers modifiers) {
+        if (row < 0 || row >= this.items.size()) {
+            return false;
+        }
+        if (this.editRoute != null) {
+            return this.editRoute.edit(row, x, codePoint, modifiers);
+        }
+        final CellEditor<T> editor = this.cellEditor;
+        if (editor == null) {
+            return false;
+        }
+        final T item = this.items.get(row);
+        this.request(EDIT_CELL, item, value -> this.beginEdit(editor, row, item, codePoint, modifiers));
+        return true;
+    }
+
+    /**
+     * Puts the editor in place of a row's cell, keeps the row built and focuses the editor.
+     */
+    private void beginEdit(final CellEditor<T> editor, final int row, final T item, final int codePoint,
+                           final Modifiers modifiers) {
+        if (this.rowFor(row) == null) {
+            return;
+        }
+        final Component<?> component = this.session.begin(editor, item,
+                value -> this.report(CELL_EDITED, (Object) value, (Object) item),
+                () -> this.dropRow(row), this::requestFocus);
+        final Component<?> old = this.rows.remove(row);
+        if (old != null) {
+            this.removeChild(old);
+        }
+        this.rows.put(row, component);
+        this.addContent(component);
+        this.pinnedRow = row;
+        this.invalidateLayout();
+        this.session.focus(codePoint, modifiers);
+    }
+
+    /**
+     * Returns the component built for a row, scrolling it into view and laying out first if it is not built yet.
+     *
+     * @param row the row
+     * @return the row's component, or null if it could not be built, as while the list is detached
+     */
+    Component<?> rowFor(final int row) {
+        if (this.rowsStale || !this.rows.containsKey(row)) {
+            // Pinned, the row is built by the next layout even while a smooth scroll has not reached it
+            final int pinned = this.pinnedRow;
+            this.pinnedRow = row;
+            this.scrollToIndex(row);
+            final Root root = this.hostRoot();
+            if (root != null && this.isAttached()) {
+                root.layout();
+            }
+            if (this.rowsStale || !this.rows.containsKey(row)) {
+                this.pinnedRow = pinned;
+                return null;
+            }
+        }
+        return this.rows.get(row);
+    }
+
+    /**
+     * Keeps a row built while it scrolls out of view, for the edit going on in it.
+     *
+     * @param row the row
+     */
+    void pin(final int row) {
+        this.pinnedRow = row;
+    }
+
+    /**
+     * Drops a row's component so the next layout builds it again from the cell factory, and stops keeping it built.
+     *
+     * @param row the row
+     */
+    void dropRow(final int row) {
+        final Component<?> component = this.rows.remove(row);
+        if (component != null) {
+            this.removeChild(component);
+        }
+        if (this.pinnedRow == row) {
+            this.pinnedRow = -1;
+        }
+        this.invalidateLayout();
+    }
+
+    /**
+     * Starts and cancels the edits of a control that shows its rows in this list.
+     */
+    interface EditRoute {
+        /**
+         * Starts an edit of a row for the user.
+         *
+         * @param row the row
+         * @param x the pointer's x for a double press, or NaN
+         * @param codePoint the character that started the edit, or -1
+         * @param modifiers the modifiers held
+         * @return true if the row is editable
+         */
+        boolean edit(int row, float x, int codePoint, Modifiers modifiers);
+
+        /**
+         * Ends the edit going on with no change, before the rows change.
+         */
+        void cancel();
     }
 
     @Override
@@ -337,10 +633,7 @@ public final class ListViewImpl<T> extends BuiltInComposite<ListView<T>> impleme
     @Override
     public ListView<T> selectItems(final Collection<? extends T> items) {
         // The first row of each key, as selectItem finds it
-        final Map<Object, Integer> rows = new HashMap<>();
-        for (int i = 0; i < this.items.size(); i++) {
-            rows.putIfAbsent(this.keyFunction.apply(this.items.get(i)), i);
-        }
+        final Map<Object, Integer> rows = Items.firstIndexes(this.items, this.keyFunction);
         final List<Integer> indexes = new ArrayList<>(items.size());
         for (final T item : items) {
             final Integer index = item == null ? null : rows.get(this.keyFunction.apply(item));
@@ -378,6 +671,16 @@ public final class ListViewImpl<T> extends BuiltInComposite<ListView<T>> impleme
     }
 
     /**
+     * Brings the bits painting reads up to date with the selected set.
+     */
+    private void chosenChanged() {
+        this.chosenBits.clear();
+        for (final int index : this.chosen) {
+            this.chosenBits.set(index);
+        }
+    }
+
+    /**
      * Replaces the selected set and the current row, reporting the set first and then the current row, each only if
      * it changed.
      */
@@ -386,6 +689,7 @@ public final class ListViewImpl<T> extends BuiltInComposite<ListView<T>> impleme
         final int previous = this.selectedIndex;
         this.chosen.clear();
         this.chosen.addAll(set);
+        this.chosenChanged();
         this.selectedIndex = current;
         if (!before.equals(List.copyOf(this.chosen))) {
             this.manyChanged(before);
@@ -402,13 +706,13 @@ public final class ListViewImpl<T> extends BuiltInComposite<ListView<T>> impleme
      * @param indexes the rows to select, or null
      * @param wanted the row the user's action made current
      */
-    public void applyMany(final List<Integer> indexes, final int wanted) {
+    void applyMany(final List<Integer> indexes, final int wanted) {
         if (indexes == null) {
             return;
         }
         final TreeSet<Integer> set = new TreeSet<>();
         for (final Integer index : indexes) {
-            if (index != null && index >= 0 && index < this.items.size()) {
+            if (Items.isIndex(index, this.items.size())) {
                 set.add(index);
             }
         }
@@ -438,8 +742,16 @@ public final class ListViewImpl<T> extends BuiltInComposite<ListView<T>> impleme
     }
 
     /**
-     * Picks a row with the pointer or the keys in MULTIPLE mode: alone, added or removed with Control, or as the
-     * range from the anchor with Shift.
+     * Returns the platform's shortcut modifier, which adds a clicked entry to the selection: the host's, or Control
+     * while the control is not on a screen.
+     */
+    private Modifier shortcutModifier() {
+        return this.hostRoot() == null ? Modifier.CONTROL : this.hostRoot().shortcutModifier();
+    }
+
+    /**
+     * Picks a row with the pointer or the keys in MULTIPLE mode: alone, added or removed with the shortcut modifier,
+     * or as the range from the anchor with Shift.
      */
     private void userPick(final int index, final boolean control, final boolean shift, final boolean single) {
         if (shift) {
@@ -469,13 +781,7 @@ public final class ListViewImpl<T> extends BuiltInComposite<ListView<T>> impleme
 
     @Override
     public ListView<T> selectItem(final T item) {
-        final Object key = this.keyFunction.apply(item);
-        for (int i = 0; i < this.items.size(); i++) {
-            if (Objects.equals(key, this.keyFunction.apply(this.items.get(i)))) {
-                return this.select(i);
-            }
-        }
-        return this.select(-1);
+        return this.select(Items.indexOf(this.items, this.keyFunction, item));
     }
 
     @Override
@@ -496,8 +802,13 @@ public final class ListViewImpl<T> extends BuiltInComposite<ListView<T>> impleme
     }
 
     @Override
+    public Text placeholder() {
+        return this.placeholder;
+    }
+
+    @Override
     public ListView<T> setPlaceholder(final Text placeholder) {
-        this.placeholder = placeholder;
+        this.placeholder = Objects.requireNonNull(placeholder, "placeholder");
         this.invalidateLayout();
         return this;
     }
@@ -509,8 +820,37 @@ public final class ListViewImpl<T> extends BuiltInComposite<ListView<T>> impleme
 
     @Override
     public ListView<T> setScrollY(final float scrollY) {
+        if (Float.isNaN(scrollY)) {
+            throw new IllegalArgumentException("A scroll offset must not be NaN");
+        }
+        this.glide.stop();
         this.scrollTo(scrollY);
         return this;
+    }
+
+    @Override
+    public boolean isDragScroll() {
+        return this.dragScroll;
+    }
+
+    @Override
+    public ListView<T> setDragScroll(final boolean dragScroll) {
+        this.dragScroll = dragScroll;
+        return this;
+    }
+
+    @Override
+    protected boolean onEdgeScroll(final float x, final float y) {
+        if (!this.dragScroll || !this.arranged || !(x >= this.shownViewport.x() && x < this.shownViewport.right())) {
+            return false;
+        }
+        final float step = EdgeScroll.step(y, this.viewport.y(), this.viewport.bottom(), this.step(), this.scrollY,
+                this.maxScrollY);
+        if (step == 0f) {
+            return false;
+        }
+        this.glide.stop();
+        return this.scrollTo(this.scrollY + step);
     }
 
     @Override
@@ -554,7 +894,7 @@ public final class ListViewImpl<T> extends BuiltInComposite<ListView<T>> impleme
      *               it with {@link #applyMany}
      * @param selected told the new and previous set after every change
      */
-    public void routeMany(final ManyRequest select, final ManyReport selected) {
+    void routeMany(final ManyRequest select, final ManyReport selected) {
         this.selectManyRoute = Objects.requireNonNull(select, "select");
         this.selectedManyRoute = Objects.requireNonNull(selected, "selected");
     }
@@ -562,7 +902,8 @@ public final class ListViewImpl<T> extends BuiltInComposite<ListView<T>> impleme
     /**
      * Makes this list a private part of the control that owns it. The list then fires none of its own events: each
      * selection and activation by the user goes to the owner, which applies a selection with {@link #applySelect},
-     * and every change of selection, from any source, is told to the owner instead of being reported.
+     * and every change of selection, from any source, is told to the owner instead of being reported. Only core
+     * controls that hold a list as a private part call it; it is public for the ones outside this package.
      *
      * @param select takes a row the user is about to select, or -1
      * @param activate takes a row the user activated
@@ -581,7 +922,7 @@ public final class ListViewImpl<T> extends BuiltInComposite<ListView<T>> impleme
      * @param index the row to select, -1 for none, or null
      */
     public void applySelect(final Integer index) {
-        if (index != null && index >= -1 && index < this.items.size()) {
+        if (Items.isIndexOrNone(index, this.items.size())) {
             this.select(index);
         }
     }
@@ -590,7 +931,7 @@ public final class ListViewImpl<T> extends BuiltInComposite<ListView<T>> impleme
      * Reports the row a request ended with as activated. A null or an index outside the items is ignored.
      */
     private void applyActivate(final Integer index) {
-        if (index != null && index >= 0 && index < this.items.size()) {
+        if (Items.isIndex(index, this.items.size())) {
             this.report(ACTIVATED, index, index);
         }
     }
@@ -628,13 +969,50 @@ public final class ListViewImpl<T> extends BuiltInComposite<ListView<T>> impleme
         }
     }
 
+    /**
+     * Moves the selection to a row for a key the user pressed, as Up and Down do: in {@link SelectionMode#MULTIPLE}
+     * mode the row alone, or the range from the anchor with Shift, through {@link ListView#SELECT_MANY}; otherwise
+     * through {@link ListView#SELECT} if the selection changes.
+     *
+     * @param index the row
+     * @param shift whether Shift is held
+     */
+    void keyMove(final int index, final boolean shift) {
+        if (this.mode == SelectionMode.MULTIPLE) {
+            this.userPick(index, false, shift, false);
+        } else {
+            this.keySelect(index);
+        }
+    }
+
+    /**
+     * Moves to an offset, at least 0. Once the list has been laid out it is also clamped to the rows, measured from
+     * the current items and the last viewport, so an offset set right after {@link #setItems} is not clamped to the
+     * old items. The next arrange clamps it again.
+     */
     private boolean scrollTo(final float scrollY) {
-        final float next = Math.max(0f, Math.min(scrollY, this.maxScrollY));
+        final float max = this.arranged ? Math.max(0f, this.totalHeight() - this.viewport.height()) : Float.MAX_VALUE;
+        final float next = Math.max(0f, Math.min(scrollY, max));
         if (next == this.scrollY) {
             return false;
         }
         this.scrollY = next;
         this.invalidateArrangement();
+        return true;
+    }
+
+    /**
+     * Glides to an offset, clamped as {@link #scrollTo} clamps, over the theme's smooth scrolling time.
+     *
+     * @return true if where the list is headed changed
+     */
+    private boolean glideTo(final float scrollY) {
+        final float max = this.arranged ? Math.max(0f, this.totalHeight() - this.viewport.height()) : Float.MAX_VALUE;
+        final float next = Math.max(0f, Math.min(scrollY, max));
+        if (next == this.glide.destination(this.scrollY)) {
+            return false;
+        }
+        this.glide.move(this.motionAnimator(), this.smoothMillis, this.scrollY, next);
         return true;
     }
 
@@ -688,7 +1066,7 @@ public final class ListViewImpl<T> extends BuiltInComposite<ListView<T>> impleme
      * Asked before the user changes the selected set of a routed list.
      */
     @FunctionalInterface
-    public interface ManyRequest {
+    interface ManyRequest {
         /**
          * Asked before the user changes the selected set.
          *
@@ -702,7 +1080,7 @@ public final class ListViewImpl<T> extends BuiltInComposite<ListView<T>> impleme
      * Told after the selected set of a routed list changed.
      */
     @FunctionalInterface
-    public interface ManyReport {
+    interface ManyReport {
         /**
          * Told after the selected set changed.
          *
@@ -743,6 +1121,7 @@ public final class ListViewImpl<T> extends BuiltInComposite<ListView<T>> impleme
         this.rowSelected = theme.paintOr(STYLE_ROW_SELECTED, Paint.NONE);
         this.rowSelectedUnfocused = theme.paintOr(STYLE_ROW_SELECTED_UNFOCUSED, this.rowSelected);
         this.ring = theme.paintOr(STYLE_ROW_RING, Paint.NONE);
+        this.drop = theme.paintOr(STYLE_DROP, this.rowSelected);
         this.ringUnfocused = theme.paintOr(STYLE_ROW_RING_UNFOCUSED, Paint.NONE);
         this.edge = theme.paintOr(STYLE_EDGE, Paint.NONE);
         this.edgeOuter = theme.paintOr(STYLE_EDGE_OUTER, Paint.NONE);
@@ -753,12 +1132,14 @@ public final class ListViewImpl<T> extends BuiltInComposite<ListView<T>> impleme
         this.thumb = theme.paintOr(ScrollPanel.STYLE_THUMB, Paint.NONE);
         this.thumbHovered = theme.paintOr(ScrollPanel.STYLE_THUMB_HOVERED, this.thumb);
         this.track = theme.paintOr(ScrollPanel.STYLE_TRACK, Paint.NONE);
+        this.smoothMillis = Motion.millis(theme, ScrollPanel.STYLE_SMOOTH);
         this.placeholderStyle = theme.textStyleOr(STYLE_PLACEHOLDER, TextStyle.DEFAULT);
+        this.typeAhead.applyTheme(theme);
     }
 
     @Override
     protected Size measure(final MeasureContext context, final float availableWidth, final float availableHeight) {
-        this.placeholderLine = this.placeholder == null ? TextLine.EMPTY
+        this.placeholderLine = this.placeholder.isEmpty() ? TextLine.EMPTY
                 : TextLine.of(this.placeholder, this.placeholderStyle, context.text());
         final float insetWidth = this.border().widths().horizontal();
         final float insetHeight = this.border().widths().vertical();
@@ -786,15 +1167,26 @@ public final class ListViewImpl<T> extends BuiltInComposite<ListView<T>> impleme
                 Math.max(0f, inner.width() - (this.barShown && !column ? GUTTER : 0f)), inner.height());
         this.maxScrollY = Math.max(0f, total - this.viewport.height());
         if (this.reveal >= 0 && this.reveal < this.items.size()) {
+            final float aim = this.glide.destination(this.scrollY);
             final float top = this.padding.top() + this.reveal * this.step();
-            if (top < this.scrollY) {
-                this.scrollY = top;
-            } else if (top + this.rowHeight > this.scrollY + this.viewport.height()) {
-                this.scrollY = top + this.rowHeight - this.viewport.height();
+            float target = aim;
+            if (top < aim) {
+                target = top;
+            } else if (top + this.rowHeight > aim + this.viewport.height()) {
+                target = top + this.rowHeight - this.viewport.height();
+            }
+            target = Math.max(0f, Math.min(target, this.maxScrollY));
+            final Animator animator = this.motionAnimator();
+            if (target != aim && this.arranged && animator != null && this.smoothMillis > 0L) {
+                this.glide.move(animator, this.smoothMillis, this.scrollY, target);
+            } else if (target != aim) {
+                this.glide.stop();
+                this.scrollY = target;
             }
         }
         this.reveal = -1;
         this.scrollY = Math.max(0f, Math.min(this.scrollY, this.maxScrollY));
+        this.arranged = true;
         this.rowWidth = column ? this.rowLimit : this.viewport.width();
         this.rowX = column ? Caption.center(this.viewport.x(), this.viewport.width(), this.rowWidth) : this.viewport.x();
 
@@ -815,12 +1207,36 @@ public final class ListViewImpl<T> extends BuiltInComposite<ListView<T>> impleme
         }
         for (final Iterator<Map.Entry<Integer, Component<?>>> it = this.rows.entrySet().iterator(); it.hasNext(); ) {
             final Map.Entry<Integer, Component<?>> entry = it.next();
-            if (entry.getKey() < first || entry.getKey() > last) {
+            if ((entry.getKey() < first || entry.getKey() > last) && entry.getKey() != this.pinnedRow) {
                 it.remove();
                 this.removeChild(entry.getValue());
             }
         }
         final float offset = Math.round(this.scrollY);
+        // A row kept built for an edit follows the scrolling outside the viewport, where the clip hides it
+        Component<?> pinned = null;
+        if (this.pinnedRow >= 0 && this.pinnedRow < this.items.size()
+                && (this.pinnedRow < first || this.pinnedRow > last)) {
+            pinned = this.rows.get(this.pinnedRow);
+            if (pinned == null) {
+                pinned = this.cellFactory.apply(this.items.get(this.pinnedRow));
+                this.rows.put(this.pinnedRow, pinned);
+                this.addContent(pinned);
+                context.measure(pinned, this.rowWidth, this.rowHeight);
+            }
+        }
+        if (pinned != null) {
+            context.arrange(pinned, new Rect(this.rowX,
+                    this.viewport.y() + this.padding.top() + this.pinnedRow * this.step() - offset,
+                    this.rowWidth, this.rowHeight));
+        }
+        final int count = Math.max(0, last - first + 1);
+        if (this.paintRect.length < count) {
+            this.paintIndex = new int[count];
+            this.paintRect = new Rect[count];
+            this.paintRing = new Rect[count][];
+        }
+        this.paintCount = 0;
         for (int i = first; i <= last; i++) {
             Component<?> cell = this.rows.get(i);
             if (cell == null) {
@@ -829,28 +1245,44 @@ public final class ListViewImpl<T> extends BuiltInComposite<ListView<T>> impleme
                 this.addContent(cell);
                 context.measure(cell, this.rowWidth, this.rowHeight);
             }
-            context.arrange(cell, new Rect(this.rowX, this.viewport.y() + this.padding.top() + i * this.step() - offset,
-                    this.rowWidth, this.rowHeight));
+            final Rect rect = new Rect(this.rowX, this.viewport.y() + this.padding.top() + i * this.step() - offset,
+                    this.rowWidth, this.rowHeight);
+            context.arrange(cell, rect);
+            this.paintIndex[this.paintCount] = i;
+            this.paintRect[this.paintCount] = this.flow(rect);
+            this.paintRing[this.paintCount] = null;
+            this.paintCount++;
         }
         final float barX = column
                 ? this.rowX + this.rowWidth + this.barGap
                 : inner.right() - ScrollPanel.BAR_WIDTH;
-        this.bar.update(new Rect(barX, inner.y(), ScrollPanel.BAR_WIDTH, inner.height()),
+        this.bar.update(this.flow(new Rect(barX, inner.y(), ScrollPanel.BAR_WIDTH, inner.height())),
                 this.viewport.height(), Math.max(total, this.viewport.height()));
+        this.shownViewport = this.flow(this.viewport);
+        this.rowClip = column
+                ? this.flow(new Rect(this.rowX, this.viewport.y(), this.rowWidth, this.viewport.height()))
+                : this.shownViewport;
+        this.thumbRect = this.bar.thumb(this.scrollY, this.maxScrollY);
+        this.edges = this.standalone ? new Rect[] {
+                new Rect(bounds.x(), bounds.y() - 1f, bounds.width(), 1f),
+                new Rect(bounds.x(), bounds.bottom(), bounds.width(), 1f),
+                new Rect(bounds.x(), bounds.y() - 2f, bounds.width(), 1f),
+                new Rect(bounds.x(), bounds.bottom() + 1f, bounds.width(), 1f)
+        } : new Rect[0];
     }
 
     @Override
     protected Rect childClip() {
-        return this.viewport;
+        return this.rowClip;
     }
 
     @Override
     protected void paint(final Painter painter, final Rect bounds) {
-        if (this.standalone) {
-            this.edge.paint(painter, new Rect(bounds.x(), bounds.y() - 1f, bounds.width(), 1f));
-            this.edge.paint(painter, new Rect(bounds.x(), bounds.bottom(), bounds.width(), 1f));
-            this.edgeOuter.paint(painter, new Rect(bounds.x(), bounds.y() - 2f, bounds.width(), 1f));
-            this.edgeOuter.paint(painter, new Rect(bounds.x(), bounds.bottom() + 1f, bounds.width(), 1f));
+        if (this.edges.length == 4) {
+            this.edge.paint(painter, this.edges[0]);
+            this.edge.paint(painter, this.edges[1]);
+            this.edgeOuter.paint(painter, this.edges[2]);
+            this.edgeOuter.paint(painter, this.edges[3]);
         }
         this.background.paint(painter, bounds);
         if (this.items.isEmpty()) {
@@ -863,27 +1295,29 @@ public final class ListViewImpl<T> extends BuiltInComposite<ListView<T>> impleme
         }
         this.painter = painter;
         try {
-            painter.clipped(this.viewport, this.drawRows);
+            painter.clipped(this.shownViewport, this.drawRows);
         } finally {
             this.painter = null;
         }
     }
 
     /**
-     * Draws each built row's background, inside the viewport clip.
+     * Draws each built row's background, inside the viewport clip, from the rectangles arrange made.
      */
     private void drawRows() {
         final int hoveredRow = this.isHoverWithin() ? this.rowAt(this.pointerY) : -1;
-        final float offset = Math.round(this.scrollY);
         final boolean focused = this.isFocused();
-        for (final Integer index : this.rows.keySet()) {
-            final Rect rect = new Rect(this.rowX, this.viewport.y() + this.padding.top() + index * this.step() - offset, this.rowWidth,
-                    this.rowHeight);
-            if (this.chosen.contains(index)) {
+        for (int i = 0; i < this.paintCount; i++) {
+            final int index = this.paintIndex[i];
+            final Rect rect = this.paintRect[i];
+            if (this.chosenBits.get(index)) {
                 (focused ? this.rowSelected : this.rowSelectedUnfocused).paint(this.painter, rect);
                 final Paint edge = focused ? this.ring : this.ringUnfocused;
                 if (edge != Paint.NONE) {
-                    Rings.paint(this.painter, edge, rect);
+                    if (this.paintRing[i] == null) {
+                        this.paintRing[i] = Shapes.ring(rect);
+                    }
+                    Shapes.paint(this.painter, edge, this.paintRing[i]);
                 }
             } else {
                 (index == hoveredRow ? this.rowHovered : this.row).paint(this.painter, rect);
@@ -893,8 +1327,17 @@ public final class ListViewImpl<T> extends BuiltInComposite<ListView<T>> impleme
 
     @Override
     protected void paintOverChildren(final Painter painter, final Rect bounds) {
+        if (this.dropMark != null && this.isHoverWithin()) {
+            this.painter = painter;
+            try {
+                painter.clipped(this.shownViewport, this.drawDrop);
+            } finally {
+                this.painter = null;
+            }
+        }
         if (this.barShown) {
-            this.bar.paint(painter, this.scrollY, this.maxScrollY, this.track, this.dragging ? this.thumbHovered : this.thumb);
+            this.track.paint(painter, this.bar.track());
+            (this.thumbDrag.isDragging() ? this.thumbHovered : this.thumb).paint(painter, this.thumbRect);
         }
     }
 
@@ -910,34 +1353,39 @@ public final class ListViewImpl<T> extends BuiltInComposite<ListView<T>> impleme
     @Override
     protected void onPointerPress(final PointerButtonEvent event) {
         this.pointerY = event.y();
-        this.dragging = false;
+        this.thumbDrag.release();
         if (event.button() != MouseButton.LEFT) {
             return;
         }
-        if (this.barShown && this.bar.track().contains(event.x(), event.y())) {
-            final Rect thumbRect = this.bar.thumb(this.scrollY, this.maxScrollY);
-            if (thumbRect.contains(event.x(), event.y())) {
-                this.dragging = true;
-                this.dragGrab = event.y() - thumbRect.y();
-            } else {
-                final float page = Math.max(this.step(), this.viewport.height() - this.step());
-                this.scrollTo(this.scrollY + (event.y() < thumbRect.y() ? -page : page));
+        if (this.barShown) {
+            final float page = Math.max(this.step(), this.viewport.height() - this.step());
+            final float next = this.thumbDrag.press(event.x(), event.y(), this.scrollY, this.maxScrollY, page);
+            if (!Float.isNaN(next)) {
+                this.glide.stop();
+                this.scrollTo(next);
+                event.consume();
+                return;
             }
-            event.consume();
-            return;
         }
         final int index = this.rowAt(event.y());
         if (index < 0) {
             return;
         }
-        if (this.mode == SelectionMode.MULTIPLE) {
-            this.userPick(index, event.modifiers().control(), event.modifiers().shift(), event.clicks() == 1);
+        this.pendingPick = -1;
+        final boolean adds = event.modifiers().has(this.shortcutModifier());
+        if (this.mode == SelectionMode.MULTIPLE && this.dragTransfer != null && event.clicks() == 1
+                && !adds && !event.modifiers().shift() && this.chosenBits.get(index)
+                && this.chosen.size() > 1) {
+            this.pendingPick = index;
+        } else if (this.mode == SelectionMode.MULTIPLE) {
+            this.userPick(index, adds, event.modifiers().shift(), event.clicks() == 1);
         } else if (this.deselectable && index == this.selectedIndex && event.clicks() == 1) {
             this.userSelect(-1);
         } else if (index != this.selectedIndex) {
             this.userSelect(index);
         }
-        if (event.clicks() == 2 && !this.activateOnClick) {
+        if (event.clicks() == 2 && !this.activateOnClick
+                && !this.startEdit(index, event.x(), -1, event.modifiers())) {
             this.userActivate(index);
         }
         event.consume();
@@ -956,27 +1404,176 @@ public final class ListViewImpl<T> extends BuiltInComposite<ListView<T>> impleme
 
     @Override
     protected void onDragStart(final DragEvent event) {
+        this.pendingPick = -1;
         this.onDrag(event);
+        if (event.isHandled() || this.dragTransfer == null || event.button() != MouseButton.LEFT) {
+            return;
+        }
+        final int pressed = this.rowAt(event.startY());
+        if (pressed < 0) {
+            return;
+        }
+        final List<Integer> rows = this.chosenBits.get(pressed) ? List.copyOf(this.chosen) : List.of(pressed);
+        final List<T> dragged = new ArrayList<>(rows.size());
+        for (final int row : rows) {
+            dragged.add(this.items.get(row));
+        }
+        final Transfer transfer = this.dragTransfer.apply(List.copyOf(dragged));
+        if (transfer == null || transfer.isEmpty()) {
+            return;
+        }
+        final T first = dragged.get(0);
+        final float width = this.rowWidth;
+        final float height = this.rowHeight;
+        final Function<? super T, ? extends Component<?>> cells = this.cellFactory;
+        this.draggedRows = rows;
+        event.startTransfer(transfer, EnumSet.of(DropEffect.MOVE, DropEffect.COPY), factory -> {
+            final Component<?> image = cells.apply(first);
+            image.setSize(width, height);
+            image.setOpacity(0.75f);
+            return image;
+        });
+    }
+
+    @Override
+    protected void onDragOver(final TransferEvent event) {
+        if (this.draggedRows == null || event.source().orElse(null) != this
+                || !event.allowed().contains(DropEffect.MOVE)) {
+            return;
+        }
+        final int gap = this.gapAt(event.y());
+        if (gap != this.dropGap) {
+            this.dropGap = gap;
+            final float y = this.viewport.y() + this.padding.top() + gap * this.step() - Math.round(this.scrollY)
+                    - this.rowSpacing * 0.5f - DROP_MARK_HEIGHT * 0.5f;
+            this.dropMark = this.flow(new Rect(this.rowX, y, this.rowWidth, DROP_MARK_HEIGHT));
+            this.repaint();
+        }
+        event.accept(DropEffect.MOVE);
+    }
+
+    @Override
+    protected void onDrop(final TransferEvent event) {
+        final List<Integer> rows = this.draggedRows;
+        final int gap = this.dropGap;
+        if (rows == null || gap < 0 || event.source().orElse(null) != this
+                || event.effect().orElse(null) != DropEffect.MOVE) {
+            return;
+        }
+        final ItemMove move = new ItemMove(rows, Math.min(gap, this.items.size()));
+        if (this.changesNothing(move)) {
+            return;
+        }
+        this.request(MOVE_ITEMS, move, this::applyMove);
+    }
+
+    @Override
+    protected void onTransferDone(final TransferEvent event) {
+        this.draggedRows = null;
+        this.dropGap = -1;
+        if (this.dropMark != null) {
+            this.dropMark = null;
+            this.repaint();
+        }
+    }
+
+    /**
+     * Returns the gap between rows nearest a point: 0 above the first row, the number of items below the last.
+     */
+    private int gapAt(final float y) {
+        final float along = y - this.viewport.y() + Math.round(this.scrollY) - this.padding.top();
+        return Math.max(0, Math.min(this.items.size(), Math.round(along / this.step())));
+    }
+
+    private boolean changesNothing(final ItemMove move) {
+        final List<Integer> rows = move.indexes();
+        final boolean together = rows.get(rows.size() - 1) - rows.get(0) == rows.size() - 1;
+        return together && move.before() >= rows.get(0) && move.before() <= rows.get(rows.size() - 1) + 1;
+    }
+
+    /**
+     * Moves the items as a move request ended with, ignoring a move that names no rows of the list or changes
+     * nothing.
+     */
+    private void applyMove(final ItemMove move) {
+        if (move == null || move.indexes().get(move.indexes().size() - 1) >= this.items.size() || move.before() > this.items.size()
+                || this.changesNothing(move)) {
+            return;
+        }
+        this.setItems(move.apply(this.items));
+    }
+
+    @Override
+    public Optional<Function<? super List<T>, Transfer>> dragTransfer() {
+        return Optional.ofNullable(this.dragTransfer);
+    }
+
+    @Override
+    public ListView<T> setDragTransfer(final Function<? super List<T>, Transfer> transfer) {
+        this.dragTransfer = transfer;
+        return this;
     }
 
     @Override
     protected void onDrag(final DragEvent event) {
-        if (this.dragging) {
-            this.scrollTo(this.bar.offsetForThumbAt(event.y() - this.dragGrab, this.maxScrollY));
+        if (this.thumbDrag.isDragging()) {
+            this.glide.stop();
+            this.scrollTo(this.thumbDrag.drag(event.x(), event.y(), this.maxScrollY));
             event.consume();
         }
     }
 
     @Override
     protected void onDragEnd(final DragEvent event) {
-        this.dragging = false;
+        this.thumbDrag.release();
+    }
+
+    @Override
+    protected void onPointerRelease(final PointerButtonEvent event) {
+        // A press on the thumb that never became a drag ends here, with no drag end
+        if (event.button() == MouseButton.LEFT) {
+            this.thumbDrag.release();
+            final int pick = this.pendingPick;
+            this.pendingPick = -1;
+            if (pick >= 0 && pick < this.items.size()) {
+                this.userPick(pick, false, false, true);
+            }
+        }
     }
 
     @Override
     protected void onScroll(final ScrollEvent event) {
-        if (this.scrollTo(this.scrollY - event.scrollY() * this.step() * this.scrollRows)) {
+        if (this.glideTo(this.glide.destination(this.scrollY) - event.scrollY() * this.step() * this.scrollRows)) {
             event.consume();
         }
+    }
+
+    @Override
+    protected void onChar(final CharEvent event) {
+        final Function<? super T, ?> name = this.typeAheadName;
+        if (name == null) {
+            // Without type-ahead a printable character starts an edit of the current row
+            final int codePoint = event.codePoint();
+            if (!event.modifiers().control() && !event.modifiers().alt() && !Character.isISOControl(codePoint)
+                    && !Character.isWhitespace(codePoint)
+                    && this.startEdit(this.selectedIndex, Float.NaN, codePoint, event.modifiers())) {
+                event.consume();
+            }
+            return;
+        }
+        if (this.items.isEmpty()) {
+            return;
+        }
+        final Appearances appearances = this.node().factory().appearances();
+        final int found = this.typeAhead.type(event, this.environment().millis(), this.selectedIndex,
+                this.items.size(), index -> appearances.nameOf(name.apply(this.items.get(index))).plain());
+        if (found == TypeAhead.NOT_TAKEN) {
+            return;
+        }
+        if (found >= 0) {
+            this.keyMove(found, false);
+        }
+        event.consume();
     }
 
     @Override
@@ -984,8 +1581,10 @@ public final class ListViewImpl<T> extends BuiltInComposite<ListView<T>> impleme
         if (!event.action().isDown() || event.modifiers().alt() || this.items.isEmpty()) {
             return;
         }
-        if (event.modifiers().control()) {
-            if (this.mode == SelectionMode.MULTIPLE && event.key() == Key.A && event.action() == KeyAction.PRESS) {
+        final boolean shortcut = event.modifiers().has(event.shortcutModifier());
+        if (shortcut || event.modifiers().control()) {
+            if (shortcut && this.mode == SelectionMode.MULTIPLE && event.key() == Key.A
+                    && event.action() == KeyAction.PRESS) {
                 final List<Integer> all = new ArrayList<>(this.items.size());
                 for (int i = 0; i < this.items.size(); i++) {
                     all.add(i);
@@ -998,6 +1597,12 @@ public final class ListViewImpl<T> extends BuiltInComposite<ListView<T>> impleme
         final int page = Math.max(1, (int) Math.floor(this.viewport.height() / this.step()));
         final int last = this.items.size() - 1;
         final int current = this.selectedIndex;
+        if (event.key() == Key.F2 && event.action() == KeyAction.PRESS && !event.modifiers().shift()) {
+            if (this.startEdit(current, Float.NaN, -1, event.modifiers())) {
+                event.consume();
+            }
+            return;
+        }
         final int next = switch (event.key()) {
             case UP -> current < 0 ? last : Math.max(0, current - 1);
             case DOWN -> current < 0 ? 0 : Math.min(last, current + 1);
@@ -1007,11 +1612,8 @@ public final class ListViewImpl<T> extends BuiltInComposite<ListView<T>> impleme
             case END -> last;
             default -> -2;
         };
-        if (next >= 0 && this.mode == SelectionMode.MULTIPLE) {
-            this.userPick(next, false, event.modifiers().shift(), false);
-            event.consume();
-        } else if (next >= 0) {
-            this.keySelect(next);
+        if (next >= 0) {
+            this.keyMove(next, event.modifiers().shift());
             event.consume();
         } else if (event.key().isEnter() && event.action() == KeyAction.PRESS && current >= 0) {
             this.userActivate(current);

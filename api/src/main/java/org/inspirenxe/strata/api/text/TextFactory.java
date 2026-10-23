@@ -16,6 +16,7 @@
 package org.inspirenxe.strata.api.text;
 
 import java.util.List;
+import java.util.Locale;
 
 /**
  * Makes {@link Text}. The static methods on {@code Text} call the factory that {@link org.inspirenxe.strata.api.Strata}
@@ -59,6 +60,25 @@ public interface TextFactory {
      * @return the text
      */
     Text translatable(String key, Object... args);
+
+    /**
+     * See {@link Text#plural(String, long, Object...)}.
+     *
+     * @param key the translation key without its category
+     * @param count the count that picks the translation
+     * @param args the arguments
+     * @return the text
+     */
+    Text plural(String key, long count, Object... args);
+
+    /**
+     * See {@link PluralCategory#of(Locale, long)}.
+     *
+     * @param locale the language
+     * @param count the count
+     * @return the category
+     */
+    PluralCategory pluralCategory(Locale locale, long count);
 
     /**
      * See {@link Text#concat(List)}.

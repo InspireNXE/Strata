@@ -37,7 +37,9 @@ import java.util.Optional;
 /**
  * The core {@link RadioGroup}. It holds its buttons and their values side by side and tracks the selected button;
  * the buttons ask it whether they are selected. Its handlers live in a dispatcher of its own, created on the first
- * registration, and the group's {@code SELECTED} reaches only them.
+ * registration, and the group's {@code SELECTED} reaches only them. After each new button and each change of the
+ * selection it sets which buttons are tabbable: the selected one, or the first while none is selected. A button
+ * taken out with {@link #remove} is no longer in its lists, so {@link #choose} ignores it.
  *
  * @param <T> the type of the values the buttons stand for
  */
@@ -48,6 +50,8 @@ public final class RadioGroupImpl<T> implements RadioGroup<T> {
     private final List<T> values;
     private EventDispatcher dispatcher;
     private RadioButtonImpl selected;
+    // The button a choice in progress selected but has not reported yet
+    private RadioButtonImpl arriving;
 
     /**
      * Creates an empty group.
@@ -66,7 +70,67 @@ public final class RadioGroupImpl<T> implements RadioGroup<T> {
         final RadioButtonImpl button = new RadioButtonImpl(this.ui, this, text);
         this.buttons.add(button);
         this.values.add(value);
+        this.updateTabStops();
         return button;
+    }
+
+    /**
+     * Takes a button out. The selected button is deselected first, through {@link #choose}, so it reports
+     * {@code TOGGLED} and the group {@code SELECTED} with -1. A button before the selected one moves the selected
+     * index down, which the group reports with the selected button as the target.
+     */
+    @Override
+    public RadioGroup<T> remove(final RadioButton button) {
+        if (!(button instanceof final RadioButtonImpl impl) || !this.buttons.contains(impl)) {
+            return this;
+        }
+        if (impl == this.selected) {
+            this.choose(null);
+        }
+        final int before = this.buttons.indexOf(this.selected);
+        final int index = this.buttons.indexOf(impl);
+        this.buttons.remove(index);
+        this.values.remove(index);
+        this.updateTabStops();
+        if (this.selected != null && index < before) {
+            this.fireSelected(this.selected, before - 1, before);
+        }
+        return this;
+    }
+
+    /**
+     * Takes every button out: the selected one is deselected first, through {@link #choose}, and then the lists are
+     * emptied.
+     */
+    @Override
+    public RadioGroup<T> clear() {
+        if (this.selected != null) {
+            this.choose(null);
+        }
+        this.buttons.clear();
+        this.values.clear();
+        return this;
+    }
+
+    boolean contains(final RadioButtonImpl button) {
+        return this.buttons.contains(button);
+    }
+
+    /**
+     * Makes the selected button the group's only tab stop, or the first enabled button while none is selected, so
+     * Tab enters and leaves the group in one step and the arrows move inside it. A button whose tabbable flag is not
+     * what the group last set, because code called {@code setTabbable} on it, keeps its own setting from then on.
+     */
+    void updateTabStops() {
+        RadioButtonImpl stop = this.selected;
+        for (int i = 0; stop == null && i < this.buttons.size(); i++) {
+            if (this.buttons.get(i).isEnabled()) {
+                stop = this.buttons.get(i);
+            }
+        }
+        for (final RadioButtonImpl button : this.buttons) {
+            button.groupTabStop(button == stop);
+        }
     }
 
     @Override
@@ -131,26 +195,46 @@ public final class RadioGroupImpl<T> implements RadioGroup<T> {
     /**
      * Makes a button the selected one, or none. If that changed anything, the deselected and the selected button
      * report {@code TOGGLED}, in that order, and the group fires {@code SELECTED} to its own handlers. That event's
-     * target is the newly selected button, or the deselected one when none is selected now.
+     * target is the newly selected button, or the deselected one when none is selected now. A handler of either
+     * report that selects another button makes that change report itself, and this one reports nothing more, so the
+     * last events always describe the selection the group has.
      */
     void choose(final RadioButtonImpl button) {
         final RadioButtonImpl previous = this.selected;
-        if (previous == button) {
+        if (previous == button || button != null && !this.buttons.contains(button)) {
             return;
         }
+        // A button selected by a choice that has not reported yet has no deselect to report
+        final RadioButtonImpl told = previous == this.arriving ? null : previous;
         this.selected = button;
-        if (previous != null) {
+        this.arriving = button;
+        this.updateTabStops();
+        if (told != null) {
             // The group deselects the old button, so it is on that report's cause chain
             try (CauseFrame ignored = this.ui.causes().pushFrame().push(this)) {
-                previous.reportToggled(false);
+                told.reportToggled(false);
+            }
+            if (this.selected != button) {
+                return;
             }
         }
+        this.arriving = null;
         if (button != null) {
             button.reportToggled(true);
+            if (this.selected != button) {
+                return;
+            }
         }
+        this.fireSelected(button != null ? button : told != null ? told : previous, this.buttons.indexOf(button),
+                this.buttons.indexOf(told));
+    }
+
+    /**
+     * Fires {@code SELECTED} to the group's own handlers, if it has any.
+     */
+    private void fireSelected(final RadioButtonImpl target, final int index, final int previous) {
         if (this.dispatcher != null && this.dispatcher.hasHandlers(SELECTED)) {
-            final ValueEventImpl<Selection<?, ?>, Integer> event = new ValueEventImpl<>(
-                    button == null ? previous : button, this, this.buttons.indexOf(button), this.buttons.indexOf(previous));
+            final ValueEventImpl<Selection<?, ?>, Integer> event = new ValueEventImpl<>(target, this, index, previous);
             event.setCauses(this.ui.causes());
             this.dispatcher.fire(SELECTED, event);
         }
@@ -166,6 +250,9 @@ public final class RadioGroupImpl<T> implements RadioGroup<T> {
     boolean moveFrom(final RadioButtonImpl from, final int direction) {
         final int count = this.buttons.size();
         final int start = this.buttons.indexOf(from);
+        if (start < 0) {
+            return false;
+        }
         for (int step = 1; step < count; step++) {
             final RadioButtonImpl next = this.buttons.get(Math.floorMod(start + step * direction, count));
             if (next.isAttached() && next.isVisible() && next.isEnabled()) {

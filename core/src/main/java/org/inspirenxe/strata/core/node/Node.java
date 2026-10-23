@@ -19,9 +19,12 @@ import org.inspirenxe.strata.api.component.Component;
 import org.inspirenxe.strata.api.component.ComponentSnapshot;
 import org.inspirenxe.strata.api.component.CursorKind;
 import org.inspirenxe.strata.api.component.Focusable;
+import org.inspirenxe.strata.api.component.HasContextMenu;
 import org.inspirenxe.strata.api.component.HasCursor;
 import org.inspirenxe.strata.api.component.HasTooltip;
 import org.inspirenxe.strata.api.component.Tooltip;
+import org.inspirenxe.strata.api.control.attribute.popup.Popup;
+import org.inspirenxe.strata.api.text.Text;
 import org.inspirenxe.strata.api.event.Event;
 import org.inspirenxe.strata.api.event.EventHandler;
 import org.inspirenxe.strata.api.event.EventType;
@@ -38,10 +41,12 @@ import org.inspirenxe.strata.api.geometry.Insets;
 import org.inspirenxe.strata.api.geometry.Rect;
 import org.inspirenxe.strata.api.geometry.Size;
 import org.inspirenxe.strata.api.input.TextInputKind;
+import org.inspirenxe.strata.api.layout.FlowDirection;
 import org.inspirenxe.strata.api.layout.HorizontalAlignment;
 import org.inspirenxe.strata.api.layout.VerticalAlignment;
 import org.inspirenxe.strata.api.state.PropertyKey;
 import org.inspirenxe.strata.api.state.Source;
+import org.inspirenxe.strata.api.text.TextStyle;
 import org.inspirenxe.strata.api.theme.Border;
 import org.inspirenxe.strata.api.theme.Paint;
 import org.inspirenxe.strata.api.theme.Theme;
@@ -49,6 +54,7 @@ import org.inspirenxe.strata.core.event.ControlEventImpl;
 import org.inspirenxe.strata.core.event.EventDispatcher;
 import org.inspirenxe.strata.core.event.EventImpl;
 import org.inspirenxe.strata.core.event.EventRouter;
+import org.inspirenxe.strata.core.event.LifecycleEventImpl;
 import org.inspirenxe.strata.core.event.MeasureEventImpl;
 import org.inspirenxe.strata.core.event.PaintEventImpl;
 import org.inspirenxe.strata.core.event.RequestEventImpl;
@@ -57,7 +63,9 @@ import org.inspirenxe.strata.core.event.ValueRequestEventImpl;
 import org.inspirenxe.strata.core.paint.CanvasPainter;
 import org.inspirenxe.strata.core.state.Binding;
 
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
@@ -71,7 +79,8 @@ import java.util.function.Function;
  * Strata's own components, or a developer's {@code CustomComponent}, for which this node is the peer. Core reaches the
  * facade's protected hooks only through the hooks object the facade hands its node.
  *
- * <p>A new node is visible, enabled, not focusable and not tabbable, with tab index 0, no cursor, no margin, no
+ * <p>A new node has no id, and is visible, enabled, not focusable and not tabbable, with tab index 0, no cursor, no
+ * margin, no
  * size limits, no fixed size, left and top alignment, no offset, no background, no border, no tooltip and z index
  * 0.</p>
  *
@@ -80,7 +89,12 @@ import java.util.function.Function;
  * nothing inside it changed since, keeps its bounds without arranging its children. {@link #invalidateLayout()}
  * marks the node and every ancestor as changed.</p>
  *
- * <p>Every method must be called on the UI thread.</p>
+ * <p>Every change that shows asks the host for a frame (design 4.47): layout invalidation through the root, and
+ * {@link #repaint()} for the rest, which the background, border, cursor and z index setters and every report call.
+ * {@link #repaintAfter(long)} registers a change the clock brings.</p>
+ *
+ * <p>Every method must be called on the UI thread. While the node is attached, its changes check that through
+ * {@link #checkThread()}.</p>
  */
 public class Node implements ComponentPeer {
     /**
@@ -92,8 +106,11 @@ public class Node implements ComponentPeer {
     private final Component<?> facade;
     private final NodeHooks hooks;
 
+    private String id;
     private ContainerNode parent;
     private Root root;
+    // Whether the attach hook and ATTACHED ran since the last detach, so attach and detach always come in pairs
+    private boolean attachedFired;
     private EventDispatcher dispatcher;
     // By key name, made on the first bind
     private Map<String, Binding<?>> bindings;
@@ -101,6 +118,8 @@ public class Node implements ComponentPeer {
     private boolean content;
     private MeasureEventImpl measureEvent;
     private Theme theme;
+    // Made on the first style state set or looked up
+    private StyleStates styleStates;
 
     private boolean visible;
     private boolean enabled;
@@ -113,6 +132,8 @@ public class Node implements ComponentPeer {
     private boolean hovered;
     private boolean pressed;
     private boolean focused;
+    private Node focusDelegate;
+    private Node focusOwner;
 
     // Layout inputs
     private Insets margin;
@@ -128,11 +149,19 @@ public class Node implements ComponentPeer {
     private float explicitHeight;
     private HorizontalAlignment horizontalAlignment;
     private VerticalAlignment verticalAlignment;
+    // Null follows the parent
+    private FlowDirection flowDirection;
     private float offsetX;
     private float offsetY;
     private Paint background;
     private Border border;
     private Tooltip tooltip;
+    // A message shown ahead of the tooltip, such as a validation's, and the tooltip made of both
+    private Text tooltipNotice;
+    private Tooltip noticeTooltip;
+    private Popup<?> contextMenu;
+
+    private float opacity;
 
     // Drawing order among siblings: the z index, then the sequence number the parent gave when adding or raising
     private int zIndex;
@@ -143,10 +172,16 @@ public class Node implements ComponentPeer {
     private float desiredHeight;
     private Rect bounds;
     private boolean measureDirty;
+    // The content minimum from the hook, kept until the layout is invalidated
+    private float contentMinWidth;
+    private float contentMinHeight;
+    private boolean minimumDirty;
     private boolean arrangeDirty;
     private float lastAvailableWidth;
     private float lastAvailableHeight;
     private Rect lastSlot;
+    // The sum of the left and right edges of the parent's bounds the last arrange mirrored inside, or NaN for none
+    private float lastMirror = Float.NaN;
 
     /**
      * Creates the node behind a component. {@link ComponentFactoryImpl#createPeer}, {@link BuiltInComponent} and
@@ -162,6 +197,7 @@ public class Node implements ComponentPeer {
         this.hooks = Objects.requireNonNull(hooks, "hooks");
         this.visible = true;
         this.enabled = true;
+        this.opacity = 1f;
         this.margin = Insets.NONE;
         this.minWidth = 0f;
         this.maxWidth = Float.POSITIVE_INFINITY;
@@ -175,6 +211,7 @@ public class Node implements ComponentPeer {
         this.border = Border.NONE;
         this.bounds = Rect.ZERO;
         this.measureDirty = true;
+        this.minimumDirty = true;
         this.arrangeDirty = true;
         this.lastAvailableWidth = Float.NaN;
         this.lastAvailableHeight = Float.NaN;
@@ -235,12 +272,13 @@ public class Node implements ComponentPeer {
      * replaced by the fixed size where one is set and capped by the maximum size. The result is replaced by the
      * fixed size where one is set, then clamped to the minimum and maximum. A hidden component measures as 0 by 0
      * without calling its hook. Nothing is measured if nothing changed since the last measure with the same space.
+     * If the hook or a {@link Component#MEASURED} handler throws, the component stays marked for measuring, so the
+     * next layout tries again.
      *
      * @param pass the layout context
      * @param availableWidth the width the parent offers, margin included; may be infinite
      * @param availableHeight the height the parent offers, margin included; may be infinite
      */
-    @SuppressWarnings("unchecked")
     public final void measure(final LayoutPass pass, final float availableWidth, final float availableHeight) {
         if (!this.measureDirty && availableWidth == this.lastAvailableWidth && availableHeight == this.lastAvailableHeight) {
             return;
@@ -255,7 +293,19 @@ public class Node implements ComponentPeer {
             this.desiredHeight = 0f;
             return;
         }
+        boolean done = false;
+        try {
+            this.measureVisible(pass, availableWidth, availableHeight);
+            done = true;
+        } finally {
+            if (!done) {
+                this.measureDirty = true;
+            }
+        }
+    }
 
+    @SuppressWarnings("unchecked")
+    private void measureVisible(final LayoutPass pass, final float availableWidth, final float availableHeight) {
         float width = Float.isNaN(this.explicitWidth) ? availableWidth - this.margin.horizontal() : this.explicitWidth;
         float height = Float.isNaN(this.explicitHeight) ? availableHeight - this.margin.vertical() : this.explicitHeight;
         width = Math.max(0f, Math.min(width, this.maxWidth));
@@ -282,20 +332,72 @@ public class Node implements ComponentPeer {
     }
 
     /**
+     * Returns the smallest space the component can work in, margin included, as
+     * {@link org.inspirenxe.strata.api.extension.MeasureContext#minimumSize} describes. The hook runs only when the
+     * layout was invalidated since it last ran; if it throws, it runs again next time. A hidden component has a zero
+     * minimum without calling its hook.
+     *
+     * @param pass the layout context
+     * @return the outer minimum
+     */
+    public final Size minimumSize(final LayoutPass pass) {
+        if (!this.visible) {
+            return Size.ZERO;
+        }
+        if (this.minimumDirty) {
+            final Size content = this.hooks.measureMinimum(pass);
+            this.contentMinWidth = Float.isFinite(content.width()) ? Math.max(0f, content.width()) : 0f;
+            this.contentMinHeight = Float.isFinite(content.height()) ? Math.max(0f, content.height()) : 0f;
+            this.minimumDirty = false;
+        }
+        final float width = Float.isNaN(this.explicitWidth)
+                ? Math.max(this.minWidth, Math.min(this.maxWidth, this.contentMinWidth))
+                : this.clampWidth(this.explicitWidth);
+        final float height = Float.isNaN(this.explicitHeight)
+                ? Math.max(this.minHeight, Math.min(this.maxHeight, this.contentMinHeight))
+                : this.clampHeight(this.explicitHeight);
+        return new Size(width + this.margin.horizontal(), height + this.margin.vertical());
+    }
+
+    /**
+     * Returns where the component's first baseline lies below the top of its margin, from its baseline hook and its
+     * top margin, as {@link org.inspirenxe.strata.api.extension.MeasureContext#baseline} describes.
+     *
+     * @return the baseline in UI units, or NaN when the component is hidden, reports none or reports one that is
+     *     not finite
+     */
+    public final float baseline() {
+        if (!this.visible) {
+            return Float.NaN;
+        }
+        final float baseline = this.hooks.baseline();
+        return Float.isFinite(baseline) ? this.margin.top() + baseline : Float.NaN;
+    }
+
+    /**
      * Places the component in a slot and arranges its children. The slot is shrunk by the margin; the component
      * then takes its desired size, or the whole inner slot on an axis set to stretch with no fixed size (still
-     * clamped), and is aligned inside, then moved by its offset. A hidden component gets an empty rectangle at the
-     * slot's origin. Nothing is arranged if nothing changed since the last arrange into the same slot.
+     * clamped), and is aligned inside. In a parent whose {@linkplain #flowDirection() direction} is right to left
+     * the result is then mirrored inside the parent's bounds, so the slot and the alignment are worked out as for
+     * left to right. Last it is moved by its offset, which is not mirrored. {@link VerticalAlignment#BASELINE} places
+     * it as {@link VerticalAlignment#TOP} does; the parents that line up baselines move the slot instead. A hidden
+     * component gets an empty rectangle at the slot's origin. Nothing is arranged if nothing changed since the last
+     * arrange into the same slot and the same mirror. If the hook throws, the component stays marked for arranging,
+     * so the next layout tries again.
      *
      * @param pass the layout context
      * @param slot the space the parent assigns, margin included, in the host's coordinates
      */
     public final void arrange(final LayoutPass pass, final Rect slot) {
-        if (!this.arrangeDirty && slot.equals(this.lastSlot)) {
+        final ContainerNode container = this.parent;
+        final float mirror = container != null && container.flowDirection() == FlowDirection.RIGHT_TO_LEFT
+                ? container.bounds().x() + container.bounds().right() : Float.NaN;
+        if (!this.arrangeDirty && slot.equals(this.lastSlot) && Float.compare(mirror, this.lastMirror) == 0) {
             return;
         }
         this.arrangeDirty = false;
         this.lastSlot = slot;
+        this.lastMirror = mirror;
         if (!this.visible) {
             this.bounds = new Rect(slot.x(), slot.y(), 0f, 0f);
             return;
@@ -316,13 +418,23 @@ public class Node implements ComponentPeer {
             case RIGHT -> inner.right() - width;
         };
         final float y = switch (this.verticalAlignment) {
-            case TOP, STRETCH -> inner.y();
+            case TOP, STRETCH, BASELINE -> inner.y();
             case MIDDLE -> inner.y() + (inner.height() - height) * 0.5f;
             case BOTTOM -> inner.bottom() - height;
         };
 
-        this.bounds = new Rect(x + this.offsetX, y + this.offsetY, width, height);
-        this.hooks.arrange(pass, this.bounds);
+        // Mirrored inside the parent's bounds: the left edge goes where the right edge was, from the other side
+        final float placedX = Float.isNaN(mirror) ? x : mirror - x - width;
+        this.bounds = new Rect(placedX + this.offsetX, y + this.offsetY, width, height);
+        boolean done = false;
+        try {
+            this.hooks.arrange(pass, this.bounds);
+            done = true;
+        } finally {
+            if (!done) {
+                this.arrangeDirty = true;
+            }
+        }
     }
 
     /**
@@ -347,10 +459,27 @@ public class Node implements ComponentPeer {
         }
     }
 
+    /**
+     * Throws if this node is attached and the calling thread is not the UI thread. Every change that would corrupt a
+     * shown tree from another thread calls this first: layout invalidation, and so every setter that lays out,
+     * handler registration, binding, and adding, moving and removing children. A detached node is not checked, so a
+     * tree can be built on another thread and added on the UI thread.
+     *
+     * @throws IllegalStateException if attached and called off the UI thread
+     */
+    protected final void checkThread() {
+        final Root current = this.root;
+        if (current != null) {
+            current.checkThread();
+        }
+    }
+
     @Override
     public final void invalidateLayout() {
+        this.checkThread();
         for (Node node = this; node != null; node = node.parent) {
             node.measureDirty = true;
+            node.minimumDirty = true;
             node.arrangeDirty = true;
         }
         if (this.root != null) {
@@ -358,8 +487,58 @@ public class Node implements ComponentPeer {
         }
     }
 
+    /**
+     * Asks the host for a frame, because the component's look changed and its layout did not. Does nothing while
+     * detached: attaching asks for a frame anyway.
+     */
+    @Override
+    public final void repaint() {
+        final Root current = this.root;
+        if (current != null) {
+            current.repaint();
+        }
+    }
+
+    /**
+     * Asks for the next frame the host's frame rate allows, because the look moves with the clock. Any thread may
+     * call it. Does nothing while detached.
+     */
+    @Override
+    public final void repaintNextFrame() {
+        final Root current = this.root;
+        if (current != null) {
+            current.repaintNextFrame();
+        }
+    }
+
+    /**
+     * Tells the host that the component's look changes by itself after a time, so a host that renders on demand
+     * draws a frame then. A delay of 0 is {@link #repaint()}. Does nothing while detached.
+     *
+     * @param millis the delay in milliseconds, by the platform's clock
+     * @throws IllegalArgumentException if {@code millis} is negative
+     * @throws IllegalStateException if attached and called off the UI thread
+     */
+    @Override
+    public final void repaintAfter(final long millis) {
+        if (millis < 0L) {
+            throw new IllegalArgumentException("A repaint delay must not be negative: " + millis);
+        }
+        final Root current = this.root;
+        if (current == null) {
+            return;
+        }
+        current.checkThread();
+        if (millis == 0L) {
+            current.repaint();
+        } else {
+            current.repaintAt(current.nanoTime() + millis * 1_000_000L);
+        }
+    }
+
     @Override
     public final void invalidateArrangement() {
+        this.checkThread();
         if (this.root != null) {
             this.root.requestArrangement(this);
         }
@@ -422,16 +601,31 @@ public class Node implements ComponentPeer {
     /**
      * Paints the component. If it has {@link Component#PAINT} handlers they run first, and canceling skips the
      * component's own drawing but still paints its children. Then come its background and border, its paint hook,
-     * its children, its over-children hook, and last any {@link Component#PAINTED} handlers. Hidden components and
-     * components with empty bounds paint nothing. The paint event object is made once and reused.
+     * its children, its over-children hook, and last any {@link Component#PAINTED} handlers. Hidden components,
+     * components with empty bounds and components with an opacity of 0 paint nothing. A component whose opacity is
+     * between 0 and 1 paints inside a {@code Canvas.pushOpacity} of it. The paint event object is made once and
+     * reused.
      *
      * @param painter the painter for this frame
      */
-    @SuppressWarnings("unchecked")
     public final void paint(final CanvasPainter painter) {
-        if (!this.visible || this.bounds.isEmpty()) {
+        if (!this.visible || this.bounds.isEmpty() || this.opacity <= 0f) {
             return;
         }
+        if (this.opacity >= 1f) {
+            this.paintOpaque(painter);
+            return;
+        }
+        painter.canvas().pushOpacity(this.opacity);
+        try {
+            this.paintOpaque(painter);
+        } finally {
+            painter.canvas().popOpacity();
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    private void paintOpaque(final CanvasPainter painter) {
         final EventDispatcher handlers = this.dispatcher;
         boolean own = true;
         if (handlers != null && handlers.hasHandlers(Component.PAINT)) {
@@ -470,15 +664,16 @@ public class Node implements ComponentPeer {
     }
 
     /**
-     * Finds the deepest visible, enabled node at a point. A disabled or hidden node hides its whole subtree from
-     * the pointer.
+     * Finds the deepest visible node at a point. A hidden node hides its whole subtree from the pointer. A disabled
+     * node, or one inside a disabled node, can be hit, so the pointer stops there: {@link Root} gives it no input
+     * events and shows its tooltip.
      *
      * @param x the x, in the host's coordinates
      * @param y the y, in the host's coordinates
      * @return the node hit, or {@code null} if the point misses this node
      */
     public Node hitTest(final float x, final float y) {
-        if (!this.visible || !this.enabled || !this.bounds.contains(x, y)) {
+        if (!this.visible || !this.bounds.contains(x, y)) {
             return null;
         }
         return this;
@@ -488,13 +683,26 @@ public class Node implements ComponentPeer {
     // Events
     // ------------------------------------------------------------------
 
+    /**
+     * Adds a handler. Adding or removing a {@link Component#MEASURED} handler marks the component for measuring, since
+     * the handler can change the desired size and a component is not measured again while nothing changed.
+     */
     @Override
     public final <E extends Event> Subscription subscribe(final EventType<E> type, final int priority,
                                                           final EventHandler<? super E> handler) {
+        this.checkThread();
         if (this.dispatcher == null) {
             this.dispatcher = new EventDispatcher();
         }
-        return this.dispatcher.subscribe(type, priority, handler);
+        final Subscription subscription = this.dispatcher.subscribe(type, priority, handler);
+        if (type != Component.MEASURED) {
+            return subscription;
+        }
+        this.invalidateLayout();
+        return () -> {
+            subscription.unsubscribe();
+            this.invalidateLayout();
+        };
     }
 
     /**
@@ -507,13 +715,14 @@ public class Node implements ComponentPeer {
      */
     @Override
     public final <V> void bind(final PropertyKey<?, V> key, final Source<V> source) {
+        this.checkThread();
         final Binding<V> binding = new Binding<>(this.facade, key, source, this.ui::causes);
         if (this.bindings == null) {
             this.bindings = new LinkedHashMap<>();
         }
         final Binding<?> replaced = this.bindings.put(key.name(), binding);
         if (replaced != null) {
-            replaced.detach();
+            replaced.release();
         }
         if (this.root != null) {
             binding.attach(this.root.bindingQueue());
@@ -521,12 +730,28 @@ public class Node implements ComponentPeer {
         }
     }
 
+    /**
+     * Removes the binding with the key's name, detaching it so no state refers to it. The property keeps its value.
+     * Does nothing when no binding has that name.
+     *
+     * @param key the property
+     */
+    @Override
+    public final void unbind(final PropertyKey<?, ?> key) {
+        this.checkThread();
+        if (this.bindings == null) {
+            return;
+        }
+        final Binding<?> removed = this.bindings.remove(key.name());
+        if (removed != null) {
+            removed.release();
+        }
+    }
+
     @Override
     public final boolean isHandled(final EventType<?> type) {
         // Control events stop at the first composite above, as EventRouter.next does
-        final Class<?> eventClass = type.eventClass();
-        final boolean input = eventClass != RequestEvent.class && eventClass != ValueRequestEvent.class
-                && eventClass != ControlEvent.class && eventClass != ValueEvent.class;
+        final boolean input = EventRouter.isInput(type);
         for (Node node = this; node != null; node = type.bubbles() ? EventRouter.next(node, this, input) : null) {
             final EventDispatcher handlers = node.dispatcher;
             if (handlers != null && handlers.hasHandlers(type)) {
@@ -565,6 +790,8 @@ public class Node implements ComponentPeer {
     @Override
     public final void report(final EventType<?> type) {
         Node.requireClass(type, ControlEvent.class);
+        // A report is a change, and most changes show
+        this.repaint();
         if (this.isHandled(type)) {
             Node.dispatchControl(type, new ControlEventImpl<>(this.facade), this);
         }
@@ -573,6 +800,7 @@ public class Node implements ComponentPeer {
     @Override
     public final <V> void report(final EventType<?> type, final V value, final V previous) {
         Node.requireClass(type, ValueEvent.class);
+        this.repaint();
         if (this.isHandled(type)) {
             Node.dispatchControl(type, new ValueEventImpl<>(this.facade, value, previous), this);
         }
@@ -667,16 +895,19 @@ public class Node implements ComponentPeer {
     }
 
     /**
-     * Gives the component a theme and marks its layout dirty, since styles can change sizes.
+     * Gives the component a theme and marks its layout dirty, since styles can change sizes. The component gets the
+     * theme with the {@linkplain ContainerNode#childTheme text style patches} of its containers applied, which is the
+     * theme itself when none sets one.
      *
-     * @param theme the theme
+     * @param theme the root's theme
      */
     public final void applyTheme(final Theme theme) {
-        this.theme = Objects.requireNonNull(theme, "theme");
+        Objects.requireNonNull(theme, "theme");
+        this.theme = this.parent != null ? this.parent.childTheme(theme) : theme;
         if (this.themeMargin != null && !this.marginSet) {
-            this.margin = this.themeMargin.apply(theme);
+            this.margin = this.themeMargin.apply(this.theme);
         }
-        this.hooks.applyTheme(theme);
+        this.hooks.applyTheme(this.theme);
         this.invalidateLayout();
     }
 
@@ -685,9 +916,83 @@ public class Node implements ComponentPeer {
         return this.theme;
     }
 
+    /**
+     * Turns one of the component's own style states on or off. The node sets {@code disabled}, {@code pressed},
+     * {@code hovered} and {@code focused} itself, from its own state. A change marks nothing for layout.
+     *
+     * @param state the state's name
+     * @param on whether the state is on
+     * @throws IllegalArgumentException if the name is empty or one of the four the node sets, or the component
+     *     already has 60 states of its own
+     */
+    @Override
+    public final void setStyleState(final String state, final boolean on) {
+        this.styleStates().set(state, on);
+    }
+
+    /**
+     * Looks up a paint for the component's style states, as {@link StyleStates} describes: {@code key.disabled}
+     * while the component is disabled, itself or through an ancestor, then {@code key.<state>} for each of its own
+     * states that is on, in the order they were first set, then {@code key.pressed}, {@code key.hovered} and
+     * {@code key.focused}, and last the key. The result of each combination is kept until the theme changes.
+     *
+     * @param key the style key
+     * @param fallback returned when the theme has none of the keys tried, or the node has no theme yet
+     * @return the paint
+     */
+    @Override
+    public final Paint stylePaint(final String key, final Paint fallback) {
+        Objects.requireNonNull(key, "key");
+        final Theme theme = this.theme;
+        if (theme == null) {
+            return fallback;
+        }
+        final StyleStates states = this.styleStates();
+        return states.paint(theme, key, fallback, this.styleCombination(states));
+    }
+
+    /**
+     * Looks up a text style for the component's style states, in the same order as {@link #stylePaint}.
+     *
+     * @param key the style key
+     * @param fallback returned when the theme has none of the keys tried, or the node has no theme yet
+     * @return the text style
+     */
+    @Override
+    public final TextStyle styleText(final String key, final TextStyle fallback) {
+        Objects.requireNonNull(key, "key");
+        final Theme theme = this.theme;
+        if (theme == null) {
+            return fallback;
+        }
+        final StyleStates states = this.styleStates();
+        return states.text(theme, key, fallback, this.styleCombination(states));
+    }
+
+    private StyleStates styleStates() {
+        if (this.styleStates == null) {
+            this.styleStates = new StyleStates();
+        }
+        return this.styleStates;
+    }
+
+    private long styleCombination(final StyleStates states) {
+        return states.combination(!this.facade.isEffectivelyEnabled(), this.pressed, this.hovered, this.focused);
+    }
+
     // ------------------------------------------------------------------
     // Tree
     // ------------------------------------------------------------------
+
+    @Override
+    public final Optional<String> id() {
+        return Optional.ofNullable(this.id);
+    }
+
+    @Override
+    public final void setId(final String id) {
+        this.id = id;
+    }
 
     /**
      * Returns the node of the container or composite holding this component.
@@ -760,6 +1065,49 @@ public class Node implements ComponentPeer {
     }
 
     /**
+     * Runs the component's attach hook and then its {@link Component#ATTACHED} handlers, if it has any. Does nothing
+     * while the node is detached, or if this already ran since the node was last {@linkplain #fireDetached()
+     * detached}, so a subtree that a binding attached during another attach hears it once. {@link Root} calls this for
+     * each node of a subtree it attached, parents first, after the bindings set their properties.
+     */
+    final void fireAttached() {
+        if (this.root == null || this.attachedFired) {
+            return;
+        }
+        this.attachedFired = true;
+        this.hooks.attached();
+        final EventDispatcher handlers = this.dispatcher;
+        if (handlers != null && handlers.hasHandlers(Component.ATTACHED)) {
+            final LifecycleEventImpl event = new LifecycleEventImpl(this.facade);
+            event.setCauses(this.ui.causes());
+            handlers.fire(Component.ATTACHED, event);
+        }
+    }
+
+    /**
+     * Runs the component's {@link Component#DETACHED} handlers, if it has any, and then its detach hook, which runs
+     * even if a handler throws. Does nothing unless {@link #fireAttached()} ran since the last time, so every detach a
+     * component hears follows an attach it heard. {@link Root} calls this for each node of a subtree it is about to
+     * detach, children first, while the node is still attached.
+     */
+    final void fireDetached() {
+        if (!this.attachedFired) {
+            return;
+        }
+        this.attachedFired = false;
+        try {
+            final EventDispatcher handlers = this.dispatcher;
+            if (handlers != null && handlers.hasHandlers(Component.DETACHED)) {
+                final LifecycleEventImpl event = new LifecycleEventImpl(this.facade);
+                event.setCauses(this.ui.causes());
+                handlers.fire(Component.DETACHED, event);
+            }
+        } finally {
+            this.hooks.detached();
+        }
+    }
+
+    /**
      * Tells the component that the root let go of its tree for good. See {@link BuiltInComponent#onReleased()}.
      */
     final void released() {
@@ -822,6 +1170,11 @@ public class Node implements ComponentPeer {
     }
 
     @Override
+    public final boolean isFocusWithin() {
+        return this.root != null && this.root.isFocusWithin(this);
+    }
+
+    @Override
     public final boolean isPressed() {
         return this.pressed;
     }
@@ -837,6 +1190,40 @@ public class Node implements ComponentPeer {
 
     final void setFocused(final boolean focused) {
         this.focused = focused;
+    }
+
+    /**
+     * Returns the node that takes focus for this one, such as a table's inner list, which core's
+     * {@code BuiltInComponent.setFocusDelegate} set.
+     *
+     * @return the delegate, or {@code null} when this node takes focus itself
+     */
+    public final Node focusDelegate() {
+        return this.focusDelegate;
+    }
+
+    /**
+     * Returns the node this one takes focus for, the reverse of {@link #focusDelegate()}. The root fires
+     * {@code FOCUS_GAINED} and {@code FOCUS_LOST} on it too.
+     *
+     * @return the owner, or {@code null} when this node is no other node's delegate
+     */
+    public final Node focusOwner() {
+        return this.focusOwner;
+    }
+
+    /**
+     * Makes another node take focus for this one, and this node stop taking it itself.
+     */
+    final void setFocusDelegate(final Node delegate) {
+        if (this.focusDelegate != null) {
+            this.focusDelegate.focusOwner = null;
+        }
+        this.focusDelegate = delegate;
+        delegate.focusOwner = this;
+        this.focusable = false;
+        this.tabbable = false;
+        this.treeChanged();
     }
 
     // ------------------------------------------------------------------
@@ -867,6 +1254,7 @@ public class Node implements ComponentPeer {
         if (this.enabled != enabled) {
             this.enabled = enabled;
             this.treeChanged();
+            this.hooks.enabledChanged();
             if (!enabled) {
                 this.hooks.disabled();
             }
@@ -914,6 +1302,8 @@ public class Node implements ComponentPeer {
     @Override
     public final void setCursor(final CursorKind cursor) {
         this.cursor = cursor;
+        // The host asks for the cursor as it renders
+        this.repaint();
     }
 
     @Override
@@ -965,6 +1355,10 @@ public class Node implements ComponentPeer {
 
     @Override
     public final void setMinSize(final float minWidth, final float minHeight) {
+        if (!(minWidth >= 0f) || !(minHeight >= 0f) || Float.isInfinite(minWidth) || Float.isInfinite(minHeight)) {
+            throw new IllegalArgumentException("A minimum size must be finite and not negative: " + minWidth + " by "
+                    + minHeight);
+        }
         this.minWidth = minWidth;
         this.minHeight = minHeight;
         this.invalidateLayout();
@@ -972,6 +1366,10 @@ public class Node implements ComponentPeer {
 
     @Override
     public final void setMaxSize(final float maxWidth, final float maxHeight) {
+        if (!(maxWidth >= 0f) || !(maxHeight >= 0f)) {
+            throw new IllegalArgumentException("A maximum size must not be negative or NaN: " + maxWidth + " by "
+                    + maxHeight);
+        }
         this.maxWidth = maxWidth;
         this.maxHeight = maxHeight;
         this.invalidateLayout();
@@ -979,14 +1377,42 @@ public class Node implements ComponentPeer {
 
     @Override
     public final void setWidth(final float width) {
-        this.explicitWidth = width;
+        this.explicitWidth = fixedLength(width, "width");
         this.invalidateLayout();
     }
 
     @Override
     public final void setHeight(final float height) {
-        this.explicitHeight = height;
+        this.explicitHeight = fixedLength(height, "height");
         this.invalidateLayout();
+    }
+
+    /**
+     * Returns the fixed width set with {@code setWidth}.
+     *
+     * @return the width, or NaN for none
+     */
+    public final float fixedWidth() {
+        return this.explicitWidth;
+    }
+
+    /**
+     * Returns the fixed height set with {@code setHeight}.
+     *
+     * @return the height, or NaN for none
+     */
+    public final float fixedHeight() {
+        return this.explicitHeight;
+    }
+
+    /**
+     * Checks a fixed width or height: NaN, which means none, or a finite length that is not negative.
+     */
+    private static float fixedLength(final float length, final String name) {
+        if (!Float.isNaN(length) && (length < 0f || Float.isInfinite(length))) {
+            throw new IllegalArgumentException("A fixed " + name + " must be finite and not negative: " + length);
+        }
+        return length;
     }
 
     @Override
@@ -1004,6 +1430,77 @@ public class Node implements ComponentPeer {
         this.horizontalAlignment = Objects.requireNonNull(horizontal, "horizontal");
         this.verticalAlignment = Objects.requireNonNull(vertical, "vertical");
         this.invalidateLayout();
+    }
+
+    /**
+     * Returns the direction this node's content runs in: its own, else the nearest ancestor's that has one, else, at
+     * the top of its tree, its root's {@link Root#flowDirection()}, or the language's while it is in no tree. It walks
+     * the parents on each call.
+     *
+     * @return the direction
+     */
+    @Override
+    public final FlowDirection flowDirection() {
+        Node node = this;
+        while (true) {
+            if (node.flowDirection != null) {
+                return node.flowDirection;
+            }
+            if (node.parent == null) {
+                return node.root != null ? node.root.flowDirection() : Root.languageDirection();
+            }
+            node = node.parent;
+        }
+    }
+
+    /**
+     * Returns the direction set on this node.
+     *
+     * @return the direction, or null when it follows its parent
+     */
+    public final FlowDirection ownFlowDirection() {
+        return this.flowDirection;
+    }
+
+    /**
+     * Sets the direction, null to follow the parent, and marks this node and everything inside it for measuring and
+     * arranging again, since text and the parts of controls follow the direction. On a screen's root, every overlay
+     * is laid out again too, since overlays follow the root.
+     *
+     * @param direction the direction, or null
+     * @throws IllegalStateException if attached and called off the UI thread
+     */
+    @Override
+    public final void setFlowDirection(final FlowDirection direction) {
+        if (direction == this.flowDirection) {
+            return;
+        }
+        this.checkThread();
+        this.flowDirection = direction;
+        if (this.root != null && this.root.content() == this) {
+            this.root.invalidateText();
+        } else {
+            this.invalidateSubtree();
+        }
+    }
+
+    /**
+     * Marks this node and everything inside it for measuring and arranging, and asks for a layout.
+     */
+    private void invalidateSubtree() {
+        this.markSubtree();
+        this.invalidateLayout();
+    }
+
+    private void markSubtree() {
+        this.measureDirty = true;
+        this.minimumDirty = true;
+        this.arrangeDirty = true;
+        if (this instanceof final ContainerNode container) {
+            for (final Node child : container.childNodes()) {
+                child.markSubtree();
+            }
+        }
     }
 
     @Override
@@ -1026,6 +1523,22 @@ public class Node implements ComponentPeer {
     }
 
     @Override
+    public final float opacity() {
+        return this.opacity;
+    }
+
+    @Override
+    public final void setOpacity(final float opacity) {
+        if (!(opacity >= 0f && opacity <= 1f)) {
+            throw new IllegalArgumentException("An opacity must be from 0 to 1: " + opacity);
+        }
+        if (this.opacity != opacity) {
+            this.opacity = opacity;
+            this.repaint();
+        }
+    }
+
+    @Override
     public final int zIndex() {
         return this.zIndex;
     }
@@ -1043,6 +1556,7 @@ public class Node implements ComponentPeer {
             if (this.parent != null) {
                 this.parent.paintOrderChanged();
             }
+            this.repaint();
         }
     }
 
@@ -1068,6 +1582,7 @@ public class Node implements ComponentPeer {
     @Override
     public final void setBorder(final Border border) {
         this.border = Objects.requireNonNull(border, "border");
+        this.repaint();
     }
 
     @Override
@@ -1078,9 +1593,73 @@ public class Node implements ComponentPeer {
     @Override
     public final void setTooltip(final Tooltip tooltip) {
         this.tooltip = tooltip;
+        this.composeTooltip();
+    }
+
+    /**
+     * Sets a message the host shows first in this component's tooltip, ahead of the tooltip set in code, such as a
+     * control's validation message. {@link #tooltip()} still returns the tooltip set in code; the host shows
+     * {@link #shownTooltip()}.
+     *
+     * @param notice the message, or {@code null} for none
+     */
+    public final void setTooltipNotice(final Text notice) {
+        if (Objects.equals(notice, this.tooltipNotice)) {
+            return;
+        }
+        this.tooltipNotice = notice;
+        this.composeTooltip();
+    }
+
+    /**
+     * Returns the tooltip the host shows: the one set in code, with the {@linkplain #setTooltipNotice notice} ahead
+     * of it when there is one. A notice before a {@link Tooltip.Lines} tooltip is its first line; before a
+     * {@link Tooltip.Custom} one it is a line of text above the custom component. The result is the same object until
+     * either changes, so the host can tell when to show it again.
+     *
+     * @return the tooltip, or {@code null} for none or when the component is not a {@link HasTooltip}
+     */
+    public final Tooltip shownTooltip() {
+        if (!(this.facade instanceof HasTooltip<?>)) {
+            return null;
+        }
+        return this.tooltipNotice == null ? this.tooltip : this.noticeTooltip;
+    }
+
+    private void composeTooltip() {
+        final Text notice = this.tooltipNotice;
+        if (notice == null) {
+            this.noticeTooltip = null;
+        } else if (this.tooltip instanceof Tooltip.Lines lines) {
+            final List<Text> all = new ArrayList<>(lines.lines().size() + 1);
+            all.add(notice);
+            all.addAll(lines.lines());
+            this.noticeTooltip = Tooltip.lines(all);
+        } else if (this.tooltip instanceof Tooltip.Custom custom) {
+            this.noticeTooltip = Tooltip.of(ui -> ui.stackPanel()
+                    .add(new TooltipView((ComponentFactoryImpl) ui, Tooltip.text(notice)))
+                    .add(custom.builder().apply(ui)));
+        } else {
+            this.noticeTooltip = Tooltip.text(notice);
+        }
         if (this.root != null) {
             this.root.tooltipChanged(this);
         }
+    }
+
+    /**
+     * Returns the context menu, which only a component that has {@link HasContextMenu} can have.
+     *
+     * @return the popup, or {@code null} for none or for a component without the attribute
+     */
+    @Override
+    public final Popup<?> contextMenu() {
+        return this.facade instanceof HasContextMenu<?> ? this.contextMenu : null;
+    }
+
+    @Override
+    public final void setContextMenu(final Popup<?> popup) {
+        this.contextMenu = popup;
     }
 
     @Override
@@ -1091,6 +1670,7 @@ public class Node implements ComponentPeer {
     @Override
     public final void setBackground(final Paint background) {
         this.background = Objects.requireNonNull(background, "background");
+        this.repaint();
     }
 
     private void treeChanged() {

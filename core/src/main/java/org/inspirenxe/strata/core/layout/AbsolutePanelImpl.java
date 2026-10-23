@@ -84,6 +84,23 @@ public final class AbsolutePanelImpl extends BuiltInContainer<AbsolutePanel> imp
     }
 
     @Override
+    protected Size measureMinimum(final MeasureContext context) {
+        float width = 0f;
+        float height = 0f;
+        for (final Component<?> child : this.children()) {
+            if (!child.isVisible()) {
+                continue;
+            }
+            final Size minimum = context.minimumSize(child);
+            final Position position = this.positions.getOrDefault(child, ORIGIN);
+            width = Math.max(width, position.x + minimum.width());
+            height = Math.max(height, position.y + minimum.height());
+        }
+        final Insets padding = this.padding();
+        return new Size(width + padding.horizontal(), height + padding.vertical());
+    }
+
+    @Override
     protected void arrange(final ArrangeContext context, final Rect bounds) {
         final Rect content = this.contentBox();
         for (final Component<?> child : this.children()) {

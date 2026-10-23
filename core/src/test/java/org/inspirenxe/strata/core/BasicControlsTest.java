@@ -36,6 +36,7 @@ import org.inspirenxe.strata.api.text.Text;
 import org.inspirenxe.strata.api.text.TextSpan;
 import org.inspirenxe.strata.api.theme.SpriteId;
 import org.inspirenxe.strata.api.theme.Themes;
+import org.inspirenxe.strata.api.visual.PixelBuffer;
 import org.inspirenxe.strata.api.visual.Visual;
 import org.inspirenxe.strata.spi.Canvas;
 import org.junit.jupiter.api.Nested;
@@ -46,6 +47,8 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -76,6 +79,15 @@ class BasicControlsTest {
         final List<Rect> sprites = new ArrayList<>();
         final List<Integer> tints = new ArrayList<>();
         final List<String> texts = new ArrayList<>();
+        final List<Rect> pixels = new ArrayList<>();
+        final List<PixelBuffer> buffers = new ArrayList<>();
+
+        @Override
+        public void pixels(final PixelBuffer buffer, final Rect rect, final int tint) {
+            this.pixels.add(rect);
+            this.buffers.add(buffer);
+            this.tints.add(tint);
+        }
 
         @Override
         public void fill(final Rect rect, final int argb) {
@@ -166,6 +178,55 @@ class BasicControlsTest {
         }
 
         @Test
+        void pixelsDrawLikeASpriteAtTheImageSize() {
+            final PixelBuffer buffer = PixelBuffer.of(4, 2);
+            final Image image = this.test.factory().image().setImageSize(10, 5).setPixels(buffer)
+                    .setScaling(Image.Scaling.FIT).setTint(0xFF808080);
+            image.setSize(40, 40);
+            this.test.show(this.test.factory().absolutePanel().add(image));
+            assertEquals(10f, image.imageWidth(), "pixels do not change the image size");
+
+            final SpriteCanvas canvas = new SpriteCanvas();
+            this.test.host().render(canvas);
+            assertEquals(List.of(new Rect(0, 10, 40, 20)), canvas.pixels);
+            assertEquals(List.of(buffer), canvas.buffers);
+            assertEquals(List.of(0xFF808080), canvas.tints);
+            assertEquals(List.of(), canvas.sprites);
+        }
+
+        @Test
+        void pixelsSpritesAndVisualsReplaceEachOther() {
+            final PixelBuffer buffer = PixelBuffer.of(1, 1);
+            final Visual visual = () -> new org.inspirenxe.strata.api.geometry.Size(8, 8);
+            final Image image = this.test.factory().image(ICON).setPixels(buffer);
+            assertTrue(image.sprite().isEmpty());
+            assertSame(buffer, image.pixels().orElseThrow());
+            image.setSprite(ICON);
+            assertTrue(image.pixels().isEmpty());
+            image.setPixels(buffer).setVisual(visual);
+            assertTrue(image.pixels().isEmpty());
+            image.setPixels(buffer).setValue("Ana");
+            assertTrue(image.pixels().isEmpty());
+            image.setPixels(buffer).setPixels(null);
+            assertTrue(image.pixels().isEmpty());
+            assertTrue(image.visual().isEmpty());
+
+            this.test.show(this.test.factory().absolutePanel().add(image));
+            final SpriteCanvas canvas = new SpriteCanvas();
+            this.test.host().render(canvas);
+            assertEquals(List.of(), canvas.pixels, "an image with no pixels draws none");
+        }
+
+        @Test
+        void theStateHoldsAtMostOneThingToShow() {
+            final PixelBuffer buffer = PixelBuffer.of(1, 1);
+            assertNull(new Image.State(ICON, null, -1, 16, 16, Image.Scaling.STRETCH).pixels());
+            assertSame(buffer, new Image.State(null, null, -1, 16, 16, Image.Scaling.STRETCH, buffer).pixels());
+            assertThrows(IllegalArgumentException.class,
+                    () -> new Image.State(ICON, null, -1, 16, 16, Image.Scaling.STRETCH, buffer));
+        }
+
+        @Test
         void rejectsBadSizes() {
             final Image image = this.test.factory().image(ICON);
             assertThrows(IllegalArgumentException.class, () -> image.setImageSize(-1, 4));
@@ -228,7 +289,7 @@ class BasicControlsTest {
         @Test
         void aClickIsConsumed() {
             final List<Object> bubbled = new ArrayList<>();
-            this.box.parent().onEvent(InputEvents.CLICK, bubbled::add);
+            this.box.parent().orElseThrow().onEvent(InputEvents.CLICK, bubbled::add);
             this.test.click(45, 8);
             assertEquals(List.of(), bubbled);
         }

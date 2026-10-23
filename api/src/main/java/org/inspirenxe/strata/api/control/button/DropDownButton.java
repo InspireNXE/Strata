@@ -17,16 +17,16 @@ package org.inspirenxe.strata.api.control.button;
 
 import org.inspirenxe.strata.api.component.Component;
 import org.inspirenxe.strata.api.component.Focusable;
+import org.inspirenxe.strata.api.component.HasContextMenu;
 import org.inspirenxe.strata.api.component.HasCursor;
 import org.inspirenxe.strata.api.component.HasTooltip;
 import org.inspirenxe.strata.api.control.attribute.popup.Closable;
 import org.inspirenxe.strata.api.control.attribute.popup.Openable;
 import org.inspirenxe.strata.api.control.attribute.popup.Popup;
+import org.inspirenxe.strata.api.control.attribute.text.HasIcon;
 import org.inspirenxe.strata.api.control.attribute.text.HasText;
 import org.inspirenxe.strata.api.geometry.Insets;
 import org.inspirenxe.strata.api.text.Text;
-import org.inspirenxe.strata.api.theme.SpriteId;
-import org.inspirenxe.strata.api.visual.Visual;
 
 import java.util.Objects;
 import java.util.Optional;
@@ -42,13 +42,16 @@ import java.util.Optional;
  * button when the user opened it. A menu opened by a key highlights its first item. When the popup closes, for any
  * reason, the button reports {@link Closable#CLOSED} after the popup's own. A click on the button while its popup is
  * open closes the popup; with a popup that closes on a press outside, the press that lands on the button closes it.
- * The button never asks {@link Closable#CLOSE}.</p>
+ * The button never asks {@link Closable#CLOSE}. It acts on the click even on a platform whose conventions say
+ * buttons act on the press, since those conventions cover push buttons, checkboxes, radio buttons, toggles and tabs,
+ * and not controls that open a popup.</p>
  *
  * <p>A menu opens at least as wide as the button, and a flyout at its content's size. With no popup, or one that has
  * nothing to show (a menu with no items, a flyout with no content), the button asks nothing and stays closed. A popup
  * belongs to one button at a time.</p>
  *
- * <p>It looks and measures like a {@link Button}, with an arrow 7 units wide and 4 tall at the right end of the
+ * <p>It looks and measures like a {@link Button}, its icon included, with an arrow 7 units wide and 4 tall at the
+ * right end of the
  * space inside its padding, 4 units after the caption. While open it draws the pressed face. It is focusable and
  * tabbable, shows the hand cursor, is at least 20 units wide, and asks to be at least 20 tall, though a smaller
  * height set on it applies. A disabled button takes no focus, does not open,
@@ -77,11 +80,15 @@ import java.util.Optional;
  * DropDownButton button = factory.dropDownButton("Sort", sort);
  * }</pre>
  *
+ * <p>Its caption marks a mnemonic with an underscore, as {@link Button} describes: Alt with the letter focuses the
+ * button and opens its popup.</p>
+ *
  * <p>Get one from {@link org.inspirenxe.strata.api.ComponentFactory#dropDownButton(String)}. Do not implement this
  * interface.</p>
  */
-public interface DropDownButton extends Component<DropDownButton>, Focusable<DropDownButton>,
-        HasCursor<DropDownButton>, HasTooltip<DropDownButton>, HasText<DropDownButton>, Openable<DropDownButton> {
+public interface DropDownButton extends Component<DropDownButton>, Focusable<DropDownButton>, HasCursor<DropDownButton>,
+        HasTooltip<DropDownButton>, HasContextMenu<DropDownButton>, HasText<DropDownButton>, HasIcon<DropDownButton>,
+        Openable<DropDownButton> {
     /**
      * Style key for the arrow (paint, optional).
      */
@@ -108,12 +115,19 @@ public interface DropDownButton extends Component<DropDownButton>, Focusable<Dro
      * Sets the space between the button's edges and its content, which with the caption, the icon and the arrow
      * gives the desired size. Padding set here stays through theme changes.
      *
-     * @param padding the padding, or {@code null} to go back to the default: the theme's
-     *     {@value Button#STYLE_PADDING} (8 left and right and 5 top and bottom without it), or its
-     *     {@value Button#STYLE_PADDING_ICON} (2 on every side) for a button with an icon and no caption
+     * @param padding the padding; {@link #clearTextPadding()} goes back to the default
      * @return this button
      */
     DropDownButton setTextPadding(Insets padding);
+
+    /**
+     * Goes back to the default text padding: the theme's {@value Button#STYLE_PADDING} (8 left and right and 5 top
+     * and bottom without it), or its {@value Button#STYLE_PADDING_ICON} (2 on every side) for a button with an icon
+     * and no caption. A new layout runs.
+     *
+     * @return this button
+     */
+    DropDownButton clearTextPadding();
 
     /**
      * Sets the same text padding on all four sides.
@@ -150,67 +164,19 @@ public interface DropDownButton extends Component<DropDownButton>, Focusable<Dro
     }
 
     /**
-     * Returns the icon sprite.
+     * Returns where the icon sits beside the caption.
      *
-     * @return the sprite, or null if the icon is a visual or there is none
+     * @return the placement; {@link IconPlacement#START} for a new button
      */
-    SpriteId iconSprite();
+    IconPlacement iconPlacement();
 
     /**
-     * Returns the icon visual.
+     * Sets where the icon sits beside the caption: before it, after it, above it or below it. A new layout runs.
      *
-     * @return the visual, or null if the icon is a sprite or there is none
-     */
-    Visual iconVisual();
-
-    /**
-     * Shows a sprite before the caption, replacing any icon. The size stays what it was, 16 by 16 by default. A new
-     * layout runs.
-     *
-     * @param sprite the sprite; see {@link SpriteId} for where engines look for it
+     * @param placement the placement
      * @return this button
      */
-    DropDownButton setIcon(SpriteId sprite);
-
-    /**
-     * Shows a visual before the caption, replacing any icon, at the visual's natural size. A new layout runs.
-     *
-     * @param visual the visual
-     * @return this button
-     */
-    DropDownButton setIcon(Visual visual);
-
-    /**
-     * Removes the icon. A new layout runs.
-     *
-     * @return this button
-     */
-    DropDownButton clearIcon();
-
-    /**
-     * Returns the width the icon is drawn at.
-     *
-     * @return the width in UI units; 16 by default
-     */
-    float iconWidth();
-
-    /**
-     * Returns the height the icon is drawn at.
-     *
-     * @return the height in UI units; 16 by default
-     */
-    float iconHeight();
-
-    /**
-     * Sets the size the icon is drawn at. Strata cannot ask an engine for a sprite's size, so the caller gives it.
-     * A new layout runs.
-     *
-     * @param width the width in UI units, finite and not negative
-     * @param height the height in UI units, finite and not negative
-     * @return this button
-     * @throws IllegalArgumentException if either size is negative, infinite or not a number
-     */
-    DropDownButton setIconSize(float width, float height);
+    DropDownButton setIconPlacement(IconPlacement placement);
 
     /**
      * Returns the popup the button opens.

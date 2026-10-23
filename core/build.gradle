@@ -1,6 +1,8 @@
 plugins {
     id 'strata-java'
     id 'strata-documented'
+    // The test kit applications test their screens with (org.inspirenxe.strata.testing)
+    id 'java-test-fixtures'
 }
 
 description = 'The Strata implementation. Adapters use it; developers compile against api only.'
@@ -9,4 +11,20 @@ dependencies {
     api(project(':spi'))
     // Run the SPI contracts against the test platform, which checks both
     testImplementation(testFixtures(project(':spi')))
+}
+
+// As for spi: builds that take Strata from Maven ask for testFixtures("org.inspirenxe:strata-core"), which looks for
+// the artifact's name, so the variants declare that capability too.
+configurations.matching { it.name.startsWith('testFixtures') && it.name.endsWith('Elements') }.configureEach {
+    outgoing.capability("${project.group}:strata-core-test-fixtures:${project.version}")
+}
+
+// The test kit is published API, so its Javadoc gets the same checks as the main sources'
+def testFixturesJavadoc = tasks.named('testFixturesJavadoc', Javadoc) {
+    options.encoding = 'UTF-8'
+    options.addBooleanOption('Xdoclint:all', true)
+    options.addBooleanOption('Werror', true)
+}
+tasks.named('check') {
+    dependsOn(testFixturesJavadoc)
 }

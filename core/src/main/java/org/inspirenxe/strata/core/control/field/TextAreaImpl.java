@@ -23,6 +23,7 @@ import org.inspirenxe.strata.api.event.input.DragEvent;
 import org.inspirenxe.strata.api.event.input.KeyEvent;
 import org.inspirenxe.strata.api.event.input.PointerButtonEvent;
 import org.inspirenxe.strata.api.event.input.ScrollEvent;
+import org.inspirenxe.strata.api.extension.Environment;
 import org.inspirenxe.strata.api.extension.MeasureContext;
 import org.inspirenxe.strata.api.extension.Painter;
 import org.inspirenxe.strata.api.geometry.Insets;
@@ -31,6 +32,7 @@ import org.inspirenxe.strata.api.geometry.Size;
 import org.inspirenxe.strata.api.input.Key;
 import org.inspirenxe.strata.api.input.Modifiers;
 import org.inspirenxe.strata.api.input.MouseButton;
+import org.inspirenxe.strata.api.layout.HorizontalAlignment;
 import org.inspirenxe.strata.api.layout.ScrollPanel;
 import org.inspirenxe.strata.api.text.Text;
 import org.inspirenxe.strata.api.text.TextHighlighter;
@@ -39,27 +41,44 @@ import org.inspirenxe.strata.api.text.TextSpan;
 import org.inspirenxe.strata.api.text.TextStyle;
 import org.inspirenxe.strata.api.theme.Paint;
 import org.inspirenxe.strata.api.theme.Theme;
+import org.inspirenxe.strata.core.control.Motion;
 import org.inspirenxe.strata.core.layout.ScrollTrack;
 import org.inspirenxe.strata.core.node.BuiltInComponent;
 import org.inspirenxe.strata.core.node.ComponentFactoryImpl;
+import org.inspirenxe.strata.core.text.LineBreaks;
 import org.inspirenxe.strata.core.text.StyledText;
 import org.inspirenxe.strata.core.text.TextLine;
 
 import java.util.Arrays;
 import java.util.Objects;
 import java.util.Set;
+import java.util.function.Consumer;
+import java.util.function.UnaryOperator;
+import org.inspirenxe.strata.api.component.Validation;
+import org.inspirenxe.strata.core.control.Validity;
+import org.inspirenxe.strata.core.state.ConversionTarget;
+import java.util.function.Function;
 
 /**
  * The core {@link TextArea}. It edits like {@link TextBoxImpl} and lays its text out in rows: one per line, and more
  * where a line wraps. Rows are worked out again only when the text, the style or the content size changes, and each
  * row keeps its span, so painting measures nothing. The caret stays shown and then hidden for the theme's
  * {@value TextBox#STYLE_CARET_BLINK}, {@link TextBoxImpl#BLINK_MILLIS} milliseconds each by default. Setting the text
- * puts the caret at its end and scrolls back to the top.
+ * puts the caret at its end and scrolls back to the top, and the view stays there until the caret moves, so new text
+ * shows its start.
  *
- * <p>A row that wraps keeps its trailing space, and the caret cannot sit after its last character: that position is
- * the start of the next row. The view scrolls to keep the caret in sight after the caret moves, but not on other
- * frames, so the wheel can scroll it away. Each wheel notch scrolls three lines, and selecting a whole line past its
- * end shows a 3-unit stub for the line break.</p>
+ * <p>Rows break by the rule {@code LineBreaks} describes, which labels share, and a word too wide for a row breaks
+ * between grapheme clusters. A row that wraps keeps the whitespace it breaks at, past its edge if it must, and the
+ * caret cannot sit after its last character: that position is the start of the next row. A caret in that whitespace
+ * is drawn at the edge. The view scrolls to keep the caret in sight after the caret moves, but not on other frames,
+ * so the wheel can scroll it away. Each wheel notch scrolls three lines, and selecting a whole line past its
+ * end shows a 3-unit stub for the line break. A vertical notch glides over the theme's
+ * {@value org.inspirenxe.strata.api.layout.ScrollPanel#STYLE_SMOOTH} time through a {@link Motion}, adding to where a
+ * glide under way is headed; keeping the caret in sight moves at once and stops a glide, so typing never waits.</p>
+ *
+ * <p>Tab is left to the root, which moves focus, unless the area accepts tabs and is editable: then Tab types a tab
+ * as typing does, Shift+Tab is consumed and does nothing, and Control+Tab moves focus through the root, forward or
+ * with Shift backward. Lines and columns are counted from line breaks over the buffer, not from the rows.</p>
  *
  * <p>A vertical scroll bar shows when the rows are taller than the area. An area that does not wrap also shows a
  * horizontal one along the bottom when its widest row does not fit; a horizontal wheel turn scrolls it by three
@@ -68,14 +87,22 @@ import java.util.Set;
  * <p>Every user edit that would change the text fires {@link TextArea#MODIFY} and then {@link TextArea#EDIT} when a
  * handler for either is on its path. While the handlers run the area still holds the text and selection from before
  * the edit; a canceled {@code MODIFY} ends the edit there. The final text then has its line breaks turned into
- * {@code \n} and is cut to the length limit, and the caret goes as many characters from its end as the edit left it,
- * with nothing selected. With neither handler on the path the edit applies directly, without putting the old text
- * back first. Every change reports {@link TextArea#EDITED} and then {@link TextArea#MODIFIED}.</p>
+ * {@code \n} and its control characters other than tabs dropped, and is cut to the length limit, and the caret goes
+ * as many characters from its end as the edit left it, with nothing selected. With neither handler on the path the edit applies directly, without putting the old text
+ * back first. Every change reports {@link TextArea#EDITED} and then {@link TextArea#MODIFIED}, and each input or call
+ * that moved the caret or the anchor then reports {@link TextArea#CARET_MOVED} once.</p>
  *
- * <p>The text is a {@code PlainBuffer}, and code point and word boundaries come from {@code TextBoundaries}, which
- * the text box and the password box share; the rows are the area's own.</p>
+ * <p>The user's edits and the edits from code go into an {@code EditHistory} of at most 100 edits by default, which
+ * Ctrl+Z, Ctrl+Y and Ctrl+Shift+Z walk through, as {@code PlainEdits} describes; {@link #setText} clears it. An edit
+ * from code keeps the view where it is unless it moved the caret, and then scrolls only as far as the caret
+ * needs.</p>
+ *
+ * <p>The text is a {@code PlainBuffer}. The caret, the selection, the keys and the pointer are a {@code TextEditor},
+ * which the text box and the password box share, with the area's rows plugged in for Home, End, Up, Down, Page Up,
+ * Page Down and triple clicks, and a user's edit goes through the {@code PlainEdits} the text box uses too. The rows
+ * and their drawing are the area's own.</p>
  */
-public final class TextAreaImpl extends BuiltInComponent<TextArea> implements TextArea {
+public final class TextAreaImpl extends BuiltInComponent<TextArea> implements TextArea, ConversionTarget {
     /**
      * How many lines one wheel notch scrolls.
      */
@@ -92,11 +119,15 @@ public final class TextAreaImpl extends BuiltInComponent<TextArea> implements Te
      */
     public static final Insets DEFAULT_PADDING = Insets.of(4f);
 
+    private final Validity validity;
     private final PlainBuffer buffer;
     private final TextBoundaries boundaries;
+    private final TextEditor editor;
+    private final PlainEdits edits;
     private final ScrollTrack bar;
     private final ScrollTrack horizontalBar;
     private final Runnable drawContent;
+    private final Runnable drawRow;
     private int maxLength;
     private boolean wrap;
     private int visibleLines;
@@ -105,27 +136,23 @@ public final class TextAreaImpl extends BuiltInComponent<TextArea> implements Te
     private Insets setPadding;
     private Insets themePadding;
     private boolean readOnly;
+    private boolean acceptsTab;
+    private HorizontalAlignment textAlignment;
+    // How much of a row's free room goes before it: 0 for left, 0.5 for center, 1 for right
+    private float alignment;
 
-    // The text and selection before the edit in progress, for a rejected edit to fall back to
-    private String beforeText;
-    private int beforeCaret;
-    private int beforeAnchor;
-
-    private int caret;
-    private int anchor;
-    private float goalX;
     private float scrollX;
     private float scrollY;
-    private long blinkStart;
+    private long smoothMillis;
+    private final Motion glide = new Motion(offset -> {
+        if (this.scrollTo(offset)) {
+            this.repaint();
+        }
+    });
     private boolean revealPending;
     private boolean draggingBar;
     private boolean draggingHorizontalBar;
     private float barGrab;
-
-    // Double-click drags select whole words around the word first clicked
-    private boolean wordDrag;
-    private int dragWordStart;
-    private int dragWordEnd;
 
     // Theme
     private Paint normal;
@@ -155,6 +182,12 @@ public final class TextAreaImpl extends BuiltInComponent<TextArea> implements Te
     // Each row as drawn: one span per styled segment it crosses, and where each starts on the row
     private TextSpan[][] rowSpans;
     private float[][] rowSpanX;
+    private float[] rowWidth;
+    // How far each row is shifted right by the alignment, worked out with the viewport
+    private float[] rowShift;
+    private float shiftedFor;
+    // The direction the rows were shifted for
+    private boolean alignedRightToLeft;
     private final StyledText styled;
     private TextHighlighter highlighter;
     private float widestRow;
@@ -172,8 +205,26 @@ public final class TextAreaImpl extends BuiltInComponent<TextArea> implements Te
     private float[] selectionX0;
     private float[] selectionX1;
 
-    // Set only while paint runs, for drawContent
+    // Drawn last frame, made again only when they move or the rows change
+    private Rect innerFor;
+    private Insets innerPadding;
+    private Rect barTrack;
+    private Rect horizontalTrack;
+    private Rect caretRect;
+    private Rect[] selectedRects;
+    private Rect[] beforeClips;
+    private Rect[] afterClips;
+    // Each row's spans in the selected style, made again when the row's spans or the style change
+    private TextSpan[][] selectedSpans;
+    private TextSpan[][] selectedSpansFor;
+    private TextStyle selectedSpansStyle;
+
+    // Set only while paint runs, for drawContent and drawRow
     private Painter painter;
+    private TextSpan[] drawnSpans;
+    private float[] drawnOffsets;
+    private float drawnX;
+    private float drawnY;
 
     /**
      * Creates an empty text area that wraps.
@@ -183,17 +234,20 @@ public final class TextAreaImpl extends BuiltInComponent<TextArea> implements Te
     @SuppressWarnings("this-escape")
     public TextAreaImpl(final ComponentFactoryImpl ui) {
         super(ui);
+        this.validity = new Validity(this.node(), this::validated);
         this.buffer = new PlainBuffer();
-        this.boundaries = new TextBoundaries(this.buffer, false);
+        this.boundaries = new TextBoundaries(this.buffer);
+        this.editor = new TextEditor(this.buffer, this.boundaries, new Editing(), new RowMoves(), this::caretMoved);
+        this.edits = new PlainEdits(this.buffer, this.boundaries, this.editor, new Edits());
         this.bar = new ScrollTrack(true);
         this.horizontalBar = new ScrollTrack(false);
         this.drawContent = this::drawContent;
+        this.drawRow = this::drawRow;
         this.maxLength = Integer.MAX_VALUE;
         this.wrap = true;
         this.visibleLines = DEFAULT_VISIBLE_LINES;
         this.textPadding = DEFAULT_PADDING;
         this.themePadding = DEFAULT_PADDING;
-        this.goalX = Float.NaN;
         this.normal = Paint.NONE;
         this.focusedPaint = Paint.NONE;
         this.disabledPaint = Paint.NONE;
@@ -213,14 +267,24 @@ public final class TextAreaImpl extends BuiltInComponent<TextArea> implements Te
         this.rowSoft = new boolean[8];
         this.rowSpans = new TextSpan[8][];
         this.rowSpanX = new float[8][];
+        this.rowWidth = new float[8];
+        this.rowShift = new float[8];
+        this.shiftedFor = Float.NaN;
+        this.textAlignment = HorizontalAlignment.LEFT;
         this.styled = new StyledText();
         this.highlighter = TextHighlighter.NONE;
         this.selectionX0 = new float[8];
         this.selectionX1 = new float[8];
+        this.selectedRects = new Rect[8];
+        this.beforeClips = new Rect[8];
+        this.afterClips = new Rect[8];
+        this.selectedSpans = new TextSpan[8][];
+        this.selectedSpansFor = new TextSpan[8][];
         this.contentBox = Rect.ZERO;
         this.viewport = Rect.ZERO;
         this.visualsDirty = true;
         this.setCursor(CursorKind.TEXT);
+        this.setContextMenu(TextMenus.create(ui, this.editor, this.editor::settle, this::canUndo, this::canRedo));
         this.setMinSize(20f, 20f);
     }
 
@@ -235,16 +299,88 @@ public final class TextAreaImpl extends BuiltInComponent<TextArea> implements Te
 
     @Override
     public TextArea setText(final String text) {
-        final String clean = truncate(normalize(Objects.requireNonNull(text, "text")), this.maxLength);
+        final String clean = PlainEdits.truncate(FieldText.lines(Objects.requireNonNull(text, "text")), this.maxLength);
         if (!this.buffer.contentEquals(clean)) {
             final String previous = this.buffer.toString();
             this.buffer.set(clean);
-            this.caret = this.buffer.length();
-            this.anchor = this.caret;
+            this.editor.place(this.buffer.length());
+            // The text the user edited is gone, so nothing in the history applies to it
+            this.edits.history().clear();
             this.scrollX = 0f;
             this.scrollY = 0f;
-            this.changed(previous);
+            this.changed(previous, false);
+            this.editor.settle();
         }
+        return this;
+    }
+
+    @Override
+    public TextArea insert(final String text) {
+        return this.change(this.selectionStart(), this.selectionEnd(), text, true);
+    }
+
+    @Override
+    public TextArea replace(final int start, final int end, final String text) {
+        return this.change(start, end, text, false);
+    }
+
+    @Override
+    public TextArea append(final String text) {
+        return this.change(this.buffer.length(), this.buffer.length(), text, false);
+    }
+
+    @Override
+    public TextArea delete(final int start, final int end) {
+        return this.change(start, end, "", false);
+    }
+
+    private TextArea change(final int start, final int end, final String text, final boolean collapse) {
+        this.edits.change(start, end, text, collapse);
+        this.editor.settle();
+        return this;
+    }
+
+    @Override
+    public boolean canUndo() {
+        return this.edits.history().canUndo();
+    }
+
+    @Override
+    public boolean canRedo() {
+        return this.edits.history().canRedo();
+    }
+
+    @Override
+    public TextArea undo() {
+        this.edits.undo(false);
+        this.editor.settle();
+        return this;
+    }
+
+    @Override
+    public TextArea redo() {
+        this.edits.redo(false);
+        this.editor.settle();
+        return this;
+    }
+
+    @Override
+    public TextArea clearHistory() {
+        this.edits.history().clear();
+        return this;
+    }
+
+    @Override
+    public int historyLimit() {
+        return this.edits.history().limit();
+    }
+
+    @Override
+    public TextArea setHistoryLimit(final int edits) {
+        if (edits < 0) {
+            throw new IllegalArgumentException("History limit must not be negative: " + edits);
+        }
+        this.edits.history().setLimit(edits);
         return this;
     }
 
@@ -275,11 +411,7 @@ public final class TextAreaImpl extends BuiltInComponent<TextArea> implements Te
         }
         this.maxLength = maxLength;
         if (this.codePoints() > maxLength) {
-            final String previous = this.buffer.toString();
-            this.buffer.truncate(this.buffer.offsetByCodePoints(0, maxLength));
-            this.caret = Math.min(this.caret, this.buffer.length());
-            this.anchor = Math.min(this.anchor, this.buffer.length());
-            this.changed(previous);
+            this.change(this.buffer.offsetByCodePoints(0, maxLength), this.buffer.length(), "", false);
         }
         return this;
     }
@@ -295,7 +427,7 @@ public final class TextAreaImpl extends BuiltInComponent<TextArea> implements Te
             this.wrap = wrap;
             this.scrollX = 0f;
             this.rowsDirty = true;
-            this.moved();
+            this.editor.moved();
         }
         return this;
     }
@@ -312,8 +444,17 @@ public final class TextAreaImpl extends BuiltInComponent<TextArea> implements Te
 
     @Override
     public TextArea setTextPadding(final Insets padding) {
-        this.setPadding = padding;
-        this.textPadding = padding != null ? padding : this.themePadding;
+        this.setPadding = Objects.requireNonNull(padding, "padding");
+        this.textPadding = padding;
+        this.rowsDirty = true;
+        this.invalidateLayout();
+        return this;
+    }
+
+    @Override
+    public TextArea clearTextPadding() {
+        this.setPadding = null;
+        this.textPadding = this.themePadding;
         this.rowsDirty = true;
         this.invalidateLayout();
         return this;
@@ -321,17 +462,17 @@ public final class TextAreaImpl extends BuiltInComponent<TextArea> implements Te
 
     @Override
     public int caret() {
-        return this.caret;
+        return this.editor.caret();
     }
 
     @Override
     public int selectionStart() {
-        return Math.min(this.anchor, this.caret);
+        return this.editor.selectionStart();
     }
 
     @Override
     public int selectionEnd() {
-        return Math.max(this.anchor, this.caret);
+        return this.editor.selectionEnd();
     }
 
     @Override
@@ -341,17 +482,15 @@ public final class TextAreaImpl extends BuiltInComponent<TextArea> implements Te
 
     @Override
     public TextArea select(final int anchor, final int caret) {
-        this.anchor = this.snap(anchor);
-        this.caret = this.snap(caret);
-        this.moved();
+        this.editor.select(anchor, caret);
+        this.editor.settle();
         return this;
     }
 
     @Override
     public TextArea selectAll() {
-        this.anchor = 0;
-        this.caret = this.buffer.length();
-        this.moved();
+        this.editor.selectAll();
+        this.editor.settle();
         return this;
     }
 
@@ -383,6 +522,121 @@ public final class TextAreaImpl extends BuiltInComponent<TextArea> implements Te
         return this.scrollY;
     }
 
+    @Override
+    public TextArea setScrollY(final float scrollY) {
+        if (Float.isNaN(scrollY)) {
+            throw new IllegalArgumentException("Scroll offset is NaN");
+        }
+        // Code wins over a glide of the wheel, as the caret does
+        this.glide.stop();
+        this.scrollY = Math.max(0f, scrollY);
+        this.revealPending = false;
+        if (this.isLaidOut()) {
+            this.ensureRows();
+        }
+        this.repaint();
+        return this;
+    }
+
+    @Override
+    public TextArea scrollToCaret() {
+        this.glide.stop();
+        this.repaint();
+        if (this.isLaidOut()) {
+            this.ensureRows();
+            this.updateVisuals();
+            this.revealPending = false;
+            this.revealCaret();
+        } else {
+            this.revealPending = true;
+        }
+        return this;
+    }
+
+    /**
+     * Returns whether the area has been measured in a tree, so its rows can be worked out now.
+     */
+    private boolean isLaidOut() {
+        return this.isAttached() && this.lineHeight > 0f;
+    }
+
+    @Override
+    public int lineCount() {
+        int lines = 1;
+        for (int i = this.buffer.indexOf("\n", 0); i >= 0; i = this.buffer.indexOf("\n", i + 1)) {
+            lines++;
+        }
+        return lines;
+    }
+
+    @Override
+    public int lineOf(final int index) {
+        final int end = Math.max(0, Math.min(index, this.buffer.length()));
+        int line = 0;
+        for (int i = this.buffer.indexOf("\n", 0); i >= 0 && i < end; i = this.buffer.indexOf("\n", i + 1)) {
+            line++;
+        }
+        return line;
+    }
+
+    @Override
+    public int lineStart(final int line) {
+        if (line < 0) {
+            throw new IndexOutOfBoundsException("No line " + line);
+        }
+        int start = 0;
+        for (int i = 0; i < line; i++) {
+            final int newline = this.buffer.indexOf("\n", start);
+            if (newline < 0) {
+                throw new IndexOutOfBoundsException("No line " + line + " in " + (i + 1) + " lines");
+            }
+            start = newline + 1;
+        }
+        return start;
+    }
+
+    @Override
+    public int columnOf(final int index) {
+        final int at = this.boundaries.snap(index);
+        return this.buffer.codePointCount(this.startOfLineAt(at), at);
+    }
+
+    @Override
+    public boolean acceptsTab() {
+        return this.acceptsTab;
+    }
+
+    @Override
+    public HorizontalAlignment textAlignment() {
+        return this.textAlignment;
+    }
+
+    /**
+     * The share of the free room before each row: the alignment's, with left and right swapped right to left.
+     */
+    private float alignment() {
+        return this.alignedRightToLeft ? 1f - this.alignment : this.alignment;
+    }
+
+    @Override
+    public TextArea setTextAlignment(final HorizontalAlignment alignment) {
+        this.textAlignment = Objects.requireNonNull(alignment, "alignment");
+        this.alignment = switch (alignment) {
+            case CENTER -> 0.5f;
+            case RIGHT -> 1f;
+            case LEFT, STRETCH -> 0f;
+        };
+        this.shiftedFor = Float.NaN;
+        this.visualsDirty = true;
+        return this;
+    }
+
+    @Override
+    public TextArea setAcceptsTab(final boolean accepts) {
+        this.acceptsTab = accepts;
+        return this;
+    }
+
     // ------------------------------------------------------------------
     // Theme and layout
     // ------------------------------------------------------------------
@@ -397,8 +651,40 @@ public final class TextAreaImpl extends BuiltInComponent<TextArea> implements Te
         return true;
     }
 
+    // ------------------------------------------------------------------
+    // Validatable
+    // ------------------------------------------------------------------
+
+    @Override
+    public Validation validation() {
+        return this.validity.validation();
+    }
+
+    @Override
+    public TextArea setValidation(final Validation validation) {
+        this.validity.set(validation);
+        return this;
+    }
+
+    @Override
+    public TextArea setValidator(final Function<? super TextArea, Validation> validator) {
+        this.validity.setValidator(validator == null ? null : () -> validator.apply(this));
+        return this;
+    }
+
+    @Override
+    public void setConversionError(final Text message) {
+        this.validity.setConversionError(message);
+    }
+
+    private void validated(final Validation validation, final Validation previous) {
+        this.report(VALIDATED, validation, previous);
+    }
+
     @Override
     protected void onApplyTheme(final Theme theme) {
+        this.smoothMillis = Motion.millis(theme, ScrollPanel.STYLE_SMOOTH);
+        this.validity.applyTheme(theme, TextBox.STYLE_INVALID);
         this.themePadding = themePadding(theme);
         if (this.setPadding == null) {
             this.textPadding = this.themePadding;
@@ -442,8 +728,13 @@ public final class TextAreaImpl extends BuiltInComponent<TextArea> implements Te
      * Works out the content box and, if the text, style or size changed, the rows and the scroll bar.
      */
     private void ensureRows() {
-        final Rect inner = this.bounds().shrink(this.textPadding);
-        this.contentBox = inner;
+        final Rect bounds = this.bounds();
+        if (!bounds.equals(this.innerFor) || this.textPadding != this.innerPadding) {
+            this.contentBox = bounds.shrink(this.textPadding);
+            this.innerFor = bounds;
+            this.innerPadding = this.textPadding;
+        }
+        final Rect inner = this.contentBox;
         final TextStyle style = this.style();
         if (this.rowsDirty || inner.width() != this.rowsWidth || inner.height() != this.rowsHeight || style != this.rowsStyle) {
             this.rowsDirty = false;
@@ -464,25 +755,58 @@ public final class TextAreaImpl extends BuiltInComponent<TextArea> implements Te
                 this.barShown = true;
             }
             this.visualsDirty = true;
+            this.shiftedFor = Float.NaN;
         }
         final float bottomGutter = this.horizontalBarShown ? GUTTER : 0f;
-        this.viewport = new Rect(inner.x(), inner.y(), Math.max(0f, inner.width() - (this.barShown ? GUTTER : 0f)),
-                Math.max(0f, inner.height() - bottomGutter));
+        // Right to left the vertical bar sits at the left and the rows after it
+        final boolean rightToLeft = this.isRightToLeft();
+        final float sideGutter = this.barShown ? GUTTER : 0f;
+        this.viewport = Rects.reuse(this.viewport, rightToLeft ? inner.x() + sideGutter : inner.x(), inner.y(),
+                inner.width() - sideGutter, inner.height() - bottomGutter);
         final float total = this.rowCount * this.lineHeight;
         this.maxScrollY = Math.max(0f, total - this.viewport.height());
         this.scrollY = Math.max(0f, Math.min(this.scrollY, this.maxScrollY));
-        this.bar.update(new Rect(inner.right() - ScrollPanel.BAR_WIDTH, inner.y(), ScrollPanel.BAR_WIDTH,
-                Math.max(0f, inner.height() - bottomGutter)), this.viewport.height(), Math.max(total, this.viewport.height()));
+        this.barTrack = Rects.reuse(this.barTrack, rightToLeft ? inner.x() : inner.right() - ScrollPanel.BAR_WIDTH,
+                inner.y(), ScrollPanel.BAR_WIDTH, inner.height() - bottomGutter);
+        this.bar.update(this.barTrack, this.viewport.height(), Math.max(total, this.viewport.height()));
         final float wide = this.widestRow + 1f;
         this.maxScrollX = this.wrap ? 0f : Math.max(0f, wide - this.viewport.width());
         this.scrollX = Math.max(0f, Math.min(this.scrollX, this.maxScrollX));
-        this.horizontalBar.update(new Rect(inner.x(), inner.bottom() - ScrollPanel.BAR_WIDTH, this.viewport.width(),
-                ScrollPanel.BAR_WIDTH), this.viewport.width(), Math.max(wide, this.viewport.width()));
+        this.horizontalTrack = Rects.reuse(this.horizontalTrack, this.viewport.x(),
+                inner.bottom() - ScrollPanel.BAR_WIDTH, this.viewport.width(), ScrollPanel.BAR_WIDTH);
+        if (rightToLeft != this.alignedRightToLeft) {
+            this.alignedRightToLeft = rightToLeft;
+            this.shiftedFor = Float.NaN;
+        }
+        this.horizontalBar.update(this.horizontalTrack, this.viewport.width(), Math.max(wide, this.viewport.width()));
+        this.alignRows(Math.max(wide, this.viewport.width()));
     }
 
+    /**
+     * Works out how far each row is shifted by the alignment within a width: the viewport's, or the widest row's when
+     * that is wider. Only after the rows or the width changed.
+     */
+    private void alignRows(final float span) {
+        if (span == this.shiftedFor) {
+            return;
+        }
+        this.shiftedFor = span;
+        final float alignment = this.alignment();
+        for (int row = 0; row < this.rowCount; row++) {
+            this.rowShift[row] = alignment == 0f ? 0f
+                    : Math.round(Math.max(0f, span - (this.rowWidth[row] + 1f)) * alignment);
+        }
+    }
+
+    /**
+     * Lays the text out in rows by the rule {@link LineBreaks} describes, breaking a word too wide for a row between
+     * grapheme clusters. Whitespace where a row breaks stays in the row, so the caret can sit in it.
+     */
     private void buildRows(final TextMetrics metrics, final TextStyle style, final float width) {
         this.rowCount = 0;
         this.widestRow = 0f;
+        final String text = this.styled.text();
+        final LineBreaks.Measure measure = (start, end) -> this.width(metrics, style, start, end);
         int lineStart = 0;
         final int length = this.buffer.length();
         while (true) {
@@ -492,24 +816,8 @@ public final class TextAreaImpl extends BuiltInComponent<TextArea> implements Te
             }
             int start = lineStart;
             do {
-                int end = this.fit(metrics, style, start, lineEnd, width);
-                boolean soft = false;
-                if (end < lineEnd) {
-                    soft = true;
-                    if (Character.isWhitespace(this.buffer.codePointAt(end))) {
-                        // The space that does not fit stays at the end of the row
-                        end = this.nextCodePoint(end);
-                    } else {
-                        // Break after the last whitespace that fits, or between characters
-                        for (int i = end; i > start; i = this.previousCodePoint(i)) {
-                            if (Character.isWhitespace(this.buffer.codePointBefore(i))) {
-                                end = i;
-                                break;
-                            }
-                        }
-                    }
-                }
-                this.addRow(metrics, style, start, end, soft);
+                final int end = LineBreaks.end(LineBreaks.row(text, start, lineEnd, width, measure, this.boundaries));
+                this.addRow(metrics, style, start, end, end < lineEnd);
                 start = end;
             } while (start < lineEnd);
             if (lineEnd >= length) {
@@ -517,30 +825,6 @@ public final class TextAreaImpl extends BuiltInComponent<TextArea> implements Te
             }
             lineStart = lineEnd + 1;
         }
-    }
-
-    /**
-     * The furthest index from {@code start}, at most {@code end}, whose text fits a width, and at least one code point
-     * past {@code start} while there is one.
-     */
-    private int fit(final TextMetrics metrics, final TextStyle style, final int start, final int end, final float width) {
-        if (Float.isInfinite(width) || this.width(metrics, style, start, end) <= width) {
-            return end;
-        }
-        int low = this.nextCodePoint(start);
-        int high = end;
-        while (low < high) {
-            final int mid = this.snap(low + (high - low + 1) / 2);
-            if (mid <= low) {
-                break;
-            }
-            if (this.width(metrics, style, start, mid) <= width) {
-                low = mid;
-            } else {
-                high = this.previousCodePoint(mid);
-            }
-        }
-        return low;
     }
 
     private float width(final TextMetrics metrics, final TextStyle style, final int start, final int end) {
@@ -556,8 +840,15 @@ public final class TextAreaImpl extends BuiltInComponent<TextArea> implements Te
             this.rowSoft = Arrays.copyOf(this.rowSoft, grown);
             this.rowSpans = Arrays.copyOf(this.rowSpans, grown);
             this.rowSpanX = Arrays.copyOf(this.rowSpanX, grown);
+            this.rowWidth = Arrays.copyOf(this.rowWidth, grown);
+            this.rowShift = Arrays.copyOf(this.rowShift, grown);
             this.selectionX0 = Arrays.copyOf(this.selectionX0, grown);
             this.selectionX1 = Arrays.copyOf(this.selectionX1, grown);
+            this.selectedRects = Arrays.copyOf(this.selectedRects, grown);
+            this.beforeClips = Arrays.copyOf(this.beforeClips, grown);
+            this.afterClips = Arrays.copyOf(this.afterClips, grown);
+            this.selectedSpans = Arrays.copyOf(this.selectedSpans, grown);
+            this.selectedSpansFor = Arrays.copyOf(this.selectedSpansFor, grown);
         }
         final TextSpan[] spans = this.styled.spans(start, end);
         final float[] offsets = StyledText.offsets(metrics, spans);
@@ -567,6 +858,7 @@ public final class TextAreaImpl extends BuiltInComponent<TextArea> implements Te
         this.rowSpans[this.rowCount] = spans;
         this.rowSpanX[this.rowCount] = offsets;
         final float rowWidth = StyledText.extent(metrics, spans, offsets);
+        this.rowWidth[this.rowCount] = rowWidth;
         this.widestRow = Math.max(this.widestRow, rowWidth);
         this.rowCount++;
     }
@@ -600,27 +892,10 @@ public final class TextAreaImpl extends BuiltInComponent<TextArea> implements Te
     }
 
     /**
-     * The code point boundary on a row nearest to {@code x}, measured from the row's start.
+     * The character boundary on a row nearest to {@code x}, measured from the row's start.
      */
     private int indexOnRow(final int row, final float x) {
-        final int start = this.rowStart[row];
-        final int limit = this.rowLimit(row);
-        if (x <= 0f) {
-            return start;
-        }
-        int previous = start;
-        float previousX = 0f;
-        int index = start;
-        while (index < limit) {
-            index = this.nextCodePoint(index);
-            final float indexX = this.xOnRow(row, index);
-            if (indexX >= x) {
-                return x - previousX < indexX - x ? previous : index;
-            }
-            previous = index;
-            previousX = indexX;
-        }
-        return limit;
+        return this.boundaries.nearest(this.rowStart[row], this.rowLimit(row), x, index -> this.xOnRow(row, index));
     }
 
     /**
@@ -630,7 +905,7 @@ public final class TextAreaImpl extends BuiltInComponent<TextArea> implements Te
         this.ensureRows();
         final int row = Math.max(0, Math.min(this.rowCount - 1,
                 (int) Math.floor((localY - this.textPadding.top() + this.scrollY) / this.lineHeight)));
-        return this.indexOnRow(row, localX - this.textPadding.left() + this.scrollX);
+        return this.indexOnRow(row, localX - this.textPadding.left() + this.scrollX - this.rowShift[row]);
     }
 
     private void updateVisuals() {
@@ -638,8 +913,9 @@ public final class TextAreaImpl extends BuiltInComponent<TextArea> implements Te
             return;
         }
         this.visualsDirty = false;
-        this.caretRow = this.rowOf(this.caret);
-        this.caretX = this.xOnRow(this.caretRow, this.caret);
+        final int caret = this.editor.caret();
+        this.caretRow = this.rowOf(caret);
+        this.caretX = this.xOnRow(this.caretRow, caret);
         final int start = this.selectionStart();
         final int end = this.selectionEnd();
         for (int row = 0; row < this.rowCount; row++) {
@@ -664,18 +940,24 @@ public final class TextAreaImpl extends BuiltInComponent<TextArea> implements Te
      */
     private void revealCaret() {
         final float top = this.caretRow * this.lineHeight;
+        final float before = this.scrollY;
         if (top < this.scrollY) {
             this.scrollY = top;
         } else if (top + this.lineHeight > this.scrollY + this.viewport.height()) {
             this.scrollY = top + this.lineHeight - this.viewport.height();
         }
         this.scrollY = Math.max(0f, Math.min(this.scrollY, this.maxScrollY));
-        final float view = this.viewport.width();
-        if (this.caretX - this.scrollX > view - 1f) {
-            this.scrollX = this.caretX - view + 1f;
+        if (this.scrollY != before) {
+            // The caret wins over a glide of the wheel, so typing never waits
+            this.glide.stop();
         }
-        if (this.caretX - this.scrollX < 0f) {
-            this.scrollX = this.caretX;
+        final float view = this.viewport.width();
+        final float caretX = this.caretX + this.rowShift[this.caretRow];
+        if (caretX - this.scrollX > view - 1f) {
+            this.scrollX = caretX - view + 1f;
+        }
+        if (caretX - this.scrollX < 0f) {
+            this.scrollX = caretX;
         }
         this.scrollX = Math.max(0f, Math.min(this.scrollX, this.maxScrollX));
     }
@@ -689,12 +971,13 @@ public final class TextAreaImpl extends BuiltInComponent<TextArea> implements Te
         final Paint face;
         if (!this.isEnabled()) {
             face = this.disabledPaint;
-        } else if (this.isFocused()) {
-            face = this.focusedPaint;
         } else {
-            face = this.normal;
+            face = this.validity.face(this.isFocused() ? this.focusedPaint : this.normal);
         }
         face.paint(painter, bounds);
+        if (this.isEnabled()) {
+            this.validity.paintOutline(painter, bounds);
+        }
 
         this.ensureRows();
         this.updateVisuals();
@@ -710,13 +993,21 @@ public final class TextAreaImpl extends BuiltInComponent<TextArea> implements Te
             this.painter = null;
         }
 
-        if (this.isFocused() && this.isEnabled() && !this.readOnly && this.caretShown()) {
-            final float x = this.viewport.x() + this.caretX - this.scrollX;
+        if (this.isFocused() && this.isEnabled() && !this.readOnly) {
+            this.repaintAfter(this.editor.untilBlink(this.look.blinkMillis()));
+        }
+        if (this.isFocused() && this.isEnabled() && !this.readOnly && this.editor.caretShown(this.look.blinkMillis())) {
+            float x = this.viewport.x() + this.rowShift[this.caretRow] + this.caretX - this.scrollX;
+            if (this.wrap) {
+                // A caret in the spaces that hang past the end of a wrapped row stops at the edge
+                x = Math.min(x, this.viewport.right() - 1f);
+            }
             final float y = this.viewport.y() + this.caretRow * this.lineHeight - Math.round(this.scrollY);
             if (x >= this.viewport.x() && x < this.viewport.right() && y + this.lineHeight > this.viewport.y()
                     && y < this.viewport.bottom()) {
                 final float reach = this.look.caretExtend();
-                this.look.caret().paint(painter, new Rect(x, y - reach, 1f, this.lineHeight + reach * 2f));
+                this.caretRect = Rects.reuse(this.caretRect, x, y - reach, 1f, this.lineHeight + reach * 2f);
+                this.look.caret().paint(painter, this.caretRect);
             }
         }
         if (this.barShown) {
@@ -730,53 +1021,86 @@ public final class TextAreaImpl extends BuiltInComponent<TextArea> implements Te
 
     /**
      * Runs inside the viewport clip during {@link #paint}; a field-held method reference, so painting allocates no
-     * lambda per frame.
+     * lambda per frame. The rectangles of each selected row and its spans in the selected style are kept from frame to
+     * frame and made again only when they change.
      */
     private void drawContent() {
         final float originX = this.viewport.x() - this.scrollX;
         final float offset = Math.round(this.scrollY);
         if (this.buffer.length() == 0) {
             if (!this.placeholderLine.isEmpty() && !(this.look.hidePlaceholder() && this.isFocused())) {
-                this.placeholderLine.draw(this.painter, this.viewport.x(), this.viewport.y() - offset);
+                final float alignment = this.alignment();
+                final float shift = alignment == 0f ? 0f
+                        : Math.round(Math.max(0f, this.viewport.width() - this.placeholderLine.width()) * alignment);
+                this.placeholderLine.draw(this.painter, this.viewport.x() + shift, this.viewport.y() - offset);
             }
             return;
         }
         final int first = Math.max(0, (int) Math.floor(offset / this.lineHeight));
         final int last = Math.min(this.rowCount - 1, (int) Math.floor((offset + this.viewport.height()) / this.lineHeight));
         final TextStyle selectedStyle = this.look.selectedText();
+        if (selectedStyle != this.selectedSpansStyle) {
+            Arrays.fill(this.selectedSpans, null);
+            Arrays.fill(this.selectedSpansFor, null);
+            this.selectedSpansStyle = selectedStyle;
+        }
         for (int row = first; row <= last; row++) {
             final float y = this.viewport.y() + row * this.lineHeight - offset;
-            final TextSpan[] spans = this.rowSpans[row];
-            final float[] offsets = this.rowSpanX[row];
+            final float rowX = originX + this.rowShift[row];
+            this.drawnX = rowX;
+            this.drawnY = y;
+            this.drawnSpans = this.rowSpans[row];
+            this.drawnOffsets = this.rowSpanX[row];
             if (this.selectionX1[row] > this.selectionX0[row]) {
-                final Rect selected = new Rect(originX + this.selectionX0[row], y,
+                this.selectedRects[row] = Rects.reuse(this.selectedRects[row], rowX + this.selectionX0[row], y,
                         this.selectionX1[row] - this.selectionX0[row], this.lineHeight);
+                final Rect selected = this.selectedRects[row];
                 this.look.selection().paint(this.painter, selected);
                 if (selectedStyle != null) {
                     // The row outside the selection as it is, and inside it in the selected style
                     final float left = this.viewport.x();
                     final float right = this.viewport.right();
-                    this.painter.clipped(new Rect(left, y, Math.max(0f, selected.x() - left), this.lineHeight),
-                            () -> this.drawRow(spans, offsets, originX, y, null));
-                    this.painter.clipped(new Rect(selected.right(), y, Math.max(0f, right - selected.right()),
-                            this.lineHeight), () -> this.drawRow(spans, offsets, originX, y, null));
-                    this.painter.clipped(selected, () -> this.drawRow(spans, offsets, originX, y, selectedStyle));
+                    this.beforeClips[row] = Rects.reuse(this.beforeClips[row], left, y, selected.x() - left,
+                            this.lineHeight);
+                    this.afterClips[row] = Rects.reuse(this.afterClips[row], selected.right(), y,
+                            right - selected.right(), this.lineHeight);
+                    this.painter.clipped(this.beforeClips[row], this.drawRow);
+                    this.painter.clipped(this.afterClips[row], this.drawRow);
+                    this.drawnSpans = this.selectedSpans(row, selectedStyle);
+                    this.painter.clipped(selected, this.drawRow);
                     continue;
                 }
             }
-            this.drawRow(spans, offsets, originX, y, null);
+            this.drawRow();
         }
+        this.drawnSpans = null;
+        this.drawnOffsets = null;
     }
 
-    private void drawRow(final TextSpan[] spans, final float[] offsets, final float originX, final float y,
-                         final TextStyle style) {
+    /**
+     * Returns a row's spans in the selected style, made again only when the row's spans changed.
+     */
+    private TextSpan[] selectedSpans(final int row, final TextStyle style) {
+        final TextSpan[] spans = this.rowSpans[row];
+        if (this.selectedSpansFor[row] != spans) {
+            final TextSpan[] styled = new TextSpan[spans.length];
+            for (int i = 0; i < spans.length; i++) {
+                styled[i] = new TextSpan(spans[i].text(), style);
+            }
+            this.selectedSpans[row] = styled;
+            this.selectedSpansFor[row] = spans;
+        }
+        return this.selectedSpans[row];
+    }
+
+    /**
+     * Draws the spans set for the row being drawn; a field-held method reference, as {@link #drawContent} is.
+     */
+    private void drawRow() {
+        final TextSpan[] spans = this.drawnSpans;
         for (int i = 0; i < spans.length; i++) {
-            this.painter.text(style == null ? spans[i] : new TextSpan(spans[i].text(), style), originX + offsets[i], y);
+            this.painter.text(spans[i], this.drawnX + this.drawnOffsets[i], this.drawnY);
         }
-    }
-
-    private boolean caretShown() {
-        return ((this.environment().millis() - this.blinkStart) / this.look.blinkMillis()) % 2 == 0;
     }
 
     @Override
@@ -786,7 +1110,7 @@ public final class TextAreaImpl extends BuiltInComponent<TextArea> implements Te
 
     @Override
     public TextArea setPlaceholder(final Text placeholder) {
-        this.placeholder = placeholder == null ? Text.empty() : placeholder;
+        this.placeholder = Objects.requireNonNull(placeholder, "placeholder");
         this.invalidateLayout();
         return this;
     }
@@ -822,36 +1146,14 @@ public final class TextAreaImpl extends BuiltInComponent<TextArea> implements Te
                 this.barGrab = event.y() - thumbRect.y();
             } else {
                 final float page = Math.max(this.lineHeight, this.viewport.height() - this.lineHeight);
+                this.glide.stop();
                 this.scrollBy(event.y() < thumbRect.y() ? -page : page);
             }
             event.consume();
             return;
         }
-        final int index = this.indexAt(event.localX(), event.localY());
-        this.wordDrag = false;
-        switch (event.clicks()) {
-            case 1 -> {
-                this.caret = index;
-                if (!event.modifiers().shift()) {
-                    this.anchor = index;
-                }
-            }
-            case 2 -> {
-                final int[] word = this.wordAround(index);
-                this.anchor = word[0];
-                this.caret = word[1];
-                this.wordDrag = true;
-                this.dragWordStart = word[0];
-                this.dragWordEnd = word[1];
-            }
-            default -> {
-                this.anchor = this.lineStart(index);
-                this.caret = this.lineEnd(index);
-            }
-        }
-        this.goalX = Float.NaN;
-        this.moved();
-        event.consume();
+        this.editor.press(event, this.indexAt(event.localX(), event.localY()));
+        this.editor.settle();
     }
 
     @Override
@@ -865,6 +1167,7 @@ public final class TextAreaImpl extends BuiltInComponent<TextArea> implements Te
             return;
         }
         if (this.draggingBar) {
+            this.glide.stop();
             this.scrollTo(this.bar.offsetForThumbAt(event.y() - this.barGrab, this.maxScrollY));
             event.consume();
             return;
@@ -877,22 +1180,8 @@ public final class TextAreaImpl extends BuiltInComponent<TextArea> implements Te
         if (event.clicks() >= 3) {
             return;
         }
-        final int index = this.indexAt(event.localX(), event.localY());
-        if (this.wordDrag) {
-            final int[] word = this.wordAround(index);
-            if (word[0] < this.dragWordStart) {
-                this.anchor = this.dragWordEnd;
-                this.caret = word[0];
-            } else {
-                this.anchor = this.dragWordStart;
-                this.caret = Math.max(word[1], this.dragWordEnd);
-            }
-        } else {
-            this.caret = index;
-        }
-        this.goalX = Float.NaN;
-        this.moved();
-        event.consume();
+        this.editor.drag(event, this.indexAt(event.localX(), event.localY()));
+        this.editor.settle();
     }
 
     @Override
@@ -904,7 +1193,12 @@ public final class TextAreaImpl extends BuiltInComponent<TextArea> implements Te
     @Override
     protected void onScroll(final ScrollEvent event) {
         this.ensureRows();
-        final boolean vertical = this.scrollBy(-event.scrollY() * this.lineHeight * WHEEL_LINES);
+        final float aim = this.glide.destination(this.scrollY);
+        final float next = Math.max(0f, Math.min(aim - event.scrollY() * this.lineHeight * WHEEL_LINES, this.maxScrollY));
+        final boolean vertical = next != aim;
+        if (vertical) {
+            this.glide.move(this.motionAnimator(), this.smoothMillis, this.scrollY, next);
+        }
         final boolean horizontal = this.scrollXTo(this.scrollX - event.scrollX() * this.lineHeight * WHEEL_LINES);
         if (vertical || horizontal) {
             event.consume();
@@ -945,313 +1239,96 @@ public final class TextAreaImpl extends BuiltInComponent<TextArea> implements Te
         final Key key = event.key();
         final Modifiers modifiers = event.modifiers();
         if (key == Key.TAB) {
+            this.tabKey(event);
             return;
         }
         this.ensureRows();
         this.updateVisuals();
-        final boolean shift = modifiers.shift();
         final boolean handled;
-        if (modifiers.control() && !modifiers.alt()) {
-            handled = this.controlKey(key, shift);
-        } else if (!modifiers.alt()) {
-            handled = this.plainKey(key, shift);
+        if (key.isEnter() && !modifiers.control() && !modifiers.alt()) {
+            this.edits.edit(this.editor.selectionStart(), this.editor.selectionEnd(), "\n", EditHistory.Kind.TYPE);
+            handled = true;
         } else {
-            handled = false;
+            handled = this.editor.key(key, modifiers, event.shortcutModifier());
         }
-        if (handled || (!modifiers.control() && !modifiers.alt() && key.isPrintable())) {
+        if (handled || TextEditor.typesCharacter(key, modifiers)) {
             event.consume();
         }
-    }
-
-    private boolean controlKey(final Key key, final boolean shift) {
-        switch (key) {
-            case A -> this.selectAll();
-            case C -> this.copy();
-            case X -> this.cut();
-            case V -> this.paste();
-            case LEFT -> this.moveTo(this.previousWordStart(this.caret), shift);
-            case RIGHT -> this.moveTo(this.nextWordEnd(this.caret), shift);
-            case HOME -> this.moveTo(0, shift);
-            case END -> this.moveTo(this.buffer.length(), shift);
-            case BACKSPACE -> {
-                if (this.hasSelection()) {
-                    this.deleteSelection();
-                } else {
-                    this.deleteRange(this.previousWordStart(this.caret), this.caret);
-                }
-            }
-            case DELETE -> {
-                if (this.hasSelection()) {
-                    this.deleteSelection();
-                } else {
-                    this.deleteRange(this.caret, this.nextWordEnd(this.caret));
-                }
-            }
-            default -> {
-                return false;
-            }
-        }
-        return true;
-    }
-
-    private boolean plainKey(final Key key, final boolean shift) {
-        if (key.isEnter()) {
-            this.insert("\n");
-            return true;
-        }
-        switch (key) {
-            case LEFT -> {
-                if (this.hasSelection() && !shift) {
-                    this.moveTo(this.selectionStart(), false);
-                } else {
-                    this.moveTo(this.previousCodePoint(this.caret), shift);
-                }
-            }
-            case RIGHT -> {
-                if (this.hasSelection() && !shift) {
-                    this.moveTo(this.selectionEnd(), false);
-                } else {
-                    this.moveTo(this.nextCodePoint(this.caret), shift);
-                }
-            }
-            case UP -> this.moveRows(-1, shift);
-            case DOWN -> this.moveRows(1, shift);
-            case PAGE_UP -> this.moveRows(-this.pageRows(), shift);
-            case PAGE_DOWN -> this.moveRows(this.pageRows(), shift);
-            case HOME -> this.moveTo(this.rowStart[this.caretRow], shift);
-            case END -> this.moveTo(this.rowLimit(this.caretRow), shift);
-            case BACKSPACE -> {
-                if (this.hasSelection()) {
-                    this.deleteSelection();
-                } else {
-                    this.deleteRange(this.previousCodePoint(this.caret), this.caret);
-                }
-            }
-            case DELETE -> {
-                if (this.hasSelection()) {
-                    this.deleteSelection();
-                } else {
-                    this.deleteRange(this.caret, this.nextCodePoint(this.caret));
-                }
-            }
-            default -> {
-                return false;
-            }
-        }
-        return true;
-    }
-
-    private int pageRows() {
-        return Math.max(1, (int) Math.floor(this.viewport.height() / this.lineHeight) - 1);
+        this.editor.settle();
     }
 
     /**
-     * Moves the caret up or down by rows, keeping the column it had when vertical movement began.
+     * Handles Tab while the area accepts tabs and is editable: types a tab, ignores Shift+Tab, and moves focus for
+     * Control+Tab. Otherwise leaves Tab to the root.
      */
-    private void moveRows(final int rows, final boolean extend) {
-        final float goal = Float.isNaN(this.goalX) ? this.caretX : this.goalX;
-        final int target = this.caretRow + rows;
-        final int index;
-        if (target < 0) {
-            index = 0;
-        } else if (target >= this.rowCount) {
-            index = this.buffer.length();
-        } else {
-            index = this.indexOnRow(target, goal);
+    private void tabKey(final KeyEvent event) {
+        final Modifiers modifiers = event.modifiers();
+        if (!this.acceptsTab || this.readOnly || modifiers.alt()) {
+            return;
         }
-        this.moveTo(index, extend);
-        this.goalX = goal;
+        if (modifiers.control()) {
+            this.hostRoot().moveFocus(modifiers.shift());
+        } else if (!modifiers.shift()) {
+            this.ensureRows();
+            this.updateVisuals();
+            this.edits.edit(this.editor.selectionStart(), this.editor.selectionEnd(), "\t", EditHistory.Kind.TYPE);
+            this.editor.settle();
+        }
+        event.consume();
     }
 
     @Override
     protected void onChar(final CharEvent event) {
-        if (!this.isEnabled()) {
-            return;
+        if (this.isEnabled() && this.editor.type(event.codePoint())) {
+            event.consume();
         }
-        final int codePoint = event.codePoint();
-        if (Character.isISOControl(codePoint)) {
-            return;
-        }
-        this.insert(Character.toString(codePoint));
-        event.consume();
+        this.editor.settle();
     }
 
     // ------------------------------------------------------------------
     // Editing
     // ------------------------------------------------------------------
 
-    private void insert(final String text) {
-        if (!this.beginEdit()) {
-            return;
-        }
-        if (this.hasSelection()) {
-            this.removeSelection();
-        }
-        final String fitted = truncate(text, this.maxLength - this.codePoints());
-        if (!fitted.isEmpty()) {
-            this.buffer.insert(this.caret, fitted);
-            this.caret += fitted.length();
-        }
-        this.anchor = this.caret;
-        this.edited();
-    }
-
-    private void copy() {
-        if (this.hasSelection()) {
-            this.environment().setClipboardText(this.selectedText());
-        }
-    }
-
-    private void cut() {
-        if (this.hasSelection() && !this.readOnly) {
-            this.copy();
-            this.deleteSelection();
-        }
-    }
-
-    private void paste() {
-        this.environment().clipboardText().map(TextAreaImpl::normalize).ifPresent(this::insert);
-    }
-
-    private void deleteSelection() {
-        if (!this.beginEdit()) {
-            return;
-        }
-        this.removeSelection();
-        this.edited();
-    }
-
-    private void removeSelection() {
-        final int start = this.selectionStart();
-        this.buffer.delete(start, this.selectionEnd());
-        this.caret = start;
-        this.anchor = start;
-    }
-
-    private void deleteRange(final int start, final int end) {
-        if (start >= end || !this.beginEdit()) {
-            return;
-        }
-        this.buffer.delete(start, end);
-        this.caret = start;
-        this.anchor = start;
-        this.edited();
-    }
-
-    private boolean beginEdit() {
-        if (this.readOnly) {
-            return false;
-        }
-        this.beforeText = this.buffer.toString();
-        this.beforeCaret = this.caret;
-        this.beforeAnchor = this.anchor;
-        return true;
-    }
-
     /**
-     * Ends a user edit. With no {@link TextArea#MODIFY} or {@link TextArea#EDIT} handler on the path, or when the edit
-     * left the text as it was, this applies the edit at once. Otherwise it puts the text and selection back as they
-     * were before the edit and asks {@code MODIFY}; unless that was canceled, it fires {@code EDIT} with the edited
-     * text, which applies the final text through {@code proceedEdit} unless a handler cancels it.
+     * Marks the caret and selection out of date and scrolls to the caret on the next frame, after the caret or the
+     * text changed.
      */
-    private void edited() {
-        this.goalX = Float.NaN;
-        if (!this.isHandled(MODIFY) && !this.isHandled(EDIT)) {
-            this.applyEdit();
-            return;
-        }
-        final String candidate = this.buffer.toString();
-        if (candidate.equals(this.beforeText)) {
-            this.applyEdit();
-            return;
-        }
-        final int fromEnd = candidate.length() - this.caret;
-        this.buffer.set(this.beforeText);
-        this.caret = this.beforeCaret;
-        this.anchor = this.beforeAnchor;
-        this.moved();
-        if (!this.request(MODIFY)) {
-            return;
-        }
-        this.request(EDIT, candidate, text -> this.proceedEdit(text, fromEnd));
-    }
-
-    /**
-     * Applies the final text of an {@link TextArea#EDIT} request: turns its line breaks into {@code \n}, cuts
-     * it to the length limit, and puts it in the area with the caret {@code fromEnd} characters before its end and
-     * nothing selected. For the edited text itself that is where the edit left the caret. Then it applies the text
-     * as the edit.
-     */
-    private void proceedEdit(final String text, final int fromEnd) {
-        final String fitted = truncate(normalize(Objects.requireNonNull(text, "text")), this.maxLength);
-        this.buffer.set(fitted);
-        this.caret = this.snap(this.buffer.length() - fromEnd);
-        this.anchor = this.caret;
-        this.goalX = Float.NaN;
-        this.applyEdit();
-    }
-
-    /**
-     * Applies the edit the buffer holds, reporting {@link TextArea#EDITED} and {@link TextArea#MODIFIED} if the text
-     * changed.
-     */
-    private void applyEdit() {
-        if (this.buffer.contentEquals(this.beforeText)) {
-            this.moved();
-            return;
-        }
-        this.changed(this.beforeText);
-    }
-
-    private void moveTo(final int index, final boolean extend) {
-        this.caret = this.snap(index);
-        if (!extend) {
-            this.anchor = this.caret;
-        }
-        this.goalX = Float.NaN;
-        this.moved();
-    }
-
-    private void moved() {
+    private void caretMoved() {
         this.visualsDirty = true;
         this.revealPending = true;
-        this.blinkStart = this.environment().millis();
     }
 
-    private void changed(final String previous) {
+    /**
+     * Reports a change of the text, from any source: {@link TextArea#EDITED}, then {@link TextArea#MODIFIED}.
+     *
+     * @param reveal whether the next frame scrolls to the caret; false keeps the view where it is
+     */
+    private void changed(final String previous, final boolean reveal) {
         this.rowsDirty = true;
-        this.moved();
+        this.editor.moved();
+        if (!reveal) {
+            this.revealPending = false;
+        }
         this.report(EDITED, this.buffer.toString(), previous);
         if (this.isHandled(MODIFIED)) {
             this.report(MODIFIED, this.codePoints(), previous.codePointCount(0, previous.length()));
         }
+        this.validity.check();
     }
 
     // ------------------------------------------------------------------
     // Text helpers
     // ------------------------------------------------------------------
 
-    private boolean hasSelection() {
-        return this.anchor != this.caret;
-    }
-
     private int codePoints() {
         return this.buffer.codePointCount(0, this.buffer.length());
-    }
-
-    private int snap(final int index) {
-        return this.boundaries.snap(index);
     }
 
     private int previousCodePoint(final int index) {
         return this.boundaries.previousCodePoint(index);
     }
 
-    private int nextCodePoint(final int index) {
-        return this.boundaries.nextCodePoint(index);
-    }
-
-    private int lineStart(final int index) {
+    private int startOfLineAt(final int index) {
         final int newline = this.buffer.lastIndexOf("\n", index - 1);
         return newline < 0 ? 0 : newline + 1;
     }
@@ -1261,34 +1338,194 @@ public final class TextAreaImpl extends BuiltInComponent<TextArea> implements Te
         return newline < 0 ? this.buffer.length() : newline;
     }
 
-    private int previousWordStart(final int index) {
-        return this.boundaries.previousWordStart(index);
-    }
-
-    private int nextWordEnd(final int index) {
-        return this.boundaries.nextWordEnd(index);
-    }
-
-    private int[] wordAround(final int index) {
-        return this.boundaries.wordAround(index);
-    }
-
-    private static String normalize(final String text) {
-        return text.replace("\r\n", "\n").replace('\r', '\n');
-    }
-
-    private static String truncate(final String text, final int codePoints) {
-        if (codePoints <= 0) {
-            return "";
-        }
-        if (text.codePointCount(0, text.length()) <= codePoints) {
-            return text;
-        }
-        return text.substring(0, text.offsetByCodePoints(0, codePoints));
-    }
-
     @Override
     protected Object snapshotState() {
-        return new TextArea.State(this.buffer.toString(), this.caret, this.anchor, this.maxLength);
+        return new TextArea.State(this.buffer.toString(), this.editor.caret(), this.editor.anchor(), this.maxLength);
+    }
+
+    /**
+     * What the area tells its {@link TextEditor}: how the user's edits apply. Copying is always allowed.
+     */
+    private final class Editing implements TextEditor.Host {
+
+        @Override
+        public boolean rightToLeft() {
+            return TextAreaImpl.this.isRightToLeft();
+        }
+        @Override
+        public Environment environment() {
+            return TextAreaImpl.this.environment();
+        }
+
+        @Override
+        public void repaintAfter(final long millis) {
+            TextAreaImpl.this.repaintAfter(millis);
+        }
+
+        @Override
+        public boolean isReadOnly() {
+            return TextAreaImpl.this.readOnly;
+        }
+
+        @Override
+        public boolean allowsCopy() {
+            return true;
+        }
+
+        @Override
+        public void selectAll() {
+            TextAreaImpl.this.selectAll();
+        }
+
+        @Override
+        public void type(final int start, final int end, final int codePoint) {
+            TextAreaImpl.this.edits.edit(start, end, Character.toString(codePoint), EditHistory.Kind.TYPE);
+        }
+
+        @Override
+        public void delete(final int start, final int end, final EditHistory.Kind kind) {
+            TextAreaImpl.this.edits.edit(start, end, "", kind);
+        }
+
+        @Override
+        public void paste(final int start, final int end) {
+            TextAreaImpl.this.environment().clipboardText()
+                    .map(FieldText::lines)
+                    .ifPresent(text -> TextAreaImpl.this.edits.edit(start, end, text, EditHistory.Kind.OTHER));
+        }
+
+        @Override
+        public void copy(final int start, final int end) {
+            TextAreaImpl.this.environment().setClipboardText(TextAreaImpl.this.buffer.substring(start, end));
+        }
+
+        @Override
+        public boolean undo() {
+            return TextAreaImpl.this.edits.undo(true);
+        }
+
+        @Override
+        public boolean redo() {
+            return TextAreaImpl.this.edits.redo(true);
+        }
+
+        @Override
+        public void beforeMove() {
+        }
+
+        @Override
+        public void caretMoved(final int previousAnchor, final int previousCaret, final int anchor, final int caret) {
+            if (TextAreaImpl.this.isHandled(CARET_MOVED)) {
+                TextAreaImpl.this.report(CARET_MOVED, new Caret(anchor, caret), new Caret(previousAnchor, previousCaret));
+            }
+        }
+    }
+
+    /**
+     * The area's rows, as its {@link TextEditor} moves through them. The area brings its rows and caret up to date
+     * before it hands the editor a key.
+     */
+    private final class RowMoves implements TextEditor.Rows {
+        @Override
+        public int rowStart(final int index) {
+            return TextAreaImpl.this.rowStart[TextAreaImpl.this.rowOf(index)];
+        }
+
+        @Override
+        public int rowEnd(final int index) {
+            return TextAreaImpl.this.rowLimit(TextAreaImpl.this.rowOf(index));
+        }
+
+        @Override
+        public int lineStart(final int index) {
+            return TextAreaImpl.this.startOfLineAt(index);
+        }
+
+        @Override
+        public int lineEnd(final int index) {
+            return TextAreaImpl.this.lineEnd(index);
+        }
+
+        @Override
+        public float caretX() {
+            return TextAreaImpl.this.caretX + TextAreaImpl.this.rowShift[TextAreaImpl.this.caretRow];
+        }
+
+        @Override
+        public int indexAt(final int count, final float x) {
+            final TextAreaImpl area = TextAreaImpl.this;
+            final int target = area.caretRow + count;
+            if (target < 0) {
+                return 0;
+            }
+            return target >= area.rowCount ? area.buffer.length() : area.indexOnRow(target, x - area.rowShift[target]);
+        }
+
+        @Override
+        public int pageRows() {
+            return Math.max(1, (int) Math.floor(TextAreaImpl.this.viewport.height() / TextAreaImpl.this.lineHeight) - 1);
+        }
+    }
+
+    /**
+     * What the area tells its {@link PlainEdits}: its length limit and line rule, and its way to the edit requests and
+     * reports. It has no filter of its own.
+     */
+    private final class Edits implements PlainEdits.Field {
+        @Override
+        public boolean isReadOnly() {
+            return TextAreaImpl.this.readOnly;
+        }
+
+        @Override
+        public int maxLength() {
+            return TextAreaImpl.this.maxLength;
+        }
+
+        @Override
+        public String clean(final String text) {
+            return FieldText.lines(text);
+        }
+
+        @Override
+        public UnaryOperator<String> filter() {
+            return null;
+        }
+
+        @Override
+        public boolean hearsEdits() {
+            return TextAreaImpl.this.isHandled(MODIFY) || TextAreaImpl.this.isHandled(EDIT);
+        }
+
+        @Override
+        public boolean askModify() {
+            return TextAreaImpl.this.request(MODIFY);
+        }
+
+        @Override
+        public void askEdit(final String candidate, final Consumer<String> apply) {
+            TextAreaImpl.this.request(EDIT, candidate, apply);
+        }
+
+        @Override
+        public long millis() {
+            return TextAreaImpl.this.environment().millis();
+        }
+
+        @Override
+        public void userChanged(final String previous) {
+            TextAreaImpl.this.changed(previous, true);
+        }
+
+        @Override
+        public void userUndid(final String previous) {
+            TextAreaImpl.this.changed(previous, true);
+        }
+
+        @Override
+        public void codeChanged(final String previous, final boolean caretMoved) {
+            // The view stays where it is unless the caret moved, and then scrolls only as far as the caret needs
+            TextAreaImpl.this.changed(previous, caretMoved);
+        }
     }
 }

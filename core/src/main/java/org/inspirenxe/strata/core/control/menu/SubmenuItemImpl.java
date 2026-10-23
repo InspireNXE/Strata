@@ -81,7 +81,7 @@ public final class SubmenuItemImpl extends MenuEntryImpl implements SubmenuItem 
 
     @Override
     public SubmenuItem setMenu(final Menu menu) {
-        final MenuImpl next = MenuImpl.of(menu);
+        final MenuImpl next = menu == null ? null : MenuImpl.of(menu);
         if (next == this.menu) {
             return this;
         }

@@ -30,10 +30,11 @@ import java.util.Locale;
 
 /**
  * A canvas that writes each drawing call down as a line of text, so a test can compare what was drawn in order: fills
- * with their color, sprites and visuals with their rectangle, text with its position and color, and the transforms.
+ * with their color, sprites and visuals with their rectangle, text with its position and color, the transforms and
+ * the opacities.
  * Clips, layers and cursor requests are left out. Numbers print without a fraction when they are whole.
  */
-public final class DrawLog implements Canvas {
+public class DrawLog implements Canvas {
     private final List<String> lines = new ArrayList<>();
     private final List<TextStyle> textStyles = new ArrayList<>();
 
@@ -116,6 +117,11 @@ public final class DrawLog implements Canvas {
     }
 
     @Override
+    public void pushRoundClip(final Rect rect, final float radius) {
+        this.lines.add("roundclip " + DrawLog.rect(rect) + " " + DrawLog.number(radius));
+    }
+
+    @Override
     public void popClip() {
     }
 
@@ -132,6 +138,16 @@ public final class DrawLog implements Canvas {
     @Override
     public void popTransform() {
         this.lines.add("pop");
+    }
+
+    @Override
+    public void pushOpacity(final float opacity) {
+        this.lines.add("opacity " + DrawLog.number(opacity));
+    }
+
+    @Override
+    public void popOpacity() {
+        this.lines.add("opacity end");
     }
 
     @Override

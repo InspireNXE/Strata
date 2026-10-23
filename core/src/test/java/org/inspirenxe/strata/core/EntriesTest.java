@@ -16,6 +16,8 @@
 package org.inspirenxe.strata.core;
 
 import org.inspirenxe.strata.api.ComponentFactory;
+import org.inspirenxe.strata.api.component.Enableable;
+import org.inspirenxe.strata.api.component.HasTooltip;
 import org.inspirenxe.strata.api.component.Tooltip;
 import org.inspirenxe.strata.api.control.attribute.item.SingleSelection;
 import org.inspirenxe.strata.api.control.collection.ListView;
@@ -29,6 +31,7 @@ import org.inspirenxe.strata.api.control.menu.Menu;
 import org.inspirenxe.strata.api.control.menu.MenuBar;
 import org.inspirenxe.strata.api.control.menu.MenuEntry;
 import org.inspirenxe.strata.api.control.menu.MenuItem;
+import org.inspirenxe.strata.api.control.menu.MenuSeparator;
 import org.inspirenxe.strata.api.control.menu.SubmenuItem;
 import org.inspirenxe.strata.api.control.pane.SplitPane;
 import org.inspirenxe.strata.api.control.pane.Tab;
@@ -52,7 +55,6 @@ import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -92,6 +94,52 @@ class EntriesTest {
         }
 
         @Test
+        void aCheckItemDrawsItsShortcutHintAsACommandDoes() {
+            final ComponentFactory ui = EntriesTest.this.ui;
+            final CheckMenuItem prices = ui.checkMenuItem("Prices").setShortcut("Ctrl+P");
+            final Menu menu = ui.menu().addItem("Copy", "Ctrl+C", () -> { }).addItem(prices);
+            EntriesTest.this.test.show(ui.absolutePanel());
+            menu.openAt(10, 10);
+            EntriesTest.this.test.host().layout();
+            final DrawLog log = new DrawLog();
+            EntriesTest.this.test.host().render(log);
+
+            assertEquals("Ctrl+P", prices.shortcut().plain());
+            assertEquals(1, log.lines("text Ctrl+P ").size(), log.lines().toString());
+            final String copyHint = log.lines("text Ctrl+C ").get(0).split(" ")[2].split(",")[0];
+            final String pricesHint = log.lines("text Ctrl+P ").get(0).split(" ")[2].split(",")[0];
+            assertEquals(copyHint, pricesHint, "both hints end at the menu's right");
+        }
+
+        @Test
+        void oneLoopEnablesComponentsAndEntriesAlike() {
+            final ComponentFactory ui = EntriesTest.this.ui;
+            final List<Enableable<?>> all = List.of(ui.button("Ana"), ui.menuItem("Copy"), ui.checkMenuItem("Prices"),
+                    ui.submenuItem("More"), ui.tab("Sell"), ui.navigationItem("Market"));
+
+            for (final Enableable<?> each : all) {
+                assertTrue(each.isEnabled(), each + " starts enabled");
+                each.setEnabled(false);
+            }
+
+            assertTrue(all.stream().noneMatch(Enableable::isEnabled));
+        }
+
+        @Test
+        void entriesTakeTooltipsAsComponentsDo() {
+            final ComponentFactory ui = EntriesTest.this.ui;
+            final List<HasTooltip<?>> all = List.of(ui.button("Ana"), ui.tab("Sell"), ui.navigationItem("Market"));
+
+            for (final HasTooltip<?> each : all) {
+                assertEquals(Optional.empty(), each.tooltip());
+                each.setTooltip("Why it is off");
+                assertEquals(Tooltip.text("Why it is off"), each.tooltip().orElseThrow());
+                each.clearTooltip();
+                assertEquals(Optional.empty(), each.tooltip(), each + " clears");
+            }
+        }
+
+        @Test
         void anEntryBelongsToOneMenuAtATime() {
             final MenuItem item = EntriesTest.this.ui.menuItem("Copy");
             final Menu first = EntriesTest.this.ui.menu().addItem(item);
@@ -126,6 +174,27 @@ class EntriesTest {
             EntriesTest.this.test.click(30, 10 + 2 + 7);
             assertEquals(List.of("copy"), EntriesTest.this.heard);
             assertFalse(menu.isOpen());
+        }
+
+        @Test
+        void aSubmenuItemsMenuCanBeCleared() {
+            final ComponentFactory ui = EntriesTest.this.ui;
+            final Menu view = ui.menu().addItem("Zoom", () -> { });
+            final SubmenuItem item = ui.submenuItem("View").setMenu(view);
+            final MenuBar bar = ui.menuBar().addMenu(item);
+            item.setMenu(null);
+            assertEquals(Optional.empty(), item.menu());
+            // The menu is free again, so another holder can take it
+            bar.addMenu("Other", view);
+        }
+
+        @Test
+        void removingAnEntryNotMadeByStrataDoesNothing() {
+            final Menu menu = EntriesTest.this.ui.menu().addItem("Copy", () -> { });
+            final MenuSeparator foreign = new MenuSeparator() {
+            };
+            menu.removeItem(foreign);
+            assertEquals(1, menu.items().size());
         }
 
         @Test
@@ -235,10 +304,10 @@ class EntriesTest {
             assertEquals(Orientation.HORIZONTAL, ui.separator().orientation());
             assertEquals(Orientation.HORIZONTAL, ui.splitPane().orientation());
             final Image image = ui.image();
-            assertNull(image.sprite());
-            assertNull(image.visual());
+            assertEquals(Optional.empty(), image.sprite());
+            assertEquals(Optional.empty(), image.visual());
             final MessageBox box = ui.messageBox();
-            assertEquals(MessageBox.Buttons.OK, box.buttons());
+            assertEquals(MessageBox.Buttons.OK.results(), box.results());
             assertEquals("", box.text().plain());
         }
 
@@ -278,7 +347,8 @@ class EntriesTest {
                     .setButtons(MessageBox.Buttons.YES_NO);
             assertEquals("Delete?", box.window().title().plain());
             assertEquals("This cannot be undone.", box.text().plain());
-            assertEquals(MessageBox.Buttons.YES_NO, box.buttons());
+            assertEquals(MessageBox.Buttons.YES_NO.results(), box.results());
+            assertEquals(MessageBox.Result.NO, box.dismissResult());
         }
     }
 }

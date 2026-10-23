@@ -16,8 +16,12 @@
 package org.inspirenxe.strata.api.event;
 
 /**
- * A handler registered with {@link EventTarget#subscribe}, which can be removed before its target is discarded.
- * Removing a component from its tree does not remove its handlers; close the subscription.
+ * Something registered that can be removed again: a handler registered with {@link EventTarget#subscribe}, which
+ * can be removed before its target is discarded, or a registration in a registry such as
+ * {@link org.inspirenxe.strata.api.component.registry.ComponentRegistry}. Removing a component from its tree does not
+ * remove its handlers; close the subscription. Close a handler's subscription on the
+ * {@linkplain org.inspirenxe.strata.api.UiThread UI thread}, as {@link EventTarget} requires; a registry's
+ * subscriptions follow the registry's own threading rule.
  */
 @FunctionalInterface
 public interface Subscription extends AutoCloseable {

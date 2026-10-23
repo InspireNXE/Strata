@@ -19,6 +19,7 @@ import org.inspirenxe.strata.api.component.Tooltip;
 import org.inspirenxe.strata.api.control.button.Button;
 import org.inspirenxe.strata.api.control.button.CheckBox;
 import org.inspirenxe.strata.api.control.button.RadioButton;
+import org.inspirenxe.strata.api.control.button.ToggleButton;
 import org.inspirenxe.strata.api.control.button.ToggleSwitch;
 import org.inspirenxe.strata.api.control.collection.ComboBox;
 import org.inspirenxe.strata.api.control.collection.ListView;
@@ -82,6 +83,9 @@ public final class Themes {
                 .paint(Button.STYLE_PRESSED, Paint.solid(0xFF2B2D31))
                 .paint(Button.STYLE_DISABLED, Paint.solid(0xFF2A2A2A))
                 .paint(Button.STYLE_FOCUS, Paint.solid(0xFF6A9FFF))
+                .paint(ToggleButton.STYLE_SELECTED, Paint.solid(0xFF3A4D6E))
+                .paint(ToggleButton.STYLE_SELECTED_HOVERED, Paint.solid(0xFF4A5F84))
+                .paint(ToggleButton.STYLE_SELECTED_DISABLED, Paint.solid(0xFF2E333B))
                 .textStyle(Button.STYLE_TEXT, TextStyle.DEFAULT.withColor(0xFFF0F0F0))
                 .textStyle(Button.STYLE_TEXT_DISABLED, TextStyle.DEFAULT.withColor(0xFF808080))
                 .textStyle(Button.STYLE_LINK_TEXT, TextStyle.DEFAULT.withColor(0xFF6AA8FF))
@@ -105,6 +109,8 @@ public final class Themes {
                 .paint(Slider.STYLE_THUMB, Paint.solid(0xFF5A5E66))
                 .paint(Slider.STYLE_THUMB_HOVERED, Paint.solid(0xFF6A9FFF))
                 .paint(Slider.STYLE_THUMB_DISABLED, Paint.solid(0xFF3A3A3A))
+                .paint(Slider.STYLE_TICK, Paint.solid(0xFF8A8F98))
+                .paint(Slider.STYLE_TICK_MINOR, Paint.solid(0xFF4E525A))
                 // The label sits over the thumb as well as the track, so it gets a shadow to stay readable on both
                 .textStyle(Slider.STYLE_TEXT, TextStyle.DEFAULT.withColor(0xFFF0F0F0).withShadow(true))
                 .textStyle(Slider.STYLE_TEXT_DISABLED, TextStyle.DEFAULT.withColor(0xFF707070))
@@ -124,6 +130,7 @@ public final class Themes {
                 .paint(ListView.STYLE_ROW, Paint.solid(0xFF1F2024))
                 .paint(ListView.STYLE_ROW_HOVERED, Paint.solid(0xFF2E3136))
                 .paint(ListView.STYLE_ROW_SELECTED, Paint.solid(0xFF3A4D6E))
+                .paint(ListView.STYLE_DROP, Paint.solid(0xFF8FB4F0))
                 .textStyle(ListView.STYLE_PLACEHOLDER, TextStyle.DEFAULT.withColor(0xFF808080))
                 .paint(ComboBox.STYLE_NORMAL, Paint.solid(0xFF1B1C1F))
                 .paint(ComboBox.STYLE_HOVERED, Paint.solid(0xFF2E3136))
@@ -133,6 +140,7 @@ public final class Themes {
                 .textStyle(ComboBox.STYLE_TEXT_DISABLED, TextStyle.DEFAULT.withColor(0xFF707070))
                 .paint(Window.STYLE_BACKGROUND, Paint.solid(0xF0141518))
                 .paint(Window.STYLE_TITLE_BAR, Paint.solid(0xFF2B2D31))
+                .paint(Window.STYLE_TITLE_INACTIVE, Paint.solid(0xFF1F2023))
                 .textStyle(Window.STYLE_TITLE_TEXT, TextStyle.DEFAULT.withColor(0xFFFFFFFF))
                 .textStyle(Window.STYLE_CLOSE, TextStyle.DEFAULT.withColor(0xFFA0A0A0))
                 .textStyle(Window.STYLE_CLOSE_HOVERED, TextStyle.DEFAULT.withColor(0xFFFFFFFF))

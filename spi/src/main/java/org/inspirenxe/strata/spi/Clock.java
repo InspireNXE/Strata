@@ -25,8 +25,9 @@ package org.inspirenxe.strata.spi;
  *     <li>Advance in real time while the UI runs, or click counting, caret blinking and key repeat stall.</li>
  *     <li>{@link #wall()} returns the clock and zone that today's date is read from, such as the day a calendar
  *     marks. The default is the system clock in the default zone. An adapter may return the engine's own clock or
- *     zone instead, and a test a fixed clock. Core reads it on the UI thread, at most about once a minute for each
- *     control that shows today, so it need not be fast. It must not return null.</li>
+ *     zone instead, and a test a fixed clock. Core reads it on the UI thread: a calendar about once a minute while it
+ *     shows, and a date or time picker each time the user steps a field, opens its popup or fills in today. Keep it
+ *     cheap, as the system clock is. It must not return null.</li>
  * </ul>
  */
 @FunctionalInterface

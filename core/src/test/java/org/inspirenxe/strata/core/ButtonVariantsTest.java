@@ -37,7 +37,6 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -269,11 +268,11 @@ class ButtonVariantsTest {
             assertEquals(List.of(0xFFFFFFFF), this.render().tints);
             this.button.setEnabled(false);
             assertEquals(List.of(0xFF808080), this.render().tints);
-            assertEquals(ICON, this.button.iconSprite());
+            assertEquals(ICON, this.button.iconSprite().orElseThrow());
             this.button.clearIcon();
             ButtonVariantsTest.this.test.host().layout();
-            assertNull(this.button.iconSprite());
-            assertNull(this.button.iconVisual());
+            assertTrue(this.button.iconSprite().isEmpty());
+            assertTrue(this.button.iconVisual().isEmpty());
             assertEquals(List.of(), this.render().sprites);
             assertEquals(new Rect(0, 0, 28, 20), this.button.bounds());
         }
@@ -326,6 +325,30 @@ class ButtonVariantsTest {
             ButtonVariantsTest.this.test.host().layout();
             assertEquals(new Rect(0, 0, 46, 20), this.link.bounds());
             assertFalse(this.render().fills().isEmpty());
+        }
+
+        @Test
+        void aMinimumSetInCodeOutlivesSwitchingToALinkAndBack() {
+            final Button before = ButtonVariantsTest.this.ui.button("Go").setMinSize(50, 10);
+            before.setLink(true);
+            assertEquals(50f, before.minWidth());
+            assertEquals(10f, before.minHeight());
+            before.setLink(false);
+            assertEquals(50f, before.minWidth());
+
+            final Button after = ButtonVariantsTest.this.ui.button("Go").setLink(true).setMinSize(40, 0);
+            after.setLink(false);
+            assertEquals(40f, after.minWidth());
+        }
+
+        @Test
+        void theButtonsOwnMinimumFollowsTheLink() {
+            final Button button = ButtonVariantsTest.this.ui.button("Go");
+            assertEquals(20f, button.minWidth());
+            button.setLink(true);
+            assertEquals(0f, button.minWidth());
+            button.setLink(false);
+            assertEquals(20f, button.minWidth());
         }
     }
 }

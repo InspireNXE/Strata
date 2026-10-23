@@ -39,6 +39,7 @@ import org.inspirenxe.strata.api.input.Modifiers;
 import org.inspirenxe.strata.api.input.MouseButton;
 import org.inspirenxe.strata.api.input.TextInputKind;
 import org.inspirenxe.strata.api.layout.Anchor;
+import org.inspirenxe.strata.api.layout.HorizontalAlignment;
 import org.inspirenxe.strata.api.text.Text;
 import org.inspirenxe.strata.api.text.TextMetrics;
 import org.inspirenxe.strata.api.text.TextSpan;
@@ -57,6 +58,9 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.function.IntPredicate;
+import org.inspirenxe.strata.api.component.Validation;
+import org.inspirenxe.strata.core.control.Validity;
+import org.inspirenxe.strata.core.state.ConversionTarget;
 
 /**
  * The core {@link PasswordTextBox}. It edits through a {@code LineEditor} over a {@code SecretBuffer}, the same
@@ -76,19 +80,24 @@ import java.util.function.IntPredicate;
  * and drops all of it when the text hides. Typed code points go into the buffer as ints.</p>
  *
  * <p>A user's edit asks {@link PasswordTextBox#MODIFY} with the buffer unchanged and applies only if it was not
- * canceled, so the box never needs a second copy of its text to fall back to. Every change reports
- * {@link PasswordTextBox#MODIFIED} with the lengths. Core never logs the text or a typed code point.</p>
+ * canceled, so the box never needs a second copy of its text to fall back to. An edit that would put back the chars
+ * it replaces asks nothing, which the box checks against the buffer without copying it. Every change reports
+ * {@link PasswordTextBox#MODIFIED} with the lengths, and each input or call that moved the caret or the anchor then
+ * reports {@link PasswordTextBox#CARET_MOVED} once. It keeps no undo history. Core never logs the text or a typed code
+ * point.</p>
  *
  * <p>The box wipes itself in {@link #onReleased()}, which the root calls after the screen that holds it closes or
  * rebuilds and after the overlay that holds it closes, and hides its text in {@link #onDisabled()} when it is
- * disabled.</p>
+ * disabled. A wipe reports nothing, the caret's move to the start included.</p>
  */
-public final class PasswordTextBoxImpl extends BuiltInComposite<PasswordTextBox> implements PasswordTextBox {
+public final class PasswordTextBoxImpl extends BuiltInComposite<PasswordTextBox> implements PasswordTextBox,
+        ConversionTarget {
     /**
      * The space, in UI units, between the text and the eye.
      */
     public static final float REVEAL_GAP = 2f;
 
+    private final Validity validity;
     private final ComponentFactoryImpl ui;
     private final SecretBuffer buffer;
     private final LineEditor editor;
@@ -100,6 +109,7 @@ public final class PasswordTextBoxImpl extends BuiltInComposite<PasswordTextBox>
     private Insets themePadding;
     private boolean readOnly;
     private boolean selectAllOnFocus;
+    private HorizontalAlignment textAlignment;
     private int maskCodePoint;
     private boolean revealable;
     private boolean revealed;
@@ -121,9 +131,20 @@ public final class PasswordTextBoxImpl extends BuiltInComposite<PasswordTextBox>
     // Made during measure
     private TextLine placeholderLine;
     private float lineHeight;
+    // The bounds less the padding, and the part of it the text takes, made again when what they depend on changes
+    private Rect contentBox;
+    private Rect textBox;
+    private Rect contentFor;
+    private Insets contentPadding;
+    private boolean contentRevealable;
+    private boolean contentRightToLeft;
+    private float contentLineHeight;
 
     // The text as drawn, made again after each edit: the mask, or the shown text and its boundaries
     private TextSpan drawn;
+    // The drawn text again in the selected style, made again when either changes
+    private TextSpan selectedDrawn;
+    private TextSpan selectedDrawnFor;
     private int drawnCount;
     private float drawnWidth;
     private float[] shownX;
@@ -136,10 +157,12 @@ public final class PasswordTextBoxImpl extends BuiltInComposite<PasswordTextBox>
     @SuppressWarnings("this-escape")
     public PasswordTextBoxImpl(final ComponentFactoryImpl ui) {
         super(ui);
+        this.validity = new Validity(this.node(), this::validated);
         this.ui = ui;
         this.buffer = new SecretBuffer();
-        this.editor = new LineEditor(this.buffer, new TextBoundaries(this.buffer, true), new Editing());
+        this.editor = new LineEditor(this.buffer, new TextBoundaries(this.buffer), new Editing());
         this.maxLength = Integer.MAX_VALUE;
+        this.textAlignment = HorizontalAlignment.LEFT;
         this.textPadding = TextBoxImpl.DEFAULT_PADDING;
         this.themePadding = TextBoxImpl.DEFAULT_PADDING;
         this.maskCodePoint = DEFAULT_MASK;
@@ -156,6 +179,7 @@ public final class PasswordTextBoxImpl extends BuiltInComposite<PasswordTextBox>
         this.placeholder = Text.empty();
         this.placeholderLine = TextLine.EMPTY;
         this.setCursor(CursorKind.TEXT);
+        this.setContextMenu(TextMenus.create(ui, this.editor.editor(), this.editor::settle, null, null));
         this.setMinSize(20f, 0f);
         this.eye = new RevealEye(ui, this);
         this.addChild(this.eye);
@@ -201,7 +225,7 @@ public final class PasswordTextBoxImpl extends BuiltInComposite<PasswordTextBox>
             int i = 0;
             while (i < password.length && count < this.maxLength) {
                 final char c = password[i];
-                if (c == '\r' || c == '\n') {
+                if (FieldText.isLineBreak(c)) {
                     i++;
                     continue;
                 }
@@ -227,6 +251,7 @@ public final class PasswordTextBoxImpl extends BuiltInComposite<PasswordTextBox>
             this.fromCode = !this.buffer.isEmpty();
             this.setRevealed(false);
             this.changed(before);
+            this.editor.settle();
         } finally {
             next.clear();
         }
@@ -253,6 +278,7 @@ public final class PasswordTextBoxImpl extends BuiltInComposite<PasswordTextBox>
         this.editor.place(0);
         this.fromCode = false;
         this.changed(before);
+        this.editor.settle();
         return this;
     }
 
@@ -260,10 +286,17 @@ public final class PasswordTextBoxImpl extends BuiltInComposite<PasswordTextBox>
     protected void onReleased() {
         this.buffer.clear();
         this.editor.place(0);
+        this.editor.editor().settleQuietly();
         this.fromCode = false;
         this.revealed = false;
         this.forgetDrawn();
         this.eye.sync();
+    }
+
+    @Override
+    protected void onEnabledChanged() {
+        // The mask or the shown text is drawn in another style now
+        this.forgetDrawn();
     }
 
     @Override
@@ -288,6 +321,7 @@ public final class PasswordTextBoxImpl extends BuiltInComposite<PasswordTextBox>
             this.buffer.delete(this.buffer.offsetByCodePoints(0, maxLength), this.buffer.length());
             this.editor.clamp();
             this.changed(before);
+            this.editor.settle();
         }
         return this;
     }
@@ -322,19 +356,29 @@ public final class PasswordTextBoxImpl extends BuiltInComposite<PasswordTextBox>
     @Override
     public PasswordTextBox select(final int anchor, final int caret) {
         this.editor.select(anchor, caret);
+        this.editor.settle();
         return this;
     }
 
     @Override
     public PasswordTextBox selectAll() {
         this.editor.selectAll();
+        this.editor.settle();
         return this;
     }
 
     @Override
     public PasswordTextBox setTextPadding(final Insets padding) {
-        this.setPadding = padding;
-        this.textPadding = padding != null ? padding : this.themePadding;
+        this.setPadding = Objects.requireNonNull(padding, "padding");
+        this.textPadding = padding;
+        this.invalidateLayout();
+        return this;
+    }
+
+    @Override
+    public PasswordTextBox clearTextPadding() {
+        this.setPadding = null;
+        this.textPadding = this.themePadding;
         this.invalidateLayout();
         return this;
     }
@@ -396,6 +440,8 @@ public final class PasswordTextBoxImpl extends BuiltInComposite<PasswordTextBox>
      */
     private void forgetDrawn() {
         this.drawn = null;
+        this.selectedDrawn = null;
+        this.selectedDrawnFor = null;
         this.shownX = null;
         this.drawnCount = 0;
         this.drawnWidth = 0f;
@@ -439,8 +485,20 @@ public final class PasswordTextBoxImpl extends BuiltInComposite<PasswordTextBox>
 
     @Override
     public PasswordTextBox setPlaceholder(final Text placeholder) {
-        this.placeholder = placeholder == null ? Text.empty() : placeholder;
+        this.placeholder = Objects.requireNonNull(placeholder, "placeholder");
         this.invalidateLayout();
+        return this;
+    }
+
+    @Override
+    public HorizontalAlignment textAlignment() {
+        return this.textAlignment;
+    }
+
+    @Override
+    public PasswordTextBox setTextAlignment(final HorizontalAlignment alignment) {
+        this.textAlignment = Objects.requireNonNull(alignment, "alignment");
+        this.editor.setAlignment(alignment);
         return this;
     }
 
@@ -480,8 +538,39 @@ public final class PasswordTextBoxImpl extends BuiltInComposite<PasswordTextBox>
         return TextInputKind.SECRET;
     }
 
+    // ------------------------------------------------------------------
+    // Validatable
+    // ------------------------------------------------------------------
+
+    @Override
+    public Validation validation() {
+        return this.validity.validation();
+    }
+
+    @Override
+    public PasswordTextBox setValidation(final Validation validation) {
+        this.validity.set(validation);
+        return this;
+    }
+
+    @Override
+    public PasswordTextBox setValidator(final Function<? super PasswordTextBox, Validation> validator) {
+        this.validity.setValidator(validator == null ? null : () -> validator.apply(this));
+        return this;
+    }
+
+    @Override
+    public void setConversionError(final Text message) {
+        this.validity.setConversionError(message);
+    }
+
+    private void validated(final Validation validation, final Validation previous) {
+        this.report(VALIDATED, validation, previous);
+    }
+
     @Override
     protected void onApplyTheme(final Theme theme) {
+        this.validity.applyTheme(theme, TextBox.STYLE_INVALID);
         this.themePadding = theme.insetsOr(TextBox.STYLE_PADDING, TextBoxImpl.DEFAULT_PADDING);
         if (this.setPadding == null) {
             this.textPadding = this.themePadding;
@@ -517,25 +606,45 @@ public final class PasswordTextBoxImpl extends BuiltInComposite<PasswordTextBox>
     }
 
     @Override
+    protected float baseline() {
+        return this.textPadding.top() + (this.desiredHeight() - this.textPadding.vertical() - this.lineHeight) * 0.5f
+                + this.environment().text().ascent(this.shownStyle());
+    }
+
+    @Override
     protected void paint(final Painter painter, final Rect bounds) {
         final Paint face;
         if (!this.isEnabled()) {
             face = this.disabledPaint;
-        } else if (this.isFocused()) {
-            face = this.focusedPaint;
         } else {
-            face = this.normal;
+            face = this.validity.face(this.isFocused() ? this.focusedPaint : this.normal);
         }
         face.paint(painter, bounds);
+        if (this.isEnabled()) {
+            this.validity.paintOutline(painter, bounds);
+        }
 
-        final Rect content = bounds.shrink(this.textPadding);
-        // The text keeps the eye's room whenever the box is revealable, so it does not move when the eye appears
-        final Rect text = this.revealable
-                ? new Rect(content.x(), content.y(), Math.max(0f, content.width() - this.lineHeight - REVEAL_GAP),
-                        content.height())
-                : content;
+        final boolean rightToLeft = this.isRightToLeft();
+        if (!bounds.equals(this.contentFor) || this.textPadding != this.contentPadding
+                || this.revealable != this.contentRevealable || this.lineHeight != this.contentLineHeight
+                || rightToLeft != this.contentRightToLeft) {
+            this.contentBox = this.flow(bounds.shrink(this.textPadding));
+            // The text keeps the eye's room whenever the box is revealable, so it does not move when the eye appears;
+            // right to left the eye is mirrored to the left, as the node mirrors it, and the text sits after it
+            final float room = this.lineHeight + REVEAL_GAP;
+            this.textBox = this.revealable
+                    ? new Rect(rightToLeft ? this.contentBox.x() + room : this.contentBox.x(), this.contentBox.y(),
+                            this.contentBox.width() - room, this.contentBox.height())
+                    : this.contentBox;
+            this.contentRightToLeft = rightToLeft;
+            this.contentFor = bounds;
+            this.contentPadding = this.textPadding;
+            this.contentRevealable = this.revealable;
+            this.contentLineHeight = this.lineHeight;
+        }
+        final Rect content = this.contentBox;
         final float textY = content.y() + (content.height() - this.lineHeight) * 0.5f;
-        this.editor.paint(painter, text, textY, this.lineHeight, this.look, this.shownStyle(),
+        this.editor.paint(painter, this.textBox, textY, this.lineHeight, this.look, this.shownStyle(),
                 this.isFocused() && this.isEnabled() && !this.readOnly);
     }
 
@@ -570,6 +679,7 @@ public final class PasswordTextBoxImpl extends BuiltInComposite<PasswordTextBox>
             return;
         }
         this.editor.press(event, event.localX() - this.textPadding.left());
+        this.editor.settle();
     }
 
     @Override
@@ -587,11 +697,16 @@ public final class PasswordTextBoxImpl extends BuiltInComposite<PasswordTextBox>
             return;
         }
         this.editor.drag(event, event.localX() - this.textPadding.left());
+        this.editor.settle();
     }
 
     @Override
     protected void onFocusGained(final FocusEvent event) {
         this.editor.focusGained(this.selectAllOnFocus, this.isFocusFromPress());
+        // A press that gave focus places the caret next and reports once for both
+        if (!this.isFocusFromPress()) {
+            this.editor.settle();
+        }
     }
 
     @Override
@@ -624,17 +739,19 @@ public final class PasswordTextBoxImpl extends BuiltInComposite<PasswordTextBox>
             event.consume();
             return;
         }
-        final boolean handled = this.editor.key(key, modifiers);
+        final boolean handled = this.editor.key(key, modifiers, event.shortcutModifier());
         // Typing keys arrive as characters too; keep the engine from also reading them as shortcuts
-        if (handled || (!modifiers.control() && !modifiers.alt() && key.isPrintable())) {
+        if (handled || TextEditor.typesCharacter(key, modifiers)) {
             event.consume();
         }
+        this.editor.settle();
     }
 
     @Override
     protected void onChar(final CharEvent event) {
         // Typed characters stop here, read-only or not, so no ancestor's handler sees them
         this.editor.type(event.codePoint());
+        this.editor.settle();
         event.consume();
     }
 
@@ -663,6 +780,7 @@ public final class PasswordTextBoxImpl extends BuiltInComposite<PasswordTextBox>
         if (this.isHandled(MODIFIED)) {
             this.report(MODIFIED, this.length(), before);
         }
+        this.validity.check();
     }
 
     private boolean replacesAll(final int start, final int end) {
@@ -690,6 +808,11 @@ public final class PasswordTextBoxImpl extends BuiltInComposite<PasswordTextBox>
         @Override
         public Environment environment() {
             return PasswordTextBoxImpl.this.environment();
+        }
+
+        @Override
+        public void repaintAfter(final long millis) {
+            PasswordTextBoxImpl.this.repaintAfter(millis);
         }
 
         @Override
@@ -779,9 +902,28 @@ public final class PasswordTextBoxImpl extends BuiltInComposite<PasswordTextBox>
                 }
                 return;
             }
-            if (box.drawn != null) {
-                painter.text(style == null ? box.drawn : new TextSpan(box.drawn.text(), style), originX, y);
+            if (box.drawn == null) {
+                return;
             }
+            if (style == null) {
+                painter.text(box.drawn, originX, y);
+                return;
+            }
+            if (box.selectedDrawnFor != box.drawn || box.selectedDrawn.style() != style) {
+                box.selectedDrawn = new TextSpan(box.drawn.text(), style);
+                box.selectedDrawnFor = box.drawn;
+            }
+            painter.text(box.selectedDrawn, originX, y);
+        }
+
+        @Override
+        public float placeholderWidth() {
+            return PasswordTextBoxImpl.this.placeholderLine.width();
+        }
+
+        @Override
+        public boolean rightToLeft() {
+            return PasswordTextBoxImpl.this.isRightToLeft();
         }
 
         @Override
@@ -797,7 +939,8 @@ public final class PasswordTextBoxImpl extends BuiltInComposite<PasswordTextBox>
             }
             final int before = box.length();
             final boolean fits = before - box.buffer.codePointCount(start, end) < box.maxLength;
-            if (!fits && start == end) {
+            // An edit that would leave the text as it is fires nothing
+            if (!fits && start == end || fits && box.buffer.holds(start, end, codePoint)) {
                 return;
             }
             if (!box.request(MODIFY)) {
@@ -815,7 +958,7 @@ public final class PasswordTextBoxImpl extends BuiltInComposite<PasswordTextBox>
         }
 
         @Override
-        public void delete(final int start, final int end) {
+        public void delete(final int start, final int end, final EditHistory.Kind kind) {
             final PasswordTextBoxImpl box = PasswordTextBoxImpl.this;
             if (box.readOnly || !box.request(MODIFY)) {
                 return;
@@ -837,17 +980,18 @@ public final class PasswordTextBoxImpl extends BuiltInComposite<PasswordTextBox>
             if (clipboard.isEmpty()) {
                 return;
             }
-            final String text = TextBoxImpl.sanitize(clipboard.get());
+            final String text = FieldText.withoutLineBreaks(clipboard.get());
             if (text.isEmpty()) {
                 return;
             }
             // Refused whole: a password silently cut short or filtered is worse than none
-            if (box.filter != null && !text.codePoints().allMatch(box.filter)) {
+            if (!text.codePoints().allMatch(FieldText::isTypeable)
+                    || box.filter != null && !text.codePoints().allMatch(box.filter)) {
                 return;
             }
             final int before = box.length();
             if ((long) before - box.buffer.codePointCount(start, end) + text.codePointCount(0, text.length())
-                    > box.maxLength) {
+                    > box.maxLength || box.buffer.holds(start, end, text)) {
                 return;
             }
             if (!box.request(MODIFY)) {
@@ -866,7 +1010,26 @@ public final class PasswordTextBoxImpl extends BuiltInComposite<PasswordTextBox>
         }
 
         @Override
+        public boolean undo() {
+            // A password box keeps no history of its secret
+            return false;
+        }
+
+        @Override
+        public boolean redo() {
+            return false;
+        }
+
+        @Override
         public void beforeMove() {
+        }
+
+        @Override
+        public void caretMoved(final int previousAnchor, final int previousCaret, final int anchor, final int caret) {
+            final PasswordTextBoxImpl box = PasswordTextBoxImpl.this;
+            if (box.isHandled(CARET_MOVED)) {
+                box.report(CARET_MOVED, new Caret(anchor, caret), new Caret(previousAnchor, previousCaret));
+            }
         }
     }
 
@@ -928,8 +1091,12 @@ public final class PasswordTextBoxImpl extends BuiltInComposite<PasswordTextBox>
                 wanted = this.box.revealable && !this.box.buffer.isEmpty() && !this.box.fromCode ? this.show : null;
             }
             // Set only on a change, so typing does not refresh a tooltip that is showing
-            if (this.tooltip() != wanted) {
-                this.setTooltip(wanted);
+            if (this.tooltip().orElse(null) != wanted) {
+                if (wanted == null) {
+                    this.clearTooltip();
+                } else {
+                    this.setTooltip(wanted);
+                }
             }
         }
 

@@ -24,25 +24,37 @@ import org.inspirenxe.strata.api.extension.Painter;
 import org.inspirenxe.strata.api.geometry.Rect;
 import org.inspirenxe.strata.api.geometry.Size;
 import org.inspirenxe.strata.api.theme.SpriteId;
+import org.inspirenxe.strata.api.visual.PixelBuffer;
 import org.inspirenxe.strata.api.visual.Visual;
+import org.inspirenxe.strata.core.control.RectCache;
 import org.inspirenxe.strata.core.node.BuiltInComponent;
 import org.inspirenxe.strata.core.node.ComponentFactoryImpl;
 
 import java.util.Objects;
+import java.util.Optional;
 
 /**
  * The core {@link Image}. Its desired size is the image size, 16 by 16 by default or the visual's natural size. It
- * draws the sprite or visual stretched over its bounds, or, with {@link Image.Scaling#FIT}, at the largest size with
- * the image size's aspect ratio that fits, centered. An image size of zero on either axis draws nothing with
- * {@code FIT}.
+ * draws the sprite, visual or pixel buffer stretched over its bounds, or, with {@link Image.Scaling#FIT}, at the largest size with
+ * the image size's aspect ratio that fits, centered. {@link Image.Scaling#COVER} draws it at the smallest size with that
+ * aspect ratio that covers the bounds, and {@link Image.Scaling#NONE} at the image size, each centered and clipped to
+ * the bounds, so every kind of image is cut the same way. An image size of zero on either axis draws nothing with
+ * any scaling but {@code STRETCH}.
  */
 public final class ImageImpl extends BuiltInComponent<Image> implements Image {
     private SpriteId sprite;
     private Visual visual;
+    private PixelBuffer pixels;
     private int tint;
     private float imageWidth;
     private float imageHeight;
     private Scaling scaling;
+    // What the clipped draw paints, set only while it runs, so a cut image allocates nothing
+    private Painter clipPainter;
+    private Rect clipPlaced;
+    private final Runnable drawClipped = () -> this.draw(this.clipPainter, this.clipPlaced);
+    // Kept between frames while the image fits the same bounds
+    private final RectCache fitRect = new RectCache();
     // The value shown through its appearance, and the tooltip it last set, which is refreshed on hover while it is
     // still the image's tooltip
     private Object value;
@@ -92,64 +104,93 @@ public final class ImageImpl extends BuiltInComponent<Image> implements Image {
     }
 
     @Override
-    public SpriteId sprite() {
-        return this.sprite;
+    public Optional<SpriteId> sprite() {
+        return Optional.ofNullable(this.sprite);
     }
 
     @Override
     public Image setSprite(final SpriteId sprite) {
         this.sprite = Objects.requireNonNull(sprite, "sprite");
         this.visual = null;
+        this.pixels = null;
         this.value = null;
+        this.showValueTooltip();
         return this;
     }
 
     @Override
-    public Visual visual() {
-        return this.visual;
+    public Optional<Visual> visual() {
+        return Optional.ofNullable(this.visual);
     }
 
     @Override
     public Image setVisual(final Visual visual) {
         this.visual = Objects.requireNonNull(visual, "visual");
         this.sprite = null;
+        this.pixels = null;
         this.value = null;
+        this.showValueTooltip();
         return this.setImageSize(visual.size().width(), visual.size().height());
     }
 
     @Override
-    public Object value() {
-        return this.value;
+    public Optional<PixelBuffer> pixels() {
+        return Optional.ofNullable(this.pixels);
+    }
+
+    @Override
+    public Image setPixels(final PixelBuffer buffer) {
+        this.pixels = buffer;
+        this.sprite = null;
+        this.visual = null;
+        this.value = null;
+        this.showValueTooltip();
+        return this;
+    }
+
+    @Override
+    public Optional<Object> value() {
+        return Optional.ofNullable(this.value);
     }
 
     @Override
     public Image setValue(final Object value) {
         final Visual icon = value == null ? null : Strata.appearances().iconOf(value).orElse(null);
         this.sprite = null;
+        this.pixels = null;
         this.visual = icon;
         if (icon != null) {
             this.setImageSize(icon.size().width(), icon.size().height());
         }
         this.value = value;
-        this.valueTooltip = this.tooltip();
-        this.refreshTooltip();
+        this.showValueTooltip();
         return this;
     }
 
     /**
-     * Shows the value's tooltip, unless a tooltip was set since the value's was.
+     * Shows the tooltip of the value just set: it replaces the tooltip shown when the value has one, and otherwise
+     * removes the previous value's tooltip and leaves a tooltip set with {@code setTooltip} in place.
      */
-    private void refreshTooltip() {
-        if (this.value == null || this.tooltip() != this.valueTooltip && this.tooltip() != null) {
-            return;
+    private void showValueTooltip() {
+        final Tooltip next = this.value == null ? null : Strata.appearances().tooltipOf(this.value).orElse(null);
+        if (next != null || this.tooltip().orElse(null) == this.valueTooltip) {
+            if (next == null) {
+                this.clearTooltip();
+            } else {
+                this.setTooltip(next);
+            }
         }
-        this.valueTooltip = Strata.appearances().tooltipOf(this.value).orElse(null);
-        this.setTooltip(this.valueTooltip);
+        this.valueTooltip = next;
     }
 
+    /**
+     * Asks the value for its tooltip again while the one shown is the value's.
+     */
     @Override
     protected void onPointerEnter(final PointerEvent event) {
-        this.refreshTooltip();
+        if (this.value != null && this.tooltip().orElse(null) == this.valueTooltip) {
+            this.showValueTooltip();
+        }
     }
 
     @Override
@@ -209,11 +250,27 @@ public final class ImageImpl extends BuiltInComponent<Image> implements Image {
         if (this.imageWidth <= 0f || this.imageHeight <= 0f) {
             return;
         }
-        final float scale = Math.min(bounds.width() / this.imageWidth, bounds.height() / this.imageHeight);
+        final float scale = switch (this.scaling) {
+            case COVER -> Math.max(bounds.width() / this.imageWidth, bounds.height() / this.imageHeight);
+            case NONE -> 1f;
+            default -> Math.min(bounds.width() / this.imageWidth, bounds.height() / this.imageHeight);
+        };
         final float width = this.imageWidth * scale;
         final float height = this.imageHeight * scale;
-        this.draw(painter, new Rect(bounds.x() + (bounds.width() - width) * 0.5f,
-                bounds.y() + (bounds.height() - height) * 0.5f, width, height));
+        final Rect placed = this.fitRect.at(bounds.x() + (bounds.width() - width) * 0.5f,
+                bounds.y() + (bounds.height() - height) * 0.5f, width, height);
+        if (width <= bounds.width() && height <= bounds.height()) {
+            this.draw(painter, placed);
+            return;
+        }
+        this.clipPainter = painter;
+        this.clipPlaced = placed;
+        try {
+            painter.clipped(bounds, this.drawClipped);
+        } finally {
+            this.clipPainter = null;
+            this.clipPlaced = null;
+        }
     }
 
     private void draw(final Painter painter, final Rect rect) {
@@ -221,11 +278,14 @@ public final class ImageImpl extends BuiltInComponent<Image> implements Image {
             painter.visual(this.visual, rect, this.tint);
         } else if (this.sprite != null) {
             painter.sprite(this.sprite, rect, this.tint);
+        } else if (this.pixels != null) {
+            painter.pixels(this.pixels, rect, this.tint);
         }
     }
 
     @Override
     protected Object snapshotState() {
-        return new Image.State(this.sprite, this.visual, this.tint, this.imageWidth, this.imageHeight, this.scaling);
+        return new Image.State(this.sprite, this.visual, this.tint, this.imageWidth, this.imageHeight, this.scaling,
+                this.pixels);
     }
 }

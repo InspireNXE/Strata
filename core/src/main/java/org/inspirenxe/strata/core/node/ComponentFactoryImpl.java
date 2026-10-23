@@ -16,8 +16,20 @@
 package org.inspirenxe.strata.core.node;
 
 import org.inspirenxe.strata.api.ComponentFactory;
+import org.inspirenxe.strata.api.UiThread;
+import org.inspirenxe.strata.api.control.button.ToggleButton;
+import org.inspirenxe.strata.api.control.menu.RadioMenuItem;
+import org.inspirenxe.strata.core.animation.AnimatorImpl;
+import org.inspirenxe.strata.core.control.button.ToggleButtonImpl;
+import org.inspirenxe.strata.core.control.menu.RadioMenuItemImpl;
+import org.inspirenxe.strata.core.file.FileDialogsImpl;
+import org.inspirenxe.strata.core.frame.UiThreadImpl;
+import org.inspirenxe.strata.api.event.Subscription;
+import org.inspirenxe.strata.api.command.Shortcuts;
 import org.inspirenxe.strata.api.event.cause.CauseStack;
+import org.inspirenxe.strata.api.input.KeyStroke;
 import org.inspirenxe.strata.core.event.CauseStackImpl;
+import org.inspirenxe.strata.core.input.KeyNames;
 import org.inspirenxe.strata.api.appearance.Appearances;
 import org.inspirenxe.strata.api.component.Component;
 import org.inspirenxe.strata.api.component.registry.ComponentId;
@@ -70,7 +82,9 @@ import org.inspirenxe.strata.api.control.pane.TabBar;
 import org.inspirenxe.strata.api.control.window.MessageBox;
 import org.inspirenxe.strata.api.control.window.Window;
 import org.inspirenxe.strata.api.event.input.InputEvents;
+import org.inspirenxe.strata.api.state.Source;
 import org.inspirenxe.strata.api.extension.CustomComponent;
+import org.inspirenxe.strata.api.file.FileDialogs;
 import org.inspirenxe.strata.api.extension.CustomComposite;
 import org.inspirenxe.strata.api.extension.CustomContainer;
 import org.inspirenxe.strata.api.extension.Environment;
@@ -86,11 +100,13 @@ import org.inspirenxe.strata.api.layout.Orientation;
 import org.inspirenxe.strata.api.layout.ScrollPanel;
 import org.inspirenxe.strata.api.layout.Spacer;
 import org.inspirenxe.strata.api.layout.StackPanel;
+import org.inspirenxe.strata.api.layout.WrapPanel;
 import org.inspirenxe.strata.api.overlay.Overlays;
 import org.inspirenxe.strata.api.text.Text;
 import org.inspirenxe.strata.api.text.TextOverflow;
 import org.inspirenxe.strata.api.theme.SpriteId;
 import org.inspirenxe.strata.api.theme.Theme;
+import org.inspirenxe.strata.api.transfer.Transfer;
 import org.inspirenxe.strata.api.visual.Visual;
 import org.inspirenxe.strata.core.control.button.ButtonImpl;
 import org.inspirenxe.strata.core.control.button.CheckBoxImpl;
@@ -145,11 +161,13 @@ import org.inspirenxe.strata.core.layout.GridPanelImpl;
 import org.inspirenxe.strata.core.layout.ScrollPanelImpl;
 import org.inspirenxe.strata.core.layout.SpacerImpl;
 import org.inspirenxe.strata.core.layout.StackPanelImpl;
+import org.inspirenxe.strata.core.layout.WrapPanelImpl;
 import org.inspirenxe.strata.core.registry.ComponentRegistryImpl;
 import org.inspirenxe.strata.spi.Platform;
 
 import java.util.Objects;
 import java.util.Optional;
+import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
@@ -175,7 +193,10 @@ public final class ComponentFactoryImpl implements ComponentFactory {
     private final Environment environment;
     private final Platform platform;
     private final CauseStack platformCauses;
+    private final UiThreadImpl uiThread;
     private Root root;
+    // Made on first use, so a platform's dialogs are asked for only by code that opens one
+    private FileDialogs fileDialogs;
 
     /**
      * Creates the factory for a host.
@@ -189,6 +210,17 @@ public final class ComponentFactoryImpl implements ComponentFactory {
         this.environment = new EnvironmentImpl(platform, this);
         this.platform = platform;
         this.platformCauses = platform.causes().orElse(null);
+        this.uiThread = UiThreadImpl.of(platform);
+    }
+
+    /**
+     * Returns the UI thread of the host's platform, shared by every host made with that platform.
+     *
+     * @return the UI thread
+     */
+    @Override
+    public UiThreadImpl uiThread() {
+        return this.uiThread;
     }
 
     /**
@@ -248,11 +280,73 @@ public final class ComponentFactoryImpl implements ComponentFactory {
     }
 
     @Override
+    public AnimatorImpl animator() {
+        if (this.root == null) {
+            throw new IllegalStateException("This factory has no host yet");
+        }
+        return this.root.animator();
+    }
+
+    @Override
+    public <T> Subscription watch(final Source<T> source, final Consumer<? super T> listener) {
+        Objects.requireNonNull(source, "source");
+        Objects.requireNonNull(listener, "listener");
+        if (this.root == null) {
+            throw new IllegalStateException("This factory has no host yet");
+        }
+        return this.root.watch(source, listener);
+    }
+
+    @Override
+    public Optional<Transfer> clipboard() {
+        return this.environment.clipboard();
+    }
+
+    @Override
+    public void setClipboard(final Transfer transfer) {
+        this.environment.setClipboard(transfer);
+    }
+
+    @Override
+    public FileDialogs fileDialogs() {
+        FileDialogs dialogs = this.fileDialogs;
+        if (dialogs == null) {
+            dialogs = new FileDialogsImpl(this.platform.fileDialogs().orElse(null), this.uiThread);
+            this.fileDialogs = dialogs;
+        }
+        return dialogs;
+    }
+
+    @Override
+    public Optional<Component<?>> componentAt(final float x, final float y) {
+        if (this.root == null) {
+            return Optional.empty();
+        }
+        return this.root.componentAt(x, y);
+    }
+
+    @Override
     public Overlays overlays() {
         if (this.root == null) {
             throw new IllegalStateException("This factory has no host yet");
         }
         return this.root.overlays();
+    }
+
+    @Override
+    public Shortcuts shortcuts() {
+        if (this.root == null) {
+            throw new IllegalStateException("This factory has no host yet");
+        }
+        return this.root.shortcuts();
+    }
+
+    /**
+     * Names a stroke through {@link KeyNames}, with the platform's shortcut modifier.
+     */
+    @Override
+    public Text keyText(final KeyStroke stroke) {
+        return KeyNames.text(Objects.requireNonNull(stroke, "stroke"), this.platform.conventions().shortcutModifier());
     }
 
     @Override
@@ -273,6 +367,16 @@ public final class ComponentFactoryImpl implements ComponentFactory {
     @Override
     public GridPanel gridPanel() {
         return new GridPanelImpl(this);
+    }
+
+    @Override
+    public WrapPanel wrapPanel() {
+        return new WrapPanelImpl(this, Orientation.HORIZONTAL);
+    }
+
+    @Override
+    public WrapPanel wrapPanel(final Orientation orientation) {
+        return new WrapPanelImpl(this, orientation);
     }
 
     @Override
@@ -309,8 +413,9 @@ public final class ComponentFactoryImpl implements ComponentFactory {
         final Text name = appearances.nameOf(value);
         final Optional<Visual> icon = appearances.iconOf(value);
         final Label row = this.cellLabel(icon.isEmpty() ? name : Text.concat(Text.visual(icon.get()), CELL_GAP, name));
-        row.setTooltip(appearances.tooltipOf(value).orElse(null));
-        return row.onEvent(InputEvents.POINTER_ENTER, event -> row.setTooltip(appearances.tooltipOf(value).orElse(null)));
+        final Runnable ask = () -> appearances.tooltipOf(value).ifPresentOrElse(row::setTooltip, row::clearTooltip);
+        ask.run();
+        return row.onEvent(InputEvents.POINTER_ENTER, event -> ask.run());
     }
 
     /**
@@ -433,6 +538,11 @@ public final class ComponentFactoryImpl implements ComponentFactory {
     }
 
     @Override
+    public ToggleButton toggleButton(final Text text) {
+        return new ToggleButtonImpl(this, text);
+    }
+
+    @Override
     public ToggleSwitch toggleSwitch(final Text text) {
         return new ToggleSwitchImpl(this, text);
     }
@@ -480,6 +590,11 @@ public final class ComponentFactoryImpl implements ComponentFactory {
     @Override
     public MenuItem menuItem(final Text text) {
         return new MenuItemImpl(text);
+    }
+
+    @Override
+    public RadioMenuItem radioMenuItem(final Text text) {
+        return new RadioMenuItemImpl(text);
     }
 
     @Override

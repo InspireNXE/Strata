@@ -24,10 +24,10 @@ import org.inspirenxe.strata.api.event.Subscription;
  * <pre>{@code
  * // Every screen that shows the engine's theme gets these buttons
  * Subscription buttons = Strata.themes().override(engineTheme, ThemeOverrides.of()
- *         .with(Button.STYLE_NORMAL, Paint.nineSlice(SpriteId.of("mymod", "button"), Insets.of(3f))));
+ *         .with(Button.STYLE_NORMAL, Paint.nineSlice(SpriteId.of("myapp", "button"), Insets.of(3f))));
  *
- * // A theme of the mod's own that follows packs for every key it leaves alone
- * Strata.themes().define(ThemeId.of("mymod", "dark"), engineTheme, ThemeOverrides.of()
+ * // A theme of the application's own that follows packs for every key it leaves alone
+ * Strata.themes().define(ThemeId.of("myapp", "dark"), engineTheme, ThemeOverrides.of()
  *         .with(Window.STYLE_BACKGROUND, Paint.solid(0xF0101010)));
  * }</pre>
  *

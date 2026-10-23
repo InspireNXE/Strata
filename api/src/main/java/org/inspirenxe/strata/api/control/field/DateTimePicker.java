@@ -17,12 +17,14 @@ package org.inspirenxe.strata.api.control.field;
 
 import org.inspirenxe.strata.api.component.Component;
 import org.inspirenxe.strata.api.component.Focusable;
+import org.inspirenxe.strata.api.component.HasContextMenu;
 import org.inspirenxe.strata.api.component.HasCursor;
 import org.inspirenxe.strata.api.component.HasTooltip;
 import org.inspirenxe.strata.api.control.attribute.popup.Closable;
 import org.inspirenxe.strata.api.control.attribute.popup.Openable;
 import org.inspirenxe.strata.api.control.attribute.value.HasDate;
 import org.inspirenxe.strata.api.control.attribute.value.HasTime;
+import org.inspirenxe.strata.api.control.attribute.value.Validatable;
 import org.inspirenxe.strata.api.event.EventType;
 import org.inspirenxe.strata.api.event.control.ValueEvent;
 import org.inspirenxe.strata.api.event.control.ValueRequestEvent;
@@ -42,7 +44,10 @@ import java.util.Optional;
  * parts. Setting one part of an empty value fills the other: the date with today, kept inside the range, and the time
  * with the {@linkplain #defaultTime() default time}. Clearing either part clears the whole value. The date range is
  * the dates of the range, and {@link #setDateRange} sets the range from the start of the first day to the end of the
- * last. The value is kept inside the range, and the filter refuses dates as on a {@link DatePicker}.</p>
+ * last. The value is kept inside the range, and the filter refuses dates as on a {@link DatePicker}. Values run over
+ * the dates {@link HasDate} supports. A value is kept to the first and last whole minute inside the range, or whole
+ * second while seconds show, and the user may type only those; a range too short to hold one keeps the value at its
+ * start.</p>
  *
  * <h2>The field and the popup</h2>
  * <p>The field edits as those of {@link DatePicker} and {@link TimePicker} do, one part at a time, and its draft
@@ -82,9 +87,9 @@ import java.util.Optional;
  * <p>Get one from {@link org.inspirenxe.strata.api.ComponentFactory#dateTimePicker()}. Do not implement this
  * interface.</p>
  */
-public interface DateTimePicker extends Component<DateTimePicker>, Focusable<DateTimePicker>,
-        HasCursor<DateTimePicker>, HasTooltip<DateTimePicker>, HasDate<DateTimePicker>, HasTime<DateTimePicker>,
-        Openable<DateTimePicker> {
+public interface DateTimePicker extends Component<DateTimePicker>, Focusable<DateTimePicker>, HasCursor<DateTimePicker>,
+        HasTooltip<DateTimePicker>, HasContextMenu<DateTimePicker>, HasDate<DateTimePicker>, HasTime<DateTimePicker>,
+        Openable<DateTimePicker>, Validatable<DateTimePicker> {
     /**
      * Style key for behind the focused part (paint, optional).
      */

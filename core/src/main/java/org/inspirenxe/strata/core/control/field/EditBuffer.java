@@ -33,6 +33,12 @@ interface EditBuffer {
     char charAt(int index);
 
     /**
+     * Returns how many times the text changed, so a reader can tell whether what it worked out from the text is still
+     * current.
+     */
+    long changes();
+
+    /**
      * Returns whether there are no chars.
      */
     default boolean isEmpty() {

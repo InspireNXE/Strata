@@ -101,8 +101,7 @@ public final class CalendarViewImpl extends BuiltInComponent<CalendarView> imple
 
     private final ComponentFactoryImpl ui;
     private LocalDate date;
-    private LocalDate min;
-    private LocalDate max;
+    private DateRange range;
     private Predicate<? super LocalDate> filter;
     private Predicate<? super LocalDate> marks;
     private DayOfWeek firstDayOverride;
@@ -173,6 +172,7 @@ public final class CalendarViewImpl extends BuiltInComponent<CalendarView> imple
     public CalendarViewImpl(final ComponentFactoryImpl ui) {
         super(ui);
         this.ui = ui;
+        this.range = DateRange.ALL;
         this.filter = day -> true;
         this.marks = day -> false;
         this.zoom = Zoom.MONTH;
@@ -228,7 +228,7 @@ public final class CalendarViewImpl extends BuiltInComponent<CalendarView> imple
 
     @Override
     public CalendarView setDate(final LocalDate date) {
-        final LocalDate next = this.clamp(date);
+        final LocalDate next = this.range.clamp(date);
         final LocalDate previous = this.date;
         if (Objects.equals(next, previous)) {
             return this;
@@ -248,21 +248,17 @@ public final class CalendarViewImpl extends BuiltInComponent<CalendarView> imple
 
     @Override
     public Optional<LocalDate> minDate() {
-        return Optional.ofNullable(this.min);
+        return Optional.ofNullable(this.range.min());
     }
 
     @Override
     public Optional<LocalDate> maxDate() {
-        return Optional.ofNullable(this.max);
+        return Optional.ofNullable(this.range.max());
     }
 
     @Override
     public CalendarView setDateRange(final LocalDate min, final LocalDate max) {
-        if (min != null && max != null && min.isAfter(max)) {
-            throw new IllegalArgumentException("The range must not end before it starts: " + min + " to " + max);
-        }
-        this.min = min;
-        this.max = max;
+        this.range = DateRange.of(min, max);
         this.setDate(this.date);
         return this.setShownMonth(this.shown);
     }
@@ -296,7 +292,7 @@ public final class CalendarViewImpl extends BuiltInComponent<CalendarView> imple
 
     @Override
     public CalendarView setShownMonth(final YearMonth month) {
-        final YearMonth next = this.clampMonth(Objects.requireNonNull(month, "month"));
+        final YearMonth next = this.range.clamp(Objects.requireNonNull(month, "month"));
         final YearMonth previous = this.shown;
         if (!next.equals(previous)) {
             this.shown = next;
@@ -352,7 +348,7 @@ public final class CalendarViewImpl extends BuiltInComponent<CalendarView> imple
      * @return true if the day can be picked
      */
     public boolean isAllowed(final LocalDate day) {
-        return this.inRange(day) && this.filter.test(day);
+        return this.range.contains(day) && this.filter.test(day);
     }
 
     // ------------------------------------------------------------------
@@ -374,35 +370,6 @@ public final class CalendarViewImpl extends BuiltInComponent<CalendarView> imple
         }
     }
 
-    private boolean inRange(final LocalDate day) {
-        return (this.min == null || !day.isBefore(this.min)) && (this.max == null || !day.isAfter(this.max));
-    }
-
-    private LocalDate clamp(final LocalDate day) {
-        if (day == null) {
-            return null;
-        }
-        if (this.min != null && day.isBefore(this.min)) {
-            return this.min;
-        }
-        return this.max != null && day.isAfter(this.max) ? this.max : day;
-    }
-
-    private YearMonth clampMonth(final YearMonth month) {
-        if (this.min != null && month.isBefore(YearMonth.from(this.min))) {
-            return YearMonth.from(this.min);
-        }
-        return this.max != null && month.isAfter(YearMonth.from(this.max)) ? YearMonth.from(this.max) : month;
-    }
-
-    private boolean monthInRange(final YearMonth month) {
-        return (this.min == null || !month.isBefore(YearMonth.from(this.min)))
-                && (this.max == null || !month.isAfter(YearMonth.from(this.max)));
-    }
-
-    private boolean yearInRange(final int year) {
-        return (this.min == null || year >= this.min.getYear()) && (this.max == null || year <= this.max.getYear());
-    }
 
     private DayOfWeek firstDay() {
         if (this.firstDayOverride != null) {
@@ -440,8 +407,7 @@ public final class CalendarViewImpl extends BuiltInComponent<CalendarView> imple
         } else {
             start = month.atDay(1);
         }
-        final LocalDate clamped = this.clamp(start);
-        return clamped == null ? start : clamped;
+        return this.range.clamp(start);
     }
 
     private boolean canBrowse(final int direction) {
@@ -451,12 +417,9 @@ public final class CalendarViewImpl extends BuiltInComponent<CalendarView> imple
             case DECADE -> this.shown.plusYears(10L * direction);
         };
         return switch (this.zoom) {
-            case MONTH -> this.monthInRange(target);
-            case YEAR -> this.yearInRange(target.getYear());
-            case DECADE -> {
-                final int start = decadeStart(target.getYear());
-                yield (this.min == null || start + 9 >= this.min.getYear()) && (this.max == null || start <= this.max.getYear());
-            }
+            case MONTH -> this.range.contains(target);
+            case YEAR -> this.range.containsYear(target.getYear());
+            case DECADE -> this.range.containsDecade(decadeStart(target.getYear()));
         };
     }
 
@@ -468,7 +431,7 @@ public final class CalendarViewImpl extends BuiltInComponent<CalendarView> imple
      * Asks to show another month, kept inside the range. Does nothing if it is the month in view.
      */
     private void userBrowse(final YearMonth month) {
-        final YearMonth target = this.clampMonth(month);
+        final YearMonth target = this.range.clamp(month);
         if (!target.equals(this.shown)) {
             this.request(BROWSE, target, value -> {
                 if (value != null) {
@@ -529,7 +492,7 @@ public final class CalendarViewImpl extends BuiltInComponent<CalendarView> imple
      * Moves the cursor, browsing when it leaves the month, year or decade in view.
      */
     private void moveCursor(final LocalDate target) {
-        final LocalDate next = this.clamp(target);
+        final LocalDate next = this.range.clamp(target);
         if (next == null || next.equals(this.cursor)) {
             return;
         }
@@ -727,6 +690,8 @@ public final class CalendarViewImpl extends BuiltInComponent<CalendarView> imple
             return;
         }
         this.refreshToday();
+        // Today is read again a minute after the last reading, which this frame must then show
+        this.repaintAfter(Math.max(1L, TODAY_CHECK_MILLIS - (this.ui.platform().clock().millis() - this.todayCheckedAt)));
         this.sync(bounds);
         this.background.paint(painter, bounds);
         final boolean enabled = this.isEnabled();
@@ -790,7 +755,7 @@ public final class CalendarViewImpl extends BuiltInComponent<CalendarView> imple
         for (int i = 0; i < 12; i++) {
             final YearMonth month = YearMonth.of(year, i + 1);
             final Rect cell = this.gridRects[i];
-            final boolean allowed = enabled && this.monthInRange(month);
+            final boolean allowed = enabled && this.range.contains(month);
             final boolean selected = this.date != null && this.date.getYear() == year && this.date.getMonthValue() == i + 1;
             this.paintGridCell(painter, cell, i, allowed, selected,
                     this.today.getYear() == year && this.today.getMonthValue() == i + 1);
@@ -807,7 +772,7 @@ public final class CalendarViewImpl extends BuiltInComponent<CalendarView> imple
         for (int i = 0; i < 12; i++) {
             final int year = this.yearsFrom + i;
             final Rect cell = this.gridRects[i];
-            final boolean allowed = enabled && this.yearInRange(year);
+            final boolean allowed = enabled && this.range.containsYear(year);
             final boolean selected = this.date != null && this.date.getYear() == year;
             this.paintGridCell(painter, cell, i, allowed, selected, this.today.getYear() == year);
             final boolean outside = i == 0 || i == 11;
@@ -945,14 +910,14 @@ public final class CalendarViewImpl extends BuiltInComponent<CalendarView> imple
             }
             case YEAR -> {
                 final YearMonth month = YearMonth.of(this.shown.getYear(), index + 1);
-                if (this.monthInRange(month)) {
+                if (this.range.contains(month)) {
                     this.zoomIn(month);
                 }
             }
             case DECADE -> {
                 final int year = this.yearsFrom + index;
-                if (this.yearInRange(year)) {
-                    this.zoomIn(this.clampMonth(this.shown.withYear(year)));
+                if (this.range.containsYear(year)) {
+                    this.zoomIn(this.range.clamp(this.shown.withYear(year)));
                 }
             }
         }

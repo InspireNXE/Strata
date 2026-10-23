@@ -32,7 +32,9 @@ public interface Stepped<S extends Stepped<S>> extends Ranged<S> {
     double step();
 
     /**
-     * Sets the step. The control rounds the value to it again.
+     * Sets the step. A control that keeps its value on its steps, such as a slider, rounds the value to them again; a
+     * control that only moves its value by them, such as a spinner, leaves the value as it is. Each control says
+     * which it does.
      *
      * @param step the step, or 0 for none where the control allows that
      * @return this control

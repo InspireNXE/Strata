@@ -15,6 +15,8 @@
  */
 package org.inspirenxe.strata.api.control.pane;
 
+import org.inspirenxe.strata.api.component.Enableable;
+import org.inspirenxe.strata.api.component.HasTooltip;
 import org.inspirenxe.strata.api.component.Tooltip;
 import org.inspirenxe.strata.api.control.attribute.text.HasText;
 
@@ -35,16 +37,20 @@ import java.util.Optional;
  * sides.addTab(sell);
  * }</pre>
  *
+ * <p>Its caption marks a mnemonic with an underscore, as {@link org.inspirenxe.strata.api.control.button.Button}
+ * describes: Alt with the letter selects the tab and focuses its bar.</p>
+ *
  * <p>Get one from {@link org.inspirenxe.strata.api.ComponentFactory#tab(String)}. Call tabs on the UI thread. Do not
  * implement this interface.</p>
  */
-public interface Tab extends HasText<Tab> {
+public interface Tab extends HasText<Tab>, Enableable<Tab>, HasTooltip<Tab> {
 
     /**
      * Returns whether the user can select the tab.
      *
      * @return true by default
      */
+    @Override
     boolean isEnabled();
 
     /**
@@ -54,6 +60,7 @@ public interface Tab extends HasText<Tab> {
      * @param enabled false to keep clicks and keys from selecting it
      * @return this tab
      */
+    @Override
     Tab setEnabled(boolean enabled);
 
     /**
@@ -61,13 +68,15 @@ public interface Tab extends HasText<Tab> {
      *
      * @return the tooltip, or empty when there is none
      */
+    @Override
     Optional<Tooltip> tooltip();
 
     /**
      * Sets the tooltip shown while the pointer rests on the tab, such as one that says why it is disabled.
      *
-     * @param tooltip the tooltip, or {@code null} for none
+     * @param tooltip the tooltip; {@link #clearTooltip()} removes it
      * @return this tab
      */
+    @Override
     Tab setTooltip(Tooltip tooltip);
 }

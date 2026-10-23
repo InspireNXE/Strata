@@ -86,7 +86,8 @@ public abstract class BuiltInComposite<T extends Component<T>> extends BuiltInCo
     }
 
     /**
-     * Returns the rectangle children are clipped to and hit-tested against while {@link #clipsChildren()} is true.
+     * Returns the rectangle children are clipped to and hit-tested against, unless {@link #setChildClipping} turned
+     * clipping off.
      * Called during painting and hit testing. The default is the bounds.
      *
      * @return the clip, in the host's coordinates
@@ -240,16 +241,8 @@ public abstract class BuiltInComposite<T extends Component<T>> extends BuiltInCo
     }
 
     /**
-     * Returns whether children are clipped to {@link #childClip()}.
-     *
-     * @return true by default
-     */
-    protected boolean clipsChildren() {
-        return this.node().clipsChildren();
-    }
-
-    /**
-     * Sets whether children are clipped to {@link #childClip()}.
+     * Sets whether children are clipped to {@link #childClip()}. Children are clipped by default. A
+     * {@link BuiltInContainer} reports the setting through its public {@code clipsChildren()}.
      *
      * @param clip false to let children draw and be hit outside it
      */

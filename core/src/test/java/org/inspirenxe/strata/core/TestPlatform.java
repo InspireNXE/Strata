@@ -23,6 +23,7 @@ import org.inspirenxe.strata.api.text.TextSpan;
 import org.inspirenxe.strata.api.text.TextStyle;
 import org.inspirenxe.strata.spi.Capabilities;
 import org.inspirenxe.strata.spi.Clipboard;
+import org.inspirenxe.strata.spi.FileDialogSource;
 import org.inspirenxe.strata.spi.Clock;
 import org.inspirenxe.strata.spi.Conventions;
 import org.inspirenxe.strata.spi.Platform;
@@ -32,20 +33,24 @@ import org.inspirenxe.strata.spi.ThemeSource;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.Optional;
+import java.util.concurrent.Executor;
+import java.util.function.BooleanSupplier;
 
 /**
- * A platform with monospaced text (6 units per code point, 9 units per line), a clock tests move by hand, and a
- * fixed wall clock.
+ * A platform with monospaced text (6 units per code point, 9 units per line, the baseline 7 below a line's top), a
+ * clock tests move by hand, and a fixed wall clock.
  */
 public final class TestPlatform implements Platform {
     public static final float CHAR_WIDTH = 6f;
     public static final float LINE_HEIGHT = 9f;
+    public static final float ASCENT = 7f;
     // Monospaced text measures wider, so tests can tell which style a span was measured in
     public static final float MONO_CHAR_WIDTH = 7f;
     // What the wall clock reads until a test sets another time
     public static final LocalDateTime TODAY = LocalDateTime.of(2026, 10, 20, 12, 0);
 
     private final boolean sendsKeyRepeat;
+    private boolean drawsShapes;
     private long nanos;
     private String clipboard;
     private Rect textInputArea;
@@ -54,6 +59,8 @@ public final class TestPlatform implements Platform {
     private Conventions conventions = Conventions.DEFAULT;
     private CauseStack causes;
     private Object user;
+    private Executor uiExecutor;
+    private BooleanSupplier uiThreadCheck;
     private java.time.Clock wall = java.time.Clock.fixed(TODAY.toInstant(ZoneOffset.UTC), ZoneOffset.UTC);
 
     public TestPlatform() {
@@ -95,11 +102,41 @@ public final class TestPlatform implements Platform {
             public float lineHeight(final TextStyle style) {
                 return LINE_HEIGHT;
             }
+
+            @Override
+            public float ascent(final TextStyle style) {
+                return ASCENT;
+            }
         };
+    }
+
+    private Clipboard clipboardOverride;
+    private FileDialogSource fileDialogs;
+
+    /**
+     * Gives the platform file dialogs, or none again for null.
+     */
+    public void setFileDialogs(final FileDialogSource fileDialogs) {
+        this.fileDialogs = fileDialogs;
+    }
+
+    @Override
+    public Optional<FileDialogSource> fileDialogs() {
+        return Optional.ofNullable(this.fileDialogs);
+    }
+
+    /**
+     * Makes {@link #clipboard()} return a clipboard of the test's own, or the text one again for null.
+     */
+    public void setClipboard(final Clipboard clipboard) {
+        this.clipboardOverride = clipboard;
     }
 
     @Override
     public Clipboard clipboard() {
+        if (this.clipboardOverride != null) {
+            return this.clipboardOverride;
+        }
         return new Clipboard() {
             @Override
             public Optional<String> get() {
@@ -166,7 +203,14 @@ public final class TestPlatform implements Platform {
 
     @Override
     public Capabilities capabilities() {
-        return new Capabilities(this.sendsKeyRepeat, false);
+        return new Capabilities(this.sendsKeyRepeat, false, false, this.drawsShapes);
+    }
+
+    /**
+     * Sets whether the platform's capabilities say its canvas draws shapes. False until set.
+     */
+    public void setDrawsShapes(final boolean drawsShapes) {
+        this.drawsShapes = drawsShapes;
     }
 
     /**
@@ -207,5 +251,24 @@ public final class TestPlatform implements Platform {
     @Override
     public Optional<Object> user() {
         return Optional.ofNullable(this.user);
+    }
+
+    // Set before the first host is made: core reads both once per platform
+    public void setUiExecutor(final Executor uiExecutor) {
+        this.uiExecutor = uiExecutor;
+    }
+
+    @Override
+    public Optional<Executor> uiExecutor() {
+        return Optional.ofNullable(this.uiExecutor);
+    }
+
+    public void setUiThreadCheck(final BooleanSupplier uiThreadCheck) {
+        this.uiThreadCheck = uiThreadCheck;
+    }
+
+    @Override
+    public Optional<BooleanSupplier> uiThreadCheck() {
+        return Optional.ofNullable(this.uiThreadCheck);
     }
 }

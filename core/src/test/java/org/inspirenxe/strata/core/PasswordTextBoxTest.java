@@ -22,6 +22,7 @@ import org.inspirenxe.strata.api.control.field.PasswordTextBox;
 import org.inspirenxe.strata.api.control.field.TextBox;
 import org.inspirenxe.strata.api.event.Event;
 import org.inspirenxe.strata.api.event.EventType;
+import org.inspirenxe.strata.api.event.SnapshotEvent;
 import org.inspirenxe.strata.api.event.control.ValueEvent;
 import org.inspirenxe.strata.api.event.control.ValueRequestEvent;
 import org.inspirenxe.strata.api.event.input.InputEvents;
@@ -164,7 +165,9 @@ class PasswordTextBoxTest {
                 InputEvents.POINTER_PRESS)) {
             this.form.onEvent(type, event -> {
                 seen.add(String.valueOf(event));
-                event.snapshotOf(this.box).map(ComponentSnapshot::toString).ifPresent(seen::add);
+                if (event instanceof final SnapshotEvent request) {
+                    request.snapshotOf(this.box).map(ComponentSnapshot::toString).ifPresent(seen::add);
+                }
                 if (event instanceof final ValueEvent<?, ?> report) {
                     seen.add(String.valueOf(report.value()));
                     seen.add(String.valueOf(report.previous()));

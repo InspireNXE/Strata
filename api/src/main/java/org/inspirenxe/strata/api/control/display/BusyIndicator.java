@@ -89,7 +89,7 @@ public interface BusyIndicator extends Component<BusyIndicator>, HasText<BusyInd
     /**
      * Sets the caption drawn above the dots. A new layout runs, since the size depends on it.
      *
-     * @param text the caption, or an empty string for none
+     * @param text the caption, or {@link Text#empty()} for none
      * @return this indicator
      */
     @Override

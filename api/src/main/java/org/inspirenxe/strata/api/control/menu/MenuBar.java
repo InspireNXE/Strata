@@ -16,6 +16,7 @@
 package org.inspirenxe.strata.api.control.menu;
 
 import org.inspirenxe.strata.api.component.Component;
+import org.inspirenxe.strata.api.component.HasContextMenu;
 import org.inspirenxe.strata.api.component.HasCursor;
 import org.inspirenxe.strata.api.component.HasTooltip;
 import org.inspirenxe.strata.api.control.attribute.item.SingleSelection;
@@ -27,7 +28,9 @@ import java.util.Optional;
 /**
  * A row of menu titles, each opening its {@link Menu} below it.
  *
- * <p>A left click on a title opens its menu, and clicking it again closes it. While one of the bar's menus is open,
+ * <p>A left click on a title opens its menu, and clicking it again closes it. It acts on the click even on a platform
+ * whose conventions say buttons act on the press, since those conventions cover buttons, checkboxes, radio buttons,
+ * toggles and tabs. While one of the bar's menus is open,
  * moving the pointer onto another title opens that one instead. Right on an item with no submenu, in the open menu
  * or any submenu of it, opens the next title's menu, and Left in the bar's own menu opens the previous one; both wrap
  * at the ends, skip disabled titles and titles with no menu, and highlight the new menu's first item. Titles are their text plus 8 units on each side, and the bar is one line plus 6 units
@@ -35,6 +38,11 @@ import java.util.Optional;
  *
  * <p>The bar's selection is its open menu: {@link #selectedIndex()} is the index of the title whose menu is open, and
  * {@link #select(int)} opens a menu from code.</p>
+ *
+ * <p>While the bar is attached, visible and enabled, the host runs the {@linkplain MenuItem#setCommand commands} of
+ * the enabled items in its menus and their submenus from their shortcuts, as desktop menu bars do, after the
+ * commands of {@link org.inspirenxe.strata.api.ComponentFactory#shortcuts()}. A bar in the content does this only
+ * while no dialog is open. A menu opened any other way adds no shortcuts.</p>
  *
  * <h2>Events</h2>
  * <ul>
@@ -68,11 +76,16 @@ import java.util.Optional;
  *         .addMenu("View", viewMenu);
  * }</pre>
  *
+ * <p>Its titles' text marks mnemonics, as {@link org.inspirenxe.strata.api.control.button.Button} describes: Alt with a
+ * title's letter opens its menu from the keyboard. Alt pressed and released alone, or F10, highlights the first title
+ * that opens a menu; Left and Right move the highlight, Down, Enter or Space open its menu, a title's letter opens that
+ * menu, and Escape or Alt again leaves the bar. The bar never takes focus, so focus stays where it was.</p>
+ *
  * <p>Get one from {@link org.inspirenxe.strata.api.ComponentFactory#menuBar()}. Do not implement this
  * interface.</p>
  */
-public interface MenuBar extends Component<MenuBar>, HasCursor<MenuBar>, HasTooltip<MenuBar>, SingleSelection<Menu,
-        MenuBar> {
+public interface MenuBar extends Component<MenuBar>, HasCursor<MenuBar>, HasTooltip<MenuBar>, HasContextMenu<MenuBar>,
+        SingleSelection<Menu, MenuBar> {
     /**
      * Style key for the bar's background (paint, optional).
      */

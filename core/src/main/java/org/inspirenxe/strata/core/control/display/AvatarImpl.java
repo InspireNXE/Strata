@@ -37,6 +37,7 @@ import org.inspirenxe.strata.core.text.TextLine;
 import org.inspirenxe.strata.core.text.Translations;
 
 import java.util.Locale;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 
@@ -73,6 +74,7 @@ public final class AvatarImpl extends BuiltInComponent<Avatar> implements Avatar
     private Paint placeholder;
     private Paint groupPlaceholder;
     private TextStyle initialsStyle;
+    private float radius;
 
     // Computed during measure
     private TextLine initialsLine;
@@ -87,7 +89,8 @@ public final class AvatarImpl extends BuiltInComponent<Avatar> implements Avatar
     private float initialsX;
     private float initialsY;
 
-    // Set only while paint runs, for drawInitials
+    // Set only while paint runs, for drawSquare and drawInitials
+    private final Runnable drawSquare;
     private final Runnable drawInitials;
     private Painter painter;
 
@@ -108,6 +111,7 @@ public final class AvatarImpl extends BuiltInComponent<Avatar> implements Avatar
         this.initialsStyle = TextStyle.DEFAULT;
         this.initialsLine = TextLine.EMPTY;
         this.scale = 1f;
+        this.drawSquare = this::drawSquare;
         this.drawInitials = this::drawInitials;
     }
 
@@ -166,8 +170,8 @@ public final class AvatarImpl extends BuiltInComponent<Avatar> implements Avatar
     // ------------------------------------------------------------------
 
     @Override
-    public Object value() {
-        return this.value;
+    public Optional<Object> value() {
+        return Optional.ofNullable(this.value);
     }
 
     @Override
@@ -175,31 +179,40 @@ public final class AvatarImpl extends BuiltInComponent<Avatar> implements Avatar
         this.value = value;
         this.valueIcon = value == null ? null : Strata.appearances().iconOf(value).orElse(null);
         this.valueName = value == null ? null : Strata.appearances().nameOf(value);
-        this.valueTooltip = this.tooltip();
-        this.refreshTooltip();
+        this.showValueTooltip();
         this.invalidateLayout();
         return this;
     }
 
     /**
-     * Shows the value's tooltip, unless a tooltip was set since the value's was.
+     * Shows the tooltip of the value just set: it replaces the tooltip shown when the value has one, and otherwise
+     * removes the previous value's tooltip and leaves a tooltip set with {@code setTooltip} in place.
      */
-    private void refreshTooltip() {
-        if (this.value == null || this.tooltip() != this.valueTooltip && this.tooltip() != null) {
-            return;
+    private void showValueTooltip() {
+        final Tooltip next = this.value == null ? null : Strata.appearances().tooltipOf(this.value).orElse(null);
+        if (next != null || this.tooltip().orElse(null) == this.valueTooltip) {
+            if (next == null) {
+                this.clearTooltip();
+            } else {
+                this.setTooltip(next);
+            }
         }
-        this.valueTooltip = Strata.appearances().tooltipOf(this.value).orElse(null);
-        this.setTooltip(this.valueTooltip);
+        this.valueTooltip = next;
     }
 
+    /**
+     * Asks the value for its tooltip again while the one shown is the value's.
+     */
     @Override
     protected void onPointerEnter(final PointerEvent event) {
-        this.refreshTooltip();
+        if (this.value != null && this.tooltip().orElse(null) == this.valueTooltip) {
+            this.showValueTooltip();
+        }
     }
 
     @Override
-    public SpriteId sprite() {
-        return this.sprite;
+    public Optional<SpriteId> sprite() {
+        return Optional.ofNullable(this.sprite);
     }
 
     @Override
@@ -210,8 +223,8 @@ public final class AvatarImpl extends BuiltInComponent<Avatar> implements Avatar
     }
 
     @Override
-    public Visual visual() {
-        return this.visual;
+    public Optional<Visual> visual() {
+        return Optional.ofNullable(this.visual);
     }
 
     @Override
@@ -228,7 +241,7 @@ public final class AvatarImpl extends BuiltInComponent<Avatar> implements Avatar
 
     @Override
     public Avatar setName(final Text name) {
-        this.name = name == null ? Text.empty() : name;
+        this.name = Objects.requireNonNull(name, "name");
         this.invalidateLayout();
         return this;
     }
@@ -319,6 +332,7 @@ public final class AvatarImpl extends BuiltInComponent<Avatar> implements Avatar
         this.placeholder = theme.paintOr(STYLE_PLACEHOLDER, Paint.NONE);
         this.groupPlaceholder = theme.paintOr(STYLE_PLACEHOLDER_GROUP, this.placeholder);
         this.initialsStyle = theme.textStyleOr(STYLE_INITIALS, TextStyle.DEFAULT);
+        this.radius = theme.metricOr(STYLE_RADIUS, 0f);
         this.badge.applyTheme(theme);
     }
 
@@ -355,6 +369,29 @@ public final class AvatarImpl extends BuiltInComponent<Avatar> implements Avatar
         if (!bounds.equals(this.placedFor)) {
             this.place(bounds);
         }
+        this.painter = painter;
+        try {
+            if (this.radius > 0f) {
+                painter.clippedRound(this.square, this.radius, this.drawSquare);
+            } else {
+                this.drawSquare();
+            }
+        } finally {
+            this.painter = null;
+        }
+        if (this.badgeVisual != null) {
+            painter.visual(this.badgeVisual, this.badgeVisualRect, WHITE);
+        } else {
+            this.badge.paint(painter, this.badgeRect);
+        }
+    }
+
+    /**
+     * Draws everything but the badge, inside the rounded clip during {@link #paint} when the theme gives a radius; a
+     * field-held method reference, so painting allocates no lambda per frame.
+     */
+    private void drawSquare() {
+        final Painter painter = this.painter;
         final Rect box = this.square;
         this.background.paint(painter, box);
         if (this.visual != null) {
@@ -367,22 +404,12 @@ public final class AvatarImpl extends BuiltInComponent<Avatar> implements Avatar
             if (this.scale == 1f) {
                 this.initialsLine.draw(painter, this.initialsX, this.initialsY);
             } else {
-                this.painter = painter;
-                try {
-                    painter.scaled(this.scale, this.drawInitials);
-                } finally {
-                    this.painter = null;
-                }
+                painter.scaled(this.scale, this.drawInitials);
             }
         } else {
             (this.group ? this.groupPlaceholder : this.placeholder).paint(painter, box);
         }
         this.frame.paint(painter, box);
-        if (this.badgeVisual != null) {
-            painter.visual(this.badgeVisual, this.badgeVisualRect, WHITE);
-        } else {
-            this.badge.paint(painter, this.badgeRect);
-        }
     }
 
     /**

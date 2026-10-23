@@ -28,6 +28,7 @@
  *     <li>{@code item}: {@code ItemSource}, {@code CellSource}, {@code Selection}, {@code SingleSelection},
  *     {@code MultiSelection}, {@code Activatable} and {@code RowView}.</li>
  *     <li>{@code popup}: {@code Closable}, {@code Openable} and {@code Popup}.</li>
+ *     <li>{@code command}: {@code HasCommand}.</li>
  * </ul>
  *
  * <p>An attribute owns the events of its capability. {@code Toggle.TOGGLED} fires for a checkbox, a switch and a radio

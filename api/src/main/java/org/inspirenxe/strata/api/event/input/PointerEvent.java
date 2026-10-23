@@ -15,16 +15,17 @@
  */
 package org.inspirenxe.strata.api.event.input;
 
-import org.inspirenxe.strata.api.event.Cancelable;
+import org.inspirenxe.strata.api.event.SnapshotEvent;
 import org.inspirenxe.strata.api.input.Modifiers;
 
 /**
- * An event about the mouse pointer. Positions are in the host's coordinates, in UI units; {@link #localX()} and
- * {@link #localY()} give the position relative to the current component.
+ * An event about a pointer: the mouse, a pen or a touch. Positions are in the host's coordinates, in UI units;
+ * {@link #localX()} and {@link #localY()} give the position relative to the current component. The device is in the
+ * cause's {@code CauseKeys.DEVICE}.
  *
  * <p>Only Strata creates events. Do not implement this interface.</p>
  */
-public interface PointerEvent extends Cancelable {
+public interface PointerEvent extends SnapshotEvent {
 
     /**
      * Returns the pointer's x in the host's coordinates.
@@ -67,4 +68,19 @@ public interface PointerEvent extends Cancelable {
      * @return the held modifiers
      */
     Modifiers modifiers();
+
+    /**
+     * Returns which pointer the event is about. Each pointer has its own presses and drags, so two fingers can press
+     * two buttons at once.
+     *
+     * @return 0 for the mouse, a pen and the first touch, and the adapter's number for each further touch
+     */
+    int pointerId();
+
+    /**
+     * Returns how hard the pointer presses, for a drawing tool that follows a pen.
+     *
+     * @return from 0 to 1; 1 for a device without pressure, such as a mouse
+     */
+    float pressure();
 }

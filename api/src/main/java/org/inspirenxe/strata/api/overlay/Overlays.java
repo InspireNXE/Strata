@@ -46,7 +46,9 @@ import java.util.Optional;
  * <p>Opening a dialog moves focus to the first tabbable component in it, and closing it puts focus back where it
  * was if that component can still take it. Closing the screen closes every overlay.</p>
  *
- * <p>Strata provides this object. Do not implement this interface. Call it on the UI thread only.</p>
+ * <p>Strata provides this object. Do not implement this interface. Call it on the
+ * {@linkplain org.inspirenxe.strata.api.UiThread UI thread} only: opening an overlay from another thread throws
+ * {@link IllegalStateException}.</p>
  */
 public interface Overlays {
     /**
@@ -88,6 +90,15 @@ public interface Overlays {
      * next (metric, optional), in UI units. Defaults to {@value #TOAST_MARGIN}.
      */
     String STYLE_TOAST_MARGIN = "toast.margin";
+    /**
+     * Style key for how long a toast takes to fade in when it opens and to fade out before its time runs out, in
+     * milliseconds (metric, optional). The fade animates the content's
+     * {@linkplain org.inspirenxe.strata.api.component.Component#OPACITY opacity}; the fade out starts that long
+     * before the toast's time is up and the toast closes when it ends. A toast that shows for less than twice the
+     * time fades in and out over half its time each. A click still closes a toast at once. Defaults to 0: toasts
+     * appear and go at once.
+     */
+    String STYLE_TOAST_FADE = "toast.fade";
     /**
      * How long a toast shows unless told otherwise, in milliseconds.
      */

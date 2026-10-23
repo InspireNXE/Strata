@@ -25,7 +25,8 @@ import java.util.Optional;
 
 /**
  * The state of one component at the moment an event fired, before any handler or default behavior ran. Compare it
- * with the live component, which {@link #component()} returns, to see what the event changed.
+ * with the live component, which {@link #component()} returns, to see what the event changed. Input events and
+ * requests carry them, as {@link org.inspirenxe.strata.api.event.SnapshotEvent}s.
  *
  * <p>A snapshot covers only the component itself. A container's snapshot holds the container's own state and
  * nothing about its children; each child that was captured has a snapshot of its own.</p>

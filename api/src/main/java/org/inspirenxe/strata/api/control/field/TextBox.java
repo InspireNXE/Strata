@@ -17,15 +17,18 @@ package org.inspirenxe.strata.api.control.field;
 
 import org.inspirenxe.strata.api.component.Component;
 import org.inspirenxe.strata.api.component.Focusable;
+import org.inspirenxe.strata.api.component.HasContextMenu;
 import org.inspirenxe.strata.api.component.HasCursor;
 import org.inspirenxe.strata.api.component.HasTooltip;
 import org.inspirenxe.strata.api.control.attribute.text.TextEntry;
 import org.inspirenxe.strata.api.control.attribute.text.TextInput;
+import org.inspirenxe.strata.api.control.attribute.value.Validatable;
 import org.inspirenxe.strata.api.event.EventType;
 import org.inspirenxe.strata.api.event.control.RequestEvent;
 import org.inspirenxe.strata.api.event.control.ValueEvent;
 import org.inspirenxe.strata.api.event.control.ValueRequestEvent;
 import org.inspirenxe.strata.api.geometry.Insets;
+import org.inspirenxe.strata.api.layout.HorizontalAlignment;
 import org.inspirenxe.strata.api.text.Text;
 
 import java.util.ArrayList;
@@ -40,12 +43,25 @@ import java.util.Objects;
  * <ul>
  *     <li>A click places the caret at the nearest character boundary. Shift+click extends the selection to it.</li>
  *     <li>Dragging selects by character. A drag that starts with a double click selects whole words. A double click
- *     selects the word (or run of spaces) under the pointer; a triple click selects everything.</li>
+ *     selects the word, run of punctuation or run of spaces under the pointer; a triple click selects
+ *     everything.</li>
  *     <li>Left and Right move by character, Home and End to either end. With Shift they extend the selection. With
- *     a selection and no Shift, Left and Right collapse it to its start or end.</li>
- *     <li>Ctrl+Left and Ctrl+Right move by word; Ctrl+Backspace and Ctrl+Delete delete by word.</li>
+ *     a selection and no Shift, Left and Right collapse it to its start or end. Backspace and Delete remove the
+ *     character before or after the caret, or the selection. A character is what a reader sees as one, so a letter
+ *     with its accents, a flag, or an emoji with its skin tone moves as one step and goes in one Backspace.</li>
+ *     <li>Ctrl+Left and Ctrl+Right move by word; Ctrl+Backspace and Ctrl+Delete delete by word. They skip spaces,
+ *     then stop at the other end of a word or of a run of punctuation, so {@code path/to/file} takes five steps.
+ *     Words follow the Unicode word rules that {@link java.text.BreakIterator} applies, so an apostrophe or a
+ *     decimal point inside a word stays in it.</li>
  *     <li>Ctrl+A selects all. Ctrl+C copies, Ctrl+X cuts and Ctrl+V pastes, through the host's clipboard. Pasted
- *     line breaks are removed.</li>
+ *     line breaks and other control characters, such as tabs, are removed, as typing never inserts them.</li>
+ *     <li>A drag that starts with a plain press inside the selection carries the selected text out as
+ *     {@code DataFormat.TEXT}, allowing a move and a copy, or only a copy from a read-only box; the press then
+ *     places the caret only on a release that started no drag. A box that is enabled and editable takes text dropped
+ *     on it at the boundary under the pointer, which shows a caret there while the drag is over it, as one edit
+ *     through {@link #EDIT}, with its line breaks removed. A move inside the box itself is one edit that undoes in
+ *     one step, and a drop inside the dragged text changes nothing. After a move to another component the box
+ *     removes the text it gave away, as an edit too.</li>
  *     <li>Typing replaces the selection. Text past {@link #maxLength()} is dropped.</li>
  *     <li>A handler for {@link #EDIT} sees the text each edit would produce and may cancel or rewrite it, so a box
  *     can take only digits. {@link #EDITED} reports every change of the text.</li>
@@ -72,6 +88,13 @@ import java.util.Objects;
  * list. The change is an edit by the user, so it goes through {@link #EDIT} like typing, and the list does not open
  * again until the next edit. A read-only or disabled box shows no suggestions.</p>
  *
+ * <h2>Drop-down</h2>
+ * <p>A box made a {@linkplain #setDropDown drop-down} is an editable combo box: it draws the combo box's arrow at its
+ * right, or its left while it runs right to left, inside its padding and 4 units after the text, which ends that much
+ * sooner. A left press on the arrow, or
+ * Alt+Down, shows {@linkplain SuggestionProvider#every every suggestion} the provider offers for the text in the same
+ * list, each replacing the whole text, or closes the list when it is open. The arrow is drawn in the text's color.</p>
+ *
  * <pre>{@code
  * TextBox name = factory.textBox()
  *         .setSuggestionProvider(TextBox.SuggestionProvider.words(List.of("Ana", "Ben", "Cleo", "Dev")))
@@ -82,17 +105,19 @@ import java.util.Objects;
  * <p>The box is focusable and tabbable and shows the text cursor. Focus by Tab puts the caret at the end; focus by
  * a click puts it at the click, unless the box {@linkplain #setSelectAllOnFocus selects all on focus}. While focused
  * it asks the engine for text input (required on SDL-based engines, which send no characters otherwise) and
- * consumes every key that types a character, so engine shortcuts on those keys, such as a game's inventory key, do
- * not fire. Tab and Escape are not consumed: Tab moves focus and Escape still reaches the engine. Enter is consumed
- * only when a handler for {@link #SUBMIT} or {@link #SUBMITTED} is on the box or on an ancestor those events reach.
- * While the suggestion list is open, the box consumes Up, Down, Tab, Enter and Escape itself. A disabled box ignores
- * input.</p>
+ * consumes every key that types a character, so shortcuts the engine binds to those keys do not fire. Tab and
+ * Escape are not consumed: Tab moves focus and Escape still reaches the engine. A key held with Alt neither edits
+ * nor moves the caret, and reaches the engine too. Enter is consumed only when a handler for {@link #SUBMIT} or
+ * {@link #SUBMITTED} is on the box or on an ancestor those events reach. While the suggestion list is open, the box
+ * consumes Up, Down, Tab, Enter and Escape itself. A disabled box ignores input.</p>
  *
  * <h2>Text and indexes</h2>
- * <p>Caret and selection indexes count UTF-16 chars, like {@link String} indexes, but never fall inside a surrogate
- * pair: editing works on whole code points. {@link #maxLength()} counts code points. The box holds one line; line
- * breaks given to {@link #setText} or pasted are removed. For a password, use a {@link PasswordTextBox}, which keeps
- * its text out of events, snapshots and the clipboard.</p>
+ * <p>Caret and selection indexes count UTF-16 chars, like {@link String} indexes, but never fall inside a
+ * character, a grapheme cluster as the editing list describes it; {@link #select} and the edits from code move an
+ * index inside one to its start. {@link #maxLength()} counts code points, and a cut to it leaves out a cluster that
+ * would cross it whole. The box holds one line; line
+ * breaks and other control characters given to {@link #setText} or pasted are removed. For a password, use a
+ * {@link PasswordTextBox}, which keeps its text out of events, snapshots and the clipboard.</p>
  *
  * <h2>Events</h2>
  * <ul>
@@ -103,10 +128,10 @@ import java.util.Objects;
  *     pasting, unless {@code MODIFY} was canceled. The value is the whole text the edit would produce. While handlers
  *     run, the box still holds the text and selection from before the edit. Cancel the event to reject the edit and
  *     keep the text and selection as they were, or set another text to rewrite it; the value must not be set to null.
- *     The final text has its line breaks removed and is cut to {@link #maxLength()} before it applies, and the caret
- *     goes as many characters before its end as the edit left it, with nothing selected. An edit that would leave the
- *     text as it is, such as typing into a full box, fires nothing, and a read-only box fires nothing. Fires only for
- *     the user's actions: {@link #setText} and {@link #setMaxLength} fire none.</li>
+ *     The final text has its line breaks and control characters removed and is cut to {@link #maxLength()} before
+ *     it applies, and the caret goes as many characters before its end as the edit left it, with nothing selected. An
+ *     edit that would leave the text as it is, such as typing into a full box, fires nothing, and a read-only box
+ *     fires nothing. Fires only for the user's actions: {@link #setText} and {@link #setMaxLength} fire none.</li>
  *     <li>{@link TextInput#EDITED}: Fired after the text changed: by an edit of the user's, by {@link #setText}, or by
  *     {@link #setMaxLength} cutting it. The value is the new text and {@code previous()} the text before; neither is
  *     null. An edit whose final text equals the old one fires nothing.</li>
@@ -175,11 +200,15 @@ import java.util.Objects;
  * name.setAlignment(HorizontalAlignment.STRETCH, VerticalAlignment.TOP);
  * }</pre>
  *
+ * <p>It has a default {@linkplain #contextMenu() context menu}: Undo, Redo, Cut, Copy, Paste, Delete and Select
+ * all, captioned from the {@code strata.edit.*} translation keys, each enabled only while it would do
+ * something and acting as the matching key does. {@code setContextMenu(null)} removes it.</p>
+ *
  * <p>Get one from {@link org.inspirenxe.strata.api.ComponentFactory#textBox()}. Do not implement this
  * interface.</p>
  */
 public interface TextBox extends Component<TextBox>, Focusable<TextBox>, HasCursor<TextBox>, HasTooltip<TextBox>,
-        TextInput<TextBox> {
+        HasContextMenu<TextBox>, TextInput<TextBox>, Validatable<TextBox> {
     /**
      * Style key for the background when not focused (paint, required).
      */
@@ -192,6 +221,12 @@ public interface TextBox extends Component<TextBox>, Focusable<TextBox>, HasCurs
      * Style key for the background when disabled (paint, required).
      */
     String STYLE_DISABLED = "textbox.disabled";
+    /**
+     * Style key for the background while the box is enabled and its validation is an error, in place of the normal
+     * and focused ones (paint, optional). Without it the box draws its normal face with a one-unit outline in
+     * {@value Validatable#STYLE_ERROR}. Text areas, password boxes and the date and time pickers read it too.
+     */
+    String STYLE_INVALID = "textbox.invalid";
     /**
      * Style key for the text (text style, optional).
      */
@@ -300,8 +335,9 @@ public interface TextBox extends Component<TextBox>, Focusable<TextBox>, HasCurs
     String text();
 
     /**
-     * Replaces the text, removing line breaks and cutting it to {@link #maxLength()}, and puts the caret at the
-     * end. {@link #EDITED} fires if the result differs from the current text; {@link #EDIT} does not.
+     * Replaces the text, removing line breaks and other control characters and cutting it to {@link #maxLength()}.
+     * If the result differs from the current text, the caret goes to the end with nothing selected and
+     * {@link #EDITED} fires; otherwise nothing changes. {@link #EDIT} never fires.
      *
      * @param text the new text
      * @return this box
@@ -337,7 +373,7 @@ public interface TextBox extends Component<TextBox>, Focusable<TextBox>, HasCurs
      * {@value #STYLE_PLACEHOLDER_HIDE} hides it while focused, goes away as soon as there is text, and is never part
      * of {@link #text()}.
      *
-     * @param placeholder the hint, or {@code null} or empty for none
+     * @param placeholder the hint, or empty for none
      * @return this box
      */
     TextBox setPlaceholder(Text placeholder);
@@ -345,11 +381,11 @@ public interface TextBox extends Component<TextBox>, Focusable<TextBox>, HasCurs
     /**
      * Does the same as {@link #setPlaceholder(Text)} with literal text.
      *
-     * @param placeholder the hint, or {@code null} or empty for none
+     * @param placeholder the hint, or empty for none
      * @return this box
      */
     default TextBox setPlaceholder(final String placeholder) {
-        return this.setPlaceholder(placeholder == null ? null : Text.of(placeholder));
+        return this.setPlaceholder(Text.of(placeholder));
     }
 
     /**
@@ -391,7 +427,7 @@ public interface TextBox extends Component<TextBox>, Focusable<TextBox>, HasCurs
 
     /**
      * Selects a range. The anchor is the fixed end and the caret the moving end, as after a Shift+arrow. Indexes
-     * outside the text are clamped, and an index inside a surrogate pair moves to the pair's start.
+     * outside the text are clamped, and an index inside a grapheme cluster moves to the cluster's start.
      *
      * @param anchor the fixed end of the selection
      * @param caret where the caret goes
@@ -439,6 +475,24 @@ public interface TextBox extends Component<TextBox>, Focusable<TextBox>, HasCurs
     TextBox setSelectAllOnFocus(boolean selectAll);
 
     /**
+     * Returns how text narrower than the box sits in it.
+     *
+     * @return the alignment; {@link HorizontalAlignment#LEFT} by default
+     */
+    HorizontalAlignment textAlignment();
+
+    /**
+     * Sets how text narrower than the box sits in it, such as a column of prices aligned right. The caret and the
+     * placeholder align with it. Text wider than the box starts at the left and scrolls sideways as before, so a
+     * short value aligned right stays at the right. {@link HorizontalAlignment#STRETCH} counts as
+     * {@link HorizontalAlignment#LEFT}.
+     *
+     * @param alignment the alignment
+     * @return this box
+     */
+    TextBox setTextAlignment(HorizontalAlignment alignment);
+
+    /**
      * Sets what offers suggestions as the user types, and closes the suggestion list if it is open. The box asks
      * the provider after each edit by the user that changes the text, and on Ctrl+Space, as the class description
      * says. It never asks while read-only or disabled.
@@ -447,6 +501,22 @@ public interface TextBox extends Component<TextBox>, Focusable<TextBox>, HasCurs
      * @return this box
      */
     TextBox setSuggestionProvider(SuggestionProvider provider);
+
+    /**
+     * Returns whether the box draws a drop-down arrow that shows every suggestion.
+     *
+     * @return true after {@code setDropDown(true)}; false for a new box
+     */
+    boolean isDropDown();
+
+    /**
+     * Makes the box an editable combo box, with an arrow at its right that shows every suggestion, or a plain box
+     * again. A new layout runs.
+     *
+     * @param dropDown true for the arrow
+     * @return this box
+     */
+    TextBox setDropDown(boolean dropDown);
 
     /**
      * Returns how many suggestions show before the list scrolls.
@@ -492,7 +562,7 @@ public interface TextBox extends Component<TextBox>, Focusable<TextBox>, HasCurs
      * A completion for the text of a box: the text that replaces a range of the box's text when the user accepts it.
      * The list shows {@link #text()}.
      *
-     * @param text what replaces the range; line breaks are removed when it applies
+     * @param text what replaces the range; line breaks and control characters are removed when it applies
      * @param start the char index where the replaced range starts
      * @param end the char index where the replaced range ends, exclusive; equal to {@code start} to insert
      */
@@ -538,17 +608,35 @@ public interface TextBox extends Component<TextBox>, Focusable<TextBox>, HasCurs
         List<Suggestion> suggest(String text, int caret);
 
         /**
+         * Returns every suggestion a {@linkplain TextBox#setDropDown drop-down} box shows when its arrow opens the
+         * list, each replacing the whole text. Called on the UI thread. The default asks {@link #suggest} with empty
+         * text and the caret at 0 and stretches each suggestion's range over the whole text; override it when that
+         * offers nothing, as a provider that completes a typed prefix would.
+         *
+         * @param text the box's whole text
+         * @return the suggestions, or an empty list for none; never null
+         */
+        default List<Suggestion> every(final String text) {
+            final List<Suggestion> found = new ArrayList<>();
+            for (final Suggestion suggestion : this.suggest("", 0)) {
+                found.add(new Suggestion(suggestion.text(), 0, text.length()));
+            }
+            return found;
+        }
+
+        /**
          * Returns a provider that completes the word at the caret from a list. The word is the run of characters
          * other than whitespace around the caret. Every entry that starts with the part of the word before the
          * caret, ignoring case, is suggested in the list's order, except an entry equal to the whole word. Each
-         * suggestion replaces the whole word. A caret with no word before it gets no suggestions.
+         * suggestion replaces the whole word. A caret with no word before it gets no suggestions. For a drop-down,
+         * {@link #every} offers every entry in the list's order, each replacing the whole text.
          *
          * @param words the words to offer; copied, so later changes to the collection are not seen
          * @return the provider
          */
         static SuggestionProvider words(final Collection<String> words) {
             final List<String> copy = List.copyOf(words);
-            return (text, caret) -> {
+            final SuggestionProvider completing = (text, caret) -> {
                 int start = caret;
                 while (start > 0 && !Character.isWhitespace(text.codePointBefore(start))) {
                     start -= Character.charCount(text.codePointBefore(start));
@@ -569,6 +657,21 @@ public interface TextBox extends Component<TextBox>, Focusable<TextBox>, HasCurs
                     }
                 }
                 return found;
+            };
+            return new SuggestionProvider() {
+                @Override
+                public List<Suggestion> suggest(final String text, final int caret) {
+                    return completing.suggest(text, caret);
+                }
+
+                @Override
+                public List<Suggestion> every(final String text) {
+                    final List<Suggestion> found = new ArrayList<>();
+                    for (final String candidate : copy) {
+                        found.add(new Suggestion(candidate, 0, text.length()));
+                    }
+                    return found;
+                }
             };
         }
     }

@@ -47,6 +47,21 @@ public interface ComponentHooks {
     Size measure(MeasureContext context, float availableWidth, float availableHeight);
 
     /**
+     * Forwards to {@code CustomComponent.measureMinimum}.
+     *
+     * @param context the measure context
+     * @return the smallest size of the content
+     */
+    Size measureMinimum(MeasureContext context);
+
+    /**
+     * Forwards to {@code CustomComponent.baseline}.
+     *
+     * @return the baseline from the top of the bounds, or NaN for none
+     */
+    float baseline();
+
+    /**
      * Forwards to {@code CustomComposite.arrange}; does nothing for a leaf component.
      *
      * @param context the arrange context
@@ -133,4 +148,14 @@ public interface ComponentHooks {
      * @param descendant the component inside this one that gained focus
      */
     void descendantFocused(Component<?> descendant);
+
+    /**
+     * Forwards to {@code CustomComponent.onAttached}.
+     */
+    void attached();
+
+    /**
+     * Forwards to {@code CustomComponent.onDetached}.
+     */
+    void detached();
 }

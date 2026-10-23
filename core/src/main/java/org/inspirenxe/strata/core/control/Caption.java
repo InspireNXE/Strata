@@ -34,6 +34,13 @@ import org.inspirenxe.strata.core.text.TextLine;
  *
  * <p>The clip area is the bounds less the clip insets. A control with no clip insets in its theme uses its
  * padding's left and right and the full height, so a caption is cut where the padding starts.</p>
+ *
+ * <p>A caption can have something before it, such as an icon and a gap, which the control draws itself where
+ * {@link #start} says. The two are centered together as one piece when they fit the clip area; otherwise the piece
+ * starts at the clip area's left edge and the caption alone is cut or scrolled in the rest of the clip area.</p>
+ *
+ * <p>The clip rectangle is kept from one frame to the next while it stays the same, so drawing a cut caption
+ * allocates nothing once the control's bounds settle.</p>
  */
 public final class Caption {
     private Insets clip;
@@ -46,6 +53,7 @@ public final class Caption {
     private float lineX;
     private float lineY;
     private final Runnable drawClipped = this::drawLine;
+    private final RectCache clipRect = new RectCache();
 
     /**
      * Creates a caption drawer with no clip insets and no scrolling, until {@link #applyTheme} reads them.
@@ -77,20 +85,63 @@ public final class Caption {
      * @param padding the control's padding, which centering leaves out
      * @param y the caption's top
      * @param millis the platform's clock, for scrolling
+     * @return true if the caption slides, so it looks different on the next frame and the control should ask for
+     *     one
      */
-    public void draw(final Painter painter, final TextLine line, final Rect bounds, final Insets padding,
-                     final float y, final long millis) {
-        final float width = line.width();
-        final float clipLeft = bounds.x() + (this.clip != null ? this.clip.left() : padding.left());
-        final float clipRight = bounds.right() - (this.clip != null ? this.clip.right() : padding.right());
-        final float space = clipRight - clipLeft;
-        if (width <= space) {
-            final float centered = center(bounds.x() + padding.left(), bounds.width() - padding.horizontal(), width);
-            line.draw(painter, Math.max(clipLeft, Math.min(centered, clipRight - width)), y);
-            return;
+    public boolean draw(final Painter painter, final TextLine line, final Rect bounds, final Insets padding,
+                        final float y, final long millis) {
+        return this.draw(painter, line, bounds, padding, 0f, line.width(), y, millis);
+    }
+
+    /**
+     * Draws a caption with something before it, the two centered together as a piece of a given width, at a given
+     * top. The caller draws what comes before the caption at {@link #start}. The caption is drawn {@code lead} units
+     * after the piece's start, and cut or scrolled at the clip area's right when it does not fit there.
+     *
+     * @param painter what to draw with
+     * @param line the caption
+     * @param bounds the control's bounds
+     * @param padding the control's padding, which centering leaves out
+     * @param lead the width of what comes before the caption, its gap included
+     * @param width the width of the whole piece, as measured
+     * @param y the caption's top
+     * @param millis the platform's clock, for scrolling
+     * @return true if the caption slides, so it looks different on the next frame and the control should ask for
+     *     one
+     */
+    public boolean draw(final Painter painter, final TextLine line, final Rect bounds, final Insets padding,
+                        final float lead, final float width, final float y, final long millis) {
+        return this.draw(painter, line, bounds, padding, lead, 0f, width, y, millis);
+    }
+
+    /**
+     * Draws a caption inside a piece of a given width with something before it, after it, or both, as
+     * {@link #draw(Painter, TextLine, Rect, Insets, float, float, float, long)} does, and cut or scrolled
+     * {@code trail} units before the clip area's right. A control that runs right to left puts its icon after the
+     * caption this way.
+     *
+     * @param painter what to draw with
+     * @param line the caption
+     * @param bounds the control's bounds
+     * @param padding the control's padding, which centering leaves out
+     * @param lead the width of what comes before the caption, its gap included
+     * @param trail the width of what comes after the caption, its gap included
+     * @param width the width of the whole piece, as measured
+     * @param y the caption's top
+     * @param millis the platform's clock, for scrolling
+     * @return true if the caption slides
+     */
+    public boolean draw(final Painter painter, final TextLine line, final Rect bounds, final Insets padding,
+                        final float lead, final float trail, final float width, final float y, final long millis) {
+        final float clipRight = bounds.right() - (this.clip != null ? this.clip.right() : padding.right()) - trail;
+        final float left = this.start(bounds, padding, width) + lead;
+        final float space = Math.max(0f, clipRight - left);
+        final float overflow = line.width() - space;
+        if (overflow <= 0f) {
+            line.draw(painter, left, y);
+            return false;
         }
-        final float overflow = width - space;
-        float x = clipLeft;
+        float x = left;
         if (this.scrollRate > 0f) {
             final double period = Math.max(overflow * (double) this.scrollRate, Math.max(1d, this.scrollMinimum));
             final double eased = Math.sin(Math.PI / 2d * Math.cos(Math.PI * 2d * millis / period)) / 2d + 0.5d;
@@ -105,12 +156,44 @@ public final class Caption {
         this.lineX = x;
         this.lineY = y;
         try {
-            painter.clipped(new Rect(clipLeft, top, space, Math.max(0f, bottom - top)), this.drawClipped);
+            painter.clipped(this.clipRect.at(left, top, space, Math.max(0f, bottom - top)), this.drawClipped);
         } finally {
             this.painter = null;
             this.line = null;
         }
+        return this.scrollRate > 0f;
     }
+
+    /**
+     * Returns the right edge of the clip area, where a caption too wide for the control is cut.
+     *
+     * @param bounds the control's bounds
+     * @param padding the control's padding, which is the clip area without a clip key
+     * @return the clip area's right edge
+     */
+    public float clipRight(final Rect bounds, final Insets padding) {
+        return bounds.right() - (this.clip != null ? this.clip.right() : padding.right());
+    }
+
+    /**
+     * Returns where a piece of a given width starts: centered across the control less its padding and moved inside
+     * the clip area when it fits there, or else at the clip area's left edge.
+     *
+     * @param bounds the control's bounds
+     * @param padding the control's padding, which centering leaves out
+     * @param width the piece's width
+     * @return the piece's left edge
+     */
+    public float start(final Rect bounds, final Insets padding, final float width) {
+        final float clipLeft = bounds.x() + (this.clip != null ? this.clip.left() : padding.left());
+        final float clipRight = bounds.right() - (this.clip != null ? this.clip.right() : padding.right());
+        if (width > clipRight - clipLeft) {
+            return clipLeft;
+        }
+        final float centered = center(bounds.x() + padding.left(), bounds.width() - padding.horizontal(), width);
+        return Math.max(clipLeft, Math.min(centered, clipRight - width));
+    }
+
 
     private void drawLine() {
         this.line.draw(this.painter, this.lineX, this.lineY);

@@ -18,15 +18,20 @@ package org.inspirenxe.strata.core.node;
 import org.inspirenxe.strata.api.extension.Environment;
 import org.inspirenxe.strata.api.input.Modifiers;
 import org.inspirenxe.strata.api.text.TextMetrics;
+import org.inspirenxe.strata.api.transfer.DataFormat;
+import org.inspirenxe.strata.api.transfer.Transfer;
 import org.inspirenxe.strata.core.text.InlineMetrics;
+import org.inspirenxe.strata.core.transfer.Clipboards;
 import org.inspirenxe.strata.spi.Platform;
 
 import java.util.Objects;
 import java.util.Optional;
 
 /**
- * The {@link Environment} components see, backed by a host's {@link Platform} and its {@link Root}. Each call reads
- * them again, so it reflects their current state.
+ * The {@link Environment} components see, backed by a host's {@link Platform} and its {@link Root}. Time, the
+ * clipboard, the held modifiers and the density are read again on each call. The text metrics are the platform's, which
+ * {@link Platform} requires to stay the same, wrapped once when the environment is made so inline sprites and visuals
+ * measure too.
  */
 final class EnvironmentImpl implements Environment {
     private final Platform platform;
@@ -51,17 +56,33 @@ final class EnvironmentImpl implements Environment {
 
     @Override
     public Optional<String> clipboardText() {
-        return this.platform.clipboard().get();
+        return this.clipboard().flatMap(transfer -> transfer.get(DataFormat.TEXT));
     }
 
     @Override
     public void setClipboardText(final String text) {
-        this.platform.clipboard().set(Objects.requireNonNull(text, "text"));
+        this.setClipboard(Transfer.text(Objects.requireNonNull(text, "text")));
+    }
+
+    @Override
+    public Optional<Transfer> clipboard() {
+        return Clipboards.read(this.platform);
+    }
+
+    @Override
+    public void setClipboard(final Transfer transfer) {
+        Clipboards.write(this.platform, Objects.requireNonNull(transfer, "transfer"));
     }
 
     @Override
     public Modifiers modifiers() {
         final Root root = this.ui.root();
         return root == null ? Modifiers.NONE : root.modifiers();
+    }
+
+    @Override
+    public float pixelsPerUnit() {
+        final Root root = this.ui.root();
+        return root == null ? 1f : root.pixelsPerUnit();
     }
 }

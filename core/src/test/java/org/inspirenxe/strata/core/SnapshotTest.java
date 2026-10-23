@@ -16,12 +16,15 @@
 package org.inspirenxe.strata.core;
 
 import org.inspirenxe.strata.api.ComponentFactory;
+import org.inspirenxe.strata.api.component.Component;
 import org.inspirenxe.strata.api.component.Focusable;
 import org.inspirenxe.strata.api.component.ComponentSnapshot;
 import org.inspirenxe.strata.api.control.attribute.text.TextInput;
 import org.inspirenxe.strata.api.control.button.Button;
 import org.inspirenxe.strata.api.control.field.TextBox;
 import org.inspirenxe.strata.api.event.Event;
+import org.inspirenxe.strata.api.event.SnapshotEvent;
+import org.inspirenxe.strata.api.event.component.PaintEvent;
 import org.inspirenxe.strata.api.event.Subscription;
 import org.inspirenxe.strata.api.event.input.InputEvents;
 import org.inspirenxe.strata.api.event.input.PointerButtonEvent;
@@ -77,7 +80,25 @@ class SnapshotTest {
         this.test.host().charTyped('c', Modifiers.NONE);
 
         assertEquals(List.of("ab"), previous);
-        assertThrows(IllegalStateException.class, events.get(0)::snapshot);
+        assertFalse(events.get(0) instanceof SnapshotEvent, "a report has no snapshot methods");
+    }
+
+    @Test
+    void inputAndRequestsAreSnapshotEventsAndPaintIsNot() {
+        final Button button = this.ui.button("Ana").setWidth(50).setHeight(20);
+        this.test.show(this.ui.absolutePanel().add(button));
+        final List<Event> events = new ArrayList<>();
+        button.onEvent(InputEvents.CLICK, events::add);
+        button.onEvent(Button.PRESS, events::add);
+        button.onEvent(Component.PAINT, events::add);
+
+        this.test.host().render(new DrawLog());
+        this.test.click(10, 10);
+
+        assertTrue(events.stream().anyMatch(event -> event instanceof PaintEvent.Pre));
+        for (final Event event : events) {
+            assertEquals(!(event instanceof PaintEvent.Pre), event instanceof SnapshotEvent, event.toString());
+        }
     }
 
     @Test

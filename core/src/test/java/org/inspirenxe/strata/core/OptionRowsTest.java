@@ -105,7 +105,7 @@ class OptionRowsTest {
         this.show("Music", "Sound", "Voices");
         final Button sound = this.buttons.get("Sound");
         // The spacer pushes the button to the right end of its row
-        assertEquals(sound.parent().bounds().right(), sound.bounds().right());
+        assertEquals(sound.parent().orElseThrow().bounds().right(), sound.bounds().right());
 
         this.clickCenter(sound);
         assertEquals(List.of("pressed Sound"), this.heard);

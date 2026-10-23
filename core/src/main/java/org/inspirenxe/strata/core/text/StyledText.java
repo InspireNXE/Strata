@@ -32,8 +32,9 @@ import java.util.Objects;
  *
  * <p>{@link #update} runs the highlighter only when the text, the base style or the highlighter changed, and checks
  * its runs: a run out of order, overlapping an earlier one, empty, or past the end of the text is dropped and its
- * range drawn in the base style. The segments then cover the whole text in order. Measuring allocates a span per
- * segment it crosses; callers cache what they paint.</p>
+ * range drawn in the base style. The segments then cover the whole text in order. The width of each whole segment is
+ * kept once measured, until the segments change or other metrics measure, so measuring a range allocates a span only
+ * for the segments it cuts, at most two; callers cache what they paint.</p>
  */
 public final class StyledText {
     private String text;
@@ -45,6 +46,9 @@ public final class StyledText {
     private int[] starts;
     private int[] ends;
     private TextStyle[] styles;
+    // The width of each whole segment once measured with widthsFor, else NaN
+    private float[] widths;
+    private TextMetrics widthsFor;
 
     /**
      * Creates empty text with no highlighter.
@@ -56,6 +60,7 @@ public final class StyledText {
         this.starts = new int[4];
         this.ends = new int[4];
         this.styles = new TextStyle[4];
+        this.widths = new float[4];
     }
 
     /**
@@ -78,6 +83,7 @@ public final class StyledText {
         this.highlighter = highlighter;
         this.useRuns = useRuns;
         this.count = 0;
+        this.widthsFor = null;
         final List<StyleRun> runs = useRuns && !text.isEmpty()
                 ? Objects.requireNonNull(highlighter.highlight(text, base), "highlighter returned null")
                 : List.of();
@@ -104,6 +110,7 @@ public final class StyledText {
             this.starts = Arrays.copyOf(this.starts, grown);
             this.ends = Arrays.copyOf(this.ends, grown);
             this.styles = Arrays.copyOf(this.styles, grown);
+            this.widths = Arrays.copyOf(this.widths, grown);
         }
         this.starts[this.count] = start;
         this.ends[this.count] = end;
@@ -129,11 +136,23 @@ public final class StyledText {
      * @return the width; 0 for an empty range
      */
     public float width(final TextMetrics metrics, final int from, final int to) {
+        if (metrics != this.widthsFor) {
+            this.widthsFor = metrics;
+            Arrays.fill(this.widths, 0, this.count, Float.NaN);
+        }
         float width = 0f;
         for (int i = this.first(from); i < this.count && this.starts[i] < to; i++) {
             final int start = Math.max(from, this.starts[i]);
             final int end = Math.min(to, this.ends[i]);
-            if (start < end) {
+            if (start >= end) {
+                continue;
+            }
+            if (start == this.starts[i] && end == this.ends[i]) {
+                if (Float.isNaN(this.widths[i])) {
+                    this.widths[i] = metrics.width(new TextSpan(this.text.substring(start, end), this.styles[i]));
+                }
+                width += this.widths[i];
+            } else {
                 width += metrics.width(new TextSpan(this.text.substring(start, end), this.styles[i]));
             }
         }

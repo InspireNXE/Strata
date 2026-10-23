@@ -19,7 +19,11 @@ import org.inspirenxe.strata.api.component.Component;
 import org.inspirenxe.strata.api.event.input.KeyEvent;
 import org.inspirenxe.strata.api.input.Key;
 import org.inspirenxe.strata.api.input.KeyAction;
+import org.inspirenxe.strata.api.input.KeyStroke;
+import org.inspirenxe.strata.api.input.Modifier;
 import org.inspirenxe.strata.api.input.Modifiers;
+
+import java.util.Objects;
 
 /**
  * The core {@link KeyEvent}, for a key press, repeat or release.
@@ -28,6 +32,19 @@ public final class KeyEventImpl extends EventImpl implements KeyEvent {
     private final Key key;
     private final KeyAction action;
     private final Modifiers modifiers;
+    private final Modifier shortcutModifier;
+
+    /**
+     * Creates the event on a platform whose shortcut modifier is Control.
+     *
+     * @param target the focused component, or the screen's root when nothing has focus
+     * @param key the physical key
+     * @param action whether the key went down, repeated or went up
+     * @param modifiers the modifiers held at the time of the event
+     */
+    public KeyEventImpl(final Component<?> target, final Key key, final KeyAction action, final Modifiers modifiers) {
+        this(target, key, action, modifiers, Modifier.CONTROL);
+    }
 
     /**
      * Creates the event.
@@ -36,12 +53,15 @@ public final class KeyEventImpl extends EventImpl implements KeyEvent {
      * @param key the physical key
      * @param action whether the key went down, repeated or went up
      * @param modifiers the modifiers held at the time of the event
+     * @param shortcutModifier the platform's shortcut modifier
      */
-    public KeyEventImpl(final Component<?> target, final Key key, final KeyAction action, final Modifiers modifiers) {
+    public KeyEventImpl(final Component<?> target, final Key key, final KeyAction action, final Modifiers modifiers,
+                        final Modifier shortcutModifier) {
         super(target);
         this.key = key;
         this.action = action;
         this.modifiers = modifiers;
+        this.shortcutModifier = Objects.requireNonNull(shortcutModifier, "shortcutModifier");
     }
 
     @Override
@@ -57,5 +77,15 @@ public final class KeyEventImpl extends EventImpl implements KeyEvent {
     @Override
     public Modifiers modifiers() {
         return this.modifiers;
+    }
+
+    @Override
+    public boolean is(final KeyStroke stroke) {
+        return this.action.isDown() && stroke.matches(this.key, this.modifiers, this.shortcutModifier);
+    }
+
+    @Override
+    public Modifier shortcutModifier() {
+        return this.shortcutModifier;
     }
 }

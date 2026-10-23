@@ -15,8 +15,11 @@
  */
 package org.inspirenxe.strata.core.host;
 
+import org.inspirenxe.strata.api.transfer.DropEffect;
+import org.inspirenxe.strata.api.transfer.Transfer;
 import org.inspirenxe.strata.api.ComponentFactory;
 import org.inspirenxe.strata.api.component.Component;
+import org.inspirenxe.strata.api.geometry.Size;
 import org.inspirenxe.strata.api.input.Key;
 import org.inspirenxe.strata.api.input.KeyAction;
 import org.inspirenxe.strata.api.input.Modifiers;
@@ -25,22 +28,28 @@ import org.inspirenxe.strata.api.input.ScrollKind;
 import org.inspirenxe.strata.api.screen.Screen;
 import org.inspirenxe.strata.api.screen.ScreenController;
 import org.inspirenxe.strata.api.screen.ScreenHandle;
+import org.inspirenxe.strata.api.text.Text;
 import org.inspirenxe.strata.api.theme.Theme;
 import org.inspirenxe.strata.api.theme.ThemeException;
 import org.inspirenxe.strata.api.theme.ThemeRef;
+import org.inspirenxe.strata.core.frame.UiThreadImpl;
 import org.inspirenxe.strata.core.node.ComponentFactoryImpl;
 import org.inspirenxe.strata.core.node.Node;
 import org.inspirenxe.strata.core.node.Root;
+import org.inspirenxe.strata.core.state.Watch;
 import org.inspirenxe.strata.core.text.Translations;
 import org.inspirenxe.strata.core.theme.ThemeRegistryImpl;
 import org.inspirenxe.strata.core.theme.ThemeResolver;
 import org.inspirenxe.strata.spi.Canvas;
+import org.inspirenxe.strata.spi.InputContext;
 import org.inspirenxe.strata.spi.Platform;
 import org.inspirenxe.strata.spi.ScreenHost;
 import org.inspirenxe.strata.spi.ThemeSource;
 
+import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 
 /**
  * The core {@link ScreenHost}. It owns one factory and one {@link Root}, and passes engine input and frames to the
@@ -54,6 +63,15 @@ import java.util.Optional;
  * themes and overrides added in code ({@link ThemeRegistryImpl#version()}) at the start of every layout and render,
  * and resolves the ref again when either changed. If that fails, or the new theme lacks keys the open tree needs,
  * the host logs a warning and keeps its theme until the next change.</p>
+ *
+ * <p>Every input, {@link #flush}, {@link #layout} and {@link #render} first lets the platform's
+ * {@link UiThreadImpl} note the calling thread as the UI thread, if it has none yet and the platform names none.
+ * {@link #flush} then runs the tasks waiting in that UI thread's queue, builds a screen that asked to be built again,
+ * steps the root's animations and evaluates dirty bindings, in that order. Closing the screen stops its
+ * animations where they are.</p>
+ *
+ * <p>Whether a frame is needed and when the next timed change is due come from the root: see
+ * {@link Root#render} and {@link Root#nextFrameNanos()}.</p>
  */
 public final class ScreenHostImpl implements ScreenHost {
     private static final System.Logger LOGGER = System.getLogger(ScreenHostImpl.class.getName());
@@ -61,6 +79,7 @@ public final class ScreenHostImpl implements ScreenHost {
     private final ComponentFactoryImpl ui;
     private final Root root;
     private final Runnable closeRequested;
+    private final UiThreadImpl uiThread;
     private final ThemeSource themes;
     private final ThemeResolver resolver;
     private Theme theme;
@@ -70,6 +89,8 @@ public final class ScreenHostImpl implements ScreenHost {
     private long textVersion = Translations.version();
     private Screen screen;
     private Handle handle;
+    // The open screen's title: read from it on open, replaced through its handle
+    private Text title = Text.empty();
     private ScreenController opener;
     private boolean rebuild;
 
@@ -78,8 +99,8 @@ public final class ScreenHostImpl implements ScreenHost {
      *
      * @param platform the engine's platform
      * @param theme the starting theme
-     * @param closeRequested runs when the open screen asks to close through its handle, or {@code null} to have
-     *     the host close the screen itself
+     * @param closeRequested runs when the open screen's handle closes it, through {@code close()} or a
+     *     {@code requestClose()} the screen agreed to, or {@code null} to have the host close the screen itself
      */
     public ScreenHostImpl(final Platform platform, final Theme theme, final Runnable closeRequested) {
         this.theme = Objects.requireNonNull(theme, "theme");
@@ -87,6 +108,7 @@ public final class ScreenHostImpl implements ScreenHost {
         this.resolver = new ThemeResolver(this.themes);
         this.ui = new ComponentFactoryImpl(() -> this.theme, platform);
         this.root = new Root(platform, theme, this.ui);
+        this.uiThread = this.ui.uiThread();
         this.closeRequested = closeRequested == null ? this::close : closeRequested;
     }
 
@@ -96,8 +118,8 @@ public final class ScreenHostImpl implements ScreenHost {
      *
      * @param platform the engine's platform
      * @param theme the theme to resolve
-     * @param closeRequested runs when the open screen asks to close through its handle, or {@code null} to have
-     *     the host close the screen itself
+     * @param closeRequested runs when the open screen's handle closes it, through {@code close()} or a
+     *     {@code requestClose()} the screen agreed to, or {@code null} to have the host close the screen itself
      * @throws ThemeException if the ref cannot be resolved
      */
     public ScreenHostImpl(final Platform platform, final ThemeRef theme, final Runnable closeRequested) {
@@ -145,12 +167,18 @@ public final class ScreenHostImpl implements ScreenHost {
         final Handle opened = new Handle(screen);
         this.screen = screen;
         this.handle = opened;
+        final Text title = screen.title();
+        this.title = title != null ? title : Text.empty();
         this.root.setScreen(screen);
         this.rebuild = false;
         screen.opened(opened);
         return opened;
     }
 
+    /**
+     * Closes the open screen: calls its {@code closed()}, then empties the root. The root is emptied even when
+     * {@code closed()} throws, so the old tree never stays shown in a host that has no screen.
+     */
     @Override
     public void close() {
         if (this.screen == null) {
@@ -159,9 +187,43 @@ public final class ScreenHostImpl implements ScreenHost {
         final Screen closing = this.screen;
         this.screen = null;
         this.handle = null;
-        closing.closed();
-        this.root.setContent(null);
-        this.root.setScreen(null);
+        this.title = Text.empty();
+        // The screen's motion stops where it is, so nothing writes to a closed tree
+        this.root.animator().stopAll();
+        try {
+            closing.closed();
+        } finally {
+            try {
+                this.root.setContent(null);
+                this.root.setScreen(null);
+            } finally {
+                this.root.stopWatches();
+            }
+        }
+    }
+
+    /**
+     * Asks the open screen whether it may close and closes it if it agrees. A screen that closes itself through its
+     * handle while it is asked counts as agreeing.
+     */
+    @Override
+    public boolean requestClose() {
+        final Handle asked = this.handle;
+        if (asked == null) {
+            return true;
+        }
+        if (!asked.owner.closeRequested(asked)) {
+            return false;
+        }
+        if (this.handle == asked) {
+            this.close();
+        }
+        return true;
+    }
+
+    @Override
+    public Text title() {
+        return this.title;
     }
 
     @Override
@@ -186,19 +248,48 @@ public final class ScreenHostImpl implements ScreenHost {
 
     @Override
     public void setTheme(final Theme theme) {
-        this.root.setTheme(theme);
-        this.theme = theme;
+        this.applyTheme(theme);
         this.themeRef = null;
     }
 
     @Override
     public void setTheme(final ThemeRef theme) {
         final Resolution resolution = Resolution.of(this.resolver, this.themes, Objects.requireNonNull(theme, "theme"));
-        this.root.setTheme(resolution.theme());
-        this.theme = resolution.theme();
+        this.applyTheme(resolution.theme());
         this.themeRef = theme;
         this.themeVersion = resolution.sourceVersion();
         this.registryVersion = resolution.registryVersion();
+    }
+
+    /**
+     * Checks a theme against the open tree and its overlays without changing anything, so a stack can check every
+     * screen before it changes any.
+     *
+     * @param theme the theme
+     * @throws ThemeException if the theme lacks keys the tree or an overlay needs
+     */
+    public void checkTheme(final Theme theme) {
+        this.root.checkTheme(theme);
+    }
+
+    /**
+     * Sets the host's theme, which the factory reports, and then gives it to the root, so components that read
+     * {@code ComponentFactory.theme()} while the theme is applied see the new one. If the root refuses the theme,
+     * the host keeps the old one.
+     */
+    private void applyTheme(final Theme theme) {
+        Objects.requireNonNull(theme, "theme");
+        final Theme previous = this.theme;
+        this.theme = theme;
+        boolean done = false;
+        try {
+            this.root.setTheme(theme);
+            done = true;
+        } finally {
+            if (!done) {
+                this.theme = previous;
+            }
+        }
     }
 
     @Override
@@ -221,9 +312,7 @@ public final class ScreenHostImpl implements ScreenHost {
         this.themeVersion = version;
         this.registryVersion = registry;
         try {
-            final Theme resolved = this.resolver.resolve(this.themeRef);
-            this.root.setTheme(resolved);
-            this.theme = resolved;
+            this.applyTheme(this.resolver.resolve(this.themeRef));
         } catch (final ThemeException e) {
             LOGGER.log(System.Logger.Level.WARNING, "Keeping theme " + this.theme.name() + " after a reload: "
                     + e.getMessage());
@@ -247,19 +336,47 @@ public final class ScreenHostImpl implements ScreenHost {
     }
 
     @Override
+    public void setPixelsPerUnit(final float pixelsPerUnit) {
+        this.root.setPixelsPerUnit(pixelsPerUnit);
+    }
+
+    @Override
+    public Size preferredSize(final float availableWidth, final float availableHeight) {
+        this.refreshTheme();
+        this.refreshText();
+        this.flush();
+        return this.root.preferredSize(availableWidth, availableHeight);
+    }
+
+    @Override
     public void setTooltipDelay(final long millis) {
         this.root.setTooltipDelay(millis);
     }
 
+    /**
+     * Returns the UI thread of the host's platform.
+     *
+     * @return the UI thread
+     */
+    public UiThreadImpl uiThread() {
+        return this.uiThread;
+    }
+
     @Override
     public void flush() {
+        this.uiThread.record();
+        // Before step 1 of the frame (design 4.42): tasks handed to the UI thread while no executor runs them
+        this.uiThread.runQueued();
         this.rebuildIfNeeded();
         // Step 2 of the frame, firing recorded continuous requests, goes here once coalescing is built (design 4.14)
+        // Between steps 2 and 3 (design 4.51): animations step, so the bindings see where they are
+        this.root.animator().step();
         this.root.flushBindings();
     }
 
     @Override
     public void layout() {
+        this.uiThread.record();
         this.refreshTheme();
         this.refreshText();
         this.flush();
@@ -268,6 +385,7 @@ public final class ScreenHostImpl implements ScreenHost {
 
     @Override
     public void render(final Canvas canvas) {
+        this.uiThread.record();
         this.refreshTheme();
         this.refreshText();
         this.flush();
@@ -277,8 +395,46 @@ public final class ScreenHostImpl implements ScreenHost {
     private void rebuildIfNeeded() {
         if (this.rebuild && this.screen != null) {
             this.rebuild = false;
-            this.root.setContent(this.ui.nodeOf(this.screen.build(this.ui)));
+            // The old build's watches stop once the new build has started its own
+            final List<Watch<?>> old = this.root.takeWatches();
+            try {
+                this.root.setContent(this.ui.nodeOf(this.screen.build(this.ui)));
+            } finally {
+                for (final Watch<?> watch : old) {
+                    watch.stop();
+                }
+            }
         }
+    }
+
+    @Override
+    public boolean needsFrame() {
+        return this.root.frames().needsFrame();
+    }
+
+    @Override
+    public long nextFrameNanos() {
+        return this.root.nextFrameNanos();
+    }
+
+    @Override
+    public void setFrameRequester(final Runnable requester) {
+        this.root.frames().setRequester(requester);
+    }
+
+    @Override
+    public void setFrameRate(final int framesPerSecond) {
+        this.root.setFrameRate(framesPerSecond);
+    }
+
+    @Override
+    public int frameRate() {
+        return this.root.frames().rate();
+    }
+
+    @Override
+    public long frameIntervalNanos() {
+        return this.root.frames().intervalNanos();
     }
 
     @Override
@@ -293,34 +449,93 @@ public final class ScreenHostImpl implements ScreenHost {
 
     @Override
     public boolean pointerMoved(final float x, final float y, final Modifiers modifiers) {
-        return this.root.pointerMoved(x, y, modifiers);
+        return this.pointerMoved(x, y, modifiers, InputContext.MOUSE);
+    }
+
+    @Override
+    public boolean pointerMoved(final float x, final float y, final Modifiers modifiers, final InputContext context) {
+        this.uiThread.record();
+        return this.root.pointerMoved(x, y, modifiers, context);
     }
 
     @Override
     public boolean pointerButton(final float x, final float y, final MouseButton button, final boolean pressed,
                                  final Modifiers modifiers) {
-        return this.root.pointerButton(x, y, button, pressed, modifiers);
+        return this.pointerButton(x, y, button, pressed, modifiers, InputContext.MOUSE);
+    }
+
+    @Override
+    public boolean pointerButton(final float x, final float y, final MouseButton button, final boolean pressed,
+                                 final Modifiers modifiers, final InputContext context) {
+        this.uiThread.record();
+        return this.root.pointerButton(x, y, button, pressed, modifiers, context);
     }
 
     @Override
     public boolean scroll(final float x, final float y, final float scrollX, final float scrollY, final ScrollKind kind,
                           final Modifiers modifiers) {
-        return this.root.scroll(x, y, scrollX, scrollY, kind, modifiers);
+        return this.scroll(x, y, scrollX, scrollY, kind, modifiers, InputContext.MOUSE);
+    }
+
+    @Override
+    public boolean scroll(final float x, final float y, final float scrollX, final float scrollY, final ScrollKind kind,
+                          final Modifiers modifiers, final InputContext context) {
+        this.uiThread.record();
+        return this.root.scroll(x, y, scrollX, scrollY, kind, modifiers, context);
     }
 
     @Override
     public void pointerLeft() {
+        this.uiThread.record();
         this.root.pointerLeft();
     }
 
     @Override
     public boolean key(final Key key, final KeyAction action, final Modifiers modifiers) {
-        return this.root.key(key, action, modifiers);
+        return this.key(key, action, modifiers, InputContext.KEYBOARD);
+    }
+
+    @Override
+    public boolean key(final Key key, final KeyAction action, final Modifiers modifiers, final InputContext context) {
+        this.uiThread.record();
+        return this.root.key(key, action, modifiers, context);
     }
 
     @Override
     public boolean charTyped(final int codePoint, final Modifiers modifiers) {
-        return this.root.charTyped(codePoint, modifiers);
+        return this.charTyped(codePoint, modifiers, InputContext.KEYBOARD);
+    }
+
+    @Override
+    public boolean charTyped(final int codePoint, final Modifiers modifiers, final InputContext context) {
+        this.uiThread.record();
+        return this.root.charTyped(codePoint, modifiers, context);
+    }
+
+    @Override
+    public Optional<DropEffect> dragEntered(final float x, final float y, final Transfer transfer,
+                                            final Set<DropEffect> allowed, final Modifiers modifiers) {
+        this.uiThread.record();
+        return this.root.dragEntered(x, y, transfer, allowed, modifiers);
+    }
+
+    @Override
+    public Optional<DropEffect> dragMoved(final float x, final float y, final Modifiers modifiers) {
+        this.uiThread.record();
+        return this.root.dragMoved(x, y, modifiers);
+    }
+
+    @Override
+    public void dragExited() {
+        this.uiThread.record();
+        this.root.dragExited();
+    }
+
+    @Override
+    public Optional<DropEffect> dropped(final float x, final float y, final Transfer transfer,
+                                        final Modifiers modifiers) {
+        this.uiThread.record();
+        return this.root.dropped(x, y, transfer, modifiers);
     }
 
     /**
@@ -349,6 +564,32 @@ public final class ScreenHostImpl implements ScreenHost {
             if (this.current()) {
                 ScreenHostImpl.this.closeRequested.run();
             }
+        }
+
+        @Override
+        public boolean requestClose() {
+            if (!this.current() || !this.owner.closeRequested(this)) {
+                return false;
+            }
+            // The screen may have closed itself while it was asked
+            if (this.current()) {
+                ScreenHostImpl.this.closeRequested.run();
+            }
+            return true;
+        }
+
+        @Override
+        public boolean isOpen() {
+            return this.current();
+        }
+
+        @Override
+        public ScreenHandle setTitle(final Text title) {
+            Objects.requireNonNull(title, "title");
+            if (this.current()) {
+                ScreenHostImpl.this.title = title;
+            }
+            return this;
         }
 
         @Override

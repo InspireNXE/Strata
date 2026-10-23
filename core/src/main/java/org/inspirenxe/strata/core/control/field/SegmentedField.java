@@ -21,7 +21,6 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.Month;
-import java.time.Year;
 import java.time.YearMonth;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -33,11 +32,18 @@ import java.util.Locale;
  * It knows nothing of components: the picker hands it keys and characters and draws the texts it returns.
  *
  * <p>Each part holds a number, or -1 while empty. Hours are held as shown: 1 to 12 with the half of the day (0 for
- * the first half, 1 for the second) on a 12 hour clock, 0 to 23 otherwise. Digits typed into a part build its number
+ * the first half, 1 for the second) on a 12 hour clock, 0 to 23 otherwise. Years run from 1 to 9999, the dates the
+ * pickers support, so a year always shows in four digits; one typed with one or two digits shows as typed until the
+ * draft is taken, since it stands for a year near today's. Digits typed into a part build its number
  * until no further digit could fit, then focus moves on. A digit that would take the number past the part's largest
  * value starts a new number. The draft is dirty from the first edit until {@link #load} replaces it.</p>
  */
 final class SegmentedField {
+    /**
+     * The last year a part takes, that of {@link DateRange#LAST}.
+     */
+    static final int MAX_YEAR = 9999;
+
     private final List<Kind> kinds;
     private final List<String> literals;
     private final int[] values;
@@ -289,7 +295,7 @@ final class SegmentedField {
             final int start = today.getYear() - 50;
             year = start + Math.floorMod(year - start, 100);
         }
-        if (year < 1 || year > Year.MAX_VALUE) {
+        if (year < 1 || year > MAX_YEAR) {
             return null;
         }
         final YearMonth yearMonth = YearMonth.of(year, month);
@@ -500,7 +506,7 @@ final class SegmentedField {
             next = switch (kind) {
                 case DAY -> SegmentedField.wrap(current + direction, 1, this.daysInMonth());
                 case MONTH -> SegmentedField.wrap(current + direction, 1, 12);
-                case YEAR -> Math.max(1, Math.min(Year.MAX_VALUE, current + direction));
+                case YEAR -> Math.max(1, Math.min(MAX_YEAR, current + direction));
                 case HOUR -> this.twelveHour ? SegmentedField.wrap(current + direction, 1, 12)
                         : SegmentedField.wrap(current + direction, 0, 23);
                 case MINUTE -> this.stepMinute(current, direction);
@@ -547,7 +553,7 @@ final class SegmentedField {
         return switch (kind) {
             case DAY -> 31;
             case MONTH -> 12;
-            case YEAR -> Year.MAX_VALUE;
+            case YEAR -> MAX_YEAR;
             case HOUR -> this.twelveHour ? 12 : 23;
             case MINUTE, SECOND -> 59;
             case HALF -> 1;
@@ -576,6 +582,10 @@ final class SegmentedField {
         }
         if (index == this.focus && this.typed > 0) {
             return Integer.toString(value);
+        }
+        if (kind == Kind.YEAR && this.yearDigits <= 2 && value < 100) {
+            // Still the digits typed: the year they stand for is worked out when the draft is taken
+            return String.format(Locale.ROOT, "%02d", value);
         }
         return String.format(Locale.ROOT, "%0" + kind.digits + "d", value);
     }

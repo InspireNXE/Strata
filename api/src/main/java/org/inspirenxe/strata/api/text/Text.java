@@ -108,6 +108,28 @@ public interface Text {
     }
 
     /**
+     * Returns translated text that picks its translation by a count, so "1 listing" and "3 listings" can read
+     * correctly in every language. Each time it is resolved, the platform's translator gives the
+     * {@linkplain PluralCategory category} of the count in the current language, and the text reads the translation
+     * of {@code key.<category>}, such as {@code listing.count.few}, or of {@code key.other} when that has none. The
+     * translation is then formatted with the arguments as {@link #translatable} formats it, so pass the count as an
+     * argument too where the translation shows it. A key with neither translation shows {@code key.other} itself.
+     *
+     * <pre>{@code
+     * // listing.count.one = "%s listing", listing.count.other = "%s listings"
+     * label.setText(Text.plural("listing.count", count, count));
+     * }</pre>
+     *
+     * @param key the translation key without its category, such as {@code listing.count}
+     * @param count the count that picks the translation
+     * @param args the arguments, text or any object; none may be null
+     * @return the text
+     */
+    static Text plural(final String key, final long count, final Object... args) {
+        return Strata.texts().plural(key, count, args);
+    }
+
+    /**
      * Returns the parts one after another.
      *
      * @param parts the parts

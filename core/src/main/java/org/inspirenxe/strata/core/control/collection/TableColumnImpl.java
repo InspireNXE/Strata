@@ -17,6 +17,7 @@ package org.inspirenxe.strata.core.control.collection;
 
 import org.inspirenxe.strata.api.ComponentFactory;
 import org.inspirenxe.strata.api.component.Component;
+import org.inspirenxe.strata.api.control.attribute.item.CellEditor;
 import org.inspirenxe.strata.api.control.collection.TableColumn;
 import org.inspirenxe.strata.api.layout.GridLength;
 import org.inspirenxe.strata.api.text.Text;
@@ -38,7 +39,15 @@ public final class TableColumnImpl<T> implements TableColumn<T> {
     private Text title;
     private GridLength width;
     private Function<? super T, ? extends Component<?>> cellFactory;
+    // What the cells show while they are text, or null once a cell factory replaced them
+    private Function<? super T, ?> cellText;
     private Comparator<? super T> comparator;
+    private CellEditor<T> cellEditor;
+    private float minWidth;
+    private float maxWidth;
+    private boolean resizable;
+    private boolean movable;
+    private boolean shown;
     private TableViewImpl<T> table;
 
     /**
@@ -51,7 +60,12 @@ public final class TableColumnImpl<T> implements TableColumn<T> {
         this.ui = Objects.requireNonNull(ui, "ui");
         this.title = Objects.requireNonNull(title, "title");
         this.width = GridLength.weighted(1f);
+        this.maxWidth = Float.POSITIVE_INFINITY;
+        this.resizable = true;
+        this.movable = true;
+        this.shown = true;
         this.cellFactory = this.textCells(Function.identity());
+        this.cellText = Function.identity();
     }
 
     @Override
@@ -79,9 +93,79 @@ public final class TableColumnImpl<T> implements TableColumn<T> {
     }
 
     @Override
+    public float minWidth() {
+        return this.minWidth;
+    }
+
+    @Override
+    public float maxWidth() {
+        return this.maxWidth;
+    }
+
+    @Override
+    public TableColumn<T> setWidthLimits(final float min, final float max) {
+        if (!(min >= 0f) || Float.isInfinite(min)) {
+            throw new IllegalArgumentException("A minimum width must be finite and not negative: " + min);
+        }
+        if (!(max >= min)) {
+            throw new IllegalArgumentException("A maximum width must be at least the minimum " + min + ": " + max);
+        }
+        this.minWidth = min;
+        this.maxWidth = max;
+        this.layoutChanged();
+        return this;
+    }
+
+    /**
+     * Returns a width kept within this column's limits.
+     */
+    float clamp(final float width) {
+        return Math.max(this.minWidth, Math.min(width, this.maxWidth));
+    }
+
+    @Override
+    public boolean isResizable() {
+        return this.resizable;
+    }
+
+    @Override
+    public TableColumn<T> setResizable(final boolean resizable) {
+        this.resizable = resizable;
+        return this;
+    }
+
+    @Override
+    public boolean isMovable() {
+        return this.movable;
+    }
+
+    @Override
+    public TableColumn<T> setMovable(final boolean movable) {
+        this.movable = movable;
+        return this;
+    }
+
+    @Override
+    public boolean isShown() {
+        return this.shown;
+    }
+
+    @Override
+    public TableColumn<T> setShown(final boolean shown) {
+        if (this.shown != shown) {
+            this.shown = shown;
+            if (this.table != null) {
+                this.table.shownChanged();
+            }
+        }
+        return this;
+    }
+
+    @Override
     public TableColumn<T> setCellText(final Function<? super T, ?> text) {
         Objects.requireNonNull(text, "text");
         this.setCellFactory(this.textCells(text));
+        this.cellText = text;
         return this.setComparator(Comparator.comparing(item -> this.ui.appearances().nameOf(text.apply(item)).plain(),
                 String.CASE_INSENSITIVE_ORDER));
     }
@@ -93,6 +177,7 @@ public final class TableColumnImpl<T> implements TableColumn<T> {
     @Override
     public TableColumn<T> setCellFactory(final Function<? super T, ? extends Component<?>> cellFactory) {
         this.cellFactory = Objects.requireNonNull(cellFactory, "cellFactory");
+        this.cellText = null;
         if (this.table != null) {
             this.table.cellsChanged();
         }
@@ -101,6 +186,31 @@ public final class TableColumnImpl<T> implements TableColumn<T> {
 
     Function<? super T, ? extends Component<?>> cellFactory() {
         return this.cellFactory;
+    }
+
+    @Override
+    public TableColumn<T> setCellEditor(final CellEditor<T> editor) {
+        this.cellEditor = editor;
+        return this;
+    }
+
+    /**
+     * Returns what edits this column's cells in place.
+     *
+     * @return the editor, or null when the cells cannot be edited
+     */
+    CellEditor<T> cellEditor() {
+        return this.cellEditor;
+    }
+
+    /**
+     * Returns what the cells show while they are text: the item itself for a new column, or the function
+     * {@link #setCellText} last set.
+     *
+     * @return the text function, or null once {@link #setCellFactory} replaced the text cells
+     */
+    Function<? super T, ?> cellText() {
+        return this.cellText;
     }
 
     @Override

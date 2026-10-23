@@ -17,11 +17,13 @@ package org.inspirenxe.strata.api.control.field;
 
 import org.inspirenxe.strata.api.component.Component;
 import org.inspirenxe.strata.api.component.Focusable;
+import org.inspirenxe.strata.api.component.HasContextMenu;
 import org.inspirenxe.strata.api.component.HasCursor;
 import org.inspirenxe.strata.api.component.HasTooltip;
 import org.inspirenxe.strata.api.control.attribute.popup.Closable;
 import org.inspirenxe.strata.api.control.attribute.popup.Openable;
 import org.inspirenxe.strata.api.control.attribute.value.HasTime;
+import org.inspirenxe.strata.api.control.attribute.value.Validatable;
 import org.inspirenxe.strata.api.text.Text;
 
 import java.time.LocalTime;
@@ -58,7 +60,9 @@ import java.time.LocalTime;
  *     <li>{@link HasTime#TIME_PICKED}: Told after the time changed, by the user or from code.</li>
  *     <li>{@link Openable#OPEN}: Asked before the user opens the popup. Cancel it to keep it closed.</li>
  *     <li>{@link Openable#OPENED} and {@link Closable#CLOSED}: Told after the popup opened and closed, from any source.
- *     The picker never fires {@link Closable#CLOSE}.</li>
+ *     </li>
+ *     <li>{@link Closable#CLOSE}: Asked before Escape or a press outside closes the popup. Cancel it to keep the
+ *     popup open. Enter, or {@code close()} from code, asks nothing.</li>
  * </ul>
  *
  * <h2>Theme keys</h2>
@@ -77,7 +81,8 @@ import java.time.LocalTime;
  * interface.</p>
  */
 public interface TimePicker extends Component<TimePicker>, Focusable<TimePicker>, HasCursor<TimePicker>,
-        HasTooltip<TimePicker>, HasTime<TimePicker>, Openable<TimePicker> {
+        HasTooltip<TimePicker>, HasContextMenu<TimePicker>, HasTime<TimePicker>, Openable<TimePicker>,
+        Validatable<TimePicker> {
     /**
      * Style key for behind the focused part (paint, optional).
      */

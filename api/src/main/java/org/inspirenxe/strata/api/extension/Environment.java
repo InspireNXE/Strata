@@ -17,12 +17,13 @@ package org.inspirenxe.strata.api.extension;
 
 import org.inspirenxe.strata.api.input.Modifiers;
 import org.inspirenxe.strata.api.text.TextMetrics;
+import org.inspirenxe.strata.api.transfer.Transfer;
 
 import java.util.Optional;
 
 /**
- * What a component may ask of the engine outside layout: text measurement, time, the clipboard and the held
- * modifiers. Get it with {@link CustomComponent#environment()}.
+ * What a component may ask of the engine outside layout: text measurement, time, the clipboard, the held
+ * modifiers and the display's density. Get it with {@link CustomComponent#environment()}.
  *
  * <p>It comes from the host, so tests can drive time and the clipboard, and a component written against it works
  * on any engine. Do not read the system clock or AWT clipboard directly in a component.</p>
@@ -47,18 +48,39 @@ public interface Environment {
     long millis();
 
     /**
-     * Reads text from the clipboard.
+     * Reads text from the clipboard: the {@link org.inspirenxe.strata.api.transfer.DataFormat#TEXT} of
+     * {@link #clipboard()}.
      *
      * @return the clipboard text, or empty if it holds none or the engine has no clipboard
      */
     Optional<String> clipboardText();
 
     /**
-     * Puts text on the clipboard. Engines without a clipboard ignore it.
+     * Puts text on the clipboard, as {@link #setClipboard} does with {@link Transfer#text}. Engines without a
+     * clipboard ignore it.
      *
      * @param text the text
      */
     void setClipboardText(String text);
+
+    /**
+     * Reads the clipboard in every format it holds. While the engine's clipboard still holds the text of the last
+     * transfer this process {@linkplain #setClipboard set}, it is that whole transfer, local formats included;
+     * otherwise it is what the engine reads, which is at least the text.
+     *
+     * @return the clipboard's content, or empty if it holds nothing or the engine has no clipboard
+     */
+    Optional<Transfer> clipboard();
+
+    /**
+     * Puts a transfer on the clipboard. The engine gets every format but the
+     * {@linkplain org.inspirenxe.strata.api.transfer.DataFormat#isLocal() local} ones, in what it can hold, which
+     * is at least the text; the whole transfer is kept for {@link #clipboard()} in this process. So rows copied as
+     * text and as objects paste back as objects in the application and as text everywhere else.
+     *
+     * @param transfer what to put on the clipboard
+     */
+    void setClipboard(Transfer transfer);
 
     /**
      * Returns the modifier keys held, as of the latest input the host received.
@@ -66,4 +88,13 @@ public interface Environment {
      * @return the held modifiers; {@link Modifiers#NONE} before any input
      */
     Modifiers modifiers();
+
+    /**
+     * Returns how many device pixels one UI unit covers on the host's display now, so a component can draw a line
+     * one device pixel wide ({@code 1 / pixelsPerUnit()} units) or pick a more detailed image. It changes when the
+     * window moves to another display or the user zooms, and the host then lays every component out again.
+     *
+     * @return device pixels per UI unit, greater than 0; 1 when the engine does not say
+     */
+    float pixelsPerUnit();
 }

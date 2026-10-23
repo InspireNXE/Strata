@@ -17,11 +17,13 @@ package org.inspirenxe.strata.api.control.field;
 
 import org.inspirenxe.strata.api.component.Component;
 import org.inspirenxe.strata.api.component.Focusable;
+import org.inspirenxe.strata.api.component.HasContextMenu;
 import org.inspirenxe.strata.api.component.HasCursor;
 import org.inspirenxe.strata.api.component.HasTooltip;
 import org.inspirenxe.strata.api.control.attribute.popup.Closable;
 import org.inspirenxe.strata.api.control.attribute.popup.Openable;
 import org.inspirenxe.strata.api.control.attribute.value.HasDate;
+import org.inspirenxe.strata.api.control.attribute.value.Validatable;
 import org.inspirenxe.strata.api.text.Text;
 
 import java.time.LocalDate;
@@ -70,7 +72,9 @@ import java.time.LocalDate;
  *     <li>{@link HasDate#DATE_PICKED}: Told after the date changed, by the user or from code.</li>
  *     <li>{@link Openable#OPEN}: Asked before the user opens the calendar. Cancel it to keep it closed.</li>
  *     <li>{@link Openable#OPENED} and {@link Closable#CLOSED}: Told after the calendar opened and closed, from any
- *     source. The picker never fires {@link Closable#CLOSE}.</li>
+ *     source.</li>
+ *     <li>{@link Closable#CLOSE}: Asked before Escape or a press outside closes the calendar. Cancel it to keep the
+ *     calendar open. Picking a day, Enter, or {@code close()} from code asks nothing.</li>
  * </ul>
  *
  * <h2>Theme keys</h2>
@@ -102,7 +106,8 @@ import java.time.LocalDate;
  * interface.</p>
  */
 public interface DatePicker extends Component<DatePicker>, Focusable<DatePicker>, HasCursor<DatePicker>,
-        HasTooltip<DatePicker>, HasDate<DatePicker>, Openable<DatePicker> {
+        HasTooltip<DatePicker>, HasContextMenu<DatePicker>, HasDate<DatePicker>, Openable<DatePicker>,
+        Validatable<DatePicker> {
     /**
      * Style key for behind the focused part (paint, optional).
      */

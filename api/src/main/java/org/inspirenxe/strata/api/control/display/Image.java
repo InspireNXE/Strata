@@ -16,29 +16,34 @@
 package org.inspirenxe.strata.api.control.display;
 
 import org.inspirenxe.strata.api.component.Component;
+import org.inspirenxe.strata.api.component.HasContextMenu;
 import org.inspirenxe.strata.api.component.HasCursor;
 import org.inspirenxe.strata.api.component.HasTooltip;
 import org.inspirenxe.strata.api.state.PropertyKey;
 import org.inspirenxe.strata.api.theme.SpriteId;
+import org.inspirenxe.strata.api.visual.PixelBuffer;
 import org.inspirenxe.strata.api.visual.Visual;
 
 import java.util.Objects;
+import java.util.Optional;
 
 /**
- * A sprite or an engine {@link Visual} drawn at a size you choose, such as an icon, a picture or a game item.
+ * A sprite, an engine {@link Visual} or a {@link PixelBuffer} drawn at a size you choose, such as an icon, a
+ * picture, a product photo or a heat map.
  *
  * <p>Strata cannot ask the engine how big a sprite's image is, so the image's size in UI units is set with
  * {@link #setImageSize}; it is 16 by 16 by default. A visual brings its own natural size, which becomes the image
  * size when the visual is set. That size is the desired size, and the aspect ratio {@link Scaling#FIT} keeps. The
  * sprite is looked up as described in {@link SpriteId}; a missing sprite, or a visual the engine cannot draw, draws
- * the engine's placeholder. An image shows either a sprite or a visual, never both.</p>
+ * the engine's placeholder. A pixel buffer is shown like a sprite, at the image size, and an engine that cannot draw
+ * pixels shows its placeholder. An image shows one of a sprite, a visual and a pixel buffer at a time.</p>
  *
  * <p>An image is not focusable, reads no theme keys and has no default behavior for input, so clicks pass through to
  * its ancestors. A disabled image draws the same as an enabled one; tint it to show the difference. It fires no
  * events.</p>
  *
  * <pre>{@code
- * Image icon = factory.image(SpriteId.of("examplemod", "icon/gear")).setImageSize(9, 9);
+ * Image icon = factory.image(SpriteId.of("example", "icon/gear")).setImageSize(9, 9);
  * }</pre>
  *
  * <p>Get one from {@link org.inspirenxe.strata.api.ComponentFactory#image()},
@@ -46,23 +51,25 @@ import java.util.Objects;
  * {@link org.inspirenxe.strata.api.ComponentFactory#image(Visual)} or
  * {@link org.inspirenxe.strata.api.ComponentFactory#image(Object)}. Do not implement this interface.</p>
  */
-public interface Image extends Component<Image>, HasCursor<Image>, HasTooltip<Image> {
+public interface Image extends Component<Image>, HasCursor<Image>, HasTooltip<Image>, HasContextMenu<Image> {
     /**
      * The value shown, as {@link #value()} and {@link #setValue} say, null for none. Binds one way.
      */
-    PropertyKey<Image, Object> VALUE = PropertyKey.of("image.value", Image::value, Image::setValue);
+    PropertyKey<Image, Object> VALUE = PropertyKey.of("image.value", image -> image.value().orElse(null),
+            Image::setValue);
     /**
      * The sprite, as {@link #sprite()} and {@link #setSprite} say. Binds one way. A null value throws as
      * {@code setSprite} does.
      */
-    PropertyKey<Image, SpriteId> SPRITE = PropertyKey.of("image.sprite", Image::sprite, Image::setSprite);
+    PropertyKey<Image, SpriteId> SPRITE = PropertyKey.of("image.sprite", image -> image.sprite().orElse(null),
+            Image::setSprite);
 
     /**
      * Returns the sprite.
      *
-     * @return the sprite drawn, or {@code null} while the image shows a visual or nothing
+     * @return the sprite drawn, or empty while the image shows a visual or nothing
      */
-    SpriteId sprite();
+    Optional<SpriteId> sprite();
 
     /**
      * Shows a sprite, replacing the sprite or visual shown before. Does not change the size.
@@ -75,9 +82,9 @@ public interface Image extends Component<Image>, HasCursor<Image>, HasTooltip<Im
     /**
      * Returns the visual.
      *
-     * @return the visual drawn, or {@code null} while the image shows a sprite or nothing
+     * @return the visual drawn, or empty while the image shows a sprite or nothing
      */
-    Visual visual();
+    Optional<Visual> visual();
 
     /**
      * Shows an engine visual, replacing the sprite or visual shown before, and sets the image size to the visual's
@@ -89,17 +96,36 @@ public interface Image extends Component<Image>, HasCursor<Image>, HasTooltip<Im
     Image setVisual(Visual visual);
 
     /**
+     * Returns the pixel buffer.
+     *
+     * @return the buffer drawn, or empty while the image shows a sprite, a visual or nothing
+     */
+    Optional<PixelBuffer> pixels();
+
+    /**
+     * Shows a pixel buffer, replacing the sprite, visual or value shown before, like a sprite: the image size does
+     * not change. Write the buffer and call {@link PixelBuffer#changed()} to show new pixels; the image draws the
+     * buffer as it is at each paint.
+     *
+     * @param buffer the pixels, or {@code null} to show nothing
+     * @return this image
+     */
+    Image setPixels(PixelBuffer buffer);
+
+    /**
      * Returns the value shown.
      *
-     * @return the value set with {@link #setValue}, or {@code null} if none is
+     * @return the value set with {@link #setValue}, or empty if none is
      */
-    Object value();
+    Optional<Object> value();
 
     /**
      * Shows a value through its {@linkplain org.inspirenxe.strata.api.appearance.Appearances appearance}: its icon, at
      * the icon's natural size, or nothing if it has none, and its tooltip, asked anew each time the pointer arrives.
-     * Setting a tooltip afterwards replaces the value's until the next {@code setValue}. Setting a sprite or a visual
-     * clears the value.
+     * Setting a tooltip afterwards replaces the value's until the next {@code setValue}. A value with a tooltip
+     * replaces the tooltip shown; one without, and {@code null}, remove the previous value's tooltip and keep a
+     * tooltip set with {@code setTooltip}. Setting a sprite, a visual or pixels clears the value, and its tooltip the
+     * same way.
      *
      * @param value the value, or {@code null} to show nothing
      * @return this image
@@ -173,31 +199,58 @@ public interface Image extends Component<Image>, HasCursor<Image>, HasTooltip<Im
          * Draw the sprite as large as fits inside the bounds with the image size's aspect ratio, centered. Space
          * left over on one axis stays empty.
          */
-        FIT
+        FIT,
+        /**
+         * Draw the sprite as small as covers the bounds with the image size's aspect ratio, centered, and cut what
+         * falls outside them, as a banner fills a card.
+         */
+        COVER,
+        /**
+         * Draw the sprite at the image size, centered in the bounds, and cut what falls outside them.
+         */
+        NONE
     }
 
     /**
      * An image's own state in a {@link org.inspirenxe.strata.api.component.ComponentSnapshot}.
      *
-     * @param sprite the {@linkplain #sprite() sprite}, or null while a visual is shown
-     * @param visual the {@linkplain #visual() visual}, or null while a sprite is shown
+     * @param sprite the {@linkplain #sprite() sprite}, or null while something else is shown
+     * @param visual the {@linkplain #visual() visual}, or null while something else is shown
      * @param tint the {@linkplain #tint() tint}
      * @param imageWidth the {@linkplain #imageWidth() image width}
      * @param imageHeight the {@linkplain #imageHeight() image height}
      * @param scaling the {@linkplain #scaling() scaling}; never null
+     * @param pixels the {@linkplain #pixels() pixel buffer}, or null while something else is shown
      */
-    record State(SpriteId sprite, Visual visual, int tint, float imageWidth, float imageHeight, Scaling scaling) {
+    record State(SpriteId sprite, Visual visual, int tint, float imageWidth, float imageHeight, Scaling scaling,
+                 PixelBuffer pixels) {
 
         /**
-         * Checks that at most one of the sprite and the visual is set, and the scaling.
+         * Checks that at most one of the sprite, the visual and the pixels is set, and the scaling.
          *
-         * @throws IllegalArgumentException if both the sprite and the visual are set
+         * @throws IllegalArgumentException if more than one of the sprite, the visual and the pixels is set
          */
         public State {
-            if (sprite != null && visual != null) {
-                throw new IllegalArgumentException("At most one of sprite and visual may be set");
+            if ((sprite != null ? 1 : 0) + (visual != null ? 1 : 0) + (pixels != null ? 1 : 0) > 1) {
+                throw new IllegalArgumentException("At most one of sprite, visual and pixels may be set");
             }
             Objects.requireNonNull(scaling, "scaling");
+        }
+
+        /**
+         * Creates the state of an image that shows no pixel buffer.
+         *
+         * @param sprite the sprite, or null
+         * @param visual the visual, or null
+         * @param tint the tint
+         * @param imageWidth the image width
+         * @param imageHeight the image height
+         * @param scaling the scaling
+         * @throws IllegalArgumentException if both the sprite and the visual are set
+         */
+        public State(final SpriteId sprite, final Visual visual, final int tint, final float imageWidth,
+                     final float imageHeight, final Scaling scaling) {
+            this(sprite, visual, tint, imageWidth, imageHeight, scaling, null);
         }
     }
 }

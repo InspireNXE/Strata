@@ -25,6 +25,7 @@ import org.inspirenxe.strata.api.control.button.Button;
 import org.inspirenxe.strata.api.control.button.CheckBox;
 import org.inspirenxe.strata.api.control.button.CycleButton;
 import org.inspirenxe.strata.api.control.button.DropDownButton;
+import org.inspirenxe.strata.api.control.button.ToggleButton;
 import org.inspirenxe.strata.api.control.button.ToggleSwitch;
 import org.inspirenxe.strata.api.control.collection.ComboBox;
 import org.inspirenxe.strata.api.control.collection.GridView;
@@ -65,6 +66,7 @@ import org.inspirenxe.strata.api.layout.GridPanel;
 import org.inspirenxe.strata.api.layout.ScrollPanel;
 import org.inspirenxe.strata.api.layout.Spacer;
 import org.inspirenxe.strata.api.layout.StackPanel;
+import org.inspirenxe.strata.api.layout.WrapPanel;
 
 import java.util.ArrayDeque;
 import java.util.ArrayList;
@@ -128,6 +130,7 @@ public final class ComponentRegistryImpl implements ComponentRegistry {
         this.builtIn("anchor_panel", AnchorPanel.class, ComponentFactory::anchorPanel);
         this.builtIn("stack_panel", StackPanel.class, ComponentFactory::stackPanel);
         this.builtIn("grid_panel", GridPanel.class, ComponentFactory::gridPanel);
+        this.builtIn("wrap_panel", WrapPanel.class, ComponentFactory::wrapPanel);
         this.builtIn("absolute_panel", AbsolutePanel.class, ComponentFactory::absolutePanel);
         this.builtIn("scroll_panel", ScrollPanel.class, ComponentFactory::scrollPanel);
         this.builtIn("spacer", Spacer.class, ComponentFactory::spacer);
@@ -142,6 +145,7 @@ public final class ComponentRegistryImpl implements ComponentRegistry {
         this.builtIn("drop_down_button", DropDownButton.class, ComponentFactory::dropDownButton);
         this.builtIn("cycle_button", CycleButton.class, ComponentFactory::cycleButton);
         this.builtIn("check_box", CheckBox.class, ComponentFactory::checkBox);
+        this.builtIn("toggle_button", ToggleButton.class, ComponentFactory::toggleButton);
         this.builtIn("toggle_switch", ToggleSwitch.class, ComponentFactory::toggleSwitch);
         this.builtIn("text_box", TextBox.class, ComponentFactory::textBox);
         this.builtIn("password_text_box", PasswordTextBox.class, ComponentFactory::passwordTextBox);

@@ -18,6 +18,7 @@ package org.inspirenxe.strata.core;
 import org.inspirenxe.strata.api.control.attribute.item.MultiSelection;
 import org.inspirenxe.strata.api.control.attribute.item.Selection;
 import org.inspirenxe.strata.api.control.attribute.item.SelectionMode;
+import org.inspirenxe.strata.api.control.collection.GridView;
 import org.inspirenxe.strata.api.control.collection.ListView;
 import org.inspirenxe.strata.api.control.collection.TableView;
 import org.inspirenxe.strata.api.control.collection.TreeView;
@@ -27,6 +28,8 @@ import org.inspirenxe.strata.api.input.Modifier;
 import org.inspirenxe.strata.api.input.Modifiers;
 import org.inspirenxe.strata.api.input.MouseButton;
 import org.inspirenxe.strata.api.layout.GridLength;
+import org.inspirenxe.strata.api.theme.Themes;
+import org.inspirenxe.strata.spi.Conventions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -153,5 +156,39 @@ class MultiSelectionTest {
         assertEquals(List.of("Ana's notes", "Ben"), tree.selectedItems());
         tree.setExpanded("Ana", false);
         assertEquals(List.of("Ben"), tree.selectedItems());
+    }
+
+    @Test
+    void aPlatformWhoseShortcutsUseSuperTakesSuperForTheListAndTheGrid() {
+        final TestPlatform platform = new TestPlatform();
+        platform.setConventions(new Conventions(false, Modifier.SUPER, true));
+        final TestHost mac = new TestHost(platform, Themes.flat(), 300, 300);
+        final ListView<String> names = mac.factory().<String>listView().setItems(PEOPLE)
+                .setSelectionMode(SelectionMode.MULTIPLE);
+        names.setSize(200, 100);
+        final GridView<String> cells = mac.factory().<String>gridView().setItems(PEOPLE).setColumns(5).setSelectable(true)
+                .setSelectionMode(SelectionMode.MULTIPLE);
+        mac.show(mac.factory().absolutePanel().add(names, 0, 0).add(cells, 0, 150));
+        mac.host().layout();
+        final float rowY = names.bounds().y() + names.rowHeight() / 2f;
+        mac.host().pointerButton(20, rowY, MouseButton.LEFT, true, Modifiers.NONE);
+        mac.host().pointerButton(20, rowY, MouseButton.LEFT, false, Modifiers.NONE);
+        final float thirdY = rowY + names.rowHeight() * 2f;
+        mac.host().pointerButton(20, thirdY, MouseButton.LEFT, true, Modifiers.of(Modifier.CONTROL));
+        mac.host().pointerButton(20, thirdY, MouseButton.LEFT, false, Modifiers.of(Modifier.CONTROL));
+        assertEquals(List.of(2), names.selectedIndexes());
+        mac.host().pointerButton(20, rowY, MouseButton.LEFT, true, Modifiers.of(Modifier.SUPER));
+        mac.host().pointerButton(20, rowY, MouseButton.LEFT, false, Modifiers.of(Modifier.SUPER));
+        assertEquals(List.of(0, 2), names.selectedIndexes());
+        mac.host().key(Key.A, KeyAction.PRESS, Modifiers.of(Modifier.CONTROL));
+        assertEquals(List.of(0, 2), names.selectedIndexes());
+        mac.host().key(Key.A, KeyAction.PRESS, Modifiers.of(Modifier.SUPER));
+        assertEquals(List.of(0, 1, 2, 3, 4), names.selectedIndexes());
+
+        cells.requestFocus();
+        mac.host().key(Key.A, KeyAction.PRESS, Modifiers.of(Modifier.CONTROL));
+        assertEquals(List.of(), cells.selectedIndexes());
+        mac.host().key(Key.A, KeyAction.PRESS, Modifiers.of(Modifier.SUPER));
+        assertEquals(List.of(0, 1, 2, 3, 4), cells.selectedIndexes());
     }
 }

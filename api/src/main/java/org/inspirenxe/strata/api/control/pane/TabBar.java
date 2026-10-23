@@ -17,6 +17,7 @@ package org.inspirenxe.strata.api.control.pane;
 
 import org.inspirenxe.strata.api.component.Component;
 import org.inspirenxe.strata.api.component.Focusable;
+import org.inspirenxe.strata.api.component.HasContextMenu;
 import org.inspirenxe.strata.api.component.HasCursor;
 import org.inspirenxe.strata.api.component.HasTooltip;
 import org.inspirenxe.strata.api.control.attribute.item.SingleSelection;
@@ -32,8 +33,10 @@ import java.util.Optional;
  *
  * <p>Tabs share the bar's width equally, with {@linkplain #setSpacing the spacing} between them; when the width
  * left for them is a whole number, each tab is a whole number wide and the spare units go one each to the first
- * tabs. They are one line
- * plus 7 units tall. A left click on an enabled tab selects it. While the bar has focus, Left and Right select the
+ * tabs. The bar asks for its widest tab times the number of tabs, plus the spacing, so every caption fits its
+ * share. They are one line
+ * plus 7 units tall. A left click on an enabled tab selects it, or the left press on a platform whose conventions say
+ * tabs act on the press. While the bar has focus, Left and Right select the
  * previous and next enabled tab, without wrapping, and repeat while held; the bar consumes them even at the ends. Each tab can have its own tooltip, such as one that says why it is disabled. The
  * first tab added is selected; a bar with no tabs has none.</p>
  *
@@ -85,7 +88,7 @@ import java.util.Optional;
  * interface.</p>
  */
 public interface TabBar extends Component<TabBar>, Focusable<TabBar>, HasCursor<TabBar>, HasTooltip<TabBar>,
-        SingleSelection<Tab, TabBar> {
+        HasContextMenu<TabBar>, SingleSelection<Tab, TabBar> {
     /**
      * Style key for an unselected tab (paint, required).
      */
@@ -177,6 +180,15 @@ public interface TabBar extends Component<TabBar>, Focusable<TabBar>, HasCursor<
     List<Tab> tabs();
 
     /**
+     * Returns the tab at an index.
+     *
+     * @param index the tab's index, from 0
+     * @return the tab
+     * @throws IndexOutOfBoundsException if there is no such tab
+     */
+    Tab tab(int index);
+
+    /**
      * Adds a tab at the end. The first tab added to an empty bar is selected, without an event.
      *
      * @param tab the tab
@@ -206,6 +218,22 @@ public interface TabBar extends Component<TabBar>, Focusable<TabBar>, HasCursor<
      * @return this bar
      */
     TabBar removeTab(Tab tab);
+
+    /**
+     * Removes the tab at an index, as {@link #removeTab(Tab)} does.
+     *
+     * @param index the tab's index, from 0
+     * @return this bar
+     * @throws IndexOutOfBoundsException if there is no such tab
+     */
+    TabBar removeTab(int index);
+
+    /**
+     * Removes every tab. {@link SingleSelection#SELECTED} fires once, with -1, if a tab was selected.
+     *
+     * @return this bar
+     */
+    TabBar clearTabs();
 
     /**
      * Adds a tab with a text at the end, as {@code addTab(factory.tab(text))} would.
@@ -268,10 +296,11 @@ public interface TabBar extends Component<TabBar>, Focusable<TabBar>, HasCursor<
     float spacing();
 
     /**
-     * Sets the space between tabs.
+     * Sets the space between tabs. A new layout runs.
      *
      * @param spacing the space in UI units
      * @return this bar
+     * @throws IllegalArgumentException if {@code spacing} is negative, infinite or not a number
      */
     TabBar setSpacing(float spacing);
 }

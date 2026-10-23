@@ -20,6 +20,8 @@ import org.inspirenxe.strata.api.event.cause.Origin;
 import org.inspirenxe.strata.api.text.TextMetrics;
 
 import java.util.Optional;
+import java.util.concurrent.Executor;
+import java.util.function.BooleanSupplier;
 
 /**
  * Everything a host needs from the engine besides drawing. An adapter passes one to
@@ -30,7 +32,8 @@ import java.util.Optional;
  * <ul>
  *     <li>Return the same objects, or objects that behave the same, every time: hosts may keep what they get.</li>
  *     <li>{@link #capabilities()} must not change during the platform's life.</li>
- *     <li>Calls come from the UI thread only.</li>
+ *     <li>Calls come from the UI thread only, except {@link #uiExecutor()} and {@link #uiThreadCheck()}, which core
+ *     reads once, on whichever thread first makes a host for the platform.</li>
  * </ul>
  * <p>Each method's return type lists its own requirements.</p>
  */
@@ -88,8 +91,8 @@ public interface Platform {
     ThemeSource themes();
 
     /**
-     * Returns the engine's own cause stack, when it has one Strata's causes should follow, such as Sponge's. Hosts
-     * then push their input frames on it and hand it to developers through {@code ComponentFactory.causes()}.
+     * Returns the engine's own cause stack, when it has one Strata's causes should follow. Hosts then push their
+     * input frames on it and hand it to developers through {@code ComponentFactory.causes()}.
      *
      * <p>A stack returned here must keep frames for the UI thread, close them in the order {@code CauseFrame}
      * states, and answer {@code current()} and {@code context} from the frames open at the time of the call. Strata
@@ -103,11 +106,55 @@ public interface Platform {
 
     /**
      * Returns the engine's object for the person at the screen, which hosts put in every {@link Origin.User} origin
-     * so handlers can tell who acted, such as the local player's profile. Strata never reads it.
+     * so handlers can tell who acted, such as the signed-in user's account. Strata never reads it.
      *
      * @return the identity, or empty if the engine does not name its user; the default
      */
     default Optional<Object> user() {
+        return Optional.empty();
+    }
+
+    /**
+     * Returns the engine's executor for its UI thread, the thread that dispatches input to the platform's hosts and
+     * renders them, such as Swing's {@code SwingUtilities::invokeLater} or an engine's main thread executor. Core
+     * hands every task given to {@code UiThread.execute} and {@code submit} to it, wrapped so that a task that throws
+     * is logged.
+     *
+     * <p>The executor must accept tasks from any thread, run them on the UI thread in the order given, and run a task
+     * given on the UI thread after the current call into Strata returns, never inside it. Core reads this once per
+     * platform.</p>
+     *
+     * @return the executor, or empty to have core queue tasks and run them at the start of the next
+     *     {@code flush}, {@code layout} or {@code render} of any host of the platform; the default. Every adapter that
+     *     renders runs them that way, so an adapter needs one only to run tasks while nothing renders
+     */
+    default Optional<Executor> uiExecutor() {
+        return Optional.empty();
+    }
+
+    /**
+     * Returns a test that answers whether the calling thread is the engine's UI thread, such as Swing's
+     * {@code SwingUtilities::isEventDispatchThread}. Core calls it from {@code UiThread.isCurrent} and
+     * {@code checkCurrent}, which run on every change to an attached component, so it must be cheap, must answer
+     * from any thread, and must not block.
+     *
+     * <p>Without one, core takes the UI thread to be the thread that first dispatches input to, flushes, lays out or
+     * renders a host of the platform, and until then treats every thread as passing {@code checkCurrent} and none as
+     * current. Core reads this once per platform.</p>
+     *
+     * @return the test, or empty to let core record the thread; the default
+     */
+    default Optional<BooleanSupplier> uiThreadCheck() {
+        return Optional.empty();
+    }
+
+    /**
+     * Returns the engine's file dialogs, for {@code ComponentFactory.fileDialogs()}.
+     *
+     * @return the dialogs, or empty for an engine without them, the default; core then reports file dialogs as not
+     *     supported and completes every request empty at once
+     */
+    default Optional<FileDialogSource> fileDialogs() {
         return Optional.empty();
     }
 }

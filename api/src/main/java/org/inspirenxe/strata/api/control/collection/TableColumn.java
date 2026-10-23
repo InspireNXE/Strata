@@ -66,6 +66,81 @@ public interface TableColumn<T> extends Titled<TableColumn<T>>, CellSource<T, Ta
     TableColumn<T> setWidth(GridLength width);
 
     /**
+     * Returns the narrowest the column gets.
+     *
+     * @return the minimum width in UI units; 0 by default
+     */
+    float minWidth();
+
+    /**
+     * Returns the widest the column gets.
+     *
+     * @return the maximum width in UI units; {@link Float#POSITIVE_INFINITY} by default
+     */
+    float maxWidth();
+
+    /**
+     * Sets the narrowest and widest the column gets, whatever its {@linkplain #width() width}: a fixed or auto width
+     * is kept between them, a weighted column's share too, and a user's resize stops at them. A table that
+     * {@linkplain TableView#setHorizontalPolicy scrolls sideways} gives a weighted column its minimum when the
+     * columns do not fit.
+     *
+     * @param min the minimum width in UI units
+     * @param max the maximum width in UI units, or {@link Float#POSITIVE_INFINITY} for none
+     * @return this column
+     * @throws IllegalArgumentException if {@code min} is negative or not finite, or {@code max} is NaN or less than
+     *     {@code min}
+     */
+    TableColumn<T> setWidthLimits(float min, float max);
+
+    /**
+     * Returns whether the user can resize the column.
+     *
+     * @return true by default
+     */
+    boolean isResizable();
+
+    /**
+     * Sets whether the user can resize the column by dragging the right edge of its title, which asks
+     * {@link TableView#RESIZE_COLUMN}, or fit it with a double click there.
+     *
+     * @param resizable false to keep the user from resizing it
+     * @return this column
+     */
+    TableColumn<T> setResizable(boolean resizable);
+
+    /**
+     * Returns whether the user can move the column.
+     *
+     * @return true by default
+     */
+    boolean isMovable();
+
+    /**
+     * Sets whether the user can move the column by dragging its title, which asks {@link TableView#MOVE_COLUMN}.
+     *
+     * @param movable false to keep the user from moving it
+     * @return this column
+     */
+    TableColumn<T> setMovable(boolean movable);
+
+    /**
+     * Returns whether the column shows.
+     *
+     * @return true by default
+     */
+    boolean isShown();
+
+    /**
+     * Shows or hides the column. A hidden column stays in {@link TableView#columns()}, takes no room, builds no
+     * cells and keeps its sort, and the user can show it again from the menu a right click on the header opens.
+     *
+     * @param shown false to hide it
+     * @return this column
+     */
+    TableColumn<T> setShown(boolean shown);
+
+    /**
      * Sets the cells to text: each cell is a one-line {@link org.inspirenxe.strata.api.control.display.Label} 4 units
      * in from the column's edges, cut short with {@code ...} when too long. It also makes the column sortable by that
      * text, ignoring case; set another comparator afterwards to sort differently. A new column shows each item's

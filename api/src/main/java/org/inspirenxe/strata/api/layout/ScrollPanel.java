@@ -39,23 +39,33 @@ import org.inspirenxe.strata.api.geometry.Rect;
  * <h2>Scrolling</h2>
  * <ul>
  *     <li>The offset is in UI units, positive when scrolled down or right, and clamped to
- *     {@code [0, maxScroll]} on every change and after every layout. Children are moved by the offset rounded to
+ *     {@code [0, maxScroll]} on every change and after every layout. Before the first layout there is no range yet,
+ *     so an offset set then is only kept from going below 0, and the first layout clamps it. Children are moved by
+ *     the offset rounded to
  *     whole units, so whole-pixel engines do not shimmer; the stored offset keeps its fraction.</li>
  *     <li>A wheel notch scrolls {@linkplain #setScrollRate the scroll rate}, 10 units by default; precise scrolls
- *     are multiplied by the same rate. A panel that scrolls only sideways takes vertical wheel input too. The panel
- *     consumes a scroll only when its offset changes, so a scroll past the end reaches an outer panel.</li>
- *     <li>Keys no focused descendant consumed scroll it vertically: Up and Down by the rate, Page Up and Page Down by
- *     the viewport less one rate, Home and End to the ends. Held keys repeat. The panel leaves them alone with
- *     Control or Alt held or while it does not scroll vertically, and consumes one only when the offset changed.</li>
+ *     are multiplied by the same rate. A panel that scrolls only sideways takes vertical wheel input too, and a
+ *     vertical scroll with Shift held scrolls sideways while the horizontal axis scrolls; an engine that already
+ *     turns it sends a horizontal scroll, which the panel takes as it is. The panel consumes a scroll only when its
+ *     offset changes, so a scroll past the end reaches an outer panel.</li>
+ *     <li>Keys no focused descendant consumed scroll it: Up and Down by the rate, Page Up and Page Down by the
+ *     viewport less one rate, and Home and End to the ends, while it scrolls vertically, and Left and Right by the
+ *     rate while it scrolls sideways. Held keys repeat. The panel leaves them alone with Control or Alt held, and
+ *     consumes one only when the offset changed.</li>
  *     <li>A left press on a scroll bar's thumb grabs it and dragging moves it; a left press on the track pages
  *     toward the pointer.</li>
  *     <li>When a descendant gains focus, the panel scrolls the least distance that shows it.</li>
+ *     <li>While a drag that carries a transfer holds the pointer within {@value #DRAG_SCROLL_ZONE} units of an edge
+ *     of the viewport, the panel scrolls toward that edge each frame, faster the nearer the pointer, up to the
+ *     scroll rate a frame, and keeps scrolling while the pointer stays still. The innermost panel under the pointer
+ *     that can still scroll that way does. {@link #setDragScroll} turns it off.</li>
  * </ul>
  *
  * <h2>Drawing</h2>
  * <p>Children are clipped to the viewport and can only be hit inside it. Scroll bars draw over the children: the
  * track along the gutter and a thumb whose length is the visible fraction of the track, at least
- * {@link #MIN_THUMB_LENGTH} units and at most the track minus 8.</p>
+ * {@link #MIN_THUMB_LENGTH} units and at most the track minus 8. On a track shorter than twice the minimum, the
+ * thumb is at least half the track instead, so it can still move.</p>
  *
  * <h2>Theme keys</h2>
  * <ul>
@@ -89,6 +99,13 @@ public interface ScrollPanel extends Container<ScrollPanel>, Focusable<ScrollPan
      */
     String STYLE_TRACK = "scroll.track";
     /**
+     * Style key for how long a scroll by the wheel, a key or {@link #scrollToVisible(Rect)} takes to glide to its
+     * new offset, in milliseconds (metric, optional). A further step while one glides adds to where it is headed.
+     * {@link #setScroll}, {@link #scrollBy} and dragging the thumb move at once. Lists, tables, trees and text areas
+     * read the same key. Defaults to 0: every scroll moves at once.
+     */
+    String STYLE_SMOOTH = "scroll.smooth";
+    /**
      * How wide a scroll bar is, in UI units.
      */
     float BAR_WIDTH = 6f;
@@ -104,6 +121,10 @@ public interface ScrollPanel extends Container<ScrollPanel>, Focusable<ScrollPan
      * How far one wheel notch scrolls by default, in UI units.
      */
     float DEFAULT_SCROLL_RATE = 10f;
+    /**
+     * How near an edge of the viewport, in UI units, a drag that carries a transfer starts scrolling.
+     */
+    float DRAG_SCROLL_ZONE = 16f;
 
     /**
      * Fired after the offset changed, by input or by a setter. The value is the panel's state after the change and
@@ -147,6 +168,7 @@ public interface ScrollPanel extends Container<ScrollPanel>, Focusable<ScrollPan
      * @param x the horizontal offset
      * @param y the vertical offset
      * @return this panel
+     * @throws IllegalArgumentException if either offset is NaN
      */
     ScrollPanel setScroll(float x, float y);
 
@@ -156,6 +178,7 @@ public interface ScrollPanel extends Container<ScrollPanel>, Focusable<ScrollPan
      * @param dx the change to the horizontal offset
      * @param dy the change to the vertical offset
      * @return this panel
+     * @throws IllegalArgumentException if either change is NaN
      */
     ScrollPanel scrollBy(float dx, float dy);
 
@@ -214,6 +237,21 @@ public interface ScrollPanel extends Container<ScrollPanel>, Focusable<ScrollPan
      * @throws IllegalArgumentException if the rate is not greater than 0 or not finite
      */
     ScrollPanel setScrollRate(float unitsPerNotch);
+
+    /**
+     * Returns whether a drag that carries a transfer scrolls the panel near the edges of its viewport.
+     *
+     * @return true by default
+     */
+    boolean isDragScroll();
+
+    /**
+     * Sets whether a drag that carries a transfer scrolls the panel near the edges of its viewport.
+     *
+     * @param dragScroll false to leave the panel still during drags
+     * @return this panel
+     */
+    ScrollPanel setDragScroll(boolean dragScroll);
 
     /**
      * Returns the viewport, as of the last layout.

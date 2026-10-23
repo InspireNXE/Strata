@@ -147,7 +147,10 @@ public final class BusyIndicatorImpl extends BuiltInComponent<BusyIndicator> imp
             }
             this.dotBounds = bounds;
         }
-        final long step = Math.floorDiv(this.environment().millis(), FRAME_MILLIS);
+        final long now = this.environment().millis();
+        final long step = Math.floorDiv(now, FRAME_MILLIS);
+        // The next dot lights at the next step
+        this.repaintAfter(FRAME_MILLIS - Math.floorMod(now, FRAME_MILLIS));
         final int lit = FRAMES[(int) Math.floorMod(step, (long) FRAMES.length)];
         if (this.dotsStyle != null && this.letterFrames[lit] != null) {
             final TextLine letters = this.letterFrames[lit];

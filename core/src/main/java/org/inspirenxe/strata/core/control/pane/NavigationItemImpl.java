@@ -31,13 +31,16 @@ import java.util.Optional;
 import java.util.function.Function;
 
 /**
- * The core {@link NavigationItem}: enabled, selectable, collapsed, with no icon, badge, page or children. It keeps
+ * The core {@link NavigationItem}: enabled, selectable, collapsed, with no icon, badge, page or children, and an
+ * icon size of 16 by 16. It keeps
  * the page its view built for it until the page is discarded.
  */
 public final class NavigationItemImpl extends NavigationEntryImpl implements NavigationItem {
     private Text text;
     private SpriteId iconSprite;
     private Visual iconVisual;
+    private float iconWidth;
+    private float iconHeight;
     private boolean enabled;
     private Tooltip tooltip;
     private boolean selectable;
@@ -54,6 +57,8 @@ public final class NavigationItemImpl extends NavigationEntryImpl implements Nav
      */
     public NavigationItemImpl(final Text text) {
         this.text = Objects.requireNonNull(text, "text");
+        this.iconWidth = 16f;
+        this.iconHeight = 16f;
         this.enabled = true;
         this.selectable = true;
         this.children = new ArrayList<>();
@@ -72,13 +77,13 @@ public final class NavigationItemImpl extends NavigationEntryImpl implements Nav
     }
 
     @Override
-    public SpriteId iconSprite() {
-        return this.iconSprite;
+    public Optional<SpriteId> iconSprite() {
+        return Optional.ofNullable(this.iconSprite);
     }
 
     @Override
-    public Visual iconVisual() {
-        return this.iconVisual;
+    public Optional<Visual> iconVisual() {
+        return Optional.ofNullable(this.iconVisual);
     }
 
     @Override
@@ -93,6 +98,8 @@ public final class NavigationItemImpl extends NavigationEntryImpl implements Nav
     public NavigationItem setIcon(final Visual visual) {
         this.iconVisual = Objects.requireNonNull(visual, "visual");
         this.iconSprite = null;
+        this.iconWidth = visual.size().width();
+        this.iconHeight = visual.size().height();
         this.changed();
         return this;
     }
@@ -103,6 +110,41 @@ public final class NavigationItemImpl extends NavigationEntryImpl implements Nav
         this.iconVisual = null;
         this.changed();
         return this;
+    }
+
+    @Override
+    public float iconWidth() {
+        return this.iconWidth;
+    }
+
+    @Override
+    public float iconHeight() {
+        return this.iconHeight;
+    }
+
+    @Override
+    public NavigationItem setIconSize(final float width, final float height) {
+        if (!(width >= 0f) || !(height >= 0f) || Float.isInfinite(width) || Float.isInfinite(height)) {
+            throw new IllegalArgumentException("Icon size must be finite and not negative: " + width + " x " + height);
+        }
+        this.iconWidth = width;
+        this.iconHeight = height;
+        this.changed();
+        return this;
+    }
+
+    /**
+     * Returns the sprite drawn as the icon, or null.
+     */
+    SpriteId sprite() {
+        return this.iconSprite;
+    }
+
+    /**
+     * Returns the visual drawn as the icon, or null.
+     */
+    Visual visual() {
+        return this.iconVisual;
     }
 
     /**
@@ -130,8 +172,15 @@ public final class NavigationItemImpl extends NavigationEntryImpl implements Nav
     }
 
     @Override
+    public NavigationItem clearTooltip() {
+        this.tooltip = null;
+        this.changed();
+        return this;
+    }
+
+    @Override
     public NavigationItem setTooltip(final Tooltip tooltip) {
-        this.tooltip = tooltip;
+        this.tooltip = Objects.requireNonNull(tooltip, "tooltip");
         this.changed();
         return this;
     }

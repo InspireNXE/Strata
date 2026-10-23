@@ -44,4 +44,29 @@ public interface MeasureContext {
      * @throws IllegalArgumentException if {@code child} was made by another factory or has no Strata implementation
      */
     Size measure(Component<?> child, float availableWidth, float availableHeight);
+
+    /**
+     * Returns the smallest space a child can work in, for sharing space among children. It is the child's content
+     * minimum ({@link CustomComponent#measureMinimum}), raised to its minimum size and capped by its maximum size, or
+     * its fixed size on an axis that has one, plus its margin. Strata works it out when first asked after the child's
+     * layout was invalidated and keeps it until the next time, so it may be read before or after the child is
+     * measured.
+     *
+     * @param child a child of the component being measured
+     * @return the child's outer minimum, or zero if it is hidden
+     * @throws IllegalArgumentException if {@code child} was made by another factory or has no Strata implementation
+     */
+    Size minimumSize(Component<?> child);
+
+    /**
+     * Returns where a measured child's first baseline lies, for lining up the text of children aligned
+     * {@link org.inspirenxe.strata.api.layout.VerticalAlignment#BASELINE}: the distance from the top of the space
+     * it asked for, margin included, to the baseline it reports for its desired height
+     * ({@link CustomComponent#baseline}). Read it after measuring the child.
+     *
+     * @param child a child of the component being measured
+     * @return the baseline in UI units from the top of the child's margin, or NaN if the child has none or is hidden
+     * @throws IllegalArgumentException if {@code child} was made by another factory or has no Strata implementation
+     */
+    float baseline(Component<?> child);
 }

@@ -28,11 +28,18 @@ import java.util.Optional;
  * reports the value of the selected button. The group is not a component: place its buttons anywhere in the tree,
  * in any layout.
  *
- * <p>A new group has no buttons and nothing selected. Selecting a button deselects the one before it. While a button
+ * <p>A new group has no buttons and nothing selected. {@link #add} makes a button in it, and {@link #remove} and
+ * {@link #clear} take buttons out again, so a group rebuilt from new choices drops its old buttons. Selecting a
+ * button deselects the one before it. While a button
  * has focus, Up and Left move the selection and focus to the previous button in the group that is in a tree, enabled
  * and visible, and Down and Right to the next one, wrapping at the ends. Held arrows repeat, and arrows with Control
  * or Alt are left alone. The focused button consumes the arrows it acts on, even when no other button can take the
  * selection.</p>
+ *
+ * <p>The group is one stop for Tab: only the selected button is {@linkplain RadioButton#isTabbable() tabbable}, or
+ * the first enabled button while none is selected, so Tab moves into the group and out of it in one step and the
+ * arrows move inside it. The group sets this on each new button, each change of the selection and each button
+ * enabled or disabled. A button whose tabbable flag code changed with {@code setTabbable} keeps that setting.</p>
  *
  * <p>The group is an {@link EventTarget} of its own for {@link SingleSelection#SELECTED}, which carries the index
  * of the selected button in {@link #buttons()}. The event's {@linkplain org.inspirenxe.strata.api.event.Event#target()
@@ -74,6 +81,27 @@ public interface RadioGroup<T> extends SingleSelection<T, RadioGroup<T>> {
     default RadioButton add(final String text, final T value) {
         return this.add(Text.of(text), value);
     }
+
+    /**
+     * Takes a button out of the group. Removing the selected button deselects it, which reports {@link Toggle#TOGGLED}
+     * on it, and the group fires {@link SingleSelection#SELECTED} with -1. Removing a button before the selected one
+     * fires {@code SELECTED} with the selected button's new index and its old one as the previous value. The group
+     * leaves the button in whatever container holds it; removed, it can no longer be selected, and code is expected
+     * to take it out of its container or throw it away. A button that is not in the group is ignored.
+     *
+     * @param button the button to remove
+     * @return this group
+     */
+    RadioGroup<T> remove(RadioButton button);
+
+    /**
+     * Takes every button out of the group, as {@link #remove} does for each, so a selected button reports
+     * {@link Toggle#TOGGLED} and the group fires {@link SingleSelection#SELECTED} with -1 once. The group leaves the
+     * buttons in whatever containers hold them. Does nothing for an empty group.
+     *
+     * @return this group
+     */
+    RadioGroup<T> clear();
 
     /**
      * Returns the group's buttons in the order they were made.

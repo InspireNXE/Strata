@@ -18,7 +18,10 @@ package org.inspirenxe.strata.core.control.collection;
 import org.inspirenxe.strata.api.component.CursorKind;
 import org.inspirenxe.strata.api.control.collection.ComboBox;
 import org.inspirenxe.strata.api.control.collection.ListView;
+import org.inspirenxe.strata.api.control.field.TextBox;
 import org.inspirenxe.strata.api.control.display.Label;
+import org.inspirenxe.strata.api.event.input.CharEvent;
+import org.inspirenxe.strata.api.event.input.FocusEvent;
 import org.inspirenxe.strata.api.event.input.KeyEvent;
 import org.inspirenxe.strata.api.event.input.PointerButtonEvent;
 import org.inspirenxe.strata.api.extension.MeasureContext;
@@ -39,6 +42,7 @@ import org.inspirenxe.strata.api.theme.Paint;
 import org.inspirenxe.strata.api.theme.Theme;
 import org.inspirenxe.strata.core.node.BuiltInComponent;
 import org.inspirenxe.strata.core.node.ComponentFactoryImpl;
+import org.inspirenxe.strata.core.node.Root;
 import org.inspirenxe.strata.core.text.TextLine;
 
 import java.util.List;
@@ -46,6 +50,9 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.function.Function;
+import org.inspirenxe.strata.api.component.Validation;
+import org.inspirenxe.strata.core.control.Validity;
+import org.inspirenxe.strata.core.state.ConversionTarget;
 
 /**
  * The core {@link ComboBox}. The open list is a {@link ListView} in a popup, not focusable, whose selection is the
@@ -61,7 +68,7 @@ import java.util.function.Function;
  *
  * @param <T> the type of the options
  */
-public final class ComboBoxImpl<T> extends BuiltInComponent<ComboBox<T>> implements ComboBox<T> {
+public final class ComboBoxImpl<T> extends BuiltInComponent<ComboBox<T>> implements ComboBox<T>, ConversionTarget {
     /**
      * The padding when the theme sets no {@value #STYLE_PADDING}: 4 at the sides and 3 at the top and bottom.
      */
@@ -76,13 +83,21 @@ public final class ComboBoxImpl<T> extends BuiltInComponent<ComboBox<T>> impleme
     public static final float ARROW_WIDTH = 7f;
     private static final Set<String> REQUIRED = Set.of(STYLE_NORMAL, STYLE_POPUP);
 
+    private final Validity validity;
     private final ComponentFactoryImpl ui;
     private Insets padding = DEFAULT_PADDING;
     private List<T> options;
     private Function<? super T, ?> labelFunction;
     private Function<? super T, ?> keyFunction;
+    // What type-ahead matches in place of the label, while typeAheadOn
+    private Function<? super T, ?> typeAheadName;
+    private boolean typeAheadOn;
+    private final TypeAhead typeAhead;
     private int selectedIndex;
+    // Set once an option was selected or code set the selection; until then new options select the first one
+    private boolean settled;
     private int maxVisible;
+    private Text placeholder;
     private Overlay popup;
     private ListViewImpl<T> list;
 
@@ -93,6 +108,7 @@ public final class ComboBoxImpl<T> extends BuiltInComponent<ComboBox<T>> impleme
     private Paint popupPaint;
     private TextStyle textStyle;
     private TextStyle disabledTextStyle;
+    private TextStyle placeholderStyle;
 
     // Computed during measure
     private float lineHeight;
@@ -103,6 +119,12 @@ public final class ComboBoxImpl<T> extends BuiltInComponent<ComboBox<T>> impleme
     private TextLine shown;
     private TextLine shownDisabled;
 
+    // The arrow's lines, and the bounds and padding they were made for
+    private Rect[] arrowLines;
+    private Rect arrowBounds;
+    private Insets arrowPadding;
+    private boolean arrowRightToLeft;
+
     /**
      * Creates a box with no options.
      *
@@ -112,10 +134,13 @@ public final class ComboBoxImpl<T> extends BuiltInComponent<ComboBox<T>> impleme
     @SuppressWarnings("this-escape")
     public ComboBoxImpl(final ComponentFactoryImpl ui, final Function<? super T, ?> labelFunction) {
         super(ui);
+        this.validity = new Validity(this.node(), this::validated);
         this.ui = ui;
         this.options = List.of();
         this.labelFunction = Objects.requireNonNull(labelFunction, "labelFunction");
         this.keyFunction = Function.identity();
+        this.typeAheadOn = true;
+        this.typeAhead = new TypeAhead();
         this.selectedIndex = -1;
         this.maxVisible = DEFAULT_MAX_VISIBLE_OPTIONS;
         this.normal = Paint.NONE;
@@ -124,6 +149,8 @@ public final class ComboBoxImpl<T> extends BuiltInComponent<ComboBox<T>> impleme
         this.popupPaint = Paint.NONE;
         this.textStyle = TextStyle.DEFAULT;
         this.disabledTextStyle = TextStyle.DEFAULT;
+        this.placeholderStyle = TextStyle.DEFAULT;
+        this.placeholder = Text.empty();
         this.shownIndex = -2;
         this.shownForWidth = Float.NaN;
         this.shown = TextLine.EMPTY;
@@ -142,24 +169,25 @@ public final class ComboBoxImpl<T> extends BuiltInComponent<ComboBox<T>> impleme
 
     @Override
     public ComboBox<T> setItems(final List<? extends T> items) {
+        final List<T> next = Items.copyOf(items);
+        // Closing first lets a CLOSED handler see the box as it was, with its index inside its options
+        this.close();
         final Optional<T> before = this.selected();
         final int beforeIndex = this.selectedIndex;
-        final boolean had = beforeIndex >= 0;
-        final T beforeItem = had ? this.options.get(beforeIndex) : null;
-        this.options = List.copyOf(items);
-        int index = this.options.isEmpty() ? -1 : 0;
-        if (had) {
-            final int found = this.indexOfKey(beforeItem);
-            if (found >= 0) {
-                index = found;
-            }
+        final int index;
+        if (beforeIndex >= 0) {
+            index = Items.indexOf(next, this.keyFunction, this.options.get(beforeIndex));
+        } else {
+            index = this.settled || next.isEmpty() ? -1 : 0;
         }
-        this.close();
+        this.options = next;
         this.selectedIndex = index;
+        this.settled |= index >= 0;
         this.shownIndex = -2;
         this.invalidateLayout();
         if (index != beforeIndex || !this.selected().equals(before)) {
             this.report(SELECTED, index, beforeIndex);
+            this.validity.check();
         }
         return this;
     }
@@ -175,25 +203,39 @@ public final class ComboBoxImpl<T> extends BuiltInComponent<ComboBox<T>> impleme
     }
 
     @Override
-    public ComboBox<T> setKeyFunction(final Function<? super T, ?> keyFunction) {
-        this.keyFunction = Objects.requireNonNull(keyFunction, "keyFunction");
+    public ComboBox<T> refresh(final T item) {
+        final Object key = this.keyFunction.apply(item);
+        boolean held = false;
+        for (final T option : this.options) {
+            held |= Objects.equals(key, this.keyFunction.apply(option));
+        }
+        if (held) {
+            this.shownIndex = -2;
+            this.invalidateLayout();
+            if (this.list != null) {
+                this.list.refresh(item);
+            }
+        }
         return this;
     }
 
-    /**
-     * Finds the first option with the same key as an item.
-     *
-     * @return the option's index, or -1 if none has the key
-     */
-    private int indexOfKey(final T item) {
-        final Object key = item == null ? null : this.keyFunction.apply(item);
-        for (int i = 0; i < this.options.size(); i++) {
-            final T option = this.options.get(i);
-            if (Objects.equals(key, option == null ? null : this.keyFunction.apply(option))) {
-                return i;
-            }
-        }
-        return -1;
+    @Override
+    public Text placeholder() {
+        return this.placeholder;
+    }
+
+    @Override
+    public ComboBox<T> setPlaceholder(final Text placeholder) {
+        this.placeholder = Objects.requireNonNull(placeholder, "placeholder");
+        this.shownIndex = -2;
+        this.invalidateLayout();
+        return this;
+    }
+
+    @Override
+    public ComboBox<T> setKeyFunction(final Function<? super T, ?> keyFunction) {
+        this.keyFunction = Objects.requireNonNull(keyFunction, "keyFunction");
+        return this;
     }
 
     @Override
@@ -201,6 +243,25 @@ public final class ComboBoxImpl<T> extends BuiltInComponent<ComboBox<T>> impleme
         this.labelFunction = Objects.requireNonNull(labelFunction, "labelFunction");
         this.invalidateLayout();
         return this;
+    }
+
+    @Override
+    public ComboBox<T> setTypeAhead(final Function<? super T, ?> name) {
+        this.typeAheadOn = name != null;
+        this.typeAheadName = name;
+        this.typeAhead.reset();
+        return this;
+    }
+
+    /**
+     * Returns the plain name type-ahead matches for an option: its type-ahead name if one is set, else its label.
+     */
+    private String typeAheadName(final int index) {
+        final T option = this.options.get(index);
+        final Object name = this.typeAheadName != null
+                ? this.typeAheadName.apply(option)
+                : this.labelFunction.apply(option);
+        return this.ui.appearances().nameOf(name).plain();
     }
 
     @Override
@@ -219,17 +280,19 @@ public final class ComboBoxImpl<T> extends BuiltInComponent<ComboBox<T>> impleme
             Objects.checkIndex(index, this.options.size());
         }
         final int previous = this.selectedIndex;
+        this.settled = true;
         if (index != previous) {
             this.selectedIndex = index;
             this.shownIndex = -2;
             this.report(SELECTED, index, previous);
+            this.validity.check();
         }
         return this;
     }
 
     @Override
     public ComboBox<T> selectItem(final T item) {
-        return this.select(this.indexOfKey(item));
+        return this.select(Items.indexOf(this.options, this.keyFunction, item));
     }
 
     @Override
@@ -256,7 +319,13 @@ public final class ComboBoxImpl<T> extends BuiltInComponent<ComboBox<T>> impleme
         if (!this.canOpen()) {
             return this;
         }
-        final float rowHeight = this.lineHeight + 4f;
+        // A box opened before its first layout has no bounds to anchor to yet; lay the host out first
+        final Root root = this.hostRoot();
+        if (root != null) {
+            root.layout();
+        }
+        // Worked out here rather than read from the last measure, which may not have run yet
+        final float rowHeight = this.lineHeight(this.environment().text()) + 4f;
         final ListViewImpl<T> options = new ListViewImpl<>(this.ui, this::cell);
         options.route(options::applySelect, this::pick, (index, previous) -> { });
         options.setFocusable(false);
@@ -272,6 +341,8 @@ public final class ComboBoxImpl<T> extends BuiltInComponent<ComboBox<T>> impleme
         }
         this.list = options;
         this.popup = this.ui.overlays().popup(options, this.bounds());
+        // Escape and a press outside ask the box itself, since its list is a private part
+        this.hostRoot().setCloseTarget(this.popup, this.node());
         this.popup.onEvent(Overlay.CLOSED, event -> {
             this.popup = null;
             this.list = null;
@@ -315,7 +386,7 @@ public final class ComboBoxImpl<T> extends BuiltInComponent<ComboBox<T>> impleme
      * Selects the option a request ended with. A null or an index outside the options is ignored.
      */
     private void applySelect(final Integer index) {
-        if (index != null && index >= 0 && index < this.options.size()) {
+        if (Items.isIndex(index, this.options.size())) {
             this.select(index);
         }
     }
@@ -349,8 +420,39 @@ public final class ComboBoxImpl<T> extends BuiltInComponent<ComboBox<T>> impleme
         return REQUIRED;
     }
 
+    // ------------------------------------------------------------------
+    // Validatable
+    // ------------------------------------------------------------------
+
+    @Override
+    public Validation validation() {
+        return this.validity.validation();
+    }
+
+    @Override
+    public ComboBox<T> setValidation(final Validation validation) {
+        this.validity.set(validation);
+        return this;
+    }
+
+    @Override
+    public ComboBox<T> setValidator(final Function<? super ComboBox<T>, Validation> validator) {
+        this.validity.setValidator(validator == null ? null : () -> validator.apply(this));
+        return this;
+    }
+
+    @Override
+    public void setConversionError(final Text message) {
+        this.validity.setConversionError(message);
+    }
+
+    private void validated(final Validation validation, final Validation previous) {
+        this.report(VALIDATED, validation, previous);
+    }
+
     @Override
     protected void onApplyTheme(final Theme theme) {
+        this.validity.applyTheme(theme, STYLE_INVALID);
         this.normal = theme.paintOr(STYLE_NORMAL, Paint.NONE);
         this.hoveredPaint = theme.paintOr(STYLE_HOVERED, this.normal);
         this.disabledPaint = theme.paintOr(STYLE_DISABLED, this.normal);
@@ -358,24 +460,48 @@ public final class ComboBoxImpl<T> extends BuiltInComponent<ComboBox<T>> impleme
         this.popupPaint = theme.paintOr(STYLE_POPUP, Paint.NONE);
         this.textStyle = theme.textStyleOr(STYLE_TEXT, TextStyle.DEFAULT);
         this.disabledTextStyle = theme.textStyleOr(STYLE_TEXT_DISABLED, this.textStyle);
+        this.placeholderStyle = theme.textStyleOr(TextBox.STYLE_PLACEHOLDER, this.textStyle);
         this.shownIndex = -2;
+        this.typeAhead.applyTheme(theme);
     }
 
     @Override
     protected Size measure(final MeasureContext context, final float availableWidth, final float availableHeight) {
         final TextMetrics metrics = context.text();
         float widest = 0f;
-        float height = Math.max(metrics.lineHeight(this.textStyle), metrics.lineHeight(this.disabledTextStyle));
         for (int i = 0; i < this.options.size(); i++) {
-            final TextLine line = TextLine.of(this.label(i), this.textStyle, metrics);
-            widest = Math.max(widest, line.width());
-            height = Math.max(height, line.height());
+            widest = Math.max(widest, TextLine.of(this.label(i), this.textStyle, metrics).width());
         }
-        this.lineHeight = height;
+        if (!this.placeholder.isEmpty()) {
+            widest = Math.max(widest, TextLine.of(this.placeholder, this.placeholderStyle, metrics).width());
+        }
+        this.lineHeight = this.lineHeight(metrics);
         this.shownIndex = -2;
         final Insets padding = this.padding;
         return new Size(padding.left() + widest + ARROW_GAP + ARROW_WIDTH + padding.right(),
                 this.lineHeight + padding.vertical());
+    }
+
+    /**
+     * Returns the height of the box's line: the taller of its two styles' line heights and every option's line,
+     * which an inline picture can make taller.
+     */
+    private float lineHeight(final TextMetrics metrics) {
+        float height = Math.max(metrics.lineHeight(this.textStyle), metrics.lineHeight(this.disabledTextStyle));
+        if (!this.placeholder.isEmpty()) {
+            height = Math.max(height, TextLine.of(this.placeholder, this.placeholderStyle, metrics).height());
+        }
+        for (int i = 0; i < this.options.size(); i++) {
+            height = Math.max(height, TextLine.of(this.label(i), this.textStyle, metrics).height());
+        }
+        return height;
+    }
+
+    @Override
+    protected float baseline() {
+        final Insets padding = this.padding;
+        return padding.top() + (this.desiredHeight() - padding.vertical() - this.lineHeight) * 0.5f
+                + this.environment().text().ascent(this.textStyle);
     }
 
     @Override
@@ -384,36 +510,47 @@ public final class ComboBoxImpl<T> extends BuiltInComponent<ComboBox<T>> impleme
         final Paint face;
         if (!enabled) {
             face = this.disabledPaint;
-        } else if (this.isHovered() || this.isFocused() || this.isOpen()) {
-            face = this.hoveredPaint;
         } else {
-            face = this.normal;
+            face = this.validity.face(this.isHovered() || this.isFocused() || this.isOpen() ? this.hoveredPaint : this.normal);
         }
         face.paint(painter, bounds);
+        if (enabled) {
+            this.validity.paintOutline(painter, bounds);
+        }
 
         final Insets padding = this.padding;
         final float textWidth = bounds.width() - padding.horizontal() - ARROW_GAP - ARROW_WIDTH;
         if (this.selectedIndex != this.shownIndex || textWidth != this.shownForWidth) {
             final TextMetrics metrics = this.environment().text();
-            final Text text = this.label(this.selectedIndex);
-            this.shown = TextLine.of(text, this.textStyle, metrics).ellipsize(textWidth, this.textStyle, metrics);
-            this.shownDisabled = TextLine.of(text, this.disabledTextStyle, metrics)
-                    .ellipsize(textWidth, this.disabledTextStyle, metrics);
+            // With nothing selected the placeholder shows, in its own style whether or not the box is enabled
+            final boolean hint = this.selectedIndex < 0;
+            final Text text = hint ? this.placeholder : this.label(this.selectedIndex);
+            final TextStyle style = hint ? this.placeholderStyle : this.textStyle;
+            final TextStyle disabledStyle = hint ? this.placeholderStyle : this.disabledTextStyle;
+            this.shown = TextLine.of(text, style, metrics).ellipsize(textWidth, style, metrics);
+            this.shownDisabled = TextLine.of(text, disabledStyle, metrics).ellipsize(textWidth, disabledStyle, metrics);
             this.shownIndex = this.selectedIndex;
             this.shownForWidth = textWidth;
         }
         final float innerY = bounds.y() + padding.top();
         final float innerHeight = bounds.height() - padding.vertical();
         final float textY = innerY + (innerHeight - this.lineHeight) * 0.5f;
-        (enabled ? this.shown : this.shownDisabled).draw(painter, bounds.x() + padding.left(), textY);
+        // Right to left the text starts at the right and the arrow sits at the left
+        final boolean rightToLeft = this.isRightToLeft();
+        final TextLine line = enabled ? this.shown : this.shownDisabled;
+        line.draw(painter, rightToLeft ? bounds.right() - padding.left() - line.width() : bounds.x() + padding.left(),
+                textY);
 
-        // A down arrow from four shrinking lines
-        final int color = (enabled ? this.textStyle : this.disabledTextStyle).color();
-        final float arrowX = bounds.right() - padding.right() - ARROW_WIDTH;
-        final float arrowY = innerY + (innerHeight - 4f) * 0.5f;
-        for (int i = 0; i < 4; i++) {
-            painter.fill(new Rect(arrowX + i, arrowY + i, ARROW_WIDTH - i * 2f, 1f), color);
+        // A down arrow from four shrinking lines, made again only when the bounds, the padding or the side changed
+        if (this.arrowLines == null || this.arrowBounds != bounds || this.arrowPadding != padding
+                || this.arrowRightToLeft != rightToLeft) {
+            this.arrowLines = Shapes.down(rightToLeft ? bounds.x() + padding.right()
+                    : bounds.right() - padding.right() - ARROW_WIDTH, innerY + (innerHeight - 4f) * 0.5f);
+            this.arrowBounds = bounds;
+            this.arrowPadding = padding;
+            this.arrowRightToLeft = rightToLeft;
         }
+        Shapes.fill(painter, (enabled ? this.textStyle : this.disabledTextStyle).color(), this.arrowLines);
     }
 
     // ------------------------------------------------------------------
@@ -433,6 +570,36 @@ public final class ComboBoxImpl<T> extends BuiltInComponent<ComboBox<T>> impleme
     }
 
     @Override
+    protected void onFocusLost(final FocusEvent event) {
+        // A press on the open list may take focus first; keep the list open for it
+        if (this.list == null || !this.nodeOf(this.list).isHoverWithin()) {
+            this.close();
+        }
+    }
+
+    @Override
+    protected void onChar(final CharEvent event) {
+        if (!this.typeAheadOn || !this.isEnabled() || this.options.isEmpty()) {
+            return;
+        }
+        final boolean open = this.isOpen();
+        final int current = open ? this.list.selectedIndex() : this.selectedIndex;
+        final int found = this.typeAhead.type(event, this.environment().millis(), current, this.options.size(),
+                this::typeAheadName);
+        if (found == TypeAhead.NOT_TAKEN) {
+            return;
+        }
+        if (found >= 0) {
+            if (open) {
+                this.list.select(found);
+            } else {
+                this.userSelect(found);
+            }
+        }
+        event.consume();
+    }
+
+    @Override
     protected void onKey(final KeyEvent event) {
         if (!event.action().isDown() || !this.isEnabled() || this.options.isEmpty()) {
             return;
@@ -444,7 +611,11 @@ public final class ComboBoxImpl<T> extends BuiltInComponent<ComboBox<T>> impleme
             switch (key) {
                 case UP -> this.list.select(Math.max(0, current - 1));
                 case DOWN -> this.list.select(Math.min(this.options.size() - 1, current + 1));
-                case ESCAPE -> this.close();
+                case ESCAPE -> {
+                    if (this.request(CLOSE)) {
+                        this.close();
+                    }
+                }
                 default -> {
                     if (press && (key.isEnter() || key == Key.SPACE)) {
                         final int chosen = current;

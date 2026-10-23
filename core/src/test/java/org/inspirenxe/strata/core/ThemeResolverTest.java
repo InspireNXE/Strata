@@ -157,6 +157,30 @@ class ThemeResolverTest {
     }
 
     @Test
+    void aFileWithANumberTooLargeForAFloatIsSkipped() {
+        final MapSource source = new MapSource()
+                .file(MOD, "{ \"parent\": \"strata:flat\", \"insets\": { \"i\": 2 } }")
+                .file(MOD, "{ \"insets\": { \"i\": 1e999 } }");
+        assertEquals(Insets.of(2), resolve(source, ThemeRef.of(MOD)).insets("i").orElseThrow());
+    }
+
+    @Test
+    void aUnicodeEscapeTakesOnlyFourHexDigits() {
+        final MapSource source = new MapSource()
+                .file(MOD, "{ \"parent\": \"strata:flat\", \"paints\": { \"a\": \"#000001\" } }")
+                .file(MOD, "{ \"paints\": { \"a\": \"#000002\", \"b\\u-123\": \"#000003\" } }");
+        assertEquals(Paint.solid(0xFF000001), resolve(source, ThemeRef.of(MOD)).paint("a").orElseThrow());
+    }
+
+    @Test
+    void aFileNestedTooDeeplyIsSkipped() {
+        final MapSource source = new MapSource()
+                .file(MOD, "{ \"parent\": \"strata:flat\", \"paints\": { \"a\": \"#000001\" } }")
+                .file(MOD, "{ \"paints\": { \"a\": " + "[".repeat(100_000) + " } }");
+        assertEquals(Paint.solid(0xFF000001), resolve(source, ThemeRef.of(MOD)).paint("a").orElseThrow());
+    }
+
+    @Test
     void eachKeyRecordsTheLayerThatSetItLast() {
         final MapSource source = new MapSource()
                 .base(ENGINE, Theme.builder("engine")
@@ -303,6 +327,15 @@ class ThemeResolverTest {
                     this.paint("{ \"tiled\": \"a:b\", \"size\": [16, 8] }"));
             assertEquals(new Paint.Tiled(SpriteId.of("a", "b"), new Size(16, 8), 0x80FF0000),
                     this.paint("{ \"tiled\": \"a:b\", \"size\": [16, 8], \"tint\": \"#80FF0000\" }"));
+        }
+
+        @Test
+        void roundedColors() {
+            assertEquals(Paint.rounded(0xFF202024, 4f), this.paint("{ \"color\": \"#FF202024\", \"radius\": 4 }"));
+            assertEquals(Paint.solid(0xFF202024), this.paint("{ \"color\": \"#202024\" }"));
+            assertTrue(this.tryPaint("{ \"color\": \"#202024\", \"radius\": -1 }").isEmpty());
+            assertTrue(this.tryPaint("{ \"color\": \"#202024\", \"radius\": \"big\" }").isEmpty());
+            assertTrue(this.tryPaint("{ \"color\": \"#202024\", \"corner\": 2 }").isEmpty());
         }
 
         @Test

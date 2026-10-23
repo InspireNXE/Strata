@@ -20,9 +20,11 @@ import org.inspirenxe.strata.api.component.Component;
 import org.inspirenxe.strata.api.component.ComponentSnapshot;
 import org.inspirenxe.strata.api.component.CursorKind;
 import org.inspirenxe.strata.api.component.Focusable;
+import org.inspirenxe.strata.api.component.HasContextMenu;
 import org.inspirenxe.strata.api.component.HasCursor;
 import org.inspirenxe.strata.api.component.HasTooltip;
 import org.inspirenxe.strata.api.component.Tooltip;
+import org.inspirenxe.strata.api.control.attribute.popup.Popup;
 import org.inspirenxe.strata.api.event.Event;
 import org.inspirenxe.strata.api.event.EventHandler;
 import org.inspirenxe.strata.api.event.EventType;
@@ -39,16 +41,20 @@ import org.inspirenxe.strata.api.event.input.KeyEvent;
 import org.inspirenxe.strata.api.event.input.PointerButtonEvent;
 import org.inspirenxe.strata.api.event.input.PointerEvent;
 import org.inspirenxe.strata.api.event.input.ScrollEvent;
+import org.inspirenxe.strata.api.event.input.TransferEvent;
 import org.inspirenxe.strata.api.extension.peer.ComponentHooks;
 import org.inspirenxe.strata.api.extension.peer.ComponentPeer;
 import org.inspirenxe.strata.api.geometry.Insets;
 import org.inspirenxe.strata.api.geometry.Rect;
 import org.inspirenxe.strata.api.geometry.Size;
 import org.inspirenxe.strata.api.input.TextInputKind;
+import org.inspirenxe.strata.api.layout.Anchor;
+import org.inspirenxe.strata.api.layout.FlowDirection;
 import org.inspirenxe.strata.api.layout.HorizontalAlignment;
 import org.inspirenxe.strata.api.layout.VerticalAlignment;
 import org.inspirenxe.strata.api.state.PropertyKey;
 import org.inspirenxe.strata.api.state.Source;
+import org.inspirenxe.strata.api.text.TextStyle;
 import org.inspirenxe.strata.api.theme.Border;
 import org.inspirenxe.strata.api.theme.Paint;
 import org.inspirenxe.strata.api.theme.Theme;
@@ -57,6 +63,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.function.Consumer;
+import java.util.function.Supplier;
 
 /**
  * Base class for new kinds of component. Strata's own controls are not built on it, so a component that is an
@@ -101,9 +108,9 @@ import java.util.function.Consumer;
  * state and handlers. Every {@link Component} method is {@code final} here and goes to the peer, so the component
  * behaves like every other one in layout, focus and events.</p>
  *
- * <p>The methods of {@link Focusable}, {@link HasCursor} and {@link HasTooltip} are here too, so a subclass takes
- * part in focus, chooses a cursor or shows a tooltip just by declaring the interface, as {@code ColorSwatch} does
- * above. Strata ignores them on a subclass that does not declare the interface. A component that implements
+ * <p>The methods of {@link Focusable}, {@link HasCursor}, {@link HasTooltip} and {@link HasContextMenu} are here too,
+ * so a subclass takes part in focus, chooses a cursor, shows a tooltip or opens a context menu just by declaring the
+ * interface, as {@code ColorSwatch} does above. Strata ignores them on a subclass that does not declare the interface. A component that implements
  * {@link Focusable} starts out focusable and tabbable.</p>
  *
  * <h2>Requirements for subclasses</h2>
@@ -113,13 +120,15 @@ import java.util.function.Consumer;
  *     not change other components or call {@link #invalidateLayout()} from it.</li>
  *     <li>{@link #paint} draws inside the given bounds and must not change layout state. Painting happens every
  *     frame, so avoid allocating there.</li>
- *     <li>Call {@link #invalidateLayout()} whenever something that {@link #measure} reads changes.</li>
+ *     <li>Call {@link #invalidateLayout()} whenever something that {@link #measure} or {@link #measureMinimum}
+ *     reads changes.</li>
  *     <li>Read time, the clipboard and text sizes through {@link #environment()}, never from the system directly,
  *     so the component works on every engine and in tests.</li>
  *     <li>Event hooks run only while the component is attached, and a disabled or hidden component gets no new
- *     pointer or keyboard input. Consume the events you act on, so ancestors and the engine do not act on them
- *     too.</li>
- *     <li>Hooks run on the UI thread. Exceptions thrown from them propagate to the engine's call into Strata.</li>
+ *     pointer or keyboard input, nor does one inside it. Consume the events you act on, so ancestors and the engine
+ *     do not act on them too.</li>
+ *     <li>Hooks run on the {@linkplain org.inspirenxe.strata.api.UiThread UI thread}. Exceptions thrown from them
+ *     propagate to the engine's call into Strata.</li>
  * </ul>
  *
  * @param <T> the type callers see the component as: the subclass itself, or an interface it implements
@@ -197,6 +206,43 @@ public abstract class CustomComponent<T extends Component<T>> implements Compone
     protected abstract Size measure(MeasureContext context, float availableWidth, float availableHeight);
 
     /**
+     * Returns the smallest size the content can work in. A parent that shares space among its children, such as a
+     * stack panel with weighted children or a grid with weighted tracks, gives no child less than this, read through
+     * {@link MeasureContext#minimumSize}. The component itself is not laid out larger because of it: {@link #measure}
+     * may still be offered less, for example inside a fixed size. The default returns {@link Size#ZERO}, so only the
+     * {@linkplain #setMinSize minimum size} counts.
+     *
+     * <p>Return what does not depend on the space offered: the longest word of wrapping text, a caption that cannot
+     * shrink, or the sum of the children's minimums read with {@link MeasureContext#minimumSize}. Do not measure
+     * children here. Strata raises the result to the minimum size, caps it by the maximum size and puts the fixed
+     * size in its place on an axis that has one. It calls this hook when a parent first asks after the layout was
+     * {@linkplain #invalidateLayout() invalidated}, which can come before or after {@link #measure}, so call
+     * {@link #invalidateLayout()} whenever something it reads changes. It is not called while the component is
+     * hidden.</p>
+     *
+     * @param context text measurement and the children's minimums
+     * @return the smallest size of the content; a negative or non-finite value counts as zero
+     */
+    protected Size measureMinimum(final MeasureContext context) {
+        return Size.ZERO;
+    }
+
+    /**
+     * Returns the distance from the top of the component's bounds to the baseline of its first line of text, for
+     * parents that line up their children's text ({@link VerticalAlignment#BASELINE}). Strata calls it during the
+     * parent's layout, after {@link #measure}, for the component at its desired height, so work it out from what
+     * {@code measure} cached and the text metrics' {@link org.inspirenxe.strata.api.text.TextMetrics#ascent ascent}:
+     * a component that draws a line of text at a top of {@code y} has its baseline at {@code y} plus the ascent of
+     * the line's style. It must not change layout state. It is not called while the component is hidden. The default
+     * returns NaN, for no baseline, and a parent lining up baselines then puts the component's bottom on the line.
+     *
+     * @return the baseline in UI units from the top of the bounds, or NaN for none
+     */
+    protected float baseline() {
+        return Float.NaN;
+    }
+
+    /**
      * Draws the component. The {@linkplain #background() background} and border are already drawn, and a
      * container's children are drawn after this returns, on top. The default draws nothing.
      *
@@ -222,9 +268,27 @@ public abstract class CustomComponent<T extends Component<T>> implements Compone
      * whenever the host's theme changes, always before the next layout. The required keys are present. The default
      * does nothing.
      *
-     * @param theme the host's theme
+     * @param theme the host's theme, with the text style patches of the containers around the component applied
      */
     protected void onApplyTheme(final Theme theme) {
+    }
+
+    /**
+     * Called when the component joins a tree a host is showing, every time it does, as {@link Component#ATTACHED}
+     * describes: after {@link #onApplyTheme} and after its bindings set their properties, and before its
+     * {@code ATTACHED} handlers. Start what the component needs only while it shows here, such as a subscription to a
+     * feed, and stop it in {@link #onDetached()}. A composite's private parts are attached after it. The default does
+     * nothing.
+     */
+    protected void onAttached() {
+    }
+
+    /**
+     * Called when the component leaves a tree a host is showing, every time it does, as {@link Component#DETACHED}
+     * describes: after its {@code DETACHED} handlers, while it is still attached and before its bindings stop. A
+     * composite's private parts are detached before it. The default does nothing.
+     */
+    protected void onDetached() {
     }
 
     /**
@@ -322,6 +386,47 @@ public abstract class CustomComponent<T extends Component<T>> implements Compone
     }
 
     /**
+     * Default behavior for {@link InputEvents#DRAG_ENTER}. The default does nothing.
+     *
+     * @param event the event
+     */
+    protected void onDragEnter(final TransferEvent event) {
+    }
+
+    /**
+     * Default behavior for {@link InputEvents#DRAG_OVER}. Accept the drag here with {@link TransferEvent#accept} to
+     * take the drop. The default does nothing.
+     *
+     * @param event the event
+     */
+    protected void onDragOver(final TransferEvent event) {
+    }
+
+    /**
+     * Default behavior for {@link InputEvents#DRAG_EXIT}. The default does nothing.
+     *
+     * @param event the event
+     */
+    protected void onDragExit(final TransferEvent event) {
+    }
+
+    /**
+     * Default behavior for {@link InputEvents#DROP}. The default does nothing.
+     *
+     * @param event the event
+     */
+    protected void onDrop(final TransferEvent event) {
+    }
+
+    /**
+     * Default behavior for {@link InputEvents#TRANSFER_DONE}, on the source of a drag. The default does nothing.
+     *
+     * @param event the event
+     */
+    protected void onTransferDone(final TransferEvent event) {
+    }
+
+    /**
      * Default behavior for {@link InputEvents#SCROLL}. The default does nothing.
      *
      * @param event the event
@@ -375,8 +480,9 @@ public abstract class CustomComponent<T extends Component<T>> implements Compone
 
     /**
      * Returns this component's own state for a {@link ComponentSnapshot}, which stores it as
-     * {@link ComponentSnapshot#state()}. Strata calls this only when an event that has snapshots fires and this
-     * component is captured, before any handler runs.
+     * {@link ComponentSnapshot#state()}. Strata calls this only when a
+     * {@link org.inspirenxe.strata.api.event.SnapshotEvent} fires and this component is captured, before any handler
+     * runs.
      *
      * <p>Return an immutable value, such as a record, that a handler can compare with the live component later.
      * Copy mutable data; returning a live list or builder makes the snapshot change with the component. Record only
@@ -426,6 +532,16 @@ public abstract class CustomComponent<T extends Component<T>> implements Compone
             this.onDrag((DragEvent) event);
         } else if (type == InputEvents.DRAG_END) {
             this.onDragEnd((DragEvent) event);
+        } else if (type == InputEvents.DRAG_ENTER) {
+            this.onDragEnter((TransferEvent) event);
+        } else if (type == InputEvents.DRAG_OVER) {
+            this.onDragOver((TransferEvent) event);
+        } else if (type == InputEvents.DRAG_EXIT) {
+            this.onDragExit((TransferEvent) event);
+        } else if (type == InputEvents.DROP) {
+            this.onDrop((TransferEvent) event);
+        } else if (type == InputEvents.TRANSFER_DONE) {
+            this.onTransferDone((TransferEvent) event);
         } else if (type == InputEvents.SCROLL) {
             this.onScroll((ScrollEvent) event);
         } else if (type == InputEvents.KEY) {
@@ -448,6 +564,16 @@ public abstract class CustomComponent<T extends Component<T>> implements Compone
         @Override
         public Size measure(final MeasureContext context, final float availableWidth, final float availableHeight) {
             return CustomComponent.this.measure(context, availableWidth, availableHeight);
+        }
+
+        @Override
+        public Size measureMinimum(final MeasureContext context) {
+            return CustomComponent.this.measureMinimum(context);
+        }
+
+        @Override
+        public float baseline() {
+            return CustomComponent.this.baseline();
         }
 
         @Override
@@ -509,6 +635,16 @@ public abstract class CustomComponent<T extends Component<T>> implements Compone
         public void descendantFocused(final Component<?> descendant) {
             CustomComponent.this.descendantFocusedHook(descendant);
         }
+
+        @Override
+        public void attached() {
+            CustomComponent.this.onAttached();
+        }
+
+        @Override
+        public void detached() {
+            CustomComponent.this.onDetached();
+        }
     }
 
     // ------------------------------------------------------------------
@@ -516,8 +652,19 @@ public abstract class CustomComponent<T extends Component<T>> implements Compone
     // ------------------------------------------------------------------
 
     @Override
-    public final Component<?> parent() {
-        return this.peer.parent();
+    public final Optional<String> id() {
+        return this.peer.id();
+    }
+
+    @Override
+    public final T setId(final String id) {
+        this.peer.setId(id);
+        return this.self();
+    }
+
+    @Override
+    public final Optional<Component<?>> parent() {
+        return Optional.ofNullable(this.peer.parent());
     }
 
     @Override
@@ -533,6 +680,16 @@ public abstract class CustomComponent<T extends Component<T>> implements Compone
     @Override
     public final boolean isAttached() {
         return this.peer.isAttached();
+    }
+
+    @Override
+    public final T whileAttached(final Supplier<? extends Subscription> start) {
+        return Component.super.whileAttached(start);
+    }
+
+    @Override
+    public final boolean isFocusWithin() {
+        return this.peer.isFocusWithin();
     }
 
     @Override
@@ -558,6 +715,16 @@ public abstract class CustomComponent<T extends Component<T>> implements Compone
     }
 
     @Override
+    public final boolean isEffectivelyEnabled() {
+        return Component.super.isEffectivelyEnabled();
+    }
+
+    @Override
+    public final boolean isEffectivelyVisible() {
+        return Component.super.isEffectivelyVisible();
+    }
+
+    @Override
     public final Insets margin() {
         return this.peer.margin();
     }
@@ -566,6 +733,21 @@ public abstract class CustomComponent<T extends Component<T>> implements Compone
     public final T setMargin(final Insets margin) {
         this.peer.setMargin(margin);
         return this.self();
+    }
+
+    @Override
+    public final T setMargin(final float all) {
+        return Component.super.setMargin(all);
+    }
+
+    @Override
+    public final T setMargin(final float horizontal, final float vertical) {
+        return Component.super.setMargin(horizontal, vertical);
+    }
+
+    @Override
+    public final T setMargin(final float left, final float top, final float right, final float bottom) {
+        return Component.super.setMargin(left, top, right, bottom);
     }
 
     @Override
@@ -613,6 +795,11 @@ public abstract class CustomComponent<T extends Component<T>> implements Compone
     }
 
     @Override
+    public final T setSize(final float width, final float height) {
+        return Component.super.setSize(width, height);
+    }
+
+    @Override
     public final HorizontalAlignment horizontalAlignment() {
         return this.peer.horizontalAlignment();
     }
@@ -629,6 +816,22 @@ public abstract class CustomComponent<T extends Component<T>> implements Compone
     }
 
     @Override
+    public final T setAnchor(final Anchor anchor) {
+        return Component.super.setAnchor(anchor);
+    }
+
+    @Override
+    public final FlowDirection flowDirection() {
+        return this.peer.flowDirection();
+    }
+
+    @Override
+    public final T setFlowDirection(final FlowDirection direction) {
+        this.peer.setFlowDirection(direction);
+        return this.self();
+    }
+
+    @Override
     public final Rect bounds() {
         return this.peer.bounds();
     }
@@ -641,6 +844,17 @@ public abstract class CustomComponent<T extends Component<T>> implements Compone
     @Override
     public final float desiredHeight() {
         return this.peer.desiredHeight();
+    }
+
+    @Override
+    public final float opacity() {
+        return this.peer.opacity();
+    }
+
+    @Override
+    public final T setOpacity(final float opacity) {
+        this.peer.setOpacity(opacity);
+        return this.self();
     }
 
     @Override
@@ -739,10 +953,10 @@ public abstract class CustomComponent<T extends Component<T>> implements Compone
     /**
      * Returns the cursor shown over this component. See {@link HasCursor#cursor()}.
      *
-     * @return the cursor, or {@code null} to use the nearest ancestor's
+     * @return the cursor, or empty to use the nearest ancestor's
      */
-    public final CursorKind cursor() {
-        return this.peer.cursor();
+    public final Optional<CursorKind> cursor() {
+        return Optional.ofNullable(this.peer.cursor());
     }
 
     /**
@@ -759,20 +973,51 @@ public abstract class CustomComponent<T extends Component<T>> implements Compone
     /**
      * Returns the tooltip. See {@link HasTooltip#tooltip()}.
      *
-     * @return the tooltip, or {@code null} for none
+     * @return the tooltip, or empty for none
      */
-    public final Tooltip tooltip() {
-        return this.peer.tooltip();
+    public final Optional<Tooltip> tooltip() {
+        return Optional.ofNullable(this.peer.tooltip());
     }
 
     /**
      * Sets the tooltip. See {@link HasTooltip#setTooltip(Tooltip)}.
      *
-     * @param tooltip the tooltip, or {@code null} for none
+     * @param tooltip the tooltip
      * @return this component
      */
     public final T setTooltip(final Tooltip tooltip) {
-        this.peer.setTooltip(tooltip);
+        this.peer.setTooltip(Objects.requireNonNull(tooltip, "tooltip"));
+        return this.self();
+    }
+
+    /**
+     * Removes the tooltip. See {@link HasTooltip#clearTooltip()}.
+     *
+     * @return this component
+     */
+    public final T clearTooltip() {
+        this.peer.setTooltip(null);
+        return this.self();
+    }
+
+    /**
+     * Returns the context menu. See {@link HasContextMenu#contextMenu()}.
+     *
+     * @return the popup, or empty for none
+     */
+    public final Optional<Popup<?>> contextMenu() {
+        return Optional.ofNullable(this.peer.contextMenu());
+    }
+
+    /**
+     * Sets the context menu. See {@link HasContextMenu#setContextMenu(Popup)}. It opens only for a subclass that
+     * declares {@code implements HasContextMenu<Self>} or a container, which always can.
+     *
+     * @param popup the popup, or {@code null} for none
+     * @return this component
+     */
+    public final T setContextMenu(final Popup<?> popup) {
+        this.peer.setContextMenu(popup);
         return this.self();
     }
 
@@ -783,15 +1028,64 @@ public abstract class CustomComponent<T extends Component<T>> implements Compone
     /**
      * Returns the theme applied to this component, for reading styles outside {@link #onApplyTheme}.
      *
-     * @return the host's theme, or {@code null} before the component is first attached
+     * @return the host's theme, with the {@linkplain org.inspirenxe.strata.api.component.Container#setTextStyle text
+     *     style patches} of the containers around the component applied, or empty before the component is
+     *     first attached
      */
-    protected final Theme theme() {
-        return this.peer.theme();
+    protected final Optional<Theme> theme() {
+        return Optional.ofNullable(this.peer.theme());
+    }
+
+    /**
+     * Turns one of this component's own style states on or off, such as {@code "selected"} or {@code "warning"}, so
+     * {@link #stylePaint} and {@link #styleText} pick the theme's look for it: with {@code "warning"} on, a lookup of
+     * {@code fancy.card} finds {@code fancy.card.warning} when the theme has it. Strata sets {@code disabled},
+     * {@code pressed}, {@code hovered} and {@code focused} on every component itself, so those names cannot be set
+     * here. A state's place in a lookup is the order in which it was first set. Changing a state marks nothing for
+     * layout; call {@link #invalidateLayout()} if the styles it picks change the component's size.
+     *
+     * @param state the state's name; any name but the four Strata sets
+     * @param on whether the state is on
+     * @throws IllegalArgumentException if the name is empty or one Strata sets, or the component already has 60
+     *     states of its own
+     */
+    protected final void setStyleState(final String state, final boolean on) {
+        this.peer.setStyleState(state, on);
+    }
+
+    /**
+     * Looks up a paint from the theme for this component's style states. The lookup tries {@code key.disabled}
+     * while the component is disabled, itself or through an ancestor, then {@code key.<state>} for each of the
+     * component's own states that is on, in the order they were first set, then {@code key.pressed},
+     * {@code key.hovered} and {@code key.focused} for those that are on, and last the key itself. The first key
+     * the theme has wins, so with {@code "warning"} on, {@code fancy.card.warning} wins over {@code fancy.card},
+     * and a disabled card shows {@code fancy.card.disabled}. The result for each combination of states is kept
+     * until the theme changes, so calling this from {@link #paint} allocates nothing once each combination was
+     * looked up.
+     *
+     * @param key the style key, such as {@code fancy.card}
+     * @param fallback returned when the theme has none of the keys tried, or the component was never attached
+     * @return the paint
+     */
+    protected final Paint stylePaint(final String key, final Paint fallback) {
+        return this.peer.stylePaint(key, fallback);
+    }
+
+    /**
+     * Looks up a text style from the theme for this component's style states, trying the keys in the order
+     * {@link #stylePaint} does.
+     *
+     * @param key the style key, such as {@code fancy.card.text}
+     * @param fallback returned when the theme has none of the keys tried, or the component was never attached
+     * @return the text style
+     */
+    protected final TextStyle styleText(final String key, final TextStyle fallback) {
+        return this.peer.styleText(key, fallback);
     }
 
     /**
      * Returns whether the pointer is over this component. Only the deepest component under the pointer counts as
-     * hovered; its ancestors do not.
+     * hovered; its ancestors do not. A component that is disabled, or inside a disabled one, is never hovered.
      *
      * @return true while hovered
      */
@@ -900,6 +1194,48 @@ public abstract class CustomComponent<T extends Component<T>> implements Compone
         this.peer.invalidateLayout();
     }
 
+    /**
+     * Asks the host for a frame, because the component's look changed and its layout did not. Call it when only
+     * {@link #paint} reads a change, such as a gauge whose needle moves through a setter that changes no size. Layout
+     * invalidation, reports, focus, hover and press, and the setters for background and border already ask. On an
+     * engine that draws every frame it costs nothing; on one that draws only when asked, a component that forgets
+     * looks stale until the next input. Does nothing while the component is detached. Any thread may call it.
+     */
+    protected final void repaint() {
+        this.peer.repaint();
+    }
+
+    /**
+     * Asks for the next frame the host's frame rate allows, because the component's look moves with the clock, such as
+     * a needle that eases toward its value or a pattern that scrolls. Call it from {@link #paint} while the look keeps
+     * moving, and read the clock through {@link #environment()} when painting, so a host with a low rate shows the
+     * same motion in fewer steps. On an engine that draws every frame it costs nothing. Does nothing while the
+     * component is detached. Any thread may call it.
+     */
+    protected final void repaintNextFrame() {
+        this.peer.repaintNextFrame();
+    }
+
+    /**
+     * Tells the host that the component's look changes by itself after a time, such as a blinking cursor's next
+     * blink or a clock's next second, so a host that draws only when asked draws a frame then. Call it from
+     * {@link #paint} for the next change only, and again on the next paint; the same deadline registered twice
+     * counts once. Does nothing while the component is detached.
+     *
+     * @param millis the delay in milliseconds, by the platform's clock read through {@link #environment()}; 0 is
+     *     {@link #repaint()}
+     * @throws IllegalArgumentException if {@code millis} is negative
+     * @throws IllegalStateException if the component is attached and this is called off the UI thread
+     */
+    protected final void repaintAfter(final long millis) {
+        this.peer.repaintAfter(millis);
+    }
+
+    @Override
+    public final <E extends Event> T onEvent(final EventType<E> type, final EventHandler<? super E> handler) {
+        return this.onEvent(type, 0, handler);
+    }
+
     @Override
     public final <E extends Event> T onEvent(final EventType<E> type, final int priority,
                                              final EventHandler<? super E> handler) {
@@ -916,6 +1252,12 @@ public abstract class CustomComponent<T extends Component<T>> implements Compone
     @Override
     public final <V> T bind(final PropertyKey<? super T, V> key, final Source<V> source) {
         this.peer.bind(key, source);
+        return this.self();
+    }
+
+    @Override
+    public final T unbind(final PropertyKey<? super T, ?> key) {
+        this.peer.unbind(key);
         return this.self();
     }
 

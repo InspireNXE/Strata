@@ -15,8 +15,9 @@
  */
 package org.inspirenxe.strata.core.control.menu;
 
+import org.inspirenxe.strata.core.layout.Flow;
+import org.inspirenxe.strata.api.command.Command;
 import org.inspirenxe.strata.api.component.Component;
-import org.inspirenxe.strata.api.component.Focusable;
 import org.inspirenxe.strata.api.control.display.Separator;
 import org.inspirenxe.strata.api.control.menu.Menu;
 import org.inspirenxe.strata.api.control.menu.MenuEntry;
@@ -30,18 +31,23 @@ import org.inspirenxe.strata.api.geometry.Rect;
 import org.inspirenxe.strata.api.geometry.Size;
 import org.inspirenxe.strata.api.input.Key;
 import org.inspirenxe.strata.api.input.KeyAction;
+import org.inspirenxe.strata.api.input.KeyStroke;
 import org.inspirenxe.strata.api.input.MouseButton;
-import org.inspirenxe.strata.api.overlay.Overlay;
 import org.inspirenxe.strata.api.text.Text;
 import org.inspirenxe.strata.api.text.TextMetrics;
 import org.inspirenxe.strata.api.text.TextStyle;
 import org.inspirenxe.strata.api.theme.Paint;
 import org.inspirenxe.strata.api.theme.Theme;
+import org.inspirenxe.strata.core.control.Commands;
 import org.inspirenxe.strata.core.control.CorePopup;
+import org.inspirenxe.strata.core.control.PopupSession;
 import org.inspirenxe.strata.core.control.Rings;
 import org.inspirenxe.strata.core.node.BuiltInComponent;
 import org.inspirenxe.strata.core.node.ComponentFactoryImpl;
 import org.inspirenxe.strata.core.node.Node;
+import org.inspirenxe.strata.core.node.Root;
+import org.inspirenxe.strata.core.text.MnemonicLine;
+import org.inspirenxe.strata.core.text.Mnemonics;
 import org.inspirenxe.strata.core.text.TextLine;
 
 import java.util.ArrayList;
@@ -52,7 +58,9 @@ import java.util.function.Consumer;
 
 /**
  * The core {@link Menu}. It draws its entries itself, with no component per entry, and opens as a popup of its host's
- * overlays. A submenu opens with its top-left corner at the right edge of its item.
+ * overlays. A submenu opens with its top-left corner at the right edge of its item. A menu that runs right to left
+ * is mirrored: its text, check marks, shortcut hints and arrows are drawn at the other side, its submenus open with
+ * their top-right corner at its left edge, and Left and Right swap.
  *
  * <p>Opening a menu lays out its host's overlays at once, so its bounds and items are known before the next frame.
  * The first menu of a chain remembers what had focus when it opened and gives focus back when it closes, if that
@@ -92,13 +100,15 @@ public final class MenuImpl extends BuiltInComponent<Menu> implements Menu, Core
     private final List<MenuEntryImpl> items;
     private MenuImpl parent;
     private MenuBarImpl bar;
-    private Holder holder;
     // The width of what opened the menu through openBelow, kept until it closes
     private float anchorWidth;
-    private Overlay popup;
+    // Where open() opens: the anchor of the last time it opened, or the pointer before that
+    private Rect lastAnchor;
+    private final PopupSession session;
     private MenuImpl openSubmenu;
-    private Component<?> returnFocus;
     private int highlighted;
+    // Whether the keyboard opened or moved through the menu since it opened, which shows its mnemonics
+    private boolean fromKeyboard;
 
     // Theme
     private Paint background;
@@ -125,6 +135,7 @@ public final class MenuImpl extends BuiltInComponent<Menu> implements Menu, Core
         super(ui);
         this.ui = ui;
         this.items = new ArrayList<>();
+        this.session = new PopupSession(this::closed, () -> this.report(CLOSED));
         this.highlighted = -1;
         this.background = Paint.NONE;
         this.itemHovered = Paint.NONE;
@@ -174,7 +185,7 @@ public final class MenuImpl extends BuiltInComponent<Menu> implements Menu, Core
 
     @Override
     public Menu removeItem(final MenuEntry entry) {
-        final int index = this.items.indexOf(MenuEntryImpl.of(entry));
+        final int index = entry instanceof final MenuEntryImpl impl ? this.items.indexOf(impl) : -1;
         if (index < 0) {
             return this;
         }
@@ -281,7 +292,7 @@ public final class MenuImpl extends BuiltInComponent<Menu> implements Menu, Core
 
     @Override
     public boolean isOpen() {
-        return this.popup != null && this.popup.isOpen();
+        return this.session.isOpen();
     }
 
     @Override
@@ -290,10 +301,10 @@ public final class MenuImpl extends BuiltInComponent<Menu> implements Menu, Core
         if (this.isOpen() || this.items.isEmpty()) {
             return this;
         }
-        this.returnFocus = this.parent == null ? this.focusedComponent() : null;
+        this.lastAnchor = anchor;
+        final Component<?> returnFocus = this.parent == null ? this.focusedComponent() : null;
         this.highlighted = -1;
-        this.popup = this.ui.overlays().popup(this, anchor);
-        this.popup.onEvent(Overlay.CLOSED, event -> this.closed());
+        this.session.start(this.ui.overlays().popup(this, anchor), returnFocus);
         // Lay the popup out now, so keys pressed before the next frame find the items, and a submenu its anchor
         if (this.hostRoot() != null) {
             this.hostRoot().layout();
@@ -309,22 +320,36 @@ public final class MenuImpl extends BuiltInComponent<Menu> implements Menu, Core
     }
 
     @Override
+    public Menu open() {
+        if (this.lastAnchor != null) {
+            return this.open(this.lastAnchor);
+        }
+        final Root root = this.hostRoot();
+        if (root == null) {
+            // The factory has no host; this throws the same exception any overlay would
+            this.ui.overlays();
+            return this;
+        }
+        return this.openAt(root.pointerX(), root.pointerY());
+    }
+
+    @Override
     public Menu close() {
         if (this.openSubmenu != null) {
             this.openSubmenu.close();
         }
-        if (this.popup != null) {
-            this.popup.close();
-        }
+        this.session.close();
         return this;
     }
 
     /**
-     * Runs once the popup has closed, however it closed.
+     * Runs first once the popup has closed, however it closed, before the session gives focus back and reports
+     * {@code CLOSED}: forgets the highlight and the anchor's width, closes the open submenu and tells the parent
+     * menu or the bar.
      */
     private void closed() {
-        this.popup = null;
         this.highlighted = -1;
+        this.fromKeyboard = false;
         if (this.anchorWidth != 0f) {
             this.anchorWidth = 0f;
             this.invalidateLayout();
@@ -337,17 +362,6 @@ public final class MenuImpl extends BuiltInComponent<Menu> implements Menu, Core
         }
         if (this.bar != null) {
             this.bar.menuClosed(this);
-        }
-        if (this.returnFocus != null) {
-            final Component<?> focus = this.returnFocus;
-            this.returnFocus = null;
-            if (focus.isAttached() && focus instanceof final Focusable<?> focusable) {
-                focusable.requestFocus();
-            }
-        }
-        this.report(CLOSED);
-        if (this.holder != null) {
-            this.holder.popupClosed();
         }
     }
 
@@ -372,7 +386,7 @@ public final class MenuImpl extends BuiltInComponent<Menu> implements Menu, Core
     }
 
     boolean isFree() {
-        return this.bar == null && this.parent == null && this.holder == null;
+        return this.bar == null && this.parent == null && this.session.holder() == null;
     }
 
     // ------------------------------------------------------------------
@@ -386,20 +400,20 @@ public final class MenuImpl extends BuiltInComponent<Menu> implements Menu, Core
 
     @Override
     public Holder holder() {
-        return this.holder;
+        return this.session.holder();
     }
 
     @Override
     public void setHolder(final Holder holder) {
-        if (holder != null && holder != this.holder) {
-            if (this.holder != null) {
+        if (holder != null && holder != this.session.holder()) {
+            if (this.session.holder() != null) {
                 throw new IllegalArgumentException(this + " already belongs to another drop-down button");
             }
             if (this.bar != null || this.parent != null) {
                 throw new IllegalArgumentException(this + " opens from a menu or a menu bar");
             }
         }
-        this.holder = holder;
+        this.session.setHolder(holder);
     }
 
     @Override
@@ -425,6 +439,7 @@ public final class MenuImpl extends BuiltInComponent<Menu> implements Menu, Core
      * Highlights the first item that can be chosen, for menus opened from the keyboard.
      */
     void highlightFirst() {
+        this.fromKeyboard = true;
         this.highlight(this.nextUsable(-1, 1));
     }
 
@@ -465,7 +480,9 @@ public final class MenuImpl extends BuiltInComponent<Menu> implements Menu, Core
             return;
         }
         final Rect bounds = this.bounds();
-        submenu.open(new Rect(bounds.right(), bounds.y() + this.itemTop[index] - this.padding.top(), 0f, 0f));
+        // Right to left the popup's right edge meets the anchor, so the submenu opens to the left
+        submenu.open(new Rect(this.isRightToLeft() ? bounds.x() : bounds.right(),
+                bounds.y() + this.itemTop[index] - this.padding.top(), 0f, 0f));
         this.openSubmenu = submenu;
         if (fromKeyboard) {
             submenu.highlightFirst();
@@ -490,9 +507,10 @@ public final class MenuImpl extends BuiltInComponent<Menu> implements Menu, Core
     }
 
     /**
-     * Closes the chain, flips a check item, runs the entry's action and reports {@link #CHOSEN}: what an accepted
-     * {@link #CHOOSE} request does. Ignores an entry that is not this menu's, is disabled, or is a separator or a
-     * submenu item, as a handler may have rewritten it.
+     * Closes the chain, flips a check item or selects a radio item, runs the entry's action, reports {@link #CHOSEN} and then runs an item's
+     * command: what an accepted {@link #CHOOSE} request does. A check item's toggle command is flipped with the
+     * item, not run again. Ignores an entry that is not this menu's, is disabled, or is a separator or a submenu
+     * item, as a handler may have rewritten it.
      */
     private void run(final MenuEntry chosen) {
         if (!(chosen instanceof MenuEntryImpl entry) || entry.owner() != this || !entry.usable()) {
@@ -505,10 +523,50 @@ public final class MenuImpl extends BuiltInComponent<Menu> implements Menu, Core
             this.top().close();
             item.setSelected(!item.isSelected());
             item.action().accept(item.isSelected());
+        } else if (chosen instanceof RadioMenuItemImpl item) {
+            this.top().close();
+            item.setSelected(true);
+            item.action().run();
         } else {
             return;
         }
         this.report(CHOSEN, chosen, chosen);
+        if (chosen instanceof MenuItemImpl item) {
+            Commands.run(this.node().causes(), item.shownCommand());
+        }
+    }
+
+    /**
+     * Clears the radio items of this menu in the same group as one just selected.
+     *
+     * @param selected the item selected
+     */
+    void clearGroupBut(final RadioMenuItemImpl selected) {
+        for (final MenuEntryImpl entry : this.items) {
+            if (entry instanceof final RadioMenuItemImpl other && other != selected && other.sameGroup(selected)) {
+                other.clear();
+            }
+        }
+    }
+
+    /**
+     * Adds the commands of this menu's usable entries and of the menus its usable submenu items open, in order, for
+     * a menu bar's shortcuts.
+     *
+     * @param out the list to add to
+     */
+    void collectCommands(final List<Command> out) {
+        for (final MenuEntryImpl entry : this.items) {
+            if (!entry.usable()) {
+                continue;
+            }
+            if (entry.shownCommand() != null) {
+                out.add(entry.shownCommand());
+            }
+            if (entry.submenu() != null) {
+                entry.submenu().collectCommands(out);
+            }
+        }
     }
 
     // ------------------------------------------------------------------
@@ -550,9 +608,17 @@ public final class MenuImpl extends BuiltInComponent<Menu> implements Menu, Core
                 y += SEPARATOR_HEIGHT;
                 continue;
             }
-            item.span = TextLine.of(item.label(), this.textStyle, metrics);
-            item.disabledSpan = TextLine.of(item.label(), this.disabledTextStyle, metrics);
-            item.shortcutSpan = TextLine.of(item.hint(), this.shortcutStyle, metrics);
+            final MnemonicLine line = MnemonicLine.of(item.label(), this.textStyle, metrics);
+            final MnemonicLine disabledLine = MnemonicLine.of(item.label(), this.disabledTextStyle, metrics);
+            item.span = line.plain();
+            item.markedSpan = line.marked();
+            item.disabledSpan = disabledLine.plain();
+            item.markedDisabledSpan = disabledLine.marked();
+            item.mnemonic = line.mnemonic();
+            item.initial = Mnemonics.initial(line.plain().spans());
+            final KeyStroke stroke = item.stroke();
+            item.shortcutSpan = TextLine.of(stroke != null ? this.ui.keyText(stroke) : item.hint(), this.shortcutStyle,
+                    metrics);
             textWidth = Math.max(textWidth, Math.max(item.span.width(), item.disabledSpan.width()));
             item.shortcutWidth = item.shortcutSpan.width();
             shortcutWidth = Math.max(shortcutWidth, item.shortcutWidth);
@@ -566,32 +632,47 @@ public final class MenuImpl extends BuiltInComponent<Menu> implements Menu, Core
     @Override
     protected void paint(final Painter painter, final Rect bounds) {
         this.background.paint(painter, bounds);
+        final boolean marked = this.fromKeyboard || this.hostRoot() != null && this.hostRoot().showsMnemonics();
         final float left = bounds.x() + this.padding.left();
         final float width = bounds.width() - this.padding.horizontal();
+        // Right to left each part is drawn mirrored inside the bounds: the x is where its right edge would be
+        final boolean mirrored = this.isRightToLeft();
+        final float mirror = bounds.x() + bounds.right();
         for (int i = 0; i < this.items.size(); i++) {
             final MenuEntryImpl item = this.items.get(i);
             final float top = bounds.y() + this.itemTop[i];
             if (item.separator()) {
-                this.separator.paint(painter, new Rect(left + 1f, top + (SEPARATOR_HEIGHT - 1f) * 0.5f, width - 2f, 1f));
+                this.separator.paint(painter, item.rowRect.at(left + 1f, top + (SEPARATOR_HEIGHT - 1f) * 0.5f,
+                        width - 2f, 1f));
                 continue;
             }
             if (i == this.highlighted) {
-                this.itemHovered.paint(painter, new Rect(left, top, width, this.itemHeight));
+                this.itemHovered.paint(painter, item.rowRect.at(left, top, width, this.itemHeight));
             }
             final Insets padding = this.itemPadding;
             final float textY = top + padding.top() + (this.itemHeight - padding.vertical() - this.lineHeight) * 0.5f;
-            (item.usable() ? item.span : item.disabledSpan).draw(painter, left + padding.left(), textY);
+            final TextLine text = item.usable() ? marked ? item.markedSpan : item.span
+                    : marked ? item.markedDisabledSpan : item.disabledSpan;
+            final float textX = left + padding.left();
+            text.draw(painter, mirrored ? mirror - textX - text.width() : textX, textY);
             final int color = (item.usable() ? this.textStyle : this.disabledTextStyle).color();
             if (item.checked()) {
-                painter.fill(new Rect(left + (padding.left() - CHECK_SIZE) * 0.5f, top + (this.itemHeight - CHECK_SIZE) * 0.5f,
-                        CHECK_SIZE, CHECK_SIZE), color);
+                final float markX = left + (padding.left() - CHECK_SIZE) * 0.5f;
+                painter.fill(item.markRect.at(mirrored ? mirror - markX - CHECK_SIZE : markX,
+                        top + (this.itemHeight - CHECK_SIZE) * 0.5f, CHECK_SIZE, CHECK_SIZE), color);
             }
             if (!item.shortcutSpan.isEmpty()) {
-                item.shortcutSpan.draw(painter, left + width - padding.right() - item.shortcutWidth, textY);
+                final float hintX = left + width - padding.right() - item.shortcutWidth;
+                item.shortcutSpan.draw(painter, mirrored ? mirror - hintX - item.shortcutWidth : hintX, textY);
             }
             if (item instanceof SubmenuItemImpl) {
-                Rings.right(painter, color, left + width - (padding.right() + Rings.ARROW_SHORT) * 0.5f,
-                        top + (this.itemHeight - Rings.ARROW_LONG) * 0.5f);
+                final float arrowX = left + width - (padding.right() + Rings.ARROW_SHORT) * 0.5f;
+                final float arrowY = top + (this.itemHeight - Rings.ARROW_LONG) * 0.5f;
+                if (mirrored) {
+                    item.arrow.left(painter, color, mirror - arrowX - Rings.ARROW_SHORT, arrowY);
+                } else {
+                    item.arrow.right(painter, color, arrowX, arrowY);
+                }
             }
         }
     }
@@ -641,11 +722,15 @@ public final class MenuImpl extends BuiltInComponent<Menu> implements Menu, Core
         if (!event.action().isDown()) {
             return;
         }
-        final Key key = event.key();
+        // Right to left, Left opens a submenu and Right goes back
+        final Key key = Flow.key(event.key(), this.isRightToLeft());
         final boolean press = event.action() == KeyAction.PRESS;
+        this.fromKeyboard = true;
         switch (key) {
             case UP -> this.highlight(this.nextUsable(this.highlighted < 0 ? 0 : this.highlighted, -1));
             case DOWN -> this.highlight(this.nextUsable(this.highlighted, 1));
+            case HOME -> this.highlight(this.nextUsable(-1, 1));
+            case END -> this.highlight(this.nextUsable(0, -1));
             case RIGHT -> {
                 if (this.highlighted >= 0 && this.items.get(this.highlighted).submenu() != null) {
                     this.openSubmenu(this.highlighted, true);
@@ -666,20 +751,64 @@ public final class MenuImpl extends BuiltInComponent<Menu> implements Menu, Core
                 if (!press) {
                     return;
                 }
-                final MenuImpl from = this.parent;
-                this.close();
-                if (from != null) {
-                    from.requestFocus();
+                // A handler that refuses keeps the menu open, and the key is used either way
+                if (this.request(CLOSE)) {
+                    final MenuImpl from = this.parent;
+                    this.close();
+                    if (from != null) {
+                        from.requestFocus();
+                    }
                 }
             }
             default -> {
                 if (press && (key.isEnter() || key == Key.SPACE)) {
                     this.choose(this.highlighted);
-                } else {
+                } else if (!press || event.modifiers().control() || event.modifiers().superKey()
+                        || !this.letter(Mnemonics.of(key))) {
                     return;
                 }
             }
         }
         event.consume();
+    }
+
+    /**
+     * Acts on a letter or digit typed in the open menu, with or without Alt. One usable entry whose mnemonic it is
+     * gets chosen; several are highlighted in turn. With no mnemonic for it, the highlight moves to the next usable
+     * entry whose text starts with it.
+     *
+     * @return true if the letter did anything
+     */
+    private boolean letter(final int letter) {
+        if (letter == Mnemonics.NONE) {
+            return false;
+        }
+        int first = -1;
+        int count = 0;
+        for (int i = 0; i < this.items.size(); i++) {
+            final MenuEntryImpl entry = this.items.get(i);
+            if (entry.usable() && entry.mnemonic == letter) {
+                count++;
+                if (first < 0) {
+                    first = i;
+                }
+            }
+        }
+        if (count == 1) {
+            this.highlight(first);
+            this.choose(first);
+            return true;
+        }
+        final boolean byMnemonic = count > 1;
+        final int size = this.items.size();
+        for (int step = 1; step <= size; step++) {
+            final int index = Math.floorMod(this.highlighted + step, size);
+            final MenuEntryImpl entry = this.items.get(index);
+            if (entry.usable() && (byMnemonic ? entry.mnemonic == letter : entry.initial == letter)) {
+                this.highlight(index);
+                return true;
+            }
+        }
+        return false;
     }
 }

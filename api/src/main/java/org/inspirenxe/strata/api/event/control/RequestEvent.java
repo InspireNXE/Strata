@@ -15,7 +15,7 @@
  */
 package org.inspirenxe.strata.api.event.control;
 
-import org.inspirenxe.strata.api.event.Cancelable;
+import org.inspirenxe.strata.api.event.SnapshotEvent;
 
 /**
  * A control's Pre event: the user asked the control to do something, such as press or close, and it has not
@@ -29,7 +29,7 @@ import org.inspirenxe.strata.api.event.Cancelable;
  *
  * @param <C> the control type
  */
-public interface RequestEvent<C> extends Cancelable {
+public interface RequestEvent<C> extends SnapshotEvent {
 
     /**
      * Returns the control that fired the event, which is also its {@linkplain #target() target}.

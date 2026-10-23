@@ -55,6 +55,11 @@ import java.time.LocalDateTime;
 import java.util.HashSet;
 import java.util.Objects;
 import java.util.Set;
+import org.inspirenxe.strata.api.component.Validation;
+import org.inspirenxe.strata.core.control.Validity;
+import org.inspirenxe.strata.core.state.ConversionTarget;
+import java.util.function.Function;
+import org.inspirenxe.strata.api.control.attribute.value.Validatable;
 
 /**
  * What the date and time pickers share: the field of parts over a {@link SegmentedField}, its draft, its keys, its
@@ -70,7 +75,7 @@ import java.util.Set;
  * @param <T> the picker's own type
  * @param <V> the type of its value
  */
-abstract class PickerBase<T extends Component<T>, V> extends BuiltInComponent<T> {
+abstract class PickerBase<T extends Component<T>, V> extends BuiltInComponent<T> implements ConversionTarget {
     /**
      * The space the icon leaves around it inside the button, in UI units.
      */
@@ -84,6 +89,7 @@ abstract class PickerBase<T extends Component<T>, V> extends BuiltInComponent<T>
      * The parts and their draft.
      */
     final SegmentedField field;
+    private final Validity validity;
     private Text placeholder;
     private boolean clearable;
     private Overlay popup;
@@ -135,6 +141,7 @@ abstract class PickerBase<T extends Component<T>, V> extends BuiltInComponent<T>
     @SuppressWarnings("this-escape")
     PickerBase(final ComponentFactoryImpl ui, final Text placeholder) {
         super(ui);
+        this.validity = new Validity(this.node(), this::validated);
         this.ui = ui;
         this.field = new SegmentedField();
         this.placeholder = placeholder;
@@ -220,6 +227,23 @@ abstract class PickerBase<T extends Component<T>, V> extends BuiltInComponent<T>
     }
 
     /**
+     * Returns the value the draft makes for a part picked in the popup's time columns, before the range applies:
+     * the draft's value without the checks {@link #draftValue()} makes. The default is the draft's value.
+     *
+     * @return the value, or null while a part is missing
+     */
+    V pickedValue() {
+        return this.draftValue();
+    }
+
+    /**
+     * Shows the value in the open popup again, after a pick from it that the requests may have changed or refused.
+     * The default does nothing.
+     */
+    void syncPopup() {
+    }
+
+    /**
      * Returns the key of the button's icon.
      *
      * @return the style key
@@ -300,6 +324,8 @@ abstract class PickerBase<T extends Component<T>, V> extends BuiltInComponent<T>
         final Component<?> content = this.popupContent();
         this.nodeOf(content).setBackground(this.popupPaint);
         this.popup = this.ui.overlays().popup(content, this.bounds());
+        // Escape and a press outside ask the picker itself, since its popup's content is a private part
+        this.hostRoot().setCloseTarget(this.popup, this.node());
         this.popup.onEvent(Overlay.CLOSED, event -> {
             this.popup = null;
             this.report(Closable.CLOSED);
@@ -374,6 +400,35 @@ abstract class PickerBase<T extends Component<T>, V> extends BuiltInComponent<T>
         }
     }
 
+    /**
+     * Sets one part from a row the user pressed in the popup's time columns, starting an empty value where the popup
+     * would, asks to pick the value that makes, then shows the value in the field and the popup again, whatever the
+     * requests did, and takes focus back to the part.
+     *
+     * @param kind the part
+     * @param number the row's number
+     */
+    final void pickPart(final SegmentedField.Kind kind, final int number) {
+        this.loadField();
+        if (this.value() == null) {
+            this.fillForPopup();
+        }
+        this.field.setPart(kind, number);
+        final int index = this.field.indexOf(kind);
+        final V picked = this.pickedValue();
+        if (picked != null) {
+            this.userPick(picked);
+        }
+        this.loadField();
+        this.syncPopup();
+        if (!this.isFocused()) {
+            this.requestFocus();
+        }
+        if (index >= 0) {
+            this.field.setFocus(index);
+        }
+    }
+
     // ------------------------------------------------------------------
     // The draft
     // ------------------------------------------------------------------
@@ -427,8 +482,60 @@ abstract class PickerBase<T extends Component<T>, V> extends BuiltInComponent<T>
         return keys;
     }
 
+    // ------------------------------------------------------------------
+    // Validatable
+    // ------------------------------------------------------------------
+
+    /**
+     * See {@link Validatable#validation()}.
+     *
+     * @return the validation
+     */
+    public Validation validation() {
+        return this.validity.validation();
+    }
+
+    /**
+     * See {@link Validatable#setValidation}.
+     *
+     * @param validation the validation
+     * @return this picker
+     */
+    public T setValidation(final Validation validation) {
+        this.validity.set(validation);
+        return this.self();
+    }
+
+    /**
+     * See {@link Validatable#setValidator}.
+     *
+     * @param validator the validator, or {@code null} for none
+     * @return this picker
+     */
+    public T setValidator(final Function<? super T, Validation> validator) {
+        this.validity.setValidator(validator == null ? null : () -> validator.apply(this.self()));
+        return this.self();
+    }
+
+    @Override
+    public void setConversionError(final Text message) {
+        this.validity.setConversionError(message);
+    }
+
+    private void validated(final Validation validation, final Validation previous) {
+        this.report(Validatable.VALIDATED, validation, previous);
+    }
+
+    /**
+     * Asks the validator again; pickers call this after they report a change of the value.
+     */
+    final void validate() {
+        this.validity.check();
+    }
+
     @Override
     protected void onApplyTheme(final Theme theme) {
+        this.validity.applyTheme(theme, TextBox.STYLE_INVALID);
         this.padding = theme.insetsOr(DatePicker.STYLE_PADDING,
                 theme.insetsOr(TextBox.STYLE_PADDING, TextBoxImpl.DEFAULT_PADDING));
         this.normal = theme.paintOr(TextBox.STYLE_NORMAL, Paint.NONE);
@@ -538,18 +645,26 @@ abstract class PickerBase<T extends Component<T>, V> extends BuiltInComponent<T>
     }
 
     @Override
+    protected float baseline() {
+        final float inner = Math.max(0f, this.desiredHeight() - this.padding.vertical());
+        return this.padding.top() + (float) Math.floor((inner - this.lineHeight) * 0.5f)
+                + this.environment().text().ascent(this.textStyle);
+    }
+
+    @Override
     protected void paint(final Painter painter, final Rect bounds) {
         this.build(bounds);
         final boolean enabled = this.isEnabled();
         final Paint face;
         if (!enabled) {
             face = this.disabledPaint;
-        } else if (this.isFocused() || this.isOpen()) {
-            face = this.focusedPaint;
         } else {
-            face = this.normal;
+            face = this.validity.face(this.isFocused() || this.isOpen() ? this.focusedPaint : this.normal);
         }
         face.paint(painter, bounds);
+        if (enabled) {
+            this.validity.paintOutline(painter, bounds);
+        }
 
         if (this.showsPlaceholder()) {
             this.placeholderLine.draw(painter, bounds.x() + this.padding.left(), this.textY);
@@ -685,8 +800,10 @@ abstract class PickerBase<T extends Component<T>, V> extends BuiltInComponent<T>
                 case LEFT -> this.field.moveFocus(-1);
                 case RIGHT -> this.field.moveFocus(1);
                 case ESCAPE -> {
-                    this.loadField();
-                    this.close();
+                    if (this.request(Closable.CLOSE)) {
+                        this.loadField();
+                        this.close();
+                    }
                 }
                 default -> {
                     if (key.isEnter() && press) {

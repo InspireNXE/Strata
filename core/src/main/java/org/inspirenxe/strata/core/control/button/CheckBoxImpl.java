@@ -15,6 +15,7 @@
  */
 package org.inspirenxe.strata.core.control.button;
 
+import org.inspirenxe.strata.api.command.Command;
 import org.inspirenxe.strata.api.component.CursorKind;
 import org.inspirenxe.strata.api.control.button.CheckBox;
 import org.inspirenxe.strata.api.control.button.CheckState;
@@ -22,23 +23,30 @@ import org.inspirenxe.strata.api.event.input.KeyEvent;
 import org.inspirenxe.strata.api.event.input.PointerButtonEvent;
 import org.inspirenxe.strata.api.extension.MeasureContext;
 import org.inspirenxe.strata.api.extension.Painter;
-import org.inspirenxe.strata.api.geometry.Insets;
 import org.inspirenxe.strata.api.geometry.Rect;
 import org.inspirenxe.strata.api.geometry.Size;
-import org.inspirenxe.strata.api.input.Key;
-import org.inspirenxe.strata.api.input.KeyAction;
-import org.inspirenxe.strata.api.input.MouseButton;
 import org.inspirenxe.strata.api.text.Text;
-import org.inspirenxe.strata.api.text.TextMetrics;
 import org.inspirenxe.strata.api.text.TextStyle;
 import org.inspirenxe.strata.api.theme.Paint;
 import org.inspirenxe.strata.api.theme.Theme;
+import org.inspirenxe.strata.core.control.Activation;
+import org.inspirenxe.strata.core.control.BoxCaption;
+import org.inspirenxe.strata.core.control.Commands;
+import org.inspirenxe.strata.core.control.RectCache;
+import org.inspirenxe.strata.core.control.Rings;
 import org.inspirenxe.strata.core.node.BuiltInComponent;
 import org.inspirenxe.strata.core.node.ComponentFactoryImpl;
-import org.inspirenxe.strata.core.text.TextLine;
+import org.inspirenxe.strata.core.node.MnemonicTarget;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
+import org.inspirenxe.strata.api.component.Validation;
+import org.inspirenxe.strata.core.control.Validity;
+import org.inspirenxe.strata.core.state.ConversionTarget;
+import java.util.function.Function;
 
 /**
  * The core {@link CheckBox}. The box sits at the left edge, vertically centered, and the caption 4 units to its
@@ -48,9 +56,12 @@ import java.util.Set;
  * paints and the mixed mark as a square at the same inset. A focused box draws a one-unit focus ring.
  *
  * <p>Measuring takes the wider and taller of the normal and disabled captions, so enabling or disabling it needs no
- * relayout. Without a fixed box size, the box is the caption's line height plus 8.</p>
+ * relayout. Without a fixed box size, the box is the caption's line height plus 8, rounded to a whole unit. The box,
+ * the mark's squares and the focus ring are kept from one frame to the next while the bounds and the box size stay
+ * the same, so painting allocates nothing then.</p>
  */
-public final class CheckBoxImpl extends BuiltInComponent<CheckBox> implements CheckBox {
+public final class CheckBoxImpl extends BuiltInComponent<CheckBox> implements CheckBox, ConversionTarget,
+        MnemonicTarget {
     /**
      * The gap between the box and the caption.
      */
@@ -61,6 +72,7 @@ public final class CheckBoxImpl extends BuiltInComponent<CheckBox> implements Ch
     public static final float BOX_PADDING = 8f;
     private static final Set<String> REQUIRED = Set.of(STYLE_NORMAL, STYLE_HOVERED, STYLE_CHECKED, STYLE_CHECKED_HOVERED);
 
+    private final Validity validity;
     private Text text;
     private CheckState state;
     private boolean allowsMixed;
@@ -81,10 +93,16 @@ public final class CheckBoxImpl extends BuiltInComponent<CheckBox> implements Ch
     private TextStyle disabledTextStyle;
 
     // Computed during measure
-    private TextLine caption;
-    private TextLine disabledCaption;
-    private float captionHeight;
+    private final BoxCaption layout = new BoxCaption(GAP);
     private float boxSize;
+
+    // Kept between frames: the mark's area, and the check's squares for the area they were placed in
+    private final RectCache markArea = new RectCache();
+    private final List<Rect> checkSquares = new ArrayList<>();
+    private Rect checkArea;
+    private final Rings.Ring ring = new Rings.Ring();
+    private final Activation activation;
+    private Command.Toggle command;
 
     /**
      * Creates a checkbox.
@@ -95,6 +113,7 @@ public final class CheckBoxImpl extends BuiltInComponent<CheckBox> implements Ch
     @SuppressWarnings("this-escape")
     public CheckBoxImpl(final ComponentFactoryImpl ui, final Text text) {
         super(ui);
+        this.validity = new Validity(this.node(), this::validated);
         this.text = Objects.requireNonNull(text, "text");
         this.fixedBoxSize = Float.NaN;
         this.normal = Paint.NONE;
@@ -111,8 +130,7 @@ public final class CheckBoxImpl extends BuiltInComponent<CheckBox> implements Ch
         this.focusRing = Paint.NONE;
         this.textStyle = TextStyle.DEFAULT;
         this.disabledTextStyle = TextStyle.DEFAULT;
-        this.caption = TextLine.EMPTY;
-        this.disabledCaption = this.caption;
+        this.activation = Activation.leftButton(this::activatesOnPress, this::userToggle);
         this.setCursor(CursorKind.HAND);
     }
 
@@ -161,6 +179,7 @@ public final class CheckBoxImpl extends BuiltInComponent<CheckBox> implements Ch
             if (previous.isChecked() != state.isChecked()) {
                 this.report(TOGGLED, state.isChecked(), previous.isChecked());
             }
+            this.validity.check();
         }
         return this;
     }
@@ -235,8 +254,39 @@ public final class CheckBoxImpl extends BuiltInComponent<CheckBox> implements Ch
         return REQUIRED;
     }
 
+    // ------------------------------------------------------------------
+    // Validatable
+    // ------------------------------------------------------------------
+
+    @Override
+    public Validation validation() {
+        return this.validity.validation();
+    }
+
+    @Override
+    public CheckBox setValidation(final Validation validation) {
+        this.validity.set(validation);
+        return this;
+    }
+
+    @Override
+    public CheckBox setValidator(final Function<? super CheckBox, Validation> validator) {
+        this.validity.setValidator(validator == null ? null : () -> validator.apply(this));
+        return this;
+    }
+
+    @Override
+    public void setConversionError(final Text message) {
+        this.validity.setConversionError(message);
+    }
+
+    private void validated(final Validation validation, final Validation previous) {
+        this.report(VALIDATED, validation, previous);
+    }
+
     @Override
     protected void onApplyTheme(final Theme theme) {
+        this.validity.applyTheme(theme, STYLE_INVALID);
         this.normal = theme.paintOr(STYLE_NORMAL, Paint.NONE);
         this.hoveredPaint = theme.paintOr(STYLE_HOVERED, this.normal);
         this.checkedPaint = theme.paintOr(STYLE_CHECKED, this.normal);
@@ -254,22 +304,39 @@ public final class CheckBoxImpl extends BuiltInComponent<CheckBox> implements Ch
     }
 
     @Override
+    protected Size measureMinimum(final MeasureContext context) {
+        // The caption does not shrink, and measuring does not depend on the space offered
+        return this.measure(context, Float.POSITIVE_INFINITY, Float.POSITIVE_INFINITY);
+    }
+
+    @Override
     protected Size measure(final MeasureContext context, final float availableWidth, final float availableHeight) {
-        final TextMetrics metrics = context.text();
-        this.caption = TextLine.of(this.text, this.textStyle, metrics);
-        this.disabledCaption = TextLine.of(this.text, this.disabledTextStyle, metrics);
-        this.captionHeight = Math.max(this.caption.height(), this.disabledCaption.height());
-        // Whole units, so the mark, inset by whole units too, is centered exactly
-        this.boxSize = Float.isNaN(this.fixedBoxSize) ? Math.round(this.captionHeight + BOX_PADDING) : this.fixedBoxSize;
-        final float captionWidth = Math.max(this.caption.width(), this.disabledCaption.width());
-        final float width = this.caption.isEmpty() ? this.boxSize : this.boxSize + GAP + captionWidth;
-        return new Size(width, Math.max(this.boxSize, this.captionHeight));
+        final float captionHeight = this.layout.measureCaption(this.text, this.textStyle, this.disabledTextStyle,
+                context.text());
+        this.boxSize = Float.isNaN(this.fixedBoxSize) ? CheckBoxImpl.defaultBoxSize(captionHeight) : this.fixedBoxSize;
+        return this.layout.size(this.boxSize, this.boxSize);
+    }
+
+    /**
+     * Returns the box size for a caption height when none is fixed: the height plus {@link #BOX_PADDING}, rounded to
+     * a whole unit so a mark inset by whole units is centered exactly. A radio button sizes its box the same way.
+     *
+     * @param captionHeight the caption's height
+     * @return the box size
+     */
+    static float defaultBoxSize(final float captionHeight) {
+        return Math.round(captionHeight + BOX_PADDING);
+    }
+
+    @Override
+    protected float baseline() {
+        return this.layout.baseline(this.desiredHeight());
     }
 
     @Override
     protected void paint(final Painter painter, final Rect bounds) {
-        final float middle = bounds.y() + bounds.height() * 0.5f;
-        final Rect box = new Rect(bounds.x(), middle - this.boxSize * 0.5f, this.boxSize, this.boxSize);
+        final boolean rightToLeft = this.isRightToLeft();
+        final Rect box = this.layout.box(bounds, rightToLeft);
         final boolean enabled = this.isEnabled();
         final boolean lit = this.isHovered() || this.isFocused();
 
@@ -278,89 +345,108 @@ public final class CheckBoxImpl extends BuiltInComponent<CheckBox> implements Ch
         if (!enabled) {
             face = checked ? this.checkedDisabled : this.disabled;
         } else if (checked) {
-            face = lit ? this.checkedHovered : this.checkedPaint;
+            face = this.validity.face(lit ? this.checkedHovered : this.checkedPaint);
         } else {
-            face = lit ? this.hoveredPaint : this.normal;
+            face = this.validity.face(lit ? this.hoveredPaint : this.normal);
         }
         face.paint(painter, box);
+        if (enabled) {
+            this.validity.paintOutline(painter, box);
+        }
 
-        final Rect inner = box.shrink(Insets.of(Math.round(this.boxSize * 0.2f)));
+        final float inset = Math.round(this.boxSize * 0.2f);
+        final Rect inner = this.markArea.at(box.x() + inset, box.y() + inset, box.width() - inset * 2f,
+                box.height() - inset * 2f);
         if (checked) {
             this.drawCheck(painter, enabled ? this.mark : this.markDisabled, inner);
         } else if (this.state == CheckState.MIXED) {
             (enabled ? this.mixedMark : this.mixedMarkDisabled).paint(painter, inner);
         }
         if (this.isFocused() && this.focusRing != Paint.NONE) {
-            this.focusRing.paint(painter, new Rect(box.x(), box.y(), box.width(), 1f));
-            this.focusRing.paint(painter, new Rect(box.x(), box.bottom() - 1f, box.width(), 1f));
-            this.focusRing.paint(painter, new Rect(box.x(), box.y() + 1f, 1f, box.height() - 2f));
-            this.focusRing.paint(painter, new Rect(box.right() - 1f, box.y() + 1f, 1f, box.height() - 2f));
+            this.ring.paint(painter, this.focusRing, box);
         }
-        if (!this.caption.isEmpty()) {
-            (enabled ? this.caption : this.disabledCaption).draw(painter, box.right() + GAP, middle - this.captionHeight * 0.5f);
-        }
+        this.layout.paintCaption(painter, bounds, enabled,
+                this.hostRoot() != null && this.hostRoot().showsMnemonics(), rightToLeft);
     }
 
     /**
      * Draws a check in a square: a short stroke down to the right from the left middle, then a long one up to the top
-     * right, each a run of squares a stroke thick.
+     * right, each a run of squares a stroke thick. The squares are placed again only when the area changed.
      */
     private void drawCheck(final Painter painter, final Paint paint, final Rect area) {
         if (paint == Paint.NONE) {
             return;
         }
-        final float size = Math.min(area.width(), area.height());
-        final float stroke = Math.max(1f, Math.round(this.boxSize / 8f));
-        final float span = size - stroke;
-        final float bottomX = area.x() + span * 0.375f;
-        final float bottomY = area.y() + span;
-        CheckBoxImpl.stroke(painter, paint, area.x(), area.y() + span * 0.5f, bottomX, bottomY, stroke);
-        CheckBoxImpl.stroke(painter, paint, bottomX, bottomY, area.x() + span, area.y(), stroke);
+        if (area != this.checkArea) {
+            this.checkArea = area;
+            this.checkSquares.clear();
+            final float size = Math.min(area.width(), area.height());
+            final float stroke = Math.max(1f, Math.round(this.boxSize / 8f));
+            final float span = size - stroke;
+            final float bottomX = area.x() + span * 0.375f;
+            final float bottomY = area.y() + span;
+            this.stroke(area.x(), area.y() + span * 0.5f, bottomX, bottomY, stroke);
+            this.stroke(bottomX, bottomY, area.x() + span, area.y(), stroke);
+        }
+        for (int i = 0; i < this.checkSquares.size(); i++) {
+            paint.paint(painter, this.checkSquares.get(i));
+        }
     }
 
-    private static void stroke(final Painter painter, final Paint paint, final float fromX, final float fromY,
-                               final float toX, final float toY, final float stroke) {
+    private void stroke(final float fromX, final float fromY, final float toX, final float toY, final float stroke) {
         final int steps = Math.max(1, Math.round(Math.max(Math.abs(toX - fromX), Math.abs(toY - fromY)) / (stroke * 0.5f)));
         for (int i = 0; i <= steps; i++) {
             final float t = (float) i / steps;
-            paint.paint(painter, new Rect(fromX + (toX - fromX) * t, fromY + (toY - fromY) * t, stroke, stroke));
+            this.checkSquares.add(new Rect(fromX + (toX - fromX) * t, fromY + (toY - fromY) * t, stroke, stroke));
         }
     }
 
     @Override
     protected void onPointerPress(final PointerButtonEvent event) {
-        if (this.activatesOnPress()) {
-            this.clicked(event);
-        }
+        this.activation.press(event);
     }
 
     @Override
     protected void onClick(final PointerButtonEvent event) {
-        if (!this.activatesOnPress()) {
-            this.clicked(event);
-        }
-    }
-
-    /**
-     * Acts on a pointer press or click, whichever the platform's conventions say buttons act on.
-     */
-    private void clicked(final PointerButtonEvent event) {
-        if (event.button() == MouseButton.LEFT) {
-            this.userToggle();
-            event.consume();
-        }
+        this.activation.click(event);
     }
 
     @Override
     protected void onKey(final KeyEvent event) {
-        if (event.action() == KeyAction.PRESS && (event.key().isEnter() || event.key() == Key.SPACE)) {
-            this.userToggle();
-            event.consume();
-        }
+        Activation.key(event, this::userToggle);
     }
 
     @Override
     protected Object snapshotState() {
         return new CheckBox.State(this.state, this.text);
+    }
+
+    @Override
+    public Optional<Command.Toggle> command() {
+        return Optional.ofNullable(this.command);
+    }
+
+    /**
+     * Shows a toggle: takes its text, binds {@link #ENABLED} to its enabled source and {@link #SELECTED} to its state
+     * both ways, or takes the bindings off again for null.
+     */
+    @Override
+    public CheckBox setCommand(final Command.Toggle command) {
+        this.command = command;
+        Commands.follow(this.node(), command);
+        return this;
+    }
+
+    @Override
+    public boolean hasMnemonic(final int mnemonic) {
+        return this.layout.mnemonic() == mnemonic;
+    }
+
+    /**
+     * Toggles the box for the user, as Alt with the caption's mnemonic does.
+     */
+    @Override
+    public void activateMnemonic(final int mnemonic) {
+        this.userToggle();
     }
 }

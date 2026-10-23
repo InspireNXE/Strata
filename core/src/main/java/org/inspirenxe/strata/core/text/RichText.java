@@ -35,9 +35,11 @@ public final class RichText {
     }
 
     /**
-     * Splits spans into lines no wider than a width, by the rules of {@link TextWrap#wrap}: newlines always break,
-     * lines take as many space-separated words as fit, the space at a wrap point is dropped, and a word wider than a
-     * whole line breaks between code points. A single span wraps exactly as {@link TextWrap} wraps its text.
+     * Splits spans into lines no wider than a width, by the rule {@link LineBreaks} describes, as {@link TextWrap#wrap}
+     * splits text in one style: newlines always break, a row breaks after the last whitespace that fits, the
+     * whitespace where it breaks is dropped, and a word wider than a whole line breaks between grapheme clusters. Each part
+     * of a line is measured in its own span's style, and an inline element is one character that is not whitespace. A
+     * single span wraps exactly as {@link TextWrap} wraps its text.
      *
      * @param spans the spans, in reading order
      * @param maxWidth the widest a line may be, in UI units; {@link Float#POSITIVE_INFINITY} splits only at newlines
@@ -66,71 +68,25 @@ public final class RichText {
         }
         final String text = joined.toString();
         final int[] owners = owner.stream().mapToInt(Integer::intValue).toArray();
+        final LineBreaks.Measure measure = (start, end) -> width(spans, owners, text, start, end, metrics);
+        final LineBreaks.Characters characters = Graphemes.of(text);
 
         int paragraphStart = 0;
         while (true) {
             final int newline = text.indexOf('\n', paragraphStart);
             final int paragraphEnd = newline < 0 ? text.length() : newline;
-            if (Float.isInfinite(maxWidth)) {
-                lines.add(slice(spans, owners, text, paragraphStart, paragraphEnd));
-            } else {
-                wrapParagraph(spans, owners, text, paragraphStart, paragraphEnd, maxWidth, metrics, lines);
-            }
+            int start = paragraphStart;
+            do {
+                final long row = LineBreaks.row(text, start, paragraphEnd, maxWidth, measure, characters);
+                lines.add(slice(spans, owners, text, start, LineBreaks.drawnEnd(row)));
+                start = LineBreaks.end(row);
+            } while (start < paragraphEnd);
             if (newline < 0) {
                 break;
             }
             paragraphStart = newline + 1;
         }
         return lines;
-    }
-
-    private static void wrapParagraph(final List<TextSpan> spans, final int[] owners, final String text, final int start,
-                                      final int end, final float maxWidth, final TextMetrics metrics,
-                                      final List<List<TextSpan>> out) {
-        if (start == end) {
-            out.add(List.of());
-            return;
-        }
-        // The line so far is [lineStart, lineEnd); it is empty when they are equal
-        int lineStart = start;
-        int lineEnd = start;
-        int wordStart = start;
-        while (wordStart <= end) {
-            int wordEnd = text.indexOf(' ', wordStart);
-            if (wordEnd < 0 || wordEnd > end) {
-                wordEnd = end;
-            }
-            final int candidateStart = lineEnd == lineStart ? wordStart : lineStart;
-            if (width(spans, owners, text, candidateStart, wordEnd, metrics) <= maxWidth) {
-                lineStart = candidateStart;
-                lineEnd = wordEnd;
-            } else {
-                if (lineEnd > lineStart) {
-                    out.add(slice(spans, owners, text, lineStart, lineEnd));
-                }
-                // The word alone may still be too wide: break it between code points, at least one per line
-                int rest = wordStart;
-                while (rest < wordEnd && width(spans, owners, text, rest, wordEnd, metrics) > maxWidth) {
-                    int fit = rest;
-                    while (fit < wordEnd) {
-                        final int next = text.offsetByCodePoints(fit, 1);
-                        if (width(spans, owners, text, rest, next, metrics) > maxWidth) {
-                            break;
-                        }
-                        fit = next;
-                    }
-                    if (fit == rest) {
-                        fit = text.offsetByCodePoints(rest, 1);
-                    }
-                    out.add(slice(spans, owners, text, rest, fit));
-                    rest = fit;
-                }
-                lineStart = rest;
-                lineEnd = wordEnd;
-            }
-            wordStart = wordEnd + 1;
-        }
-        out.add(slice(spans, owners, text, lineStart, lineEnd));
     }
 
     /**
@@ -149,8 +105,8 @@ public final class RichText {
     }
 
     /**
-     * Shortens a line to fit a width, ending it in {@link #ELLIPSIS} in the style of the last character kept. A
-     * line that already fits comes back unchanged.
+     * Shortens a line to fit a width, ending it in {@link #ELLIPSIS} in the style of the last character kept. The
+     * cut falls between grapheme clusters. A line that already fits comes back unchanged.
      *
      * @param line the spans of the line
      * @param maxWidth the width to fit, in UI units

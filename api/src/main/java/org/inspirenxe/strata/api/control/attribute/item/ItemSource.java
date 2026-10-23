@@ -26,6 +26,18 @@ import java.util.function.Function;
  * <p>The control keeps a copy of the list it is given. Change what it shows with {@link #setItems}, or with
  * {@link #refresh} when the items themselves changed inside.</p>
  *
+ * <p>Items are not null, except in a grid, where a null item is an empty cell. Every other control refuses a null
+ * item in {@link #setItems}. On all of them, a grid included, {@link Selection#selectItem} with null clears the
+ * selection.</p>
+ *
+ * <p>A control with a {@linkplain Selection selection} keeps it on the same items when they change: each selected
+ * item moves to the new item with the same {@linkplain #setKeyFunction key}. Items with equal keys are matched in
+ * order, so the second item with a key moves to the second new one, or to the last when there are fewer. A selected
+ * item that no new item matches leaves the selection, and nothing is selected in its place. Three controls depart
+ * from this, as each describes. A grid is positional: it keeps the selected cells that still exist. A combo box
+ * that has never had a selection selects its first option when it gets options. A cycle button, which always shows
+ * a value, selects its first item when its selected item is gone or nothing is selected.</p>
+ *
  * <p>Do not implement this interface.</p>
  *
  * @param <T> the type of the items
@@ -59,11 +71,12 @@ public interface ItemSource<T, S extends ItemSource<T, S>> {
     List<T> items();
 
     /**
-     * Replaces the items. A control with a {@linkplain Selection selection} keeps it as the control describes,
-     * usually on the item with the selected item's {@linkplain #setKeyFunction key}.
+     * Replaces the items. A control with a {@linkplain Selection selection} keeps it as this interface describes,
+     * on the items with the selected items' {@linkplain #setKeyFunction keys}.
      *
      * @param items the items; the control keeps a copy
      * @return this control
+     * @throws NullPointerException if an item is null, on any control but a grid
      */
     S setItems(List<? extends T> items);
 
@@ -73,6 +86,24 @@ public interface ItemSource<T, S extends ItemSource<T, S>> {
      * @return this control
      */
     S refresh();
+
+    /**
+     * Shows one item again, for when it changed inside, and leaves the other cells as they are. The control finds
+     * the items with the same {@linkplain #setKeyFunction key} and builds the cells of those it shows again, from
+     * the items it holds; it does not take the given item in their place, so call {@link #setItems} for a new value.
+     * A list of thousands of rows whose prices change can refresh the changed ones without building every cell in
+     * view again. An item the control does not hold changes nothing.
+     *
+     * <p>The default does what {@link #refresh()} does. The list, the table, the grid and the combo box build only
+     * that item's cells. A tree asks for that item's children again and works its rows out again, as its
+     * {@code refresh(item)} describes.</p>
+     *
+     * @param item the item to show again, found by its key
+     * @return this control
+     */
+    default S refresh(final T item) {
+        return this.refresh();
+    }
 
     /**
      * Sets how items are told apart when {@link #setItems} keeps the selection, and when

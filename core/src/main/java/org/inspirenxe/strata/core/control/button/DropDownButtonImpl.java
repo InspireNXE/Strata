@@ -19,6 +19,7 @@ import org.inspirenxe.strata.api.component.Component;
 import org.inspirenxe.strata.api.component.CursorKind;
 import org.inspirenxe.strata.api.control.attribute.popup.Popup;
 import org.inspirenxe.strata.api.control.button.DropDownButton;
+import org.inspirenxe.strata.api.control.button.IconPlacement;
 import org.inspirenxe.strata.api.event.input.KeyEvent;
 import org.inspirenxe.strata.api.event.input.PointerButtonEvent;
 import org.inspirenxe.strata.api.extension.MeasureContext;
@@ -35,11 +36,15 @@ import org.inspirenxe.strata.api.theme.SpriteId;
 import org.inspirenxe.strata.api.theme.Theme;
 import org.inspirenxe.strata.api.visual.Visual;
 import org.inspirenxe.strata.core.control.CorePopup;
+import org.inspirenxe.strata.core.control.RectCache;
 import org.inspirenxe.strata.core.control.Rings;
 import org.inspirenxe.strata.core.control.collection.ComboBoxImpl;
 import org.inspirenxe.strata.core.node.BuiltInComponent;
 import org.inspirenxe.strata.core.node.ComponentFactoryImpl;
+import org.inspirenxe.strata.core.node.MnemonicTarget;
+import org.inspirenxe.strata.core.text.TextLine;
 
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 
@@ -57,13 +62,16 @@ import java.util.Set;
  * opened it. A disabled button closes its popup.</p>
  */
 public final class DropDownButtonImpl extends BuiltInComponent<DropDownButton> implements DropDownButton,
-        CorePopup.Holder {
+        CorePopup.Holder, MnemonicTarget {
     private final ButtonContent content;
     private Popup<?> popup;
     private boolean open;
 
     // Theme
     private Paint arrow;
+    // Kept between frames
+    private final RectCache contentArea = new RectCache();
+    private final Rings.Arrow arrowLines = new Rings.Arrow();
 
     /**
      * Creates a drop-down button with no popup.
@@ -98,19 +106,26 @@ public final class DropDownButtonImpl extends BuiltInComponent<DropDownButton> i
 
     @Override
     public DropDownButton setTextPadding(final Insets padding) {
-        this.content.setTextPadding(padding);
+        this.content.setTextPadding(Objects.requireNonNull(padding, "padding"));
         this.invalidateLayout();
         return this;
     }
 
     @Override
-    public SpriteId iconSprite() {
-        return this.content.iconSprite();
+    public DropDownButton clearTextPadding() {
+        this.content.setTextPadding(null);
+        this.invalidateLayout();
+        return this;
     }
 
     @Override
-    public Visual iconVisual() {
-        return this.content.iconVisual();
+    public Optional<SpriteId> iconSprite() {
+        return Optional.ofNullable(this.content.iconSprite());
+    }
+
+    @Override
+    public Optional<Visual> iconVisual() {
+        return Optional.ofNullable(this.content.iconVisual());
     }
 
     @Override
@@ -147,6 +162,18 @@ public final class DropDownButtonImpl extends BuiltInComponent<DropDownButton> i
     @Override
     public DropDownButton setIconSize(final float width, final float height) {
         this.content.setIconSize(width, height);
+        this.invalidateLayout();
+        return this;
+    }
+
+    @Override
+    public IconPlacement iconPlacement() {
+        return this.content.placement();
+    }
+
+    @Override
+    public DropDownButton setIconPlacement(final IconPlacement placement) {
+        this.content.setPlacement(placement);
         this.invalidateLayout();
         return this;
     }
@@ -260,12 +287,23 @@ public final class DropDownButtonImpl extends BuiltInComponent<DropDownButton> i
     }
 
     @Override
+    protected Size measureMinimum(final MeasureContext context) {
+        // The caption does not shrink, and measuring does not depend on the space offered
+        return this.measure(context, Float.POSITIVE_INFINITY, Float.POSITIVE_INFINITY);
+    }
+
+    @Override
     protected Size measure(final MeasureContext context, final float availableWidth, final float availableHeight) {
         this.content.measure(context.text(), false);
         final Insets padding = this.content.padding(false);
         return new Size(this.content.contentWidth() + ComboBoxImpl.ARROW_GAP + ComboBoxImpl.ARROW_WIDTH
                 + padding.horizontal(), Math.max(ButtonImpl.MIN_HEIGHT,
                 Math.max(this.content.contentHeight(), Rings.ARROW_SHORT) + padding.vertical()));
+    }
+
+    @Override
+    protected float baseline() {
+        return this.content.baseline(this.desiredHeight(), this.content.padding(false));
     }
 
     @Override
@@ -281,16 +319,27 @@ public final class DropDownButtonImpl extends BuiltInComponent<DropDownButton> i
         final float innerY = bounds.y() + padding.top();
         final float innerHeight = bounds.height() - padding.vertical();
         // The content and its clip area end before the arrow
-        content.paintContent(painter, new Rect(bounds.x(), bounds.y(),
-                        bounds.width() - ComboBoxImpl.ARROW_GAP - ComboBoxImpl.ARROW_WIDTH, bounds.height()), padding,
-                enabled, enabled ? content.caption : content.disabledCaption, this.environment().millis());
+        TextLine shown = enabled ? content.caption : content.disabledCaption;
+        if (this.hostRoot() != null && this.hostRoot().showsMnemonics()) {
+            shown = content.marked(shown);
+        }
+        // Right to left the arrow sits at the left, and the content after it
+        final boolean rightToLeft = this.isRightToLeft();
+        final float beside = ComboBoxImpl.ARROW_GAP + ComboBoxImpl.ARROW_WIDTH;
+        if (content.paintContent(painter, this.contentArea.at(rightToLeft ? bounds.x() + beside : bounds.x(),
+                        bounds.y(), bounds.width() - beside, bounds.height()), padding,
+                enabled, shown, this.environment().millis(), rightToLeft)) {
+            this.repaintNextFrame();
+        }
 
-        final float arrowX = bounds.right() - padding.right() - ComboBoxImpl.ARROW_WIDTH;
+        final float arrowX = rightToLeft ? bounds.x() + padding.right()
+                : bounds.right() - padding.right() - ComboBoxImpl.ARROW_WIDTH;
         final float arrowY = innerY + (innerHeight - Rings.ARROW_SHORT) * 0.5f;
         if (enabled && this.arrow != Paint.NONE) {
-            Rings.down(painter, this.arrow, arrowX, arrowY);
+            this.arrowLines.down(painter, this.arrow, arrowX, arrowY);
         } else {
-            Rings.down(painter, (enabled ? content.textStyle : content.disabledTextStyle).color(), arrowX, arrowY);
+            this.arrowLines.down(painter, (enabled ? content.textStyle : content.disabledTextStyle).color(), arrowX,
+                    arrowY);
         }
     }
 
@@ -321,6 +370,19 @@ public final class DropDownButtonImpl extends BuiltInComponent<DropDownButton> i
             this.userOpen(true);
             event.consume();
         }
+    }
+
+    @Override
+    public boolean hasMnemonic(final int mnemonic) {
+        return this.content.mnemonic() == mnemonic;
+    }
+
+    /**
+     * Opens the popup for the user from the keyboard, as Alt with the caption's mnemonic does.
+     */
+    @Override
+    public void activateMnemonic(final int mnemonic) {
+        this.userOpen(true);
     }
 
     @Override

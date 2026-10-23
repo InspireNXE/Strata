@@ -40,9 +40,4 @@ public class RequestEventImpl<C> extends EventImpl implements RequestEvent<C> {
     public final C control() {
         return (C) this.target();
     }
-
-    @Override
-    protected final boolean runsDefaultActions() {
-        return false;
-    }
 }

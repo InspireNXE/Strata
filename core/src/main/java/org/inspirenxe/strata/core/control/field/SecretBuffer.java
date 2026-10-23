@@ -35,6 +35,7 @@ final class SecretBuffer implements EditBuffer {
 
     private char[] chars;
     private int length;
+    private long changes;
 
     SecretBuffer() {
         this.chars = new char[MIN_CAPACITY];
@@ -51,6 +52,11 @@ final class SecretBuffer implements EditBuffer {
             throw new IndexOutOfBoundsException("Index " + index + " outside a length of " + this.length);
         }
         return this.chars[index];
+    }
+
+    @Override
+    public long changes() {
+        return this.changes;
     }
 
     @Override
@@ -86,6 +92,7 @@ final class SecretBuffer implements EditBuffer {
         this.ensureCapacity(this.length + count);
         System.arraycopy(this.chars, index, this.chars, index + count, this.length - index);
         this.length += count;
+        this.changes++;
     }
 
     private void ensureCapacity(final int needed) {
@@ -107,12 +114,14 @@ final class SecretBuffer implements EditBuffer {
         System.arraycopy(this.chars, end, this.chars, start, this.length - end);
         Arrays.fill(this.chars, this.length - count, this.length, '\0');
         this.length -= count;
+        this.changes++;
     }
 
     @Override
     public void clear() {
         Arrays.fill(this.chars, '\0');
         this.length = 0;
+        this.changes++;
     }
 
     /**
@@ -127,6 +136,31 @@ final class SecretBuffer implements EditBuffer {
      */
     String reveal() {
         return new String(this.chars, 0, this.length);
+    }
+
+    /**
+     * Returns whether a range holds exactly the given chars, for an edit that would put back what is already there.
+     */
+    boolean holds(final int start, final int end, final CharSequence text) {
+        if (start < 0 || end > this.length || start > end) {
+            throw new IndexOutOfBoundsException("Range " + start + " to " + end + " outside a length of " + this.length);
+        }
+        if (end - start != text.length()) {
+            return false;
+        }
+        for (int i = 0; i < text.length(); i++) {
+            if (this.chars[start + i] != text.charAt(i)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /**
+     * Returns whether a range holds exactly one code point.
+     */
+    boolean holds(final int start, final int end, final int codePoint) {
+        return end - start == Character.charCount(codePoint) && end <= this.length && this.codePointAt(start) == codePoint;
     }
 
     /**

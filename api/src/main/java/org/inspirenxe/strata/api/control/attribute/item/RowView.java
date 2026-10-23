@@ -63,9 +63,16 @@ public interface RowView<S extends RowView<S>> {
     S setRowSpacing(float spacing);
 
     /**
+     * Returns the text shown in the middle of the rows while there are none.
+     *
+     * @return the placeholder; empty for none, which is the default
+     */
+    Text placeholder();
+
+    /**
      * Sets the text shown in the middle of the rows while there are none.
      *
-     * @param placeholder the text, or {@code null} for none
+     * @param placeholder the text, or empty for none
      * @return this control
      */
     S setPlaceholder(Text placeholder);
@@ -73,36 +80,60 @@ public interface RowView<S extends RowView<S>> {
     /**
      * Does the same as {@link #setPlaceholder(Text)} with literal text.
      *
-     * @param placeholder the text, or {@code null} for none
+     * @param placeholder the text, or empty for none
      * @return this control
      */
     default S setPlaceholder(final String placeholder) {
-        return this.setPlaceholder(placeholder == null ? null : Text.of(placeholder));
+        return this.setPlaceholder(Text.of(placeholder));
     }
 
     /**
-     * Returns the vertical offset.
+     * Returns the vertical offset. It reflects {@link #setScrollY} at once. A {@link #scrollToIndex}, a scroll from
+     * the user and a change of the rows or the control's size show in it after the next layout, which also clamps
+     * it to the rows.
      *
      * @return how far the rows are scrolled down, in UI units
      */
     float scrollY();
 
     /**
-     * Scrolls to an offset, clamped to the rows.
+     * Scrolls to an offset. The offset is at least 0, and once the control has been laid out it is at most what the
+     * current rows need, so an offset set right after the items change, or before the first layout, is kept. The
+     * next layout clamps it to the rows in the control's size.
      *
      * @param scrollY the vertical offset
      * @return this control
+     * @throws IllegalArgumentException if the offset is NaN
      */
     S setScrollY(float scrollY);
 
     /**
-     * Scrolls the least distance that shows a row.
+     * Scrolls the least distance that shows a row. The scroll happens at the next layout, once the control knows its
+     * size; {@link #scrollY()} reports the new offset after it.
      *
      * @param index the row's index, as for {@link SingleSelection}
      * @return this control
      * @throws IndexOutOfBoundsException if the index is not a row's index
      */
     S scrollToIndex(int index);
+
+    /**
+     * Returns whether a drag that carries a transfer scrolls the rows while it holds the pointer near the top or
+     * bottom of the control's viewport, as a {@code ScrollPanel} does: within
+     * {@value org.inspirenxe.strata.api.layout.ScrollPanel#DRAG_SCROLL_ZONE} units of the edge, faster the nearer
+     * the pointer, up to a row a frame.
+     *
+     * @return true by default
+     */
+    boolean isDragScroll();
+
+    /**
+     * Sets whether a drag that carries a transfer scrolls the rows near the top and bottom of the viewport.
+     *
+     * @param dragScroll false to leave the rows still during drags
+     * @return this control
+     */
+    S setDragScroll(boolean dragScroll);
 
     /**
      * Returns whether a press on the selected row deselects it.

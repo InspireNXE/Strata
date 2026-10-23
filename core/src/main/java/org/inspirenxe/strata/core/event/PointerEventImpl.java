@@ -27,6 +27,8 @@ public class PointerEventImpl extends EventImpl implements PointerEvent {
     private final float x;
     private final float y;
     private final Modifiers modifiers;
+    private int pointerId;
+    private float pressure = 1f;
 
     /**
      * Creates the event.
@@ -56,5 +58,27 @@ public class PointerEventImpl extends EventImpl implements PointerEvent {
     @Override
     public final Modifiers modifiers() {
         return this.modifiers;
+    }
+
+    @Override
+    public final int pointerId() {
+        return this.pointerId;
+    }
+
+    @Override
+    public final float pressure() {
+        return this.pressure;
+    }
+
+    /**
+     * Sets which pointer the event is about and how hard it presses. The root sets them from the input it handles;
+     * until then they are 0 and 1, the mouse's.
+     *
+     * @param pointerId which pointer
+     * @param pressure from 0 to 1
+     */
+    public final void setPointer(final int pointerId, final float pressure) {
+        this.pointerId = pointerId;
+        this.pressure = pressure;
     }
 }

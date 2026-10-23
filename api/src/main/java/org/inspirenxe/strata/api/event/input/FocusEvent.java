@@ -16,7 +16,7 @@
 package org.inspirenxe.strata.api.event.input;
 
 import org.inspirenxe.strata.api.component.Component;
-import org.inspirenxe.strata.api.event.Cancelable;
+import org.inspirenxe.strata.api.event.SnapshotEvent;
 
 import java.util.Optional;
 
@@ -29,7 +29,7 @@ import java.util.Optional;
  *
  * <p>Only Strata creates events. Do not implement this interface.</p>
  */
-public interface FocusEvent extends Cancelable {
+public interface FocusEvent extends SnapshotEvent {
 
     /**
      * Returns the other side of the move.

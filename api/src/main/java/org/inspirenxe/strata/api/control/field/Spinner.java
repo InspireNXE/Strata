@@ -16,30 +16,41 @@
 package org.inspirenxe.strata.api.control.field;
 
 import org.inspirenxe.strata.api.component.Component;
+import org.inspirenxe.strata.api.component.Focusable;
+import org.inspirenxe.strata.api.component.HasContextMenu;
 import org.inspirenxe.strata.api.component.HasCursor;
 import org.inspirenxe.strata.api.component.HasTooltip;
 import org.inspirenxe.strata.api.control.attribute.value.Ranged;
 import org.inspirenxe.strata.api.control.attribute.value.Stepped;
+import org.inspirenxe.strata.api.control.attribute.value.Validatable;
 import org.inspirenxe.strata.api.control.button.Button;
+import org.inspirenxe.strata.api.layout.HorizontalAlignment;
 
 /**
  * A number in a text field, with buttons to step it up and down.
  *
- * <p>The field is a {@link TextBox} and takes its look and editing from it. It accepts only text that could become a
- * number in the range: digits, one decimal point when {@linkplain #decimals() decimals} are allowed, and a leading
- * minus sign when the minimum is negative. Typed text becomes the value on Enter and when the field loses focus; text
- * that is not a number goes back to the current value. Up and Down step by one step while the field has focus, and
- * Page Up and Page Down by ten; held keys repeat, and with Control or Alt held they do nothing. The wheel
- * steps once for each vertical scroll while the pointer is over the spinner, up when it turns away from the user. The
- * buttons sit at the right edge, {@value #BUTTON_WIDTH} units wide, the upper half stepping up and the lower half
- * down; a left press on one steps once, and holding it does not repeat. The spinner consumes the keys, scrolls and
- * presses it acts on.</p>
+ * <p>The field is a {@link TextBox} and takes its look and editing from it. It shows the value as the language of the
+ * platform's translator writes numbers, with its digits, decimal separator and minus sign and no grouping, as the
+ * number {@linkplain org.inspirenxe.strata.api.state.Converters converters} do, so a German user sees and types "2,5".
+ * It accepts only digits, the language's or ASCII ones, one decimal separator followed by no more digits than the
+ * {@linkplain #decimals() decimals} allow, and a leading minus sign when the minimum is negative. A period is a decimal
+ * separator in every language, since numeric keypads type one. Typed text becomes the value on Enter and when the field
+ * loses focus, clamped to the range; text that is not a number goes back to the current value. Up and Down step by one
+ * step while the field has focus, and Page Up and Page Down by ten; held keys repeat, and with Control or Alt held they
+ * do nothing. The wheel steps once for each notch while the pointer is over the spinner, up when it turns away from
+ * the user; a trackpad's {@linkplain org.inspirenxe.strata.api.input.ScrollKind#PRECISE precise} scrolls add up, and
+ * it steps once for each notch's worth, 10 units at a scroll panel's default rate. The buttons sit at the right edge, or the left edge while the spinner runs right to left, {@value
+ * #BUTTON_WIDTH} units wide, the upper half stepping up and the lower half down; a left press on one steps once, and
+ * holding it steps again on the key repeat timing until the button is released. The spinner consumes the keys, scrolls and presses it acts on.</p>
  *
  * <p>The field is a private part of the spinner: its {@link TextBox} events reach the spinner but nothing above it,
  * so handlers outside see only {@link #CHANGE} and {@link #CHANGED}.</p>
  *
- * <p>Every value is clamped to the range and rounded to the number of decimals. A new spinner counts whole numbers
- * from 0 to 100 in steps of 1, starting at 0, and asks for {@value #DEFAULT_WIDTH} units of width.</p>
+ * <p>Every value is clamped to the range and rounded to the number of decimals. A step adds the step to the value as
+ * it is, so the value need not be a multiple of the step. When rounding would undo a step, as with a step of 0.25 and
+ * no decimals, the value moves by one unit of the last decimal instead, so a step always moves the value while the
+ * range leaves room. A new spinner counts whole numbers from 0 to 100 in steps of 1, starting at 0, and asks for
+ * {@value #DEFAULT_WIDTH} units of width.</p>
  *
  * <h2>Events</h2>
  * <ul>
@@ -71,10 +82,16 @@ import org.inspirenxe.strata.api.control.button.Button;
  *         .onEvent(Spinner.CHANGED, event -> this.amount = event.value().intValue());
  * }</pre>
  *
+ * <p>The spinner takes focus through its field: {@link #requestFocus()} and a press on a step button focus the
+ * field, {@link #isFocused()} is true while the field has focus, and {@link Focusable#FOCUS_GAINED} and
+ * {@link Focusable#FOCUS_LOST} fire on the spinner after they fire on the field. It is one tab stop, at the field,
+ * with the spinner's tab index.</p>
+ *
  * <p>Get one from {@link org.inspirenxe.strata.api.ComponentFactory#spinner()}. Do not implement this
  * interface.</p>
  */
-public interface Spinner extends Component<Spinner>, HasCursor<Spinner>, HasTooltip<Spinner>, Stepped<Spinner> {
+public interface Spinner extends Component<Spinner>, Focusable<Spinner>, HasCursor<Spinner>, HasTooltip<Spinner>,
+        HasContextMenu<Spinner>, Stepped<Spinner>, Validatable<Spinner> {
     /**
      * Style key for each step button (paint, optional).
      */
@@ -146,7 +163,7 @@ public interface Spinner extends Component<Spinner>, HasCursor<Spinner>, HasTool
     double step();
 
     /**
-     * Sets how far one step moves the value.
+     * Sets how far one step moves the value. The value stays as it is; the spinner does not round it to the step.
      *
      * @param step the step
      * @return this spinner
@@ -170,6 +187,23 @@ public interface Spinner extends Component<Spinner>, HasCursor<Spinner>, HasTool
      * @throws IllegalArgumentException if {@code decimals} is outside 0 to 9
      */
     Spinner setDecimals(int decimals);
+
+    /**
+     * Returns how the value's text sits in the field left of the step buttons.
+     *
+     * @return the alignment; {@link HorizontalAlignment#LEFT} by default
+     */
+    HorizontalAlignment textAlignment();
+
+    /**
+     * Sets how the value's text sits in the field left of the step buttons, as on a text box, so a column of
+     * spinners can line their numbers up at the right. {@link HorizontalAlignment#STRETCH} counts as
+     * {@link HorizontalAlignment#LEFT}.
+     *
+     * @param alignment the alignment
+     * @return this spinner
+     */
+    Spinner setTextAlignment(HorizontalAlignment alignment);
 
     /**
      * Raises the value by one step, as the up button does, without firing {@link #CHANGE}. Does nothing while

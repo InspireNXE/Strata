@@ -17,18 +17,23 @@ package org.inspirenxe.strata.api.component;
 
 import org.inspirenxe.strata.api.event.EventTarget;
 import org.inspirenxe.strata.api.event.EventType;
+import org.inspirenxe.strata.api.event.Subscription;
+import org.inspirenxe.strata.api.event.component.LifecycleEvent;
 import org.inspirenxe.strata.api.event.component.MeasureEvent;
 import org.inspirenxe.strata.api.event.component.PaintEvent;
 import org.inspirenxe.strata.api.geometry.Insets;
 import org.inspirenxe.strata.api.geometry.Rect;
 import org.inspirenxe.strata.api.layout.Anchor;
+import org.inspirenxe.strata.api.layout.FlowDirection;
 import org.inspirenxe.strata.api.layout.HorizontalAlignment;
 import org.inspirenxe.strata.api.layout.VerticalAlignment;
 import org.inspirenxe.strata.api.state.PropertyKey;
 import org.inspirenxe.strata.api.state.Source;
 import org.inspirenxe.strata.api.state.State;
 
+import java.util.Objects;
 import java.util.Optional;
+import java.util.function.Supplier;
 
 /**
  * An element of a Strata UI tree.
@@ -76,11 +81,16 @@ import java.util.Optional;
  * has them, such as {@link #ENABLED} here.</p>
  *
  * <h2>Threading</h2>
- * <p>Call components only from the engine's UI thread.</p>
+ * <p>Call components only from the {@linkplain org.inspirenxe.strata.api.UiThread UI thread}. While a component is
+ * attached to a host, adding, moving or removing children, any setter that lays it out, {@link #onEvent},
+ * {@link #subscribe} and {@link #bind} throw {@link IllegalStateException} on another thread. A tree may be built on
+ * another thread and added on the UI thread. Hand work from other threads over with
+ * {@link org.inspirenxe.strata.api.UiThread#execute}, or set a {@link State} the component is bound to, which any
+ * thread may do.</p>
  *
  * @param <T> the type callers see the component as, so setters can return it for chaining
  */
-public interface Component<T extends Component<T>> extends EventTarget<T> {
+public interface Component<T extends Component<T>> extends EventTarget<T>, Enableable<T> {
 
     /**
      * Fired before the component draws itself. Canceling it skips the component's own drawing; its
@@ -100,6 +110,24 @@ public interface Component<T extends Component<T>> extends EventTarget<T> {
     EventType<MeasureEvent> MEASURED = EventType.direct("measured", MeasureEvent.class);
 
     /**
+     * Fired when the component joins a tree a host is showing: when it is added to an attached container or
+     * composite, when it is in a screen's tree as the screen opens or is rebuilt, and when it is in an overlay's
+     * content as the overlay opens. Every component of the subtree that joins hears it, each parent before its
+     * children, once the subtree's {@linkplain #bind bindings} have set their properties. A kept component that joins
+     * again, such as a page a navigation view shows again, hears it again. See {@link LifecycleEvent}.
+     */
+    EventType<LifecycleEvent> ATTACHED = EventType.direct("attached", LifecycleEvent.class);
+
+    /**
+     * Fired when the component leaves a tree a host is showing: when it or an ancestor is removed from an attached
+     * container or composite, as an expander does with its content when it collapses and a navigation view with the
+     * page it stops showing, when its overlay closes, and when its screen closes or is rebuilt. Every component of the
+     * subtree that leaves hears it, children before their parent, while it is still attached and before its bindings
+     * stop. See {@link LifecycleEvent}.
+     */
+    EventType<LifecycleEvent> DETACHED = EventType.direct("detached", LifecycleEvent.class);
+
+    /**
      * Whether the component is enabled, as {@link #isEnabled()} and {@link #setEnabled} say. Binds one way.
      */
     PropertyKey<Component<?>, Boolean> ENABLED = PropertyKey.of("component.enabled", Component::isEnabled,
@@ -111,6 +139,32 @@ public interface Component<T extends Component<T>> extends EventTarget<T> {
     PropertyKey<Component<?>, Boolean> VISIBLE = PropertyKey.of("component.visible", Component::isVisible,
             Component::setVisible);
 
+    /**
+     * The component's opacity, as {@link #opacity()} and {@link #setOpacity} say. Binds one way, and is what a fade
+     * animates: {@code ui.animator().animate(card, Component.OPACITY, 0f, 200, Easing.EASE_IN, Interpolator.FLOAT)}.
+     */
+    PropertyKey<Component<?>, Float> OPACITY = PropertyKey.of("component.opacity", Component::opacity,
+            Component::setOpacity);
+
+    // Identity
+
+    /**
+     * Returns the id set with {@link #setId}.
+     *
+     * @return the id, or empty if none is set; empty by default
+     */
+    Optional<String> id();
+
+    /**
+     * Gives the component an id, a free string that names it for code that does not hold a reference to it, such as
+     * a test that finds the component to click. Strata neither requires an id nor checks that ids are unique, and
+     * there is no lookup by id in this API: a screen keeps references to the components it needs.
+     *
+     * @param id the id, or {@code null} to remove it
+     * @return this component
+     */
+    T setId(String id);
+
     // Tree
 
     /**
@@ -119,10 +173,10 @@ public interface Component<T extends Component<T>> extends EventTarget<T> {
      * page. Code that needs something from its parent should ask for that capability, an attribute or
      * {@code Container}, with {@link #parent(Class)} or {@link #ancestor(Class)}, and not assume the parent's type.
      *
-     * @return the parent, or {@code null} for a screen's root component, an overlay's content or a component not
-     *     added anywhere
+     * @return the parent, or empty for a screen's root component, an overlay's content or a component not added
+     *     anywhere
      */
-    Component<?> parent();
+    Optional<Component<?>> parent();
 
     /**
      * Returns the parent if it is an instance of the given type. The type is usually a raw interface, such as
@@ -149,11 +203,60 @@ public interface Component<T extends Component<T>> extends EventTarget<T> {
 
     /**
      * Returns whether the component is in a tree that a host is showing. Hover, focus and press state only change
-     * while attached, and the theme is only applied once attached.
+     * while attached, and the theme is only applied once attached. {@link #ATTACHED} and {@link #DETACHED} say when
+     * this changes.
      *
      * @return true while attached to a host
      */
     boolean isAttached();
+
+    /**
+     * Runs something for as long as the component is attached, every time it is attached. The supplier is called
+     * when the component is attached, and at once if it is attached now, and the subscription it returns is removed
+     * when the component is detached. A component that is attached again calls the supplier again, so
+     *
+     * <pre>{@code
+     * chart.whileAttached(() -> prices.subscribe(chart::add));
+     * }</pre>
+     *
+     * <p>listens to a feed whenever the chart shows and stops whenever it goes, however often that happens. Each call
+     * adds one more thing to run, and nothing takes it away again; it costs nothing while the component is detached.
+     * The supplier runs from an {@link #ATTACHED} handler and the subscription is removed from a {@link #DETACHED}
+     * handler, both at the default priority.</p>
+     *
+     * @param start starts what to run and returns how to stop it; must not return null
+     * @return this component
+     * @throws NullPointerException if {@code start} returns null
+     */
+    default T whileAttached(final Supplier<? extends Subscription> start) {
+        Objects.requireNonNull(start, "start");
+        final Subscription[] running = new Subscription[1];
+        if (this.isAttached()) {
+            running[0] = Objects.requireNonNull(start.get(), "start returned null");
+        }
+        this.onEvent(DETACHED, event -> {
+            final Subscription stop = running[0];
+            running[0] = null;
+            if (stop != null) {
+                stop.unsubscribe();
+            }
+        });
+        return this.onEvent(ATTACHED, event -> {
+            if (running[0] == null) {
+                running[0] = Objects.requireNonNull(start.get(), "start returned null");
+            }
+        });
+    }
+
+    /**
+     * Returns whether this component or one of its descendants has keyboard focus, such as a form section whose
+     * field is being typed in. Containers and panels answer too, though they never take focus themselves. Handle
+     * {@link org.inspirenxe.strata.api.event.input.InputEvents#FOCUS_ENTER} and
+     * {@link org.inspirenxe.strata.api.event.input.InputEvents#FOCUS_EXIT} to hear when this changes.
+     *
+     * @return true while focus is on this component or inside it; false while detached
+     */
+    boolean isFocusWithin();
 
     // State
 
@@ -178,17 +281,54 @@ public interface Component<T extends Component<T>> extends EventTarget<T> {
      *
      * @return true unless disabled with {@code setEnabled(false)}
      */
+    @Override
     boolean isEnabled();
 
     /**
      * Enables or disables the component. A disabled component is still drawn (built-in controls draw a disabled
-     * look) and still takes space, but it receives no pointer or keyboard input and cannot be focused. Disabling
-     * the focused component, or one of its ancestors, clears focus.
+     * look) and still takes space, but it gets no pointer or keyboard events and cannot be focused, and neither can
+     * anything inside it. It still stops the pointer: a press or click on it, or on anything inside it, goes no
+     * further, so the container behind it does not act either, and its tooltip shows while the pointer rests on it.
+     * A scroll over it goes to its nearest enabled ancestor. Disabling the focused component, or one of its
+     * ancestors, clears focus.
      *
      * @param enabled false to disable
      * @return this component
      */
+    @Override
     T setEnabled(boolean enabled);
+
+    /**
+     * Returns whether the component and every container or composite it is inside are enabled, so that it can take
+     * input. An overlay's content counts only the components inside the overlay.
+     *
+     * @return true unless this component or one of its ancestors is disabled
+     */
+    default boolean isEffectivelyEnabled() {
+        for (Optional<Component<?>> component = Optional.of(this); component.isPresent();
+             component = component.get().parent()) {
+            if (!component.get().isEnabled()) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /**
+     * Returns whether the component and every container or composite it is inside are visible. It says nothing of
+     * whether the tree is shown at all; see {@link #isAttached()}.
+     *
+     * @return true unless this component or one of its ancestors is hidden
+     */
+    default boolean isEffectivelyVisible() {
+        for (Optional<Component<?>> component = Optional.of(this); component.isPresent();
+             component = component.get().parent()) {
+            if (!component.get().isVisible()) {
+                return false;
+            }
+        }
+        return true;
+    }
 
     // Layout
 
@@ -272,20 +412,24 @@ public interface Component<T extends Component<T>> extends EventTarget<T> {
 
     /**
      * Sets the smallest size the component may take. Applies to measured sizes, fixed sizes and stretching alike.
+     * Where a minimum is larger than the maximum, the minimum wins.
      *
-     * @param minWidth the minimum width
-     * @param minHeight the minimum height
+     * @param minWidth the minimum width; 0 or more and finite
+     * @param minHeight the minimum height; 0 or more and finite
      * @return this component
+     * @throws IllegalArgumentException if either value is negative, infinite or NaN
      */
     T setMinSize(float minWidth, float minHeight);
 
     /**
      * Sets the largest size the component may take. Applies to measured sizes, fixed sizes and stretching alike.
      * The maximum also limits the space offered to the component when it is measured, so text wraps within it.
+     * Where the minimum is larger than a maximum, the minimum wins.
      *
      * @param maxWidth the maximum width; {@link Float#POSITIVE_INFINITY} for no limit
      * @param maxHeight the maximum height; {@link Float#POSITIVE_INFINITY} for no limit
      * @return this component
+     * @throws IllegalArgumentException if either value is negative or NaN
      */
     T setMaxSize(float maxWidth, float maxHeight);
 
@@ -293,8 +437,9 @@ public interface Component<T extends Component<T>> extends EventTarget<T> {
      * Fixes the width, replacing the measured width and overriding {@code STRETCH}. The minimum and maximum still
      * apply.
      *
-     * @param width the width, or {@link Float#NaN} to go back to the measured width
+     * @param width the width, 0 or more and finite, or {@link Float#NaN} to go back to the measured width
      * @return this component
+     * @throws IllegalArgumentException if the width is negative or infinite
      */
     T setWidth(float width);
 
@@ -302,8 +447,9 @@ public interface Component<T extends Component<T>> extends EventTarget<T> {
      * Fixes the height, replacing the measured height and overriding {@code STRETCH}. The minimum and maximum still
      * apply.
      *
-     * @param height the height, or {@link Float#NaN} to go back to the measured height
+     * @param height the height, 0 or more and finite, or {@link Float#NaN} to go back to the measured height
      * @return this component
+     * @throws IllegalArgumentException if the height is negative or infinite
      */
     T setHeight(float height);
 
@@ -313,6 +459,7 @@ public interface Component<T extends Component<T>> extends EventTarget<T> {
      * @param width the width, or {@link Float#NaN} for the measured width
      * @param height the height, or {@link Float#NaN} for the measured height
      * @return this component
+     * @throws IllegalArgumentException if either value is negative or infinite
      */
     default T setSize(final float width, final float height) {
         this.setWidth(width);
@@ -353,6 +500,35 @@ public interface Component<T extends Component<T>> extends EventTarget<T> {
     }
 
     /**
+     * Returns the direction the component's content runs in: the one set on it, or else its parent's, up to the top
+     * of its tree. The top of a screen's tree, and an overlay's content, follow the screen's root when a direction is
+     * set on it, and otherwise the language of the platform's translator, right to left for Arabic, Hebrew and the
+     * other languages written that way. A component in no tree follows the language.
+     *
+     * @return the direction
+     */
+    FlowDirection flowDirection();
+
+    /**
+     * Sets the direction the component's content runs in, for it and everything inside it that sets none.
+     *
+     * <p>A container or composite whose direction is right to left arranges its children as it would left to right
+     * and then mirrors them inside its bounds: each child's left edge moves to where its right edge was, measured
+     * from the other side. Margins, padding, {@link HorizontalAlignment#LEFT} and {@link HorizontalAlignment#RIGHT}
+     * therefore mean the start and the end, and the positions of an
+     * {@link org.inspirenxe.strata.api.layout.AbsolutePanel} are mirrored too. The mirror moves the real bounds, so
+     * {@link #bounds()}, the pointer and drawing stay in the host's coordinates. Text, sprites and visuals draw
+     * unmirrored; the controls whose parts or keys have a direction, such as a slider's fill or a tree's arrows,
+     * follow it themselves.</p>
+     *
+     * <p>A change lays out the component and everything inside it again.</p>
+     *
+     * @param direction the direction, or null to follow the parent's
+     * @return this component
+     */
+    T setFlowDirection(FlowDirection direction);
+
+    /**
      * Returns where the component sits, in the host's coordinates, as of the last layout. Before the first layout
      * this is {@link Rect#ZERO}. A hidden component has an empty rectangle.
      *
@@ -373,6 +549,28 @@ public interface Component<T extends Component<T>> extends EventTarget<T> {
      * @return the desired height
      */
     float desiredHeight();
+
+    // Opacity
+
+    /**
+     * Returns how opaque the component is drawn.
+     *
+     * @return from 0, not drawn, to 1, opaque; 1 by default
+     */
+    float opacity();
+
+    /**
+     * Sets how opaque the component and everything inside it are drawn. Opacities multiply down the tree, so a
+     * child at 0.5 inside a parent at 0.5 draws at 0.25. It changes drawing only: a component at 0 still takes up
+     * its room, takes the pointer and keeps focus. A component at 0 is not drawn at all; one between 0 and 1 is
+     * drawn through the engine's canvas, and draws opaque on an engine that cannot fade. A change redraws but lays
+     * nothing out again.
+     *
+     * @param opacity from 0 to 1
+     * @return this component
+     * @throws IllegalArgumentException if {@code opacity} is NaN or outside 0 to 1
+     */
+    T setOpacity(float opacity);
 
     // Drawing order
 
@@ -425,7 +623,7 @@ public interface Component<T extends Component<T>> extends EventTarget<T> {
      * <p>A binding lives as long as the component holds it. It follows its sources only while the component is
      * attached: it starts on attach and lets go of every state on detach, so a closed screen leaks nothing and there is
      * nothing to unsubscribe. A component holds one binding per {@linkplain PropertyKey#name() key name}; binding the
-     * same key again replaces the earlier binding. On attach a component sets its bound properties in the order they
+     * same key again replaces the earlier binding, and {@link #unbind} removes it. On attach a component sets its bound properties in the order they
      * were first bound, so bind a list's items before its selection.</p>
      *
      * @param <V> the type of the property's value
@@ -434,6 +632,24 @@ public interface Component<T extends Component<T>> extends EventTarget<T> {
      * @return this component
      */
     <V> T bind(PropertyKey<? super T, V> key, Source<V> source);
+
+    /**
+     * Removes the binding of a property, so it stops following its source and lets go of every state it read. The
+     * property keeps the value it has. Bindings are matched by {@linkplain PropertyKey#name() key name}, so a
+     * {@linkplain PropertyKey#convert converted} key removes a binding of the plain key, and the other way round.
+     *
+     * <pre>{@code
+     * if (custom) {
+     *     volume.unbind(Ranged.VALUE);                      // the slider keeps the default it showed
+     * } else {
+     *     volume.bind(Ranged.VALUE, defaults.volume);
+     * }
+     * }</pre>
+     *
+     * @param key the property
+     * @return this component; nothing changes when the property is not bound
+     */
+    T unbind(PropertyKey<? super T, ?> key);
 
     // Events
 }

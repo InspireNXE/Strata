@@ -15,10 +15,14 @@
  */
 package org.inspirenxe.strata.api.control.button;
 
+import org.inspirenxe.strata.api.command.Command;
 import org.inspirenxe.strata.api.component.Component;
 import org.inspirenxe.strata.api.component.Focusable;
+import org.inspirenxe.strata.api.component.HasContextMenu;
 import org.inspirenxe.strata.api.component.HasCursor;
 import org.inspirenxe.strata.api.component.HasTooltip;
+import org.inspirenxe.strata.api.control.attribute.command.HasCommand;
+import org.inspirenxe.strata.api.control.attribute.text.HasIcon;
 import org.inspirenxe.strata.api.control.attribute.text.HasText;
 import org.inspirenxe.strata.api.event.EventType;
 import org.inspirenxe.strata.api.event.control.ControlEvent;
@@ -26,7 +30,6 @@ import org.inspirenxe.strata.api.event.control.RequestEvent;
 import org.inspirenxe.strata.api.geometry.Insets;
 import org.inspirenxe.strata.api.text.Text;
 import org.inspirenxe.strata.api.theme.SpriteId;
-import org.inspirenxe.strata.api.visual.Visual;
 
 import java.util.Objects;
 
@@ -34,15 +37,18 @@ import java.util.Objects;
  * A push button with a text caption, an icon, or both.
  *
  * <p>The button is pressed when it is left-clicked, or when it has focus and Enter or Space is pressed (not
- * repeated). It consumes those inputs. Each press fires {@link #PRESS}, then {@link #PRESSED} unless a handler
- * canceled the request. A disabled button does neither and draws its disabled look.</p>
+ * repeated). On a platform whose conventions say buttons act on the press, the left press presses it instead of the
+ * click. It consumes those inputs. Each press fires {@link #PRESS}, then {@link #PRESSED} unless a handler
+ * canceled the request, and then runs the button's {@linkplain #setCommand command} if it has one. A disabled button
+ * does none of it and draws its disabled look.</p>
  *
  * <p>It is focusable and tabbable, shows the hand cursor, and has a minimum width of 20. Its desired size is the
  * caption plus the text padding (8 units left and right, 5 top and bottom by default), and at least 20 tall; a
  * smaller height set on it applies. The caption is centered in whatever size the button ends up.</p>
  *
  * <p>An {@linkplain #setIcon(SpriteId) icon} is drawn before the caption, 4 units from it, and the two are centered
- * together. A button with an icon and no caption is meant to be square, so it pads by 2 units on every side and a
+ * together; {@link #setIconPlacement} puts it after the caption, above it or below it instead. Stacked, the button
+ * is as wide as the wider of the two and as tall as both and the gap. A button with an icon and no caption is meant to be square, so it pads by 2 units on every side and a
  * 16 by 16 icon gives 20 by 20. A disabled button draws its icon in half-bright gray.</p>
  *
  * <p>{@linkplain #setLink A link} has no frame: it draws only its caption, which underlines while hovered or
@@ -56,6 +62,8 @@ import java.util.Objects;
  *     <li>{@value #STYLE_DISABLED} (paint, required): the face when disabled.</li>
  *     <li>{@value #STYLE_FOCUS} (paint, optional): a one-unit ring drawn inside the edge while focused. No ring if
  *     missing.</li>
+ *     <li>{@value #STYLE_DEFAULT} (paint, optional): the face of a default button when idle, in place of
+ *     {@value #STYLE_NORMAL}. Falls back to {@value #STYLE_NORMAL}.</li>
  *     <li>{@value #STYLE_TEXT} (text style, optional): the caption. Falls back to the default text style.</li>
  *     <li>{@value #STYLE_TEXT_DISABLED} (text style, optional): the caption when disabled. Falls back to
  *     {@value #STYLE_TEXT}.</li>
@@ -74,11 +82,18 @@ import java.util.Objects;
  * Button save = factory.button("Save").onEvent(Button.PRESSED, event -> this.save());
  * }</pre>
  *
+ * <p>An underscore before a letter in the caption's resolved text marks its mnemonic, as in {@code "_Save"}, so each
+ * translation places its own; a doubled underscore stands for one, and the markers are never drawn. While Alt is held,
+ * the letter is underlined, and Alt with the letter presses the button, when no component closer to the top layer has
+ * the same letter. When several components in that layer share the letter, each press moves focus to the next of them
+ * without acting. A platform whose conventions turn mnemonics off still takes the markers out, and Alt does
+ * nothing.</p>
+ *
  * <p>Get one from {@link org.inspirenxe.strata.api.ComponentFactory#button(String)}. Do not implement this
  * interface.</p>
  */
 public interface Button extends Component<Button>, Focusable<Button>, HasCursor<Button>, HasTooltip<Button>,
-        HasText<Button> {
+        HasContextMenu<Button>, HasText<Button>, HasIcon<Button>, HasCommand<Command.Action, Button> {
     /**
      * Style key for the idle face (paint, required).
      */
@@ -99,6 +114,10 @@ public interface Button extends Component<Button>, Focusable<Button>, HasCursor<
      * Style key for the focus ring (paint, optional).
      */
     String STYLE_FOCUS = "button.focus";
+    /**
+     * Style key for the idle face of a {@linkplain #setDefault default button} (paint, optional).
+     */
+    String STYLE_DEFAULT = "button.default";
     /**
      * Style key for the caption (text style, optional).
      */
@@ -176,12 +195,19 @@ public interface Button extends Component<Button>, Focusable<Button>, HasCursor<
      * Sets the space between the caption and the button's edges, which with the caption gives the desired size.
      * Padding set here stays through theme changes.
      *
-     * @param padding the padding, or {@code null} to go back to the default: the theme's {@value #STYLE_PADDING}
-     *     (8 left and right and 5 top and bottom without it), its {@value #STYLE_PADDING_ICON} (2 on every side)
-     *     for a button with an icon and no caption, and none for a link
+     * @param padding the padding; {@link #clearTextPadding()} goes back to the default
      * @return this button
      */
     Button setTextPadding(Insets padding);
+
+    /**
+     * Goes back to the default text padding: the theme's {@value #STYLE_PADDING} (8 left and right and 5 top and
+     * bottom without it), its {@value #STYLE_PADDING_ICON} (2 on every side) for a button with an icon and no
+     * caption, and none for a link. A new layout runs.
+     *
+     * @return this button
+     */
+    Button clearTextPadding();
 
     /**
      * Sets the same text padding on all four sides.
@@ -218,67 +244,19 @@ public interface Button extends Component<Button>, Focusable<Button>, HasCursor<
     }
 
     /**
-     * Returns the icon sprite.
+     * Returns where the icon sits beside the caption.
      *
-     * @return the sprite, or null if the icon is a visual or there is none
+     * @return the placement; {@link IconPlacement#START} for a new button
      */
-    SpriteId iconSprite();
+    IconPlacement iconPlacement();
 
     /**
-     * Returns the icon visual.
+     * Sets where the icon sits beside the caption: before it, after it, above it or below it. A new layout runs.
      *
-     * @return the visual, or null if the icon is a sprite or there is none
-     */
-    Visual iconVisual();
-
-    /**
-     * Shows a sprite before the caption, replacing any icon. The size stays what it was, 16 by 16 by default. A new
-     * layout runs.
-     *
-     * @param sprite the sprite; see {@link SpriteId} for where engines look for it
+     * @param placement the placement
      * @return this button
      */
-    Button setIcon(SpriteId sprite);
-
-    /**
-     * Shows a visual before the caption, replacing any icon, at the visual's natural size. A new layout runs.
-     *
-     * @param visual the visual
-     * @return this button
-     */
-    Button setIcon(Visual visual);
-
-    /**
-     * Removes the icon. A new layout runs.
-     *
-     * @return this button
-     */
-    Button clearIcon();
-
-    /**
-     * Returns the width the icon is drawn at.
-     *
-     * @return the width in UI units; 16 by default
-     */
-    float iconWidth();
-
-    /**
-     * Returns the height the icon is drawn at.
-     *
-     * @return the height in UI units; 16 by default
-     */
-    float iconHeight();
-
-    /**
-     * Sets the size the icon is drawn at. Strata cannot ask an engine for a sprite's size, so the caller gives it.
-     * A new layout runs.
-     *
-     * @param width the width in UI units, finite and not negative
-     * @param height the height in UI units, finite and not negative
-     * @return this button
-     * @throws IllegalArgumentException if either size is negative, infinite or not a number
-     */
-    Button setIconSize(float width, float height);
+    Button setIconPlacement(IconPlacement placement);
 
     /**
      * Returns whether the button is a link.
@@ -291,7 +269,8 @@ public interface Button extends Component<Button>, Focusable<Button>, HasCursor<
      * Makes the button a link or a framed button again. A link draws no face and no focus ring, only its caption in
      * the link text styles, and the caption underlines while the link is hovered or focused. It has no minimum size
      * and, unless {@link #setTextPadding} was called, no padding; turning the link off restores the minimum width of
-     * 20 and the desired height of at least 20. A new layout runs.
+     * 20 and the desired height of at least 20. A minimum size set with {@code setMinSize} is kept either way, before
+     * or after this call. A new layout runs.
      *
      * @param link true for a link
      * @return this button
@@ -299,8 +278,48 @@ public interface Button extends Component<Button>, Focusable<Button>, HasCursor<
     Button setLink(boolean link);
 
     /**
-     * Presses the button as if it had been clicked, firing {@link #PRESSED} but not {@link #PRESS}. Does nothing
-     * while the button is disabled.
+     * Returns whether the button is its scope's default button.
+     *
+     * @return true after {@code setDefault(true)}; false for a new button
+     */
+    boolean isDefault();
+
+    /**
+     * Makes the button the default button of its scope, or an ordinary one again. A default button is pressed for
+     * the user, with {@link #PRESS} first, by an Enter press with no modifiers that nothing on the focus path
+     * consumed, while focus is inside the nearest window that holds the button, or inside the screen's content or the
+     * overlay that holds it when no window does. It must be visible and enabled, with every ancestor. A text box
+     * consumes Enter only while a handler for its submit events is on its path, so the fields of a form submit
+     * through the default button without code. When a scope holds several default buttons, the first in tree order
+     * is pressed. A default button draws the {@value #STYLE_DEFAULT} face when idle.
+     *
+     * @param isDefault true to make it the default button
+     * @return this button
+     */
+    Button setDefault(boolean isDefault);
+
+    /**
+     * Returns whether the button is its scope's cancel button.
+     *
+     * @return true after {@code setCancel(true)}; false for a new button
+     */
+    boolean isCancel();
+
+    /**
+     * Makes the button the cancel button of its scope, or an ordinary one again. A cancel button is pressed for the
+     * user by an Escape press with no modifiers that nothing on the focus path consumed, in the same scope as a
+     * {@linkplain #setDefault default button}, before the host closes the top overlay with it. A window that would
+     * close on Escape presses its cancel button instead.
+     *
+     * @param cancel true to make it the cancel button
+     * @return this button
+     */
+    Button setCancel(boolean cancel);
+
+    /**
+     * Presses the button as if it had been clicked, firing {@link #PRESSED} but not {@link #PRESS}, then running its
+     * {@linkplain #command() command} if it has one and the command is enabled. Does nothing while the button is
+     * disabled.
      */
     void press();
 

@@ -24,9 +24,9 @@ import java.util.Collection;
 import java.util.List;
 
 /**
- * A control that can select several entries, such as a list, a table or a tree. In {@link SelectionMode#SINGLE} mode,
- * the default, it selects at most one, as a {@link SingleSelection} does. In {@link SelectionMode#MULTIPLE} mode it
- * holds a set of selected entries beside the {@linkplain Selection current} one.
+ * A control that can select several entries, such as a list, a table, a tree or a grid. In {@link SelectionMode#SINGLE}
+ * mode, the default, it selects at most one, as a {@link SingleSelection} does. In {@link SelectionMode#MULTIPLE} mode
+ * it holds a set of selected entries beside the {@linkplain Selection current} one.
  *
  * <p>Indexes are the same as {@link Selection}'s. Every change of the set fires {@link #SELECTED_MANY}, and then
  * {@link Selection#SELECTED} if the current entry moved too. In {@code MULTIPLE} mode the user's changes ask

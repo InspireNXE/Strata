@@ -15,6 +15,7 @@
  */
 package org.inspirenxe.strata.core.control.pane;
 
+import org.inspirenxe.strata.core.layout.Flow;
 import org.inspirenxe.strata.api.ComponentFactory;
 import org.inspirenxe.strata.api.component.Component;
 import org.inspirenxe.strata.api.component.CursorKind;
@@ -56,6 +57,7 @@ import org.inspirenxe.strata.api.text.TextStyle;
 import org.inspirenxe.strata.api.theme.Paint;
 import org.inspirenxe.strata.api.theme.Theme;
 import org.inspirenxe.strata.core.control.Badge;
+import org.inspirenxe.strata.core.control.Motion;
 import org.inspirenxe.strata.core.control.Rings;
 import org.inspirenxe.strata.core.node.BuiltInComponent;
 import org.inspirenxe.strata.core.node.BuiltInComposite;
@@ -84,8 +86,9 @@ import java.util.function.Function;
  * rows of hidden children are hidden, not removed. Rows are built for every entry, since navigation panes are short,
  * and rebuilt when the entries change.</p>
  *
- * <p>An item is a line of the item text style plus the item padding's top and bottom tall. Its icon is a square one
- * line tall, and children are indented by a line and {@link #GAP}, so a child's icon lines up with its parent's text.
+ * <p>An item is a line of the item text style plus the item padding's top and bottom tall. Its icon sits in a square
+ * one line tall, at the item's icon size in the middle or scaled down to fit, and children are indented by a line and
+ * {@link #GAP}, so a child's icon lines up with its parent's text.
  * A separator is a one-unit line with {@link #SEPARATOR_SPACE} above and below. The column of icons is an item's
  * height plus the pane padding's sides wide, and the bar of {@code MINIMAL} an item's height plus the pane padding's
  * top and bottom tall.</p>
@@ -96,6 +99,10 @@ import java.util.function.Function;
  * {@link Root#popupIn}, and its area follows the view's bounds through {@link Root#setPopupArea}. While it is open,
  * the pane is out of the view's children and put back first when it closes, so the tab order stays the view, the pane
  * header and footer, then the content.</p>
+ *
+ * <p>Over the theme's {@value NavigationView#STYLE_ANIMATION} metric the pane over the content slides in from the
+ * view's left edge: a {@link Motion} moves the pane's offset from minus its area's width to 0, and the popup is drawn
+ * cut to its area until the pane comes to rest. It closes at once.</p>
  */
 public final class NavigationViewImpl extends BuiltInComposite<NavigationView> implements NavigationView {
     /**
@@ -143,6 +150,8 @@ public final class NavigationViewImpl extends BuiltInComposite<NavigationView> i
     private Overlay overlay;
     private Menu menu;
     private final Pane pane;
+    private long animationMillis;
+    private final Motion paneSlide = new Motion(this::slid);
     private final Toggle barToggle;
 
     // Theme
@@ -283,9 +292,15 @@ public final class NavigationViewImpl extends BuiltInComposite<NavigationView> i
 
     @Override
     public NavigationView addFooterItem(final NavigationEntry entry) {
+        return this.addFooterItem(this.footerEntries.size(), entry);
+    }
+
+    @Override
+    public NavigationView addFooterItem(final int index, final NavigationEntry entry) {
         final NavigationEntryImpl impl = NavigationViewImpl.entry(entry);
+        Objects.checkIndex(index, this.footerEntries.size() + 1);
         impl.setOwner(this);
-        this.footerEntries.add(impl);
+        this.footerEntries.add(index, impl);
         this.structureChanged();
         return this;
     }
@@ -295,6 +310,14 @@ public final class NavigationViewImpl extends BuiltInComposite<NavigationView> i
         if (entry instanceof final NavigationEntryImpl impl && this.footerEntries.remove(impl)) {
             impl.setOwner(null);
             this.entryRemoved(impl);
+        }
+        return this;
+    }
+
+    @Override
+    public NavigationView clearFooterItems() {
+        for (final NavigationEntryImpl entry : List.copyOf(this.footerEntries)) {
+            this.removeFooterItem(entry.asEntry());
         }
         return this;
     }
@@ -574,8 +597,9 @@ public final class NavigationViewImpl extends BuiltInComposite<NavigationView> i
         if (item == this.selected) {
             return;
         }
+        // The page is built first, so a page factory that throws leaves the selection as it was
+        this.showPage(item);
         this.selected = item;
-        this.showPage();
         final int index = this.selectedIndex();
         final int previous = this.reportedIndex;
         this.reportedIndex = index;
@@ -586,14 +610,22 @@ public final class NavigationViewImpl extends BuiltInComposite<NavigationView> i
      * Shows the selected item's page, building it the first time, or else the content.
      */
     private void showPage() {
+        this.showPage(this.selected);
+    }
+
+    /**
+     * Shows an item's page, building it the first time, or else the content. A page factory that throws, or returns
+     * a component already in a tree, changes nothing and is asked again next time.
+     */
+    private void showPage(final NavigationItemImpl item) {
         Component<?> next = this.content;
-        if (this.selected != null && this.selected.page() != null) {
-            if (this.selected.keptPage() == null) {
-                final Component<?> page = Objects.requireNonNull(this.selected.page().apply(this.ui), "page");
+        if (item != null && item.page() != null) {
+            if (item.keptPage() == null) {
+                final Component<?> page = Objects.requireNonNull(item.page().apply(this.ui), "page");
                 this.checkFree(page);
-                this.selected.setKeptPage(page);
+                item.setKeptPage(page);
             }
-            next = this.selected.keptPage();
+            next = item.keptPage();
         }
         if (next != this.shown) {
             if (this.shown != null) {
@@ -735,7 +767,7 @@ public final class NavigationViewImpl extends BuiltInComposite<NavigationView> i
         this.fill(built, item);
         this.menu = built;
         // Beside the column, level with the item
-        built.openAt(this.pane.bounds().right(), row.bounds().y());
+        built.openAt(this.isRightToLeft() ? this.pane.bounds().x() : this.pane.bounds().right(), row.bounds().y());
     }
 
     private void fill(final Menu target, final NavigationItemImpl parent) {
@@ -861,8 +893,14 @@ public final class NavigationViewImpl extends BuiltInComposite<NavigationView> i
         this.removeChild(this.pane);
         this.paneOpen = true;
         this.syncLook();
-        this.overlay = root.popupIn(this.pane, this.overlayArea(), true);
+        final Rect area = this.overlayArea();
+        this.overlay = root.popupIn(this.pane, area, true);
         this.overlay.onEvent(Overlay.CLOSED, event -> this.paneClosed());
+        if (this.animationMillis > 0L && area.width() > 0f) {
+            root.setPopupClipped(this.overlay, true);
+            this.paneSlide.move(this.motionAnimator(), this.animationMillis,
+                    this.isRightToLeft() ? area.width() : -area.width(), 0f);
+        }
         // Lay the pane out now, so the cursor and clicks find its rows before the next frame
         root.layout();
         this.report(EXPANDED, true, false);
@@ -872,6 +910,8 @@ public final class NavigationViewImpl extends BuiltInComposite<NavigationView> i
      * Runs once the pane over the content closed, however it closed: puts the pane back first among the children.
      */
     private void paneClosed() {
+        this.paneSlide.stop();
+        this.pane.slideTo(0f);
         this.overlay = null;
         this.paneOpen = false;
         this.insertChild(0, this.pane);
@@ -879,9 +919,22 @@ public final class NavigationViewImpl extends BuiltInComposite<NavigationView> i
         this.report(EXPANDED, false, true);
     }
 
+    /**
+     * Applies one step of the pane's slide, and stops cutting the popup once the pane comes to rest.
+     */
+    private void slid(final float offset) {
+        this.pane.slideTo(offset);
+        final Overlay open = this.overlay;
+        final Root root = this.hostRoot();
+        if (offset == 0f && !this.paneSlide.isMoving() && open != null && open.isOpen() && root != null) {
+            root.setPopupClipped(open, false);
+        }
+    }
+
     private Rect overlayArea() {
         final Rect bounds = this.bounds();
-        return new Rect(bounds.x(), bounds.y(), Math.min(this.paneWidth, bounds.width()), bounds.height());
+        // Right to left the pane opens over the content from the right
+        return this.flow(new Rect(bounds.x(), bounds.y(), Math.min(this.paneWidth, bounds.width()), bounds.height()));
     }
 
     /**
@@ -1023,6 +1076,7 @@ public final class NavigationViewImpl extends BuiltInComposite<NavigationView> i
         this.titleText = theme.textStyleOr(STYLE_TITLE_TEXT, TextStyle.DEFAULT);
         this.itemPadding = theme.insetsOr(STYLE_ITEM_PADDING, DEFAULT_ITEM_PADDING);
         this.panePadding = theme.insetsOr(STYLE_PANE_PADDING, DEFAULT_PANE_PADDING);
+        this.animationMillis = Motion.millis(theme, STYLE_ANIMATION);
     }
 
     /**
@@ -1120,7 +1174,8 @@ public final class NavigationViewImpl extends BuiltInComposite<NavigationView> i
     protected void paint(final Painter painter, final Rect bounds) {
         if (this.shownMode == DisplayMode.MINIMAL) {
             this.panePaint.paint(painter, this.barRect);
-            this.barTitle.draw(painter, this.barTitleX, this.barTitleY);
+            this.barTitle.draw(painter, this.isRightToLeft() ? Flow.mirrorX(this.barTitleX, bounds)
+                    - this.barTitle.width() : this.barTitleX, this.barTitleY);
         }
     }
 
@@ -1149,7 +1204,8 @@ public final class NavigationViewImpl extends BuiltInComposite<NavigationView> i
         if (event.target() != this || !event.action().isDown()) {
             return;
         }
-        final Key key = event.key();
+        // Right to left, Left expands and Right collapses
+        final Key key = Flow.key(event.key(), this.isRightToLeft());
         final boolean press = event.action() == KeyAction.PRESS;
         switch (key) {
             case UP, DOWN, HOME, END -> {
@@ -1208,7 +1264,7 @@ public final class NavigationViewImpl extends BuiltInComposite<NavigationView> i
 
     private void scrollTo(final NavigationItemImpl item) {
         final Row row = this.rows.get(item);
-        if (row != null && row.parent() == this.pane.items) {
+        if (row != null && row.parent().orElse(null) == this.pane.items) {
             this.pane.scroll.scrollToVisible(row);
         }
     }
@@ -1231,7 +1287,9 @@ public final class NavigationViewImpl extends BuiltInComposite<NavigationView> i
         // The keyboard ring follows the pointer, so Tab or an arrow key carries on from the clicked item
         this.cursor = item;
         final float arrowZone = row.bounds().right() - this.itemPadding.right() - Rings.ARROW_LONG - GAP;
-        if (!this.compactLook() && !item.children().isEmpty() && event.x() >= arrowZone) {
+        // Right to left the arrow is at the left of the row
+        final float pressed = this.isRightToLeft() ? Flow.mirrorX(event.x(), row.bounds()) : event.x();
+        if (!this.compactLook() && !item.children().isEmpty() && pressed >= arrowZone) {
             this.userExpand(item, !item.isExpanded());
         } else if (this.activateOnClick) {
             this.pick(item);
@@ -1265,6 +1323,13 @@ public final class NavigationViewImpl extends BuiltInComposite<NavigationView> i
      * pane footer. It fills the slot or the area of the popup it is laid out in.
      */
     private final class Pane extends BuiltInComposite<Pane> {
+        /**
+         * Moves the pane sideways from where it is laid out, for its slide.
+         */
+        void slideTo(final float offset) {
+            this.setOffset(offset, 0f);
+        }
+
         private final Toggle toggle;
         private final ScrollPanel scroll;
         private final StackPanel items;
@@ -1390,7 +1455,8 @@ public final class NavigationViewImpl extends BuiltInComposite<NavigationView> i
         protected void paint(final Painter painter, final Rect bounds) {
             final NavigationViewImpl view = NavigationViewImpl.this;
             (view.paneOpen ? view.paneOverlayPaint : view.panePaint).paint(painter, bounds);
-            this.titleLine.draw(painter, this.titleX, this.titleY);
+            this.titleLine.draw(painter, this.isRightToLeft() ? Flow.mirrorX(this.titleX, bounds)
+                    - this.titleLine.width() : this.titleX, this.titleY);
         }
     }
 
@@ -1459,6 +1525,7 @@ public final class NavigationViewImpl extends BuiltInComposite<NavigationView> i
         // Worked out for the last bounds painted
         private Rect placedFor;
         private boolean placedCompact;
+        private boolean placedRightToLeft;
         private TextLine shownNormal;
         private TextLine shownSelected;
         private TextLine shownDisabled;
@@ -1470,6 +1537,8 @@ public final class NavigationViewImpl extends BuiltInComposite<NavigationView> i
         private float textY;
         private float arrowX;
         private float arrowY;
+        private final Rings.Arrow arrow = new Rings.Arrow();
+        private final Rings.Ring ring = new Rings.Ring();
 
         @SuppressWarnings("this-escape")
         Row(final ComponentFactoryImpl ui, final NavigationEntryImpl entry) {
@@ -1496,7 +1565,13 @@ public final class NavigationViewImpl extends BuiltInComposite<NavigationView> i
             if (this.entry instanceof final NavigationItemImpl item) {
                 this.setCursor(item.isEnabled() ? CursorKind.HAND : null);
                 final Tooltip own = item.tooltip().orElse(null);
-                this.setTooltip(own == null && NavigationViewImpl.this.compactLook() ? Tooltip.text(item.text()) : own);
+                final Tooltip shown = own == null && NavigationViewImpl.this.compactLook()
+                        ? Tooltip.text(item.text()) : own;
+                if (shown == null) {
+                    this.clearTooltip();
+                } else {
+                    this.setTooltip(shown);
+                }
             }
             this.invalidateLayout();
         }
@@ -1541,7 +1616,9 @@ public final class NavigationViewImpl extends BuiltInComposite<NavigationView> i
         }
 
         /**
-         * Works out where the parts go in the bounds, and cuts the text short to fit.
+         * Works out where the parts go in the bounds, and cuts the text short to fit. Right to left each part is
+         * worked out as for left to right and mirrored inside the bounds; the text's x stays as for left to right,
+         * since each shown line is mirrored by its own width when it is drawn.
          */
         private void place(final Rect bounds, final boolean compact) {
             final NavigationViewImpl view = NavigationViewImpl.this;
@@ -1549,11 +1626,12 @@ public final class NavigationViewImpl extends BuiltInComposite<NavigationView> i
             final float line = view.lineHeight;
             this.placedFor = bounds;
             this.placedCompact = compact;
-            this.indicatorRect = new Rect(bounds.x(), bounds.y(), INDICATOR_WIDTH, bounds.height());
+            this.placedRightToLeft = this.isRightToLeft();
+            this.indicatorRect = this.flow(new Rect(bounds.x(), bounds.y(), INDICATOR_WIDTH, bounds.height()));
             if (this.entry instanceof NavigationSeparatorImpl) {
                 final float inset = compact ? 2f : padding.left();
-                this.lineRect = new Rect(bounds.x() + inset, bounds.y() + SEPARATOR_SPACE,
-                        Math.max(0f, bounds.width() - inset * 2f), 1f);
+                this.lineRect = this.flow(new Rect(bounds.x() + inset, bounds.y() + SEPARATOR_SPACE,
+                        Math.max(0f, bounds.width() - inset * 2f), 1f));
                 return;
             }
             final TextMetrics metrics = this.environment().text();
@@ -1566,13 +1644,13 @@ public final class NavigationViewImpl extends BuiltInComposite<NavigationView> i
             }
             final NavigationItemImpl item = (NavigationItemImpl) this.entry;
             if (compact) {
-                this.iconRect = new Rect(bounds.x() + (bounds.width() - line) * 0.5f,
-                        bounds.y() + (bounds.height() - line) * 0.5f, line, line);
-                this.badgeRect = this.badge.cornerAt(bounds.right(), bounds.bottom());
+                this.iconRect = this.flow(fitIcon(item, bounds.x() + (bounds.width() - line) * 0.5f,
+                        bounds.y() + (bounds.height() - line) * 0.5f, line));
+                this.badgeRect = this.flow(this.badge.cornerAt(bounds.right(), bounds.bottom()));
                 return;
             }
             final float left = bounds.x() + padding.left() + this.depth * (line + GAP);
-            this.iconRect = new Rect(left, bounds.y() + (bounds.height() - line) * 0.5f, line, line);
+            this.iconRect = this.flow(fitIcon(item, left, bounds.y() + (bounds.height() - line) * 0.5f, line));
             float right = bounds.right() - padding.right();
             if (!item.children().isEmpty()) {
                 this.arrowX = right - Rings.ARROW_LONG;
@@ -1582,10 +1660,14 @@ public final class NavigationViewImpl extends BuiltInComposite<NavigationView> i
                 this.arrowX = bounds.right();
             }
             if (this.badge.isShown()) {
-                this.badgeRect = new Rect(right - this.badge.width(),
+                final Rect badgeRect = new Rect(right - this.badge.width(),
                         bounds.y() + (bounds.height() - this.badge.height()) * 0.5f, this.badge.width(),
                         this.badge.height());
-                right = this.badgeRect.x() - GAP;
+                this.badgeRect = this.flow(badgeRect);
+                right = badgeRect.x() - GAP;
+            }
+            if (this.placedRightToLeft && !item.children().isEmpty()) {
+                this.arrowX = Flow.mirrorX(this.arrowX, bounds) - Rings.ARROW_LONG;
             }
             this.textX = left + line + GAP;
             this.textY = bounds.y() + (bounds.height() - this.normal.height()) * 0.5f;
@@ -1595,11 +1677,26 @@ public final class NavigationViewImpl extends BuiltInComposite<NavigationView> i
             this.shownDisabled = this.disabled.ellipsize(room, view.itemTextDisabled, metrics);
         }
 
+        /**
+         * Returns where an item's icon draws in its square slot one line tall: at its size in the middle, or scaled
+         * down to fit, keeping its shape.
+         */
+        private static Rect fitIcon(final NavigationItemImpl item, final float x, final float y, final float line) {
+            final float width = item.iconWidth();
+            final float height = item.iconHeight();
+            final float scale = Math.min(1f, Math.min(width > line ? line / width : 1f,
+                    height > line ? line / height : 1f));
+            final float drawnWidth = width * scale;
+            final float drawnHeight = height * scale;
+            return new Rect(x + (line - drawnWidth) * 0.5f, y + (line - drawnHeight) * 0.5f, drawnWidth, drawnHeight);
+        }
+
         @Override
         protected void paint(final Painter painter, final Rect bounds) {
             final NavigationViewImpl view = NavigationViewImpl.this;
             final boolean compact = view.compactLook();
-            if (!bounds.equals(this.placedFor) || compact != this.placedCompact) {
+            if (!bounds.equals(this.placedFor) || compact != this.placedCompact
+                    || this.isRightToLeft() != this.placedRightToLeft) {
                 this.place(bounds, compact);
             }
             if (this.entry instanceof NavigationSeparatorImpl) {
@@ -1607,7 +1704,7 @@ public final class NavigationViewImpl extends BuiltInComposite<NavigationView> i
                 return;
             }
             if (this.entry instanceof NavigationHeaderImpl) {
-                this.shownNormal.draw(painter, this.textX, this.textY);
+                this.shownNormal.draw(painter, this.textAt(this.shownNormal, bounds), this.textY);
                 return;
             }
             final NavigationItemImpl item = (NavigationItemImpl) this.entry;
@@ -1620,27 +1717,35 @@ public final class NavigationViewImpl extends BuiltInComposite<NavigationView> i
                 view.itemHovered.paint(painter, bounds);
             }
             final int tint = enabled ? WHITE : DISABLED_ICON_TINT;
-            if (item.iconVisual() != null) {
-                painter.visual(item.iconVisual(), this.iconRect, tint);
-            } else if (item.iconSprite() != null) {
-                painter.sprite(item.iconSprite(), this.iconRect, tint);
+            if (item.visual() != null) {
+                painter.visual(item.visual(), this.iconRect, tint);
+            } else if (item.sprite() != null) {
+                painter.sprite(item.sprite(), this.iconRect, tint);
             }
             if (!compact) {
-                (isSelected && enabled ? this.shownSelected : enabled ? this.shownNormal : this.shownDisabled)
-                        .draw(painter, this.textX, this.textY);
+                final TextLine text = isSelected && enabled ? this.shownSelected
+                        : enabled ? this.shownNormal : this.shownDisabled;
+                text.draw(painter, this.textAt(text, bounds), this.textY);
                 if (!item.children().isEmpty()) {
                     final int color = (enabled ? view.itemText : view.itemTextDisabled).color();
                     if (item.isExpanded()) {
-                        Rings.up(painter, color, this.arrowX, this.arrowY);
+                        this.arrow.up(painter, color, this.arrowX, this.arrowY);
                     } else {
-                        Rings.down(painter, color, this.arrowX, this.arrowY);
+                        this.arrow.down(painter, color, this.arrowX, this.arrowY);
                     }
                 }
             }
             this.badge.paint(painter, this.badgeRect);
             if (view.isFocused() && view.cursor == item) {
-                Rings.paint(painter, view.focusRing, bounds);
+                this.ring.paint(painter, view.focusRing, bounds);
             }
+        }
+
+        /**
+         * Returns where a shown line starts: at the text's x, or mirrored by the line's width right to left.
+         */
+        private float textAt(final TextLine text, final Rect bounds) {
+            return this.placedRightToLeft ? Flow.mirrorX(this.textX, bounds) - text.width() : this.textX;
         }
 
         @Override

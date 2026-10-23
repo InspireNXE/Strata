@@ -22,7 +22,9 @@ import java.util.Map;
 
 /**
  * A small JSON reader for theme files, so core needs no library. Objects become {@link LinkedHashMap}s, arrays
- * become {@link ArrayList}s, numbers become {@link Double}s, and {@code null} becomes {@link #NULL}.
+ * become {@link ArrayList}s, numbers become {@link Double}s, and {@code null} becomes {@link #NULL}. Objects and
+ * arrays may nest {@link #MAX_DEPTH} deep; deeper text is refused like any other error, so a hostile file cannot
+ * overflow the stack. A byte order mark counts as white space.
  */
 final class Json {
     /**
@@ -30,8 +32,14 @@ final class Json {
      */
     static final Object NULL = new Object();
 
+    /**
+     * How deep objects and arrays may nest. The outermost object or array is depth 1.
+     */
+    static final int MAX_DEPTH = 64;
+
     private final String text;
     private int pos;
+    private int depth;
 
     private Json(final String text) {
         this.text = text;
@@ -42,7 +50,8 @@ final class Json {
      *
      * @param text the JSON
      * @return the value
-     * @throws IllegalArgumentException if the text is not valid JSON, with the line and column
+     * @throws IllegalArgumentException if the text is not valid JSON or nests deeper than {@link #MAX_DEPTH}, with
+     *                                  the line and column
      */
     static Object parse(final String text) {
         final Json json = new Json(text);
@@ -61,8 +70,18 @@ final class Json {
         }
         final char c = this.text.charAt(this.pos);
         return switch (c) {
-            case '{' -> this.object();
-            case '[' -> this.array();
+            case '{' -> {
+                this.enter();
+                final Map<String, Object> map = this.object();
+                this.depth--;
+                yield map;
+            }
+            case '[' -> {
+                this.enter();
+                final List<Object> list = this.array();
+                this.depth--;
+                yield list;
+            }
             case '"' -> this.string();
             case 't' -> this.literal("true", Boolean.TRUE);
             case 'f' -> this.literal("false", Boolean.FALSE);
@@ -74,6 +93,12 @@ final class Json {
                 throw this.error("Unexpected character '" + c + "'");
             }
         };
+    }
+
+    private void enter() {
+        if (++this.depth > MAX_DEPTH) {
+            throw this.error("Nested deeper than " + MAX_DEPTH);
+        }
     }
 
     private Map<String, Object> object() {
@@ -152,11 +177,19 @@ final class Json {
                         if (this.pos + 4 > this.text.length()) {
                             throw this.error("Short \\u escape");
                         }
-                        try {
-                            out.append((char) Integer.parseInt(this.text.substring(this.pos, this.pos + 4), 16));
-                        } catch (final NumberFormatException e) {
-                            throw this.error("Bad \\u escape");
+                        int unit = 0;
+                        for (int i = this.pos; i < this.pos + 4; i++) {
+                            // Exactly four ASCII hex digits; Integer.parseInt would take a sign too
+                            final char hex = this.text.charAt(i);
+                            final int digit = hex >= '0' && hex <= '9' ? hex - '0'
+                                    : hex >= 'a' && hex <= 'f' ? hex - 'a' + 10
+                                    : hex >= 'A' && hex <= 'F' ? hex - 'A' + 10 : -1;
+                            if (digit < 0) {
+                                throw this.error("Bad \\u escape");
+                            }
+                            unit = unit * 16 + digit;
                         }
+                        out.append((char) unit);
                         this.pos += 4;
                     }
                     default -> throw this.error("Unknown escape '\\" + escaped + "'");
@@ -204,7 +237,7 @@ final class Json {
     private void skipSpace() {
         while (this.pos < this.text.length()) {
             final char c = this.text.charAt(this.pos);
-            if (c != ' ' && c != '\t' && c != '\n' && c != '\r' && c != '﻿') {
+            if (c != ' ' && c != '\t' && c != '\n' && c != '\r' && c != '\uFEFF') {
                 return;
             }
             this.pos++;

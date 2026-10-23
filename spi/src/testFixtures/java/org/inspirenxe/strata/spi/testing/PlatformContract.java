@@ -15,15 +15,25 @@
  */
 package org.inspirenxe.strata.spi.testing;
 
+import org.inspirenxe.strata.api.event.cause.CauseFrame;
+import org.inspirenxe.strata.api.event.cause.CauseKey;
+import org.inspirenxe.strata.api.event.cause.CauseStack;
 import org.inspirenxe.strata.api.geometry.Rect;
 import org.inspirenxe.strata.api.input.TextInputKind;
 import org.inspirenxe.strata.api.text.TextSpan;
 import org.inspirenxe.strata.api.text.TextStyle;
+import org.inspirenxe.strata.api.theme.ThemeId;
+import org.inspirenxe.strata.api.theme.Themes;
+import org.inspirenxe.strata.api.transfer.DataFormat;
+import org.inspirenxe.strata.api.transfer.Transfer;
 import org.inspirenxe.strata.spi.Capabilities;
 import org.inspirenxe.strata.spi.Clipboard;
 import org.inspirenxe.strata.spi.Clock;
+import org.inspirenxe.strata.spi.Conventions;
 import org.inspirenxe.strata.spi.Platform;
 import org.inspirenxe.strata.spi.TextInputSink;
+import org.inspirenxe.strata.spi.ThemeSource;
+import org.inspirenxe.strata.spi.Translator;
 import org.junit.jupiter.api.Test;
 
 import java.time.LocalDate;
@@ -34,6 +44,8 @@ import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
@@ -42,7 +54,11 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
  * Checks a {@link Platform} against the requirements in its documentation. Extend it in an adapter's tests and
  * return the adapter's platform from {@link #platform()}. Override {@link #hasClipboard()} and
  * {@link #clockRunsOnItsOwn()} when the platform under test has no working clipboard (headless) or a clock the test
- * drives by hand.
+ * drives by hand, and {@link #translator()} to check the adapter's {@link Translator} too.
+ *
+ * <p>Besides the services every platform has, the checks cover the conventions and the theme source, which must
+ * answer an id they do not know with nothing and keep their version while nothing changes, and, when the platform
+ * returns one, the engine's cause stack, whose frames must hide and restore values in order.</p>
  */
 public abstract class PlatformContract {
 
@@ -72,6 +88,16 @@ public abstract class PlatformContract {
         return true;
     }
 
+    /**
+     * Returns the translator the adapter gives core with {@code StrataCore.setTranslator}, for the translator checks.
+     * The default returns {@code null}, which skips them.
+     *
+     * @return the adapter's translator, or {@code null}
+     */
+    protected Translator translator() {
+        return null;
+    }
+
     @Test
     void providesEveryService() {
         final Platform platform = this.platform();
@@ -80,6 +106,10 @@ public abstract class PlatformContract {
         assertNotNull(platform.clock(), "clock");
         assertNotNull(platform.textInput(), "textInput");
         assertNotNull(platform.capabilities(), "capabilities");
+        assertNotNull(platform.conventions(), "conventions");
+        assertNotNull(platform.themes(), "themes");
+        assertNotNull(platform.causes(), "causes");
+        assertNotNull(platform.user(), "user");
     }
 
     @Test
@@ -88,6 +118,91 @@ public abstract class PlatformContract {
         final Capabilities first = platform.capabilities();
         for (int i = 0; i < 10; i++) {
             assertEquals(first, platform.capabilities());
+        }
+    }
+
+    @Test
+    void theShorterCapabilitiesConstructorsDrawNoShapes() {
+        final Capabilities two = new Capabilities(true, true);
+        final Capabilities three = new Capabilities(true, true, true);
+        assertFalse(two.slicesSprites(), "two arguments slice no sprites");
+        assertFalse(two.drawsShapes(), "two arguments draw no shapes");
+        assertFalse(three.drawsShapes(), "three arguments draw no shapes");
+        assertEquals(new Capabilities(true, true, true, false), three);
+    }
+
+    @Test
+    void conventionsDoNotChange() {
+        final Platform platform = this.platform();
+        final Conventions first = platform.conventions();
+        for (int i = 0; i < 10; i++) {
+            assertEquals(first, platform.conventions());
+        }
+    }
+
+    @Test
+    void theThemeSourceAnswersAnUnknownIdWithNothing() {
+        final ThemeSource themes = this.platform().themes();
+        final ThemeId unknown = ThemeId.of("strata_contract", "no_such_theme");
+        assertEquals(Optional.empty(), themes.base(unknown), "base");
+        assertEquals(List.of(), themes.bases(unknown), "bases");
+        assertEquals(List.of(), themes.documents(unknown), "documents");
+    }
+
+    @Test
+    void theThemeSourceNamesARealDefaultTheme() {
+        final ThemeSource themes = this.platform().themes();
+        final ThemeId theme = themes.defaultTheme();
+        assertNotNull(theme, "defaultTheme");
+        assertNotEquals(Themes.PLATFORM, theme, "the default theme must not be the platform's placeholder id");
+    }
+
+    @Test
+    void theThemeSourceVersionHoldsWhileNothingChanges() {
+        final ThemeSource themes = this.platform().themes();
+        final long first = themes.version();
+        for (int i = 0; i < 10; i++) {
+            assertEquals(first, themes.version());
+        }
+    }
+
+    @Test
+    void theEnginesCauseStackKeepsFramesInOrder() {
+        final Optional<CauseStack> engine = this.platform().causes();
+        assumeTrue(engine.isPresent(), "the platform has no cause stack of its own");
+        final CauseStack stack = engine.get();
+        final CauseKey<String> key = CauseKey.of("strata_contract:value", String.class);
+        final Object marker = new Object();
+        final Optional<String> before = stack.context(key);
+
+        try (CauseFrame ignored = stack.pushFrame().put(key, "outer")) {
+            assertEquals(Optional.of("outer"), stack.context(key));
+            try (CauseFrame ignoredInner = stack.pushFrame().put(key, "inner").push(marker)) {
+                assertEquals(Optional.of("inner"), stack.context(key), "an inner frame hides an outer one");
+                assertEquals(Optional.of("inner"), stack.current().context(key), "the current cause agrees");
+                assertEquals(Optional.of(marker), stack.current().root(), "the newest object is the direct cause");
+            }
+            assertEquals(Optional.of("outer"), stack.context(key), "closing the inner frame shows the outer again");
+        }
+        assertEquals(before, stack.context(key), "closing every frame removes their values");
+    }
+
+    @Test
+    void theTranslatorAnswersAnUnknownKeyWithNothing() {
+        final Translator translator = this.translator();
+        assumeTrue(translator != null, "no translator given for the translator checks");
+        assertEquals(Optional.empty(), translator.translate("strata_contract.no.such.key"));
+        assertDoesNotThrow(() -> translator.translate("strata.date.month.1"), "Strata's own keys can be asked for");
+        assertNotNull(translator.locale(), "locale");
+    }
+
+    @Test
+    void theTranslatorVersionHoldsWhileNothingChanges() {
+        final Translator translator = this.translator();
+        assumeTrue(translator != null, "no translator given for the translator checks");
+        final long first = translator.version();
+        for (int i = 0; i < 10; i++) {
+            assertEquals(first, translator.version());
         }
     }
 
@@ -174,6 +289,34 @@ public abstract class PlatformContract {
     }
 
     @Test
+    void fileDialogsAreOptional() {
+        assertNotNull(assertDoesNotThrow(() -> this.platform().fileDialogs()), "fileDialogs");
+    }
+
+    @Test
+    void clipboardTransfersNeverThrow() {
+        final Clipboard clipboard = this.platform().clipboard();
+        assertDoesNotThrow(() -> {
+            clipboard.setTransfer(Transfer.text("strata"));
+            clipboard.setTransfer(Transfer.builder().add(DataFormat.TEXT, "a,b").add(DataFormat.mime("text/csv"), "a,b")
+                    .build());
+            clipboard.setTransfer(Transfer.empty());
+            clipboard.getTransfer();
+        });
+    }
+
+    @Test
+    void clipboardTransfersKeepTheirText() {
+        assumeTrue(this.hasClipboard(), "the platform has no working clipboard here");
+        final Clipboard clipboard = this.platform().clipboard();
+        clipboard.setTransfer(Transfer.builder().add(DataFormat.TEXT, "Ana	12").add(DataFormat.mime("text/csv"), "Ana,12")
+                .build());
+        assertEquals(Optional.of("Ana	12"), clipboard.get(), "get() reads the text setTransfer wrote");
+        assertEquals(Optional.of("Ana	12"), clipboard.getTransfer().flatMap(transfer -> transfer.get(DataFormat.TEXT)),
+                "getTransfer() holds the text");
+    }
+
+    @Test
     void textInputAcceptsRepeatedCalls() {
         final Platform platform = this.platform();
         assertDoesNotThrow(() -> {
@@ -202,8 +345,8 @@ public abstract class PlatformContract {
         final List<Rect> started = new ArrayList<>();
         final TextInputSink sink = new TextInputSink() {
             @Override
-            public void start(final Rect caretArea) {
-                started.add(caretArea);
+            public void start(final Rect fieldArea) {
+                started.add(fieldArea);
             }
 
             @Override

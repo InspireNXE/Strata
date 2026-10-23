@@ -17,11 +17,14 @@ package org.inspirenxe.strata.api.control.field;
 
 import org.inspirenxe.strata.api.component.Component;
 import org.inspirenxe.strata.api.component.Focusable;
+import org.inspirenxe.strata.api.component.HasContextMenu;
 import org.inspirenxe.strata.api.component.HasCursor;
 import org.inspirenxe.strata.api.component.HasTooltip;
 import org.inspirenxe.strata.api.control.attribute.text.TextEntry;
 import org.inspirenxe.strata.api.control.attribute.text.TextInput;
+import org.inspirenxe.strata.api.control.attribute.value.Validatable;
 import org.inspirenxe.strata.api.geometry.Insets;
+import org.inspirenxe.strata.api.layout.HorizontalAlignment;
 import org.inspirenxe.strata.api.text.Text;
 
 import java.util.Objects;
@@ -32,10 +35,12 @@ import java.util.Objects;
  * <p>It edits like a {@link TextBox}, with these differences. Enter and keypad Enter insert a new line. Up and Down
  * move the caret a row, keeping its horizontal position across short rows, and Page Up and Page Down move it a
  * page. Home and End go to the start and end of the row, and with Ctrl to the start and end of the text. A triple
- * click selects the line. Pasted text keeps its line breaks, and {@code \r\n} and {@code \r} become {@code \n}.</p>
+ * click selects the line. Pasted text keeps its line breaks and tabs: {@code \r\n} and every other line break, such
+ * as {@code \r} or the line separator U+2028, become {@code \n}, and other control characters are dropped.</p>
  *
  * <p>With wrapping on, which is the default, a line too long for the width breaks after the last space that fits,
- * or between characters when a word alone is too wide. A space where the line breaks stays at the end of the row.
+ * or between characters when a word alone is too wide, as a wrapping label's does. The spaces where the line breaks
+ * stay at the end of the row, past its edge if they do not fit, and a caret among them is drawn at the edge.
  * With wrapping off, rows are the lines of the text, and a row wider than the view scrolls sideways, with a scroll
  * bar at the bottom edge, by horizontal wheel, by dragging the thumb and to keep the caret in sight. Text taller than
  * the view scrolls vertically, with a scroll bar at the right edge, by wheel, by dragging the thumb and to keep the
@@ -55,7 +60,8 @@ import java.util.Objects;
  *     cutting or pasting, unless {@code MODIFY} was canceled. The value is the whole text the edit would produce.
  *     While handlers run, the area still holds the text and selection from before the edit. Cancel the event to
  *     reject the edit and keep the text and selection as they were, or set another text to rewrite it; the value must
- *     not be set to null. The final text has its {@code \r\n} and {@code \r} turned into {@code \n} and is cut to
+ *     not be set to null. The final text has its line breaks turned into {@code \n} and its control characters other
+ *     than tabs dropped, as pasted text does, and is cut to
  *     {@link #maxLength()} before it applies, and the caret goes as many characters before its end as the edit left
  *     it, with nothing selected. An edit that would leave the text as it is, such as typing into a full area, fires
  *     nothing, and a read-only area fires nothing. Fires only for the user's actions: {@link #setText} and
@@ -78,11 +84,15 @@ import java.util.Objects;
  *         .onEvent(TextArea.EDITED, event -> item.setNotes(event.value()));
  * }</pre>
  *
+ * <p>It has a default {@linkplain #contextMenu() context menu}: Undo, Redo, Cut, Copy, Paste, Delete and Select
+ * all, captioned from the {@code strata.edit.*} translation keys, each enabled only while it would do
+ * something and acting as the matching key does. {@code setContextMenu(null)} removes it.</p>
+ *
  * <p>Get one from {@link org.inspirenxe.strata.api.ComponentFactory#textArea()}. Do not implement this
  * interface.</p>
  */
 public interface TextArea extends Component<TextArea>, Focusable<TextArea>, HasCursor<TextArea>, HasTooltip<TextArea>,
-        TextInput<TextArea> {
+        HasContextMenu<TextArea>, TextInput<TextArea>, Validatable<TextArea> {
     /**
      * The width, in UI units, a text area asks for.
      */
@@ -109,7 +119,7 @@ public interface TextArea extends Component<TextArea>, Focusable<TextArea>, HasC
      * such as {@code "Add a note"}. It goes away as soon as there is text, hides while the area has focus when the
      * theme's {@value TextBox#STYLE_PLACEHOLDER_HIDE} says so, and is never part of {@link #text()}.
      *
-     * @param placeholder the hint, or {@code null} or empty for none
+     * @param placeholder the hint, or empty for none
      * @return this area
      */
     TextArea setPlaceholder(Text placeholder);
@@ -117,11 +127,11 @@ public interface TextArea extends Component<TextArea>, Focusable<TextArea>, HasC
     /**
      * Does the same as {@link #setPlaceholder(Text)} with literal text.
      *
-     * @param placeholder the hint, or {@code null} or empty for none
+     * @param placeholder the hint, or empty for none
      * @return this area
      */
     default TextArea setPlaceholder(final String placeholder) {
-        return this.setPlaceholder(placeholder == null ? null : Text.of(placeholder));
+        return this.setPlaceholder(Text.of(placeholder));
     }
 
     /**
@@ -132,10 +142,13 @@ public interface TextArea extends Component<TextArea>, Focusable<TextArea>, HasC
     String text();
 
     /**
-     * Replaces the text, cut to the length limit, puts the caret at its end and scrolls to the top.
-     * {@link #EDITED} fires if the text changed; {@link #EDIT} does not.
+     * Replaces the text, cut to the length limit. If that changes the text, the caret goes to its end with nothing
+     * selected and the view scrolls to the top, where it stays until the caret moves, so the area shows the start of
+     * the new text. {@link #EDITED} fires if the text changed; {@link #EDIT} does not. Setting the text it already
+     * holds changes nothing.
      *
-     * @param text the new text; {@code \r\n} and {@code \r} become {@code \n}
+     * @param text the new text; its line breaks become {@code \n} and its control characters other than tabs are
+     *     dropped, as pasted text's are
      * @return this text area
      */
     TextArea setText(String text);
@@ -148,7 +161,8 @@ public interface TextArea extends Component<TextArea>, Focusable<TextArea>, HasC
     int maxLength();
 
     /**
-     * Sets the length limit, cutting the text if it is longer. {@link #EDITED} fires if the text was cut.
+     * Sets the length limit, cutting the text if it is longer, never in the middle of a grapheme cluster.
+     * {@link #EDITED} fires if the text was cut.
      *
      * @param maxLength the most code points the text may hold
      * @return this text area
@@ -217,7 +231,7 @@ public interface TextArea extends Component<TextArea>, Focusable<TextArea>, HasC
     String selectedText();
 
     /**
-     * Selects a range, clamped to the text. An index in the middle of a surrogate pair moves to its start.
+     * Selects a range, clamped to the text. An index in the middle of a grapheme cluster moves to its start.
      *
      * @param anchor the end that stays put
      * @param caret the end that moves
@@ -251,9 +265,95 @@ public interface TextArea extends Component<TextArea>, Focusable<TextArea>, HasC
     /**
      * Returns how far the text is scrolled down.
      *
-     * @return the vertical scroll offset in UI units, as of the last paint
+     * @return the vertical scroll offset in UI units, as of the last paint or the last call that set it
      */
     float scrollY();
+
+    /**
+     * Scrolls to an offset. The offset is at least 0, and once the area has been laid out it is at most what its rows
+     * need; the next paint clamps it again to the rows in the area's size. It stops a glide of the wheel that is under
+     * way. The view stays there until the caret moves, the user scrolls, or it is set again.
+     *
+     * @param scrollY the vertical offset in UI units
+     * @return this text area
+     * @throws IllegalArgumentException if the offset is NaN
+     */
+    TextArea setScrollY(float scrollY);
+
+    /**
+     * Scrolls the least distance that shows the caret's row and column, at once, as moving the caret does, stopping a
+     * glide of the wheel that is under way. Before the area has been laid out, it scrolls on the next paint.
+     *
+     * @return this text area
+     */
+    TextArea scrollToCaret();
+
+    /**
+     * Returns how many lines the text has: one more than its line breaks, whatever the wrapping.
+     *
+     * @return the number of lines, at least 1
+     */
+    int lineCount();
+
+    /**
+     * Returns the line a char index is on.
+     *
+     * @param index a char index; clamped to the text
+     * @return the line, from 0
+     */
+    int lineOf(int index);
+
+    /**
+     * Returns where a line starts.
+     *
+     * @param line the line, from 0
+     * @return the char index of the line's first char, or the text's length for an empty last line
+     * @throws IndexOutOfBoundsException if {@code line} is negative or not less than {@link #lineCount()}
+     */
+    int lineStart(int line);
+
+    /**
+     * Returns the column of a char index on its line, counted in code points from the line's start, as a code
+     * editor shows it.
+     *
+     * @param index a char index; clamped to the text, and moved to the start of its grapheme cluster
+     * @return the column, from 0
+     */
+    int columnOf(int index);
+
+    /**
+     * Returns how each row sits in the area's width.
+     *
+     * @return the alignment; {@link HorizontalAlignment#LEFT} by default
+     */
+    HorizontalAlignment textAlignment();
+
+    /**
+     * Sets how each row sits in the area's width, or in the widest row's when the area does not wrap and that row is
+     * wider. The caret, the selection and the placeholder align with the text. {@link HorizontalAlignment#STRETCH}
+     * counts as {@link HorizontalAlignment#LEFT}.
+     *
+     * @param alignment the alignment
+     * @return this text area
+     */
+    TextArea setTextAlignment(HorizontalAlignment alignment);
+
+    /**
+     * Returns whether Tab types a tab character.
+     *
+     * @return false by default
+     */
+    boolean acceptsTab();
+
+    /**
+     * Makes Tab type a tab character instead of moving focus, for an area used as a small code editor. While it is on
+     * and the area is editable, Tab types a tab, Shift+Tab does nothing, and Control+Tab and Control+Shift+Tab move
+     * focus. A read-only area lets Tab move focus as usual.
+     *
+     * @param accepts true to type tabs
+     * @return this text area
+     */
+    TextArea setAcceptsTab(boolean accepts);
 
     /**
      * A text area's own state in a {@link org.inspirenxe.strata.api.component.ComponentSnapshot}.

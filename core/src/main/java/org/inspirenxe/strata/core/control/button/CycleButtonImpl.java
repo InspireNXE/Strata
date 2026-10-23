@@ -26,8 +26,6 @@ import org.inspirenxe.strata.api.extension.Painter;
 import org.inspirenxe.strata.api.geometry.Insets;
 import org.inspirenxe.strata.api.geometry.Rect;
 import org.inspirenxe.strata.api.geometry.Size;
-import org.inspirenxe.strata.api.input.Key;
-import org.inspirenxe.strata.api.input.KeyAction;
 import org.inspirenxe.strata.api.input.MouseButton;
 import org.inspirenxe.strata.api.text.Text;
 import org.inspirenxe.strata.api.text.TextMetrics;
@@ -35,6 +33,8 @@ import org.inspirenxe.strata.api.text.TextStyle;
 import org.inspirenxe.strata.api.theme.Paint;
 import org.inspirenxe.strata.api.theme.Theme;
 import org.inspirenxe.strata.core.control.Caption;
+import org.inspirenxe.strata.core.control.Activation;
+import org.inspirenxe.strata.core.control.Rings;
 import org.inspirenxe.strata.core.node.BuiltInComponent;
 import org.inspirenxe.strata.core.node.ComponentFactoryImpl;
 import org.inspirenxe.strata.core.text.TextLine;
@@ -76,6 +76,9 @@ public final class CycleButtonImpl<T> extends BuiltInComponent<CycleButton<T>> i
     private TextStyle textStyle;
     private TextStyle disabledTextStyle;
 
+    private final Activation activation;
+    private final Rings.Ring ring = new Rings.Ring();
+
     // Computed during measure
     private float lineHeight;
     private Insets padding = ButtonImpl.DEFAULT_PADDING;
@@ -112,6 +115,7 @@ public final class CycleButtonImpl<T> extends BuiltInComponent<CycleButton<T>> i
         this.focusRing = Paint.NONE;
         this.textStyle = TextStyle.DEFAULT;
         this.disabledTextStyle = TextStyle.DEFAULT;
+        this.activation = new Activation(this::activatesOnPress, this::clicked);
         this.setCursor(CursorKind.HAND);
         this.setMinSize(20f, 0f);
     }
@@ -307,6 +311,12 @@ public final class CycleButtonImpl<T> extends BuiltInComponent<CycleButton<T>> i
     }
 
     @Override
+    protected Size measureMinimum(final MeasureContext context) {
+        // The caption does not shrink, and measuring does not depend on the space offered
+        return this.measure(context, Float.POSITIVE_INFINITY, Float.POSITIVE_INFINITY);
+    }
+
+    @Override
     protected Size measure(final MeasureContext context, final float availableWidth, final float availableHeight) {
         final TextMetrics metrics = context.text();
         this.textEmpty = this.text.isEmpty();
@@ -326,6 +336,13 @@ public final class CycleButtonImpl<T> extends BuiltInComponent<CycleButton<T>> i
     }
 
     @Override
+    protected float baseline() {
+        final Insets padding = this.padding;
+        return padding.top() + (this.desiredHeight() - padding.vertical() - this.lineHeight) * 0.5f
+                + this.environment().text().ascent(this.textStyle);
+    }
+
+    @Override
     protected void paint(final Painter painter, final Rect bounds) {
         final boolean enabled = this.isEnabled();
         final Paint face;
@@ -341,10 +358,7 @@ public final class CycleButtonImpl<T> extends BuiltInComponent<CycleButton<T>> i
         face.paint(painter, bounds);
 
         if (this.isFocused() && this.focusRing != Paint.NONE) {
-            this.focusRing.paint(painter, new Rect(bounds.x(), bounds.y(), bounds.width(), 1f));
-            this.focusRing.paint(painter, new Rect(bounds.x(), bounds.bottom() - 1f, bounds.width(), 1f));
-            this.focusRing.paint(painter, new Rect(bounds.x(), bounds.y() + 1f, 1f, bounds.height() - 2f));
-            this.focusRing.paint(painter, new Rect(bounds.right() - 1f, bounds.y() + 1f, 1f, bounds.height() - 2f));
+            this.ring.paint(painter, this.focusRing, bounds);
         }
 
         if (this.selectedIndex != this.shownIndex) {
@@ -356,9 +370,11 @@ public final class CycleButtonImpl<T> extends BuiltInComponent<CycleButton<T>> i
         }
         final TextLine line = enabled ? this.shown : this.shownDisabled;
         final Insets padding = this.padding;
-        this.caption.draw(painter, line, bounds, padding,
+        if (this.caption.draw(painter, line, bounds, padding,
                 bounds.y() + padding.top() + (bounds.height() - padding.vertical() - this.lineHeight) * 0.5f,
-                this.environment().millis());
+                this.environment().millis())) {
+            this.repaintNextFrame();
+        }
     }
 
     // ------------------------------------------------------------------
@@ -367,20 +383,17 @@ public final class CycleButtonImpl<T> extends BuiltInComponent<CycleButton<T>> i
 
     @Override
     protected void onPointerPress(final PointerButtonEvent event) {
-        if (this.activatesOnPress()) {
-            this.clicked(event);
-        }
+        this.activation.press(event);
     }
 
     @Override
     protected void onClick(final PointerButtonEvent event) {
-        if (!this.activatesOnPress()) {
-            this.clicked(event);
-        }
+        this.activation.click(event);
     }
 
     /**
-     * Acts on a pointer press or click, whichever the platform's conventions say buttons act on.
+     * Acts on the pointer press or click the platform's conventions say buttons act on: the left button steps
+     * forward, or back with Shift, and the right button steps back.
      */
     private void clicked(final PointerButtonEvent event) {
         final MouseButton button = event.button();
@@ -392,7 +405,7 @@ public final class CycleButtonImpl<T> extends BuiltInComponent<CycleButton<T>> i
 
     @Override
     protected void onKey(final KeyEvent event) {
-        if (event.action() == KeyAction.PRESS && (event.key().isEnter() || event.key() == Key.SPACE)) {
+        if (Activation.isActivationKey(event)) {
             this.userCycle(event.modifiers().shift() ? -1 : 1);
             event.consume();
         }

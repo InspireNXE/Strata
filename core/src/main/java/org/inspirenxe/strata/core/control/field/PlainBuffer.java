@@ -20,6 +20,7 @@ package org.inspirenxe.strata.core.control.field;
  */
 final class PlainBuffer implements EditBuffer {
     private final StringBuilder builder;
+    private long changes;
 
     PlainBuffer() {
         this.builder = new StringBuilder();
@@ -33,6 +34,11 @@ final class PlainBuffer implements EditBuffer {
     @Override
     public char charAt(final int index) {
         return this.builder.charAt(index);
+    }
+
+    @Override
+    public long changes() {
+        return this.changes;
     }
 
     @Override
@@ -63,21 +69,25 @@ final class PlainBuffer implements EditBuffer {
     @Override
     public void insert(final int index, final CharSequence text) {
         this.builder.insert(index, text);
+        this.changes++;
     }
 
     @Override
     public void insertCodePoint(final int index, final int codePoint) {
         this.builder.insert(index, Character.toChars(codePoint));
+        this.changes++;
     }
 
     @Override
     public void delete(final int start, final int end) {
         this.builder.delete(start, end);
+        this.changes++;
     }
 
     @Override
     public void clear() {
         this.builder.setLength(0);
+        this.changes++;
     }
 
     /**
@@ -86,6 +96,7 @@ final class PlainBuffer implements EditBuffer {
     void set(final String text) {
         this.builder.setLength(0);
         this.builder.append(text);
+        this.changes++;
     }
 
     /**
@@ -93,6 +104,7 @@ final class PlainBuffer implements EditBuffer {
      */
     void truncate(final int length) {
         this.builder.setLength(length);
+        this.changes++;
     }
 
     /**
@@ -100,6 +112,7 @@ final class PlainBuffer implements EditBuffer {
      */
     void replace(final int start, final int end, final String text) {
         this.builder.replace(start, end, text);
+        this.changes++;
     }
 
     /**

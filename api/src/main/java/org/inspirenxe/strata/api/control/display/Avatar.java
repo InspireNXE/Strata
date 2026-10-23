@@ -16,6 +16,7 @@
 package org.inspirenxe.strata.api.control.display;
 
 import org.inspirenxe.strata.api.component.Component;
+import org.inspirenxe.strata.api.component.HasContextMenu;
 import org.inspirenxe.strata.api.component.HasCursor;
 import org.inspirenxe.strata.api.component.HasTooltip;
 import org.inspirenxe.strata.api.state.PropertyKey;
@@ -34,7 +35,7 @@ import java.util.Optional;
  * <ol>
  *     <li>A sprite or visual set with {@link #setSprite} or {@link #setVisual}, stretched over the square.</li>
  *     <li>The icon of the {@linkplain #setValue value}'s {@linkplain org.inspirenxe.strata.api.appearance.Appearances
- *     appearance}, so an engine adapter that registers an appearance for its player or account type makes
+ *     appearance}, so code that registers an appearance for its account type makes
  *     {@code avatar.setValue(account)} show that face with no more code.</li>
  *     <li>The {@linkplain #initials() initials}: those set with {@link #setInitials}, else worked out from the
  *     {@linkplain #setName name}, else from the value's name. They draw centered in the {@value #STYLE_INITIALS}
@@ -46,8 +47,10 @@ import java.util.Optional;
  *
  * <p>The square is {@link #avatarSize()} on a side, which is also the desired size. In bounds of another shape, the
  * avatar draws the largest square that fits, centered. {@value #STYLE_BACKGROUND} draws behind everything and
- * {@value #STYLE_FRAME} over the picture, so a theme can round the corners with a frame sprite whose corners are the
- * color of what is behind. The badge sits at the square's bottom-right corner: a number a line tall with
+ * {@value #STYLE_FRAME} over the picture. A theme rounds the square with {@value #STYLE_RADIUS}, which clips the
+ * background, the picture, the initials, the placeholder and the frame to a rounded square, so a radius of half the
+ * size makes a round avatar; on an engine that draws only rectangles the clip stays square, and a frame sprite whose
+ * corners are the color of what is behind rounds it there. The badge sits at the square's bottom-right corner: a number a line tall with
  * {@value #STYLE_BADGE_PADDING} around it, or a {@linkplain #setBadgeVisual badge visual} in a square a third of
  * the size.</p>
  *
@@ -67,6 +70,8 @@ import java.util.Optional;
  *     is drawn if it is missing.</li>
  *     <li>{@value #STYLE_PLACEHOLDER_GROUP} (paint, optional): the same for a group. Falls back to
  *     {@value #STYLE_PLACEHOLDER}.</li>
+ *     <li>{@value #STYLE_RADIUS} (metric, optional): the radius of the square's corners in UI units, limited to
+ *     half the size. Defaults to 0, square corners. The badge is not clipped.</li>
  *     <li>{@value #STYLE_BADGE} (paint, optional): behind the badge's number. Falls back to a red fill.</li>
  *     <li>{@value #STYLE_BADGE_TEXT} (text style, optional): the badge's number. Falls back to the default text
  *     style.</li>
@@ -86,7 +91,7 @@ import java.util.Optional;
  * <p>Get one from {@link org.inspirenxe.strata.api.ComponentFactory#avatar()}. Do not implement this
  * interface.</p>
  */
-public interface Avatar extends Component<Avatar>, HasCursor<Avatar>, HasTooltip<Avatar> {
+public interface Avatar extends Component<Avatar>, HasCursor<Avatar>, HasTooltip<Avatar>, HasContextMenu<Avatar> {
     /**
      * Style key for behind the square (paint, required).
      */
@@ -95,6 +100,10 @@ public interface Avatar extends Component<Avatar>, HasCursor<Avatar>, HasTooltip
      * Style key for over the picture, the initials or the placeholder (paint, optional).
      */
     String STYLE_FRAME = "avatar.frame";
+    /**
+     * Style key for the radius of the square's corners, in UI units (metric, optional).
+     */
+    String STYLE_RADIUS = "avatar.radius";
     /**
      * Style key for the initials (text style, optional).
      */
@@ -132,12 +141,14 @@ public interface Avatar extends Component<Avatar>, HasCursor<Avatar>, HasTooltip
     /**
      * The value shown, as {@link #value()} and {@link #setValue} say, null for none. Binds one way.
      */
-    PropertyKey<Avatar, Object> VALUE = PropertyKey.of("avatar.value", Avatar::value, Avatar::setValue);
+    PropertyKey<Avatar, Object> VALUE = PropertyKey.of("avatar.value", avatar -> avatar.value().orElse(null),
+            Avatar::setValue);
     /**
      * The name the initials are worked out from, as {@link #name()} and {@link #setName(Text)} say. Binds one way.
      * Null or {@link Text#empty()} goes back to the value's name.
      */
-    PropertyKey<Avatar, Text> NAME = PropertyKey.of("avatar.name", Avatar::name, Avatar::setName);
+    PropertyKey<Avatar, Text> NAME = PropertyKey.of("avatar.name", Avatar::name,
+            (avatar, name) -> avatar.setName(name == null ? Text.empty() : name));
     /**
      * The count the badge shows, as {@link #badge()} and {@link #setBadge} say. Binds one way. A negative count
      * throws as {@code setBadge} does.
@@ -147,15 +158,17 @@ public interface Avatar extends Component<Avatar>, HasCursor<Avatar>, HasTooltip
     /**
      * Returns the value shown.
      *
-     * @return the value set with {@link #setValue}, or {@code null} if none is
+     * @return the value set with {@link #setValue}, or empty if none is
      */
-    Object value();
+    Optional<Object> value();
 
     /**
      * Shows a value through its {@linkplain org.inspirenxe.strata.api.appearance.Appearances appearance}: its icon
      * as the picture unless a sprite or visual is set, its name for the initials unless a name or initials are set,
      * and its tooltip, asked anew each time the pointer arrives. Setting a tooltip afterwards replaces the value's
-     * until the next {@code setValue}. The icon and the name are read when the value is set. A value with no
+     * until the next {@code setValue}. A value with a tooltip replaces the tooltip shown; one without, and
+     * {@code null}, remove the previous value's tooltip and keep a tooltip set with {@code setTooltip}. The icon and
+     * the name are read when the value is set. A value with no
      * appearance has no icon and no tooltip, and its name is {@link String#valueOf(Object)}, so
      * {@code setValue("Ana Lima")} shows {@code AL}.
      *
@@ -167,9 +180,9 @@ public interface Avatar extends Component<Avatar>, HasCursor<Avatar>, HasTooltip
     /**
      * Returns the sprite set in code.
      *
-     * @return the sprite, or {@code null} while none is set
+     * @return the sprite, or empty while none is set
      */
-    SpriteId sprite();
+    Optional<SpriteId> sprite();
 
     /**
      * Shows a sprite as the picture, stretched over the square, replacing the sprite or visual set before.
@@ -182,9 +195,9 @@ public interface Avatar extends Component<Avatar>, HasCursor<Avatar>, HasTooltip
     /**
      * Returns the visual set in code.
      *
-     * @return the visual, or {@code null} while none is set
+     * @return the visual, or empty while none is set
      */
-    Visual visual();
+    Optional<Visual> visual();
 
     /**
      * Shows an engine visual as the picture, stretched over the square, replacing the sprite or visual set before.
@@ -205,7 +218,7 @@ public interface Avatar extends Component<Avatar>, HasCursor<Avatar>, HasTooltip
     /**
      * Sets the name the initials are worked out from, in place of the value's name. The avatar lays out again.
      *
-     * @param name the name, or {@code null} or {@link Text#empty()} to go back to the value's name
+     * @param name the name, or {@link Text#empty()} to go back to the value's name
      * @return this avatar
      */
     Avatar setName(Text name);
@@ -213,11 +226,11 @@ public interface Avatar extends Component<Avatar>, HasCursor<Avatar>, HasTooltip
     /**
      * Sets the name with literal text, as {@link #setName(Text)} does.
      *
-     * @param name the name, or {@code null} or an empty string to go back to the value's name
+     * @param name the name, or an empty string to go back to the value's name
      * @return this avatar
      */
     default Avatar setName(final String name) {
-        return this.setName(name == null ? null : Text.of(name));
+        return this.setName(Text.of(name));
     }
 
     /**

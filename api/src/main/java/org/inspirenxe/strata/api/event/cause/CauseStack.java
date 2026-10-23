@@ -30,10 +30,11 @@ import java.util.Optional;
  * }</pre>
  *
  * <p>A stack belongs to the UI thread, which dispatches events. Work from another thread pushes its frame inside the
- * task it hands to the UI thread, where the change is applied.</p>
+ * task it hands to the UI thread with {@link org.inspirenxe.strata.api.UiThread#execute}, where the change is
+ * applied.</p>
  *
  * <p>Strata implements this interface, and an adapter may implement it to back Strata's causes with the engine's
- * own, as an adapter on Sponge does with Sponge's.</p>
+ * own cause stack.</p>
  */
 public interface CauseStack {
 

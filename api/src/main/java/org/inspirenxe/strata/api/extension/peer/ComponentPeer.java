@@ -18,6 +18,7 @@ package org.inspirenxe.strata.api.extension.peer;
 import org.inspirenxe.strata.api.component.Component;
 import org.inspirenxe.strata.api.component.CursorKind;
 import org.inspirenxe.strata.api.component.Tooltip;
+import org.inspirenxe.strata.api.control.attribute.popup.Popup;
 import org.inspirenxe.strata.api.event.Event;
 import org.inspirenxe.strata.api.event.EventHandler;
 import org.inspirenxe.strata.api.event.EventType;
@@ -25,10 +26,12 @@ import org.inspirenxe.strata.api.event.Subscription;
 import org.inspirenxe.strata.api.extension.Environment;
 import org.inspirenxe.strata.api.geometry.Insets;
 import org.inspirenxe.strata.api.geometry.Rect;
+import org.inspirenxe.strata.api.layout.FlowDirection;
 import org.inspirenxe.strata.api.layout.HorizontalAlignment;
 import org.inspirenxe.strata.api.layout.VerticalAlignment;
 import org.inspirenxe.strata.api.state.PropertyKey;
 import org.inspirenxe.strata.api.state.Source;
+import org.inspirenxe.strata.api.text.TextStyle;
 import org.inspirenxe.strata.api.theme.Border;
 import org.inspirenxe.strata.api.theme.Paint;
 import org.inspirenxe.strata.api.theme.Theme;
@@ -46,6 +49,20 @@ import java.util.function.Consumer;
  * interface.</p>
  */
 public interface ComponentPeer {
+
+    /**
+     * See {@link org.inspirenxe.strata.api.component.Component#id()}.
+     *
+     * @return the id, or empty
+     */
+    Optional<String> id();
+
+    /**
+     * See {@link org.inspirenxe.strata.api.component.Component#setId(String)}.
+     *
+     * @param id the id, or null to remove it
+     */
+    void setId(String id);
 
     /**
      * See {@link org.inspirenxe.strata.api.component.Component#parent()}.
@@ -192,6 +209,13 @@ public interface ComponentPeer {
     boolean isHoverWithin();
 
     /**
+     * See {@link org.inspirenxe.strata.api.component.Component#isFocusWithin()}.
+     *
+     * @return true while this component or a descendant has focus
+     */
+    boolean isFocusWithin();
+
+    /**
      * See {@link org.inspirenxe.strata.api.extension.CustomComponent#isPressed()}.
      *
      * @return true while pressed
@@ -307,6 +331,20 @@ public interface ComponentPeer {
     void setAlignment(HorizontalAlignment horizontal, VerticalAlignment vertical);
 
     /**
+     * See {@link org.inspirenxe.strata.api.component.Component#flowDirection()}.
+     *
+     * @return the direction, its own or inherited
+     */
+    FlowDirection flowDirection();
+
+    /**
+     * See {@link org.inspirenxe.strata.api.component.Component#setFlowDirection}.
+     *
+     * @param direction the direction, or null to follow the parent's
+     */
+    void setFlowDirection(FlowDirection direction);
+
+    /**
      * See {@link org.inspirenxe.strata.api.extension.CustomComponent#offsetX()}.
      *
      * @return the horizontal offset
@@ -327,6 +365,20 @@ public interface ComponentPeer {
      * @param offsetY the vertical offset
      */
     void setOffset(float offsetX, float offsetY);
+
+    /**
+     * See {@link org.inspirenxe.strata.api.component.Component#opacity()}.
+     *
+     * @return the opacity
+     */
+    float opacity();
+
+    /**
+     * See {@link org.inspirenxe.strata.api.component.Component#setOpacity(float)}.
+     *
+     * @param opacity the opacity
+     */
+    void setOpacity(float opacity);
 
     /**
      * See {@link org.inspirenxe.strata.api.component.Component#zIndex()}.
@@ -369,6 +421,20 @@ public interface ComponentPeer {
      * @param tooltip the tooltip, or null
      */
     void setTooltip(Tooltip tooltip);
+
+    /**
+     * See {@link org.inspirenxe.strata.api.component.HasContextMenu#contextMenu()}.
+     *
+     * @return the popup, or null
+     */
+    Popup<?> contextMenu();
+
+    /**
+     * See {@link org.inspirenxe.strata.api.component.HasContextMenu#setContextMenu(Popup)}.
+     *
+     * @param popup the popup, or null
+     */
+    void setContextMenu(Popup<?> popup);
 
     /**
      * See {@link org.inspirenxe.strata.api.component.Container#background()}.
@@ -416,6 +482,23 @@ public interface ComponentPeer {
     void invalidateArrangement();
 
     /**
+     * See {@link org.inspirenxe.strata.api.extension.CustomComponent#repaint()}.
+     */
+    void repaint();
+
+    /**
+     * See {@link org.inspirenxe.strata.api.extension.CustomComponent#repaintNextFrame()}.
+     */
+    void repaintNextFrame();
+
+    /**
+     * See {@link org.inspirenxe.strata.api.extension.CustomComponent#repaintAfter(long)}.
+     *
+     * @param millis the delay in milliseconds
+     */
+    void repaintAfter(long millis);
+
+    /**
      * See {@link org.inspirenxe.strata.api.event.EventTarget#subscribe(EventType, int, EventHandler)}.
      *
      * @param <E> the event interface
@@ -434,6 +517,13 @@ public interface ComponentPeer {
      * @param source the source
      */
     <V> void bind(PropertyKey<?, V> key, Source<V> source);
+
+    /**
+     * See {@link Component#unbind}. Removes the binding whose key has the same name, if there is one.
+     *
+     * @param key the property
+     */
+    void unbind(PropertyKey<?, ?> key);
 
     /**
      * Fires a request without a value. See {@code CustomComponent.request(EventType)}.
@@ -478,4 +568,31 @@ public interface ComponentPeer {
      * @return true if firing the type would reach a handler
      */
     boolean isHandled(EventType<?> type);
+
+    /**
+     * Turns one of the component's own style states on or off. See {@code CustomComponent.setStyleState}.
+     *
+     * @param state the state's name
+     * @param on whether the state is on
+     * @throws IllegalArgumentException if the name is empty or one Strata sets
+     */
+    void setStyleState(String state, boolean on);
+
+    /**
+     * Looks up a paint by key for the component's style states. See {@code CustomComponent.stylePaint}.
+     *
+     * @param key the style key
+     * @param fallback returned when the theme has none of the keys tried, or the component has no theme yet
+     * @return the paint
+     */
+    Paint stylePaint(String key, Paint fallback);
+
+    /**
+     * Looks up a text style by key for the component's style states. See {@code CustomComponent.styleText}.
+     *
+     * @param key the style key
+     * @param fallback returned when the theme has none of the keys tried, or the component has no theme yet
+     * @return the text style
+     */
+    TextStyle styleText(String key, TextStyle fallback);
 }

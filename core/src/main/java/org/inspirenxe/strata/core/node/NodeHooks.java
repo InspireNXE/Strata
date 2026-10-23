@@ -32,8 +32,9 @@ import java.util.Set;
  * The calls a {@link Node} makes into its component. A {@link BuiltInComponent} hands the node a private instance
  * that calls its protected hooks. A developer's {@code CustomComponent} hands its peer the public
  * {@link org.inspirenxe.strata.api.extension.peer.ComponentHooks}, which {@link ExtensionHooks} adapts to this
- * interface. Calls that only Strata's own controls answer, {@link #disabled()}, {@link #released()} and
- * {@link #pressedWithin}, do nothing for a developer's component, so they never widen the public extension API.
+ * interface. Calls that only Strata's own controls answer, {@link #enabledChanged()}, {@link #disabled()},
+ * {@link #released()}, {@link #pressedWithin} and {@link #edgeScroll}, do nothing for a developer's component, so
+ * they never widen the public extension API.
  */
 interface NodeHooks {
 
@@ -46,6 +47,21 @@ interface NodeHooks {
      * @return the natural size of the content
      */
     Size measure(MeasureContext context, float availableWidth, float availableHeight);
+
+    /**
+     * Returns the smallest size of the content, for parents that share space.
+     *
+     * @param context the measure context
+     * @return the smallest size of the content
+     */
+    Size measureMinimum(MeasureContext context);
+
+    /**
+     * Returns the distance from the top of the bounds to the first baseline.
+     *
+     * @return the baseline, or NaN for none
+     */
+    float baseline();
 
     /**
      * Gives every child its slot; does nothing for a leaf component.
@@ -136,6 +152,22 @@ interface NodeHooks {
     void descendantFocused(Component<?> descendant);
 
     /**
+     * Tells the component it joined a tree a host is showing, before its {@code ATTACHED} handlers run.
+     */
+    void attached();
+
+    /**
+     * Tells the component it is leaving a tree a host is showing, after its {@code DETACHED} handlers ran.
+     */
+    void detached();
+
+    /**
+     * Tells the component that its own enabled flag changed, either way, not through an ancestor. Runs after the
+     * tree took the change and before {@link #disabled()}.
+     */
+    void enabledChanged();
+
+    /**
      * Tells the component it was disabled itself, not through an ancestor.
      */
     void disabled();
@@ -152,4 +184,14 @@ interface NodeHooks {
      * @param target the component the press is aimed at
      */
     void pressedWithin(Component<?> target);
+
+    /**
+     * Scrolls one frame's step toward an edge of the component's viewport the pointer is near, while a drag that
+     * carries a transfer holds it there.
+     *
+     * @param x the pointer's x, in the host's coordinates
+     * @param y the pointer's y, in the host's coordinates
+     * @return true if the component scrolled
+     */
+    boolean edgeScroll(float x, float y);
 }

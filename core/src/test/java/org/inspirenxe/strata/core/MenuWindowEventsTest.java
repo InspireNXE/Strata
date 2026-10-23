@@ -40,6 +40,7 @@ import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -452,6 +453,16 @@ class MenuWindowEventsTest {
         }
 
         @Test
+        void escapeKeepsADialogWithAnUnclosableWindowOpen() {
+            final Window window = this.window("Title").setClosable(false);
+            final Overlay overlay = this.dialog(window);
+            ((Button) window.children().get(0)).requestFocus();
+            assertTrue(MenuWindowEventsTest.this.key(Key.ESCAPE));
+            assertEquals(List.of(), MenuWindowEventsTest.this.heard);
+            assertTrue(overlay.isOpen());
+        }
+
+        @Test
         void codeFiresNoRequestButReports() {
             final Window window = this.window("Title");
             final Overlay overlay = this.dialog(window);
@@ -492,6 +503,13 @@ class MenuWindowEventsTest {
         }
     }
 
+    /**
+     * Names a result by its id in capitals, or null for none.
+     */
+    private static String name(final MessageBox.Result result) {
+        return result == null ? "null" : result.id().toUpperCase(Locale.ROOT);
+    }
+
     @Nested
     class MessageBoxes {
         private final List<MessageBox.Result> results = new ArrayList<>();
@@ -502,7 +520,7 @@ class MenuWindowEventsTest {
             final MenuWindowEventsTest outer = MenuWindowEventsTest.this;
             outer.test.show(outer.ui.absolutePanel());
             this.box = outer.ui.messageBox("Save", "Save?", MessageBox.Buttons.YES_NO_CANCEL)
-                    .onEvent(MessageBox.ANSWER, e -> outer.heard.add("answer " + e.value()))
+                    .onEvent(MessageBox.ANSWER, e -> outer.heard.add("answer " + name(e.value())))
                     .onEvent(MessageBox.ANSWERED, e -> {
                         assertSame(e.value(), e.previous());
                         this.results.add(e.value());
@@ -560,8 +578,9 @@ class MenuWindowEventsTest {
             assertEquals(List.of(), this.results);
             assertTrue(this.overlay.isOpen());
             refuse.close();
+            // Escape presses the cancel button, which answers as a click on it does, without closing the window
             MenuWindowEventsTest.this.key(Key.ESCAPE);
-            assertEquals(List.of("answer CANCEL", "answer CANCEL", "answer CANCEL", "window closed"),
+            assertEquals(List.of("answer CANCEL", "answer CANCEL", "answer CANCEL"),
                     MenuWindowEventsTest.this.heard);
             assertEquals(List.of(MessageBox.Result.CANCEL), this.results);
             assertFalse(this.overlay.isOpen());
@@ -602,6 +621,34 @@ class MenuWindowEventsTest {
         }
 
         @Test
+        void escapeLeavesABoxWithAnUnclosableWindowOpenAndUnanswered() {
+            this.show();
+            this.box.window().setClosable(false);
+            assertTrue(MenuWindowEventsTest.this.key(Key.ESCAPE));
+            assertEquals(List.of(), MenuWindowEventsTest.this.heard);
+            assertEquals(List.of(), this.results);
+            assertTrue(this.overlay.isOpen());
+        }
+
+        @Test
+        void closingTheOverlayFromCodeReportsTheDismissResultOnce() {
+            this.show();
+            this.overlay.close();
+            assertEquals(List.of(), MenuWindowEventsTest.this.heard);
+            assertEquals(List.of(MessageBox.Result.CANCEL), this.results);
+            MenuWindowEventsTest.this.test.host().layout();
+            assertEquals(List.of(MessageBox.Result.CANCEL), this.results);
+        }
+
+        @Test
+        void anAnsweredBoxDoesNotAnswerAgainWhenItsOverlayCloses() {
+            this.show();
+            MenuWindowEventsTest.this.key(Key.ENTER);
+            assertEquals(List.of(MessageBox.Result.YES), this.results);
+            assertFalse(this.overlay.isOpen());
+        }
+
+        @Test
         void closingTheWindowFromCodeFiresNoRequestButReportsTheDismissResult() {
             this.show();
             this.box.window().close();
@@ -617,8 +664,8 @@ class MenuWindowEventsTest {
             final AbsolutePanel panel = outer.ui.absolutePanel().add(embedded, 0, 0);
             outer.test.show(panel);
             final List<String> outside = new ArrayList<>();
-            panel.onEvent(MessageBox.ANSWER, e -> outside.add("answer " + e.value() + " " + (e.target() == embedded)))
-                    .onEvent(MessageBox.ANSWERED, e -> outside.add("answered " + e.value()))
+            panel.onEvent(MessageBox.ANSWER, e -> outside.add("answer " + name(e.value()) + " " + (e.target() == embedded)))
+                    .onEvent(MessageBox.ANSWERED, e -> outside.add("answered " + name(e.value())))
                     .onEvent(Closable.CLOSE, e -> outside.add("window close"))
                     .onEvent(Closable.CLOSED, e -> outside.add("window closed"));
             embedded.onEvent(Closable.CLOSED, e -> outer.heard.add("box heard window closed"));

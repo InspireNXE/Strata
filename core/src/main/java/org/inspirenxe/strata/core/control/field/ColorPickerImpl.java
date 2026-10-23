@@ -16,10 +16,12 @@
 package org.inspirenxe.strata.core.control.field;
 
 import org.inspirenxe.strata.api.component.CursorKind;
+import org.inspirenxe.strata.api.component.Focusable;
+import org.inspirenxe.strata.api.control.button.Button;
 import org.inspirenxe.strata.api.control.field.ColorPicker;
 import org.inspirenxe.strata.api.control.field.TextBox;
 import org.inspirenxe.strata.api.event.input.DragEvent;
-import org.inspirenxe.strata.api.component.Focusable;
+import org.inspirenxe.strata.api.event.input.KeyEvent;
 import org.inspirenxe.strata.api.event.input.PointerButtonEvent;
 import org.inspirenxe.strata.api.extension.ArrangeContext;
 import org.inspirenxe.strata.api.extension.MeasureContext;
@@ -27,29 +29,41 @@ import org.inspirenxe.strata.api.extension.Painter;
 import org.inspirenxe.strata.api.geometry.Insets;
 import org.inspirenxe.strata.api.geometry.Rect;
 import org.inspirenxe.strata.api.geometry.Size;
+import org.inspirenxe.strata.api.input.Key;
 import org.inspirenxe.strata.api.input.MouseButton;
 import org.inspirenxe.strata.api.layout.Anchor;
 import org.inspirenxe.strata.api.theme.Paint;
 import org.inspirenxe.strata.api.theme.Theme;
+import org.inspirenxe.strata.core.control.Rings;
 import org.inspirenxe.strata.core.node.BuiltInComposite;
 import org.inspirenxe.strata.core.node.ComponentFactoryImpl;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.regex.Pattern;
+import org.inspirenxe.strata.api.component.Validation;
+import org.inspirenxe.strata.api.text.Text;
+import org.inspirenxe.strata.core.control.Validity;
+import org.inspirenxe.strata.core.state.ConversionTarget;
+import java.util.function.Function;
 
 /**
  * The core {@link ColorPicker}: the square and strips are painted, and the hex field is a private
- * {@link TextBoxImpl} whose internal filter admits only an optional {@code #} and up to eight hex digits. The field's
- * {@link TextBox} events stop at the picker.
+ * {@link TextBoxImpl} whose internal filter admits only an optional {@code #} and up to six hex digits, or eight
+ * while the alpha strip shows. The field's {@link TextBox} events stop at the picker.
  *
  * <p>The square is drawn as one column per unit of its width, each a vertical gradient from the column's saturation
  * at full brightness down to black, which is exact because brightness scales the color linearly. The hue strip is
  * six gradients between the primary and secondary colors, and the alpha strip one gradient over a checkerboard of
  * {@value #CHECKER}-unit cells. Columns, segments, checker cells and markers are worked out during arrange or after a
  * change, never while painting.</p>
+ *
+ * <p>The picker takes focus itself, before the field in the tab order, and acts only on keys sent to it, not on
+ * those that bubble from the field. A key step rounds the saturation or brightness to a hundredth, so steps of 1
+ * percent land on whole percents, and the hue stops at 0 and 360.</p>
  */
-public final class ColorPickerImpl extends BuiltInComposite<ColorPicker> implements ColorPicker {
+public final class ColorPickerImpl extends BuiltInComposite<ColorPicker> implements ColorPicker, ConversionTarget {
     /**
      * The side of each checkerboard cell behind translucent colors, in UI units.
      */
@@ -59,7 +73,10 @@ public final class ColorPickerImpl extends BuiltInComposite<ColorPicker> impleme
     private static final int[] HUES = {0xFFFF0000, 0xFFFFFF00, 0xFF00FF00, 0xFF00FFFF, 0xFF0000FF, 0xFFFF00FF, 0xFFFF0000};
     private static final Paint DEFAULT_MARKER = Paint.solid(0xFFFFFFFF);
     private static final Paint DEFAULT_MARKER_OUTLINE = Paint.solid(0xFF000000);
+    private static final Pattern RGB = Pattern.compile("#?[0-9a-fA-F]{0,6}");
+    private static final Pattern ARGB = Pattern.compile("#?[0-9a-fA-F]{0,8}");
 
+    private final Validity validity;
     private final TextBoxImpl field;
     private int color;
     private int alpha;
@@ -74,6 +91,9 @@ public final class ColorPickerImpl extends BuiltInComposite<ColorPicker> impleme
     private Paint marker;
     private Paint markerOutline;
     private Paint disabledPaint;
+    private Paint focusRing;
+    private final Rings.Ring ring = new Rings.Ring();
+    private Rect squareFrame;
 
     // Computed during arrange
     private Rect square;
@@ -101,6 +121,7 @@ public final class ColorPickerImpl extends BuiltInComposite<ColorPicker> impleme
     @SuppressWarnings("this-escape")
     public ColorPickerImpl(final ComponentFactoryImpl ui) {
         super(ui);
+        this.validity = new Validity(this.node(), this::validated);
         this.color = 0xFFFFFFFF;
         this.alpha = 0xFF;
         this.brightness = 1f;
@@ -109,7 +130,9 @@ public final class ColorPickerImpl extends BuiltInComposite<ColorPicker> impleme
         this.marker = DEFAULT_MARKER;
         this.markerOutline = DEFAULT_MARKER_OUTLINE;
         this.disabledPaint = Paint.NONE;
+        this.focusRing = Paint.NONE;
         this.square = Rect.ZERO;
+        this.squareFrame = Rect.ZERO;
         this.hueStrip = Rect.ZERO;
         this.alphaStrip = Rect.ZERO;
         this.swatch = Rect.ZERO;
@@ -124,7 +147,8 @@ public final class ColorPickerImpl extends BuiltInComposite<ColorPicker> impleme
         this.field = new TextBoxImpl(ui);
         this.field.setMaxLength(9);
         this.field.setAnchor(Anchor.FILL);
-        this.field.setInternalFilter(text -> text.matches("#?[0-9a-fA-F]{0,8}") ? text : null);
+        // The alpha can be typed only while its strip shows, so the user never sets one they cannot see
+        this.field.setInternalFilter(text -> (this.alphaShown ? ARGB : RGB).matcher(text).matches() ? text : null);
         this.field.onEvent(TextBox.SUBMITTED, event -> this.commitHex());
         this.field.onEvent(Focusable.FOCUS_LOST, event -> this.commitHex());
         this.addChild(this.field);
@@ -147,6 +171,7 @@ public final class ColorPickerImpl extends BuiltInComposite<ColorPicker> impleme
             final int previous = this.color;
             this.adopt(argb);
             this.report(PICKED, argb, previous);
+            this.validity.check();
         }
         return this;
     }
@@ -256,18 +281,20 @@ public final class ColorPickerImpl extends BuiltInComposite<ColorPicker> impleme
             this.brightness = brightness;
             this.changed();
             this.report(PICKED, next, previous);
+            this.validity.check();
         });
     }
 
     /**
-     * Takes the hex code typed into the field, or puts the current color back when it is not six or eight digits.
+     * Takes the hex code typed into the field, or puts the current color back when it is not six digits, or eight
+     * while the alpha strip shows.
      */
     private void commitHex() {
         final String text = this.field.text().startsWith("#") ? this.field.text().substring(1) : this.field.text();
         final int parsed;
         if (text.length() == 6) {
             parsed = (this.color & 0xFF000000) | Integer.parseInt(text, 16);
-        } else if (text.length() == 8) {
+        } else if (text.length() == 8 && this.alphaShown) {
             parsed = Integer.parseUnsignedInt(text, 16);
         } else {
             this.showHex();
@@ -349,12 +376,44 @@ public final class ColorPickerImpl extends BuiltInComposite<ColorPicker> impleme
     // Theme, layout and painting
     // ------------------------------------------------------------------
 
+    // ------------------------------------------------------------------
+    // Validatable
+    // ------------------------------------------------------------------
+
+    @Override
+    public Validation validation() {
+        return this.validity.validation();
+    }
+
+    @Override
+    public ColorPicker setValidation(final Validation validation) {
+        this.validity.set(validation);
+        return this;
+    }
+
+    @Override
+    public ColorPicker setValidator(final Function<? super ColorPicker, Validation> validator) {
+        this.validity.setValidator(validator == null ? null : () -> validator.apply(this));
+        return this;
+    }
+
+    @Override
+    public void setConversionError(final Text message) {
+        this.validity.setConversionError(message);
+    }
+
+    private void validated(final Validation validation, final Validation previous) {
+        this.report(VALIDATED, validation, previous);
+    }
+
     @Override
     protected void onApplyTheme(final Theme theme) {
+        this.validity.applyTheme(theme, null);
         this.frame = theme.paintOr(STYLE_FRAME, Paint.NONE);
         this.marker = theme.paintOr(STYLE_MARKER, DEFAULT_MARKER);
         this.markerOutline = theme.paintOr(STYLE_MARKER_OUTLINE, DEFAULT_MARKER_OUTLINE);
         this.disabledPaint = theme.paintOr(STYLE_DISABLED, Paint.NONE);
+        this.focusRing = theme.paintOr(STYLE_FOCUS, theme.paintOr(Button.STYLE_FOCUS, Paint.NONE));
     }
 
     private float stripsWidth() {
@@ -389,6 +448,7 @@ public final class ColorPickerImpl extends BuiltInComposite<ColorPicker> impleme
             }
         }
         this.frames = frames;
+        this.squareFrame = this.square.grow(Insets.of(1f));
 
         final int count = Math.max(1, (int) Math.ceil(this.square.width()));
         final float columnWidth = this.square.width() / count;
@@ -464,10 +524,19 @@ public final class ColorPickerImpl extends BuiltInComposite<ColorPicker> impleme
     }
 
     @Override
-    protected void paint(final Painter painter, final Rect bounds) {
-        if (this.field.isEnabled() != this.isEnabled()) {
-            this.field.setEnabled(this.isEnabled());
+    protected void onEnabledChanged() {
+        this.field.setEnabled(this.isEnabled());
+    }
+
+    @Override
+    protected void paintOverChildren(final Painter painter, final Rect bounds) {
+        if (this.isEnabled()) {
+            this.validity.paintOutline(painter, bounds);
         }
+    }
+
+    @Override
+    protected void paint(final Painter painter, final Rect bounds) {
         if (this.columnsDirty) {
             this.columnsDirty = false;
             for (int i = 0; i < this.columns.length; i++) {
@@ -505,6 +574,9 @@ public final class ColorPickerImpl extends BuiltInComposite<ColorPicker> impleme
         }
         for (final Rect rect : this.markerFills) {
             this.marker.paint(painter, rect);
+        }
+        if (this.isFocused() && this.focusRing != Paint.NONE) {
+            this.ring.paint(painter, this.focusRing, this.squareFrame);
         }
     }
 
@@ -561,6 +633,44 @@ public final class ColorPickerImpl extends BuiltInComposite<ColorPicker> impleme
     @Override
     protected void onDragEnd(final DragEvent event) {
         this.dragging = Area.NONE;
+    }
+
+    @Override
+    protected void onKey(final KeyEvent event) {
+        if (!event.action().isDown() || !this.isEnabled() || event.target() != this
+                || event.modifiers().control() || event.modifiers().alt()) {
+            return;
+        }
+        final boolean big = event.modifiers().shift();
+        final float point = big ? 0.1f : 0.01f;
+        final float degrees = big ? 10f : 1f;
+        switch (event.key()) {
+            case LEFT -> this.userPick(this.hue, clamp(this.saturation - point), this.brightness, this.alpha);
+            case RIGHT -> this.userPick(this.hue, clamp(this.saturation + point), this.brightness, this.alpha);
+            case UP -> this.userPick(this.hue, this.saturation, clamp(this.brightness + point), this.alpha);
+            case DOWN -> this.userPick(this.hue, this.saturation, clamp(this.brightness - point), this.alpha);
+            case PAGE_UP -> this.userPick(Math.max(0f, this.hue - degrees), this.saturation, this.brightness,
+                    this.alpha);
+            case PAGE_DOWN -> this.userPick(Math.min(360f, this.hue + degrees), this.saturation, this.brightness,
+                    this.alpha);
+            case HOME, END -> {
+                if (!this.alphaShown) {
+                    return;
+                }
+                this.userPick(this.hue, this.saturation, this.brightness, event.key() == Key.HOME ? 0xFF : 0);
+            }
+            default -> {
+                return;
+            }
+        }
+        event.consume();
+    }
+
+    /**
+     * Clamps a saturation or brightness to 0 to 1, rounded to a hundredth so steps of 1 percent land on them.
+     */
+    private static float clamp(final float value) {
+        return Math.max(0f, Math.min(1f, Math.round(value * 100f) / 100f));
     }
 
     /**

@@ -17,19 +17,20 @@ package org.inspirenxe.strata.api.control.collection;
 
 import org.inspirenxe.strata.api.component.Component;
 import org.inspirenxe.strata.api.component.Focusable;
+import org.inspirenxe.strata.api.component.HasContextMenu;
 import org.inspirenxe.strata.api.component.HasCursor;
 import org.inspirenxe.strata.api.component.HasTooltip;
 import org.inspirenxe.strata.api.control.attribute.item.Activatable;
+import org.inspirenxe.strata.api.control.attribute.item.CellEditing;
 import org.inspirenxe.strata.api.control.attribute.item.CellSource;
+import org.inspirenxe.strata.api.control.attribute.item.ItemDragging;
 import org.inspirenxe.strata.api.control.attribute.item.ItemSource;
 import org.inspirenxe.strata.api.control.attribute.item.RowView;
 import org.inspirenxe.strata.api.control.attribute.item.MultiSelection;
 import org.inspirenxe.strata.api.control.attribute.item.Selection;
 import org.inspirenxe.strata.api.control.attribute.item.SelectionMode;
-import org.inspirenxe.strata.api.text.Text;
 
 import java.util.List;
-import java.util.Optional;
 import java.util.function.Function;
 
 /**
@@ -48,9 +49,10 @@ import java.util.function.Function;
  * <h2>Selection and input</h2>
  * <ul>
  *     <li>In the default {@link SelectionMode#SINGLE} mode at most one item is selected. A left press on a row
- *     selects it; a press on the selected row deselects it only when the list {@linkplain #setDeselectable is deselectable}.
- *     A cell that consumes the press, such as a button, keeps the row from being selected.</li>
- *     <li>In {@link SelectionMode#MULTIPLE} mode Control, Shift and Control+A select several rows, as that mode
+ *     selects it; a press on the selected row deselects it only when the list {@linkplain #setDeselectable is
+ *     deselectable}. A cell that consumes the press, such as a button, keeps the row from being selected.</li>
+ *     <li>In {@link SelectionMode#MULTIPLE} mode the shortcut modifier, Shift and the shortcut modifier with A select
+ *     several rows, as that mode
  *     describes. Those changes ask {@link MultiSelection#SELECT_MANY} in place of
  *     {@link Selection#SELECT}, and every change of the selected rows reports
  *     {@link MultiSelection#SELECTED_MANY}.</li>
@@ -59,15 +61,24 @@ import java.util.function.Function;
  *     click does instead of a double press, as in a drop-down.</li>
  *     <li>While focused: Up and Down move the selection, Page Up and Page Down by a viewport, Home and End to the
  *     ends; the list scrolls to keep the selection in view. With nothing selected, Up starts from the last row.
- *     Held keys repeat. Keys with Alt are left alone, and so are keys with Control other than Control+A in
- *     {@link SelectionMode#MULTIPLE} mode. An empty list takes no keys.</li>
+ *     Held keys repeat. Keys with Alt are left alone, and so are keys with Control or the shortcut modifier other
+ *     than the shortcut modifier with A in {@link SelectionMode#MULTIPLE} mode. An empty list takes no keys.</li>
+ *     <li>Typing a name's first letters while focused selects the item, as {@link #setTypeAhead} describes.</li>
+ *     <li>With a {@linkplain #setCellEditor cell editor}, F2 and a double press edit a row in place, as
+ *     {@link CellEditing} describes, and a double press no longer activates.</li>
  *     <li>The wheel and the scroll bar scroll as in {@link org.inspirenxe.strata.api.layout.ScrollPanel}, and the
  *     list uses its theme keys for the bar.</li>
+ *     <li>With a {@linkplain #setDragTransfer drag transfer}, a left drag from a row drags the selected rows, as
+ *     {@link ItemDragging} describes, and a drag of them within the list moves them. In
+ *     {@link SelectionMode#MULTIPLE} mode a plain press on one of several selected rows then selects it alone only
+ *     on its release, when no drag started, so a drag carries them all. A drag that carries a transfer near the top
+ *     or bottom scrolls the rows, as {@link #setDragScroll} describes.</li>
  * </ul>
  *
  * <p>{@link #setItems} keeps each selected item selected if an item with the same {@linkplain #setKeyFunction key}
- * is still there, so a list refreshed from the server keeps the row the user picked. If no item has that key,
- * nothing is selected.</p>
+ * is still there, so a list refreshed from the server keeps the row the user picked. Items with equal keys are
+ * matched in order: the second item with a key stays on the second one, or on the last when there are fewer. If no
+ * item has that key, nothing is selected.</p>
  *
  * <p>The events carry row indexes, so read the item from the list: {@code list.items().get(e.value())}. Handle
  * {@link Selection#SELECT} or {@link Activatable#ACTIVATE} to refuse or change what the user does, and
@@ -79,11 +90,12 @@ import java.util.function.Function;
  * <h2>Events</h2>
  * <ul>
  *     <li>{@link Selection#SELECT}: Asked before the user changes the selection: a press on a row, a press on the
- *     selected row of a {@linkplain #setDeselectable deselectable} list, which clears it, or the Up, Down, Page Up,
- *     Page Down, Home and End keys while the list has focus. It fires only when the selection would change. The value
- *     is the index of the row about to be selected, or -1 when the user clears the selection. A handler may rewrite it
- *     to another index or to -1; the list then selects that row and scrolls it into view, as {@link #select} does, and
- *     ignores any other index outside the items. Fires only for the user's actions.</li>
+ *     selected row of a {@linkplain #setDeselectable deselectable} list, which clears it, the Up, Down, Page Up,
+ *     Page Down, Home and End keys while the list has focus, or {@linkplain #setTypeAhead type-ahead}. It fires only
+ *     when the selection would change. The value is the index of the row about to be selected, or -1 when the user
+ *     clears the selection. A handler may rewrite it to another index or to -1; the list then selects that row and
+ *     scrolls it into view, as {@link #select} does, and ignores any other index outside the items. Fires only for the
+ *     user's actions.</li>
  *     <li>{@link Selection#SELECTED}: Told after the selection changed. The value is the selected index, or -1
  *     when nothing is selected, and the previous value is the index before. It also fires when {@link #setItems} keeps
  *     the selection at the same index but on an item that is no longer equal to the one before, so the value can equal
@@ -94,6 +106,11 @@ import java.util.function.Function;
  *     the items is ignored. Fires only for the user's actions.</li>
  *     <li>{@link Activatable#ACTIVATED}: Told after the user activated a row. The value is the row's index, and the
  *     previous value is the same index. The list has no method that activates a row from code.</li>
+ *     <li>{@link ItemDragging#MOVE_ITEMS}: Asked before the user moves rows inside the list by dragging them, once a
+ *     {@linkplain #setDragTransfer drag transfer} is set. The value names the rows and where they go. If no handler
+ *     cancels it, the list moves its items with {@link #setItems}. Fires only for the user's actions.</li>
+ *     <li>{@code InputEvents.DRAG_OVER} and {@code InputEvents.DROP}: the list takes drags of its own rows itself,
+ *     and leaves drags from elsewhere to the project's handlers.</li>
  * </ul>
  *
  * <h2>Theme keys</h2>
@@ -106,6 +123,8 @@ import java.util.function.Function;
  *     {@value #STYLE_ROW}.</li>
  *     <li>{@value #STYLE_PLACEHOLDER} (text style, optional): the {@linkplain #setPlaceholder placeholder}. Falls
  *     back to the default style.</li>
+ *     <li>{@value #STYLE_DROP} (paint, optional): the line, {@value #DROP_MARK_HEIGHT} units high across the rows,
+ *     where dragged rows would land. Falls back to {@value #STYLE_ROW_SELECTED}.</li>
  *     <li>{@value #STYLE_CELL_PADDING} (insets, optional): the margin of the cell labels that
  *     {@link org.inspirenxe.strata.api.ComponentFactory#cellLabel(String)} makes. Defaults to
  *     {@value org.inspirenxe.strata.api.ComponentFactory#CELL_PADDING} at the sides and none at the top and
@@ -127,8 +146,9 @@ import java.util.function.Function;
  * @param <T> the type of the items
  */
 public interface ListView<T> extends Component<ListView<T>>, Focusable<ListView<T>>, HasCursor<ListView<T>>,
-        HasTooltip<ListView<T>>, ItemSource<T, ListView<T>>, CellSource<T, ListView<T>>,
-        MultiSelection<T, ListView<T>>, Activatable<ListView<T>>, RowView<ListView<T>> {
+        HasTooltip<ListView<T>>, HasContextMenu<ListView<T>>, ItemSource<T, ListView<T>>, CellSource<T, ListView<T>>,
+        MultiSelection<T, ListView<T>>, Activatable<ListView<T>>, RowView<ListView<T>>, CellEditing<T, ListView<T>>,
+        ItemDragging<T, ListView<T>> {
     /**
      * Style key for the list's area behind its rows (paint, optional).
      */
@@ -168,7 +188,7 @@ public interface ListView<T> extends Component<ListView<T>>, Focusable<ListView<
     /**
      * Style key for the widest a row gets (metric, optional), in UI units. A list wider than this centers a column
      * of rows this wide and puts its scroll bar beside the column, {@value #STYLE_BAR_GAP} units right of it, even
-     * where that reaches past the list's right edge. Defaults
+     * where that reaches past the list's right edge. Rows are clipped to the column. Defaults
      * to 0, which makes rows as wide as the list. Lists inside other controls, such as a table's or a combo box's,
      * ignore it.
      */
@@ -198,6 +218,15 @@ public interface ListView<T> extends Component<ListView<T>>, Focusable<ListView<
      */
     String STYLE_PLACEHOLDER = "list.placeholder";
     /**
+     * Style key for the line where dragged rows would land (paint, optional). Defaults to
+     * {@value #STYLE_ROW_SELECTED}.
+     */
+    String STYLE_DROP = "list.drop";
+    /**
+     * How high the line where dragged rows would land is, in UI units.
+     */
+    float DROP_MARK_HEIGHT = 2f;
+    /**
      * Style key for the margin around the default cell of lists, trees and tables, the cells
      * {@link org.inspirenxe.strata.api.ComponentFactory#cell(Object)} and
      * {@link org.inspirenxe.strata.api.ComponentFactory#cellLabel(String)} make, and the rows of a combo box's
@@ -206,21 +235,25 @@ public interface ListView<T> extends Component<ListView<T>>, Focusable<ListView<
      * bottom.
      */
     String STYLE_CELL_PADDING = "list.cell.padding";
-
     /**
-     * Returns the items.
-     *
-     * @return an unmodifiable copy of the items
+     * Style key for how long a {@linkplain #setTypeAhead type-ahead} prefix lasts without a key (metric, optional),
+     * in milliseconds. Defaults to {@value #DEFAULT_TYPEAHEAD_TIMEOUT}. Tables, trees and combo boxes read it too.
      */
-    List<T> items();
+    String STYLE_TYPEAHEAD_TIMEOUT = "list.typeahead.timeout";
+    /**
+     * How long a type-ahead prefix lasts without a key when the theme sets no {@value #STYLE_TYPEAHEAD_TIMEOUT}, in
+     * milliseconds.
+     */
+    long DEFAULT_TYPEAHEAD_TIMEOUT = 1000L;
 
     /**
-     * Replaces the items and rebuilds the rows in view. The selection moves to the item with the selected item's
-     * key, or clears; {@link #SELECTED} fires if the selected item or its index changed. The scroll offset is kept,
-     * clamped to the new length.
+     * Replaces the items and rebuilds the rows in view. Each selected item moves to the item with its key, as
+     * {@link ItemSource} describes, or leaves the selection; {@link #SELECTED} fires if the selected item or its
+     * index changed. The scroll offset is kept, clamped to the new length.
      *
      * @param items the items; the list keeps a copy
      * @return this list
+     * @throws NullPointerException if an item is null
      */
     ListView<T> setItems(List<? extends T> items);
 
@@ -240,59 +273,22 @@ public interface ListView<T> extends Component<ListView<T>>, Focusable<ListView<
     ListView<T> setCellFactory(Function<? super T, ? extends Component<?>> cellFactory);
 
     /**
-     * Sets how items are told apart when {@link #setItems} keeps the selection. By default an item is its own key,
-     * compared with {@code equals}.
+     * Sets the names that type-ahead matches, or turns it off. While the list has focus, printable characters build
+     * a prefix, which starts again after {@value #STYLE_TYPEAHEAD_TIMEOUT} passes without one, and the selection
+     * moves to the next item after the current one whose name starts with it, ignoring case in the translator's
+     * locale. As the prefix grows the search starts at the current item, so it stays on a match that still fits, and
+     * one character typed again and again cycles through the items that start with it. The move asks
+     * {@link Selection#SELECT}, or {@link MultiSelection#SELECT_MANY} in {@link SelectionMode#MULTIPLE} mode, as a
+     * plain press on the row would. A space never starts a prefix, so Space reaches the cells, and characters with
+     * Control or Alt are left alone. A character a cell's own control consumes, such as one typed into a text box in
+     * a row, never reaches the list.
      *
-     * @param keyFunction returns the key of an item; keys are compared with {@code equals}
+     * @param name returns what an item is called: a {@link org.inspirenxe.strata.api.text.Text}, or any other value,
+     *     named by its appearance's name. By default the item itself, so the name is the text a default cell shows.
+     *     Null turns type-ahead off.
      * @return this list
      */
-    ListView<T> setKeyFunction(Function<? super T, ?> keyFunction);
-
-    /**
-     * Returns the row height.
-     *
-     * @return the height of every row; {@value #DEFAULT_ROW_HEIGHT} by default
-     */
-    float rowHeight();
-
-    /**
-     * Sets the height of every row.
-     *
-     * @param height the height in UI units
-     * @return this list
-     * @throws IllegalArgumentException if the height is not greater than 0 or not finite
-     */
-    ListView<T> setRowHeight(float height);
-
-    /**
-     * Returns the row spacing.
-     *
-     * @return the space between rows; 0 by default
-     */
-    float rowSpacing();
-
-    /**
-     * Sets the space between rows. No background is drawn in it.
-     *
-     * @param spacing the space in UI units
-     * @return this list
-     * @throws IllegalArgumentException if the spacing is negative or not finite
-     */
-    ListView<T> setRowSpacing(float spacing);
-
-    /**
-     * Returns the selected index.
-     *
-     * @return the index of the selected item, or -1 when nothing is selected
-     */
-    int selectedIndex();
-
-    /**
-     * Returns the selected item.
-     *
-     * @return the selected item, or empty when nothing is selected
-     */
-    Optional<T> selected();
+    ListView<T> setTypeAhead(Function<? super T, ?> name);
 
     /**
      * Selects the item at an index and scrolls it into view.
@@ -306,63 +302,8 @@ public interface ListView<T> extends Component<ListView<T>>, Focusable<ListView<
     /**
      * Selects the first item with the same key as the given one, or clears the selection if there is none.
      *
-     * @param item the item to find by its key
+     * @param item the item to find by its key, or null to clear the selection
      * @return this list
      */
     ListView<T> selectItem(T item);
-
-    /**
-     * Returns whether a press on the selected row deselects it.
-     *
-     * @return false by default
-     */
-    boolean isDeselectable();
-
-    /**
-     * Sets whether a press on the selected row deselects it.
-     *
-     * @param deselectable true to allow deselecting by pressing
-     * @return this list
-     */
-    ListView<T> setDeselectable(boolean deselectable);
-
-    /**
-     * Sets whether a single click activates a row, instead of a double click.
-     *
-     * @param onClick true to activate on every click
-     * @return this list
-     */
-    ListView<T> setActivateOnClick(boolean onClick);
-
-    /**
-     * Sets the text shown in the middle of the list while it has no items.
-     *
-     * @param placeholder the text, or {@code null} for none
-     * @return this list
-     */
-    ListView<T> setPlaceholder(Text placeholder);
-
-    /**
-     * Returns the vertical offset.
-     *
-     * @return how far the rows are scrolled down, in UI units
-     */
-    float scrollY();
-
-    /**
-     * Scrolls to an offset, clamped to the rows.
-     *
-     * @param scrollY the vertical offset
-     * @return this list
-     */
-    ListView<T> setScrollY(float scrollY);
-
-    /**
-     * Scrolls the least distance that shows a row.
-     *
-     * @param index the row's index
-     * @return this list
-     * @throws IndexOutOfBoundsException if the index is not an item's index
-     */
-    ListView<T> scrollToIndex(int index);
 }

@@ -15,8 +15,10 @@
  */
 package org.inspirenxe.strata.core.control.button;
 
+import org.inspirenxe.strata.api.command.Command;
 import org.inspirenxe.strata.api.component.CursorKind;
 import org.inspirenxe.strata.api.control.button.Button;
+import org.inspirenxe.strata.api.control.button.IconPlacement;
 import org.inspirenxe.strata.api.event.input.KeyEvent;
 import org.inspirenxe.strata.api.event.input.PointerButtonEvent;
 import org.inspirenxe.strata.api.extension.MeasureContext;
@@ -24,23 +26,28 @@ import org.inspirenxe.strata.api.extension.Painter;
 import org.inspirenxe.strata.api.geometry.Insets;
 import org.inspirenxe.strata.api.geometry.Rect;
 import org.inspirenxe.strata.api.geometry.Size;
-import org.inspirenxe.strata.api.input.Key;
-import org.inspirenxe.strata.api.input.KeyAction;
-import org.inspirenxe.strata.api.input.MouseButton;
 import org.inspirenxe.strata.api.text.Text;
+import org.inspirenxe.strata.api.theme.Paint;
 import org.inspirenxe.strata.api.theme.SpriteId;
 import org.inspirenxe.strata.api.theme.Theme;
 import org.inspirenxe.strata.api.visual.Visual;
+import org.inspirenxe.strata.core.control.Activation;
+import org.inspirenxe.strata.core.control.Commands;
 import org.inspirenxe.strata.core.node.BuiltInComponent;
 import org.inspirenxe.strata.core.node.ComponentFactoryImpl;
+import org.inspirenxe.strata.core.node.DialogButton;
+import org.inspirenxe.strata.core.node.MnemonicTarget;
 import org.inspirenxe.strata.core.text.TextLine;
 
+import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 
 /**
  * The core {@link Button}. Its face is the disabled paint when disabled, the pressed paint while held under the
  * pointer, the hovered paint while hovered or focused, and the normal paint otherwise. A focused button also draws
- * a one-unit focus ring when the theme has one. The caption is centered.
+ * a one-unit focus ring when the theme has one. A default button draws the theme's {@value #STYLE_DEFAULT} paint in
+ * place of the normal one. The caption is centered.
  *
  * <p>The button is focusable and tabbable, shows a hand cursor, is at least 20 units wide, and measures at least 20
  * tall, though a smaller height set on it applies. Its desired size is
@@ -60,7 +67,7 @@ import java.util.Set;
  * <p>The keys, the caption and the icon, and how they measure and draw, live in a helper that
  * {@link DropDownButtonImpl} shares, so the two buttons look and measure alike.</p>
  */
-public final class ButtonImpl extends BuiltInComponent<Button> implements Button {
+public final class ButtonImpl extends BuiltInComponent<Button> implements Button, DialogButton, MnemonicTarget {
     /**
      * The space between the icon and the caption, in UI units.
      */
@@ -80,9 +87,17 @@ public final class ButtonImpl extends BuiltInComponent<Button> implements Button
      * in UI units. A smaller height set on one applies.
      */
     public static final float MIN_HEIGHT = 20f;
+    /**
+     * The minimum width of a framed button, in UI units.
+     */
+    public static final float MIN_WIDTH = 20f;
 
     private final ButtonContent content;
+    private final Activation activation;
     private boolean link;
+    private Command.Action command;
+    private boolean isDefault;
+    private boolean cancel;
 
     /**
      * Creates a button.
@@ -94,8 +109,9 @@ public final class ButtonImpl extends BuiltInComponent<Button> implements Button
     public ButtonImpl(final ComponentFactoryImpl ui, final Text text) {
         super(ui);
         this.content = new ButtonContent(text);
+        this.activation = Activation.leftButton(this::activatesOnPress, this::userPress);
         this.setCursor(CursorKind.HAND);
-        this.setMinSize(20f, 0f);
+        this.setMinSize(MIN_WIDTH, 0f);
     }
 
     @Override
@@ -112,19 +128,26 @@ public final class ButtonImpl extends BuiltInComponent<Button> implements Button
 
     @Override
     public Button setTextPadding(final Insets padding) {
-        this.content.setTextPadding(padding);
+        this.content.setTextPadding(Objects.requireNonNull(padding, "padding"));
         this.invalidateLayout();
         return this;
     }
 
     @Override
-    public SpriteId iconSprite() {
-        return this.content.iconSprite();
+    public Button clearTextPadding() {
+        this.content.setTextPadding(null);
+        this.invalidateLayout();
+        return this;
     }
 
     @Override
-    public Visual iconVisual() {
-        return this.content.iconVisual();
+    public Optional<SpriteId> iconSprite() {
+        return Optional.ofNullable(this.content.iconSprite());
+    }
+
+    @Override
+    public Optional<Visual> iconVisual() {
+        return Optional.ofNullable(this.content.iconVisual());
     }
 
     @Override
@@ -166,18 +189,33 @@ public final class ButtonImpl extends BuiltInComponent<Button> implements Button
     }
 
     @Override
+    public IconPlacement iconPlacement() {
+        return this.content.placement();
+    }
+
+    @Override
+    public Button setIconPlacement(final IconPlacement placement) {
+        this.content.setPlacement(placement);
+        this.invalidateLayout();
+        return this;
+    }
+
+    @Override
     public boolean isLink() {
         return this.link;
     }
 
+    /**
+     * Makes the button a link or a framed button. The minimum size follows, 0 by 0 for a link and 20 by 0 for a
+     * framed button, only while it is still the one the button set itself, so a minimum set in code is kept whatever
+     * the order of the calls.
+     */
     @Override
     public Button setLink(final boolean link) {
-        this.link = link;
-        if (link) {
-            this.setMinSize(0f, 0f);
-        } else {
-            this.setMinSize(20f, 0f);
+        if (link != this.link && this.minWidth() == (this.link ? 0f : MIN_WIDTH) && this.minHeight() == 0f) {
+            this.setMinSize(link ? 0f : MIN_WIDTH, 0f);
         }
+        this.link = link;
         this.invalidateLayout();
         return this;
     }
@@ -186,17 +224,82 @@ public final class ButtonImpl extends BuiltInComponent<Button> implements Button
     public void press() {
         if (this.isEnabled()) {
             this.report(PRESSED);
+            this.runCommand();
         }
     }
 
     /**
-     * Presses the button for the user: fires {@link Button#PRESS}, then {@link Button#PRESSED} unless a handler
-     * canceled the request. Does nothing while disabled.
+     * Presses the button for the user: fires {@link Button#PRESS}, then {@link Button#PRESSED} and runs the command
+     * unless a handler canceled the request. Does nothing while disabled.
      */
     private void userPress() {
         if (this.isEnabled() && this.request(PRESS)) {
             this.report(PRESSED);
+            this.runCommand();
         }
+    }
+
+    private void runCommand() {
+        Commands.run(this.node().causes(), this.command);
+    }
+
+    @Override
+    public boolean isDefault() {
+        return this.isDefault;
+    }
+
+    @Override
+    public Button setDefault(final boolean isDefault) {
+        this.isDefault = isDefault;
+        return this;
+    }
+
+    @Override
+    public boolean isCancel() {
+        return this.cancel;
+    }
+
+    @Override
+    public Button setCancel(final boolean cancel) {
+        this.cancel = cancel;
+        return this;
+    }
+
+    /**
+     * Presses the button for the user, as a click would, for the root's Enter or Escape.
+     */
+    @Override
+    public void pressForUser() {
+        this.userPress();
+    }
+
+    @Override
+    public boolean hasMnemonic(final int mnemonic) {
+        return this.content.mnemonic() == mnemonic;
+    }
+
+    /**
+     * Presses the button for the user, as Alt with its mnemonic does.
+     */
+    @Override
+    public void activateMnemonic(final int mnemonic) {
+        this.userPress();
+    }
+
+    @Override
+    public Optional<Command.Action> command() {
+        return Optional.ofNullable(this.command);
+    }
+
+    /**
+     * Shows a command: takes its text and binds {@link Button#ENABLED} to its enabled source, or takes the binding
+     * off again for null.
+     */
+    @Override
+    public Button setCommand(final Command.Action command) {
+        this.command = command;
+        Commands.follow(this.node(), command);
+        return this;
     }
 
     @Override
@@ -210,6 +313,12 @@ public final class ButtonImpl extends BuiltInComponent<Button> implements Button
     }
 
     @Override
+    protected Size measureMinimum(final MeasureContext context) {
+        // The caption does not shrink, and measuring does not depend on the space offered
+        return this.measure(context, Float.POSITIVE_INFINITY, Float.POSITIVE_INFINITY);
+    }
+
+    @Override
     protected Size measure(final MeasureContext context, final float availableWidth, final float availableHeight) {
         this.content.measure(context.text(), this.link);
         final Insets padding = this.content.padding(this.link);
@@ -219,17 +328,23 @@ public final class ButtonImpl extends BuiltInComponent<Button> implements Button
     }
 
     @Override
+    protected float baseline() {
+        return this.content.baseline(this.desiredHeight(), this.content.padding(this.link));
+    }
+
+    @Override
     protected void paint(final Painter painter, final Rect bounds) {
         final ButtonContent content = this.content;
         final boolean enabled = this.isEnabled();
         final boolean lit = this.isHovered() || this.isFocused();
         if (!this.link) {
-            content.face(enabled, this.isPressed() && this.isHovered(), lit).paint(painter, bounds);
+            final Paint face = content.face(enabled, this.isPressed() && this.isHovered(), lit);
+            (this.isDefault && face == content.normal ? content.defaultFace : face).paint(painter, bounds);
             if (this.isFocused()) {
                 content.paintFocusRing(painter, bounds);
             }
         }
-        final TextLine shown;
+        TextLine shown;
         if (!enabled) {
             shown = content.disabledCaption;
         } else if (this.link && lit) {
@@ -237,40 +352,29 @@ public final class ButtonImpl extends BuiltInComponent<Button> implements Button
         } else {
             shown = content.caption;
         }
+        if (this.hostRoot() != null && this.hostRoot().showsMnemonics()) {
+            shown = content.marked(shown);
+        }
         // Centered in the button less its padding, which is the whole button when the padding is even
-        content.paintContent(painter, bounds, content.padding(this.link), enabled, shown, this.environment().millis());
+        if (content.paintContent(painter, bounds, content.padding(this.link), enabled, shown,
+                this.environment().millis(), this.isRightToLeft())) {
+            this.repaintNextFrame();
+        }
     }
 
     @Override
     protected void onPointerPress(final PointerButtonEvent event) {
-        if (this.activatesOnPress()) {
-            this.clicked(event);
-        }
+        this.activation.press(event);
     }
 
     @Override
     protected void onClick(final PointerButtonEvent event) {
-        if (!this.activatesOnPress()) {
-            this.clicked(event);
-        }
-    }
-
-    /**
-     * Acts on a pointer press or click, whichever the platform's conventions say buttons act on.
-     */
-    private void clicked(final PointerButtonEvent event) {
-        if (event.button() == MouseButton.LEFT) {
-            this.userPress();
-            event.consume();
-        }
+        this.activation.click(event);
     }
 
     @Override
     protected void onKey(final KeyEvent event) {
-        if (event.action() == KeyAction.PRESS && (event.key().isEnter() || event.key() == Key.SPACE)) {
-            this.userPress();
-            event.consume();
-        }
+        Activation.key(event, this::userPress);
     }
 
     @Override

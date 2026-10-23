@@ -17,10 +17,12 @@ package org.inspirenxe.strata.api.control.pane;
 
 import org.inspirenxe.strata.api.ComponentFactory;
 import org.inspirenxe.strata.api.component.Component;
+import org.inspirenxe.strata.api.component.Enableable;
+import org.inspirenxe.strata.api.component.HasTooltip;
 import org.inspirenxe.strata.api.component.Tooltip;
+import org.inspirenxe.strata.api.control.attribute.text.HasIcon;
 import org.inspirenxe.strata.api.control.attribute.text.HasText;
 import org.inspirenxe.strata.api.theme.SpriteId;
-import org.inspirenxe.strata.api.visual.Visual;
 
 import java.util.List;
 import java.util.Optional;
@@ -37,7 +39,7 @@ import java.util.function.Function;
  *
  * <pre>{@code
  * NavigationItem market = factory.navigationItem("Market")
- *         .setIcon(SpriteId.of("examplemod", "icon/market"))
+ *         .setIcon(SpriteId.of("example", "icon/market"))
  *         .setBadge(3)
  *         .setPage(MarketPage::new);
  * }</pre>
@@ -45,51 +47,46 @@ import java.util.function.Function;
  * <p>Get one from {@link org.inspirenxe.strata.api.ComponentFactory#navigationItem(String)}. Do not implement this
  * interface.</p>
  */
-public non-sealed interface NavigationItem extends NavigationEntry, HasText<NavigationItem> {
+public non-sealed interface NavigationItem extends NavigationEntry, HasText<NavigationItem>, HasIcon<NavigationItem>,
+        Enableable<NavigationItem>, HasTooltip<NavigationItem> {
 
     /**
-     * Returns the sprite drawn as the icon.
+     * Shows a sprite as the icon, replacing the icon set before. The icon is all a column of icons shows. The size
+     * stays what it was, 16 by 16 by default.
      *
-     * @return the sprite, or {@code null} while the item shows a visual or no icon
-     */
-    SpriteId iconSprite();
-
-    /**
-     * Returns the visual drawn as the icon.
-     *
-     * @return the visual, or {@code null} while the item shows a sprite or no icon
-     */
-    Visual iconVisual();
-
-    /**
-     * Shows a sprite as the icon, a square one line tall before the text, replacing the icon set before. The icon
-     * is all a column of icons shows.
-     *
-     * @param sprite the sprite
+     * @param sprite the sprite; see {@link SpriteId} for where engines look for it
      * @return this item
      */
+    @Override
     NavigationItem setIcon(SpriteId sprite);
-
-    /**
-     * Shows an engine visual as the icon, replacing the icon set before.
-     *
-     * @param visual the visual
-     * @return this item
-     */
-    NavigationItem setIcon(Visual visual);
 
     /**
      * Removes the icon. The space for it stays, so the texts of items line up.
      *
      * @return this item
      */
+    @Override
     NavigationItem clearIcon();
+
+    /**
+     * Sets the size the icon is drawn at. The icon sits in a square one line tall before the text, so the texts of
+     * items line up: an icon that fits is drawn at this size in the middle of the square, and a larger one is
+     * scaled down to fit, keeping its shape.
+     *
+     * @param width the width in UI units, finite and not negative
+     * @param height the height in UI units, finite and not negative
+     * @return this item
+     * @throws IllegalArgumentException if either size is negative, infinite or not a number
+     */
+    @Override
+    NavigationItem setIconSize(float width, float height);
 
     /**
      * Returns whether the user can pick the item.
      *
      * @return true by default
      */
+    @Override
     boolean isEnabled();
 
     /**
@@ -99,6 +96,7 @@ public non-sealed interface NavigationItem extends NavigationEntry, HasText<Navi
      * @param enabled false to keep the user from picking it
      * @return this item
      */
+    @Override
     NavigationItem setEnabled(boolean enabled);
 
     /**
@@ -106,15 +104,17 @@ public non-sealed interface NavigationItem extends NavigationEntry, HasText<Navi
      *
      * @return the tooltip, or empty when none is set
      */
+    @Override
     Optional<Tooltip> tooltip();
 
     /**
      * Sets the tooltip shown while the pointer rests on the item. While the pane shows as a column of icons, an item
      * with no tooltip shows its text as one.
      *
-     * @param tooltip the tooltip, or {@code null} for none
+     * @param tooltip the tooltip; {@link #clearTooltip()} removes it
      * @return this item
      */
+    @Override
     NavigationItem setTooltip(Tooltip tooltip);
 
     /**

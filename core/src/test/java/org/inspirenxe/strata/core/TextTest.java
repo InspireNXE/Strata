@@ -246,4 +246,14 @@ class TextTest {
             assertTrue(drawn.contains("No"), drawn.toString());
         }
     }
+
+    @Nested
+    class Patterns {
+        @Test
+        void aPositionalIndexTooLongForAnIntIsShownAsWritten() {
+            Translations.setTranslator(new MapTranslator(Map.of("test.total", "Total %99999999999$s")));
+
+            assertEquals("Total %99999999999$s", Text.translatable("test.total", 3).plain());
+        }
+    }
 }

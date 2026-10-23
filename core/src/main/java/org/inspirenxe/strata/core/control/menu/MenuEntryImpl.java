@@ -15,20 +15,35 @@
  */
 package org.inspirenxe.strata.core.control.menu;
 
+import org.inspirenxe.strata.api.command.Command;
 import org.inspirenxe.strata.api.control.menu.MenuEntry;
+import org.inspirenxe.strata.api.input.KeyStroke;
 import org.inspirenxe.strata.api.text.Text;
+import org.inspirenxe.strata.core.control.RectCache;
+import org.inspirenxe.strata.core.control.Rings;
+import org.inspirenxe.strata.core.text.Mnemonics;
 import org.inspirenxe.strata.core.text.TextLine;
 
 /**
- * The shared state of the core menu entries: the menu or bar that holds the entry, and the text spans its menu
- * caches during measure. A change to an entry tells its holder, which lays out again.
+ * The shared state of the core menu entries: the menu or bar that holds the entry, the text spans its menu caches
+ * during measure, and the rectangles its menu draws for it, kept between frames. A change to an entry tells its
+ * holder, which lays out again.
  */
 public abstract class MenuEntryImpl {
     private Object owner;
     TextLine span;
     TextLine disabledSpan;
+    // The two spans with the mnemonic underlined, drawn while mnemonics show
+    TextLine markedSpan;
+    TextLine markedDisabledSpan;
+    // The mnemonic and the first letter of the drawn text, in lower case, as of the last measure
+    int mnemonic = Mnemonics.NONE;
+    int initial = Mnemonics.NONE;
     TextLine shortcutSpan;
     float shortcutWidth;
+    final RectCache rowRect = new RectCache();
+    final RectCache markRect = new RectCache();
+    final Rings.Arrow arrow = new Rings.Arrow();
 
     /**
      * Creates an entry that no menu holds yet.
@@ -36,6 +51,8 @@ public abstract class MenuEntryImpl {
     MenuEntryImpl() {
         this.span = TextLine.EMPTY;
         this.disabledSpan = this.span;
+        this.markedSpan = this.span;
+        this.markedDisabledSpan = this.span;
         this.shortcutSpan = this.span;
     }
 
@@ -56,6 +73,21 @@ public abstract class MenuEntryImpl {
      */
     Text hint() {
         return Text.empty();
+    }
+
+    /**
+     * Returns the stroke drawn as the hint when {@link #hint()} is empty: the shortcut of the entry's command.
+     */
+    KeyStroke stroke() {
+        final Command command = this.shownCommand();
+        return command == null || !this.hint().isEmpty() ? null : command.shortcut();
+    }
+
+    /**
+     * Returns the command the entry shows, or null.
+     */
+    Command shownCommand() {
+        return null;
     }
 
     /**

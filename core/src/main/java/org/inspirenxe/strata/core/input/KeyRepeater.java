@@ -94,6 +94,16 @@ public final class KeyRepeater {
     }
 
     /**
+     * Returns when the next repeat is due.
+     *
+     * @return the platform clock's milliseconds at which {@link #poll} next returns a key, or {@link Long#MAX_VALUE}
+     *     when no key is held
+     */
+    public long nextFire() {
+        return this.key == null ? Long.MAX_VALUE : this.nextFire;
+    }
+
+    /**
      * Returns the modifiers that were held when the repeating key was pressed.
      *
      * @return the modifiers, or {@link Modifiers#NONE} when no key is held

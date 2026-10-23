@@ -15,12 +15,16 @@
  */
 package org.inspirenxe.strata.api.control.button;
 
+import org.inspirenxe.strata.api.command.Command;
 import org.inspirenxe.strata.api.component.Component;
 import org.inspirenxe.strata.api.component.Focusable;
+import org.inspirenxe.strata.api.component.HasContextMenu;
 import org.inspirenxe.strata.api.component.HasCursor;
 import org.inspirenxe.strata.api.component.HasTooltip;
+import org.inspirenxe.strata.api.control.attribute.command.HasCommand;
 import org.inspirenxe.strata.api.control.attribute.text.HasText;
 import org.inspirenxe.strata.api.control.attribute.value.Toggle;
+import org.inspirenxe.strata.api.control.attribute.value.Validatable;
 import org.inspirenxe.strata.api.event.EventType;
 import org.inspirenxe.strata.api.event.control.ValueEvent;
 import org.inspirenxe.strata.api.event.control.ValueRequestEvent;
@@ -33,7 +37,8 @@ import java.util.Objects;
  * A box that is checked, empty or mixed, with a caption to its right.
  *
  * <p>A left click anywhere on the checkbox changes it, and so does Enter, keypad Enter or Space while it has focus
- * (not repeated). It consumes those inputs. A change checks an empty or mixed box and empties a checked one. With
+ * (not repeated). On a platform whose conventions say checkboxes act on the press, the left press changes it instead
+ * of the click. It consumes those inputs. A change checks an empty or mixed box and empties a checked one. With
  * {@link #setAllowsMixed(boolean) mixed allowed}, the user's changes cycle empty, checked, mixed instead. Code sets
  * the mixed state with {@link #setState}, for example on a box that stands for several others while only some of them
  * are checked. A disabled checkbox takes no changes from the user and draws its disabled look.</p>
@@ -83,11 +88,15 @@ import java.util.Objects;
  *         .onEvent(Toggle.TOGGLED, event -> settings.setMusic(event.value()));
  * }</pre>
  *
+ * <p>Its caption marks a mnemonic with an underscore, as {@link Button} describes: Alt with the letter focuses and
+ * toggles the box.</p>
+ *
  * <p>Get one from {@link org.inspirenxe.strata.api.ComponentFactory#checkBox(String)}. Do not implement this
  * interface.</p>
  */
 public interface CheckBox extends Component<CheckBox>, Focusable<CheckBox>, HasCursor<CheckBox>, HasTooltip<CheckBox>,
-        HasText<CheckBox>, Toggle<CheckBox> {
+        HasContextMenu<CheckBox>, HasText<CheckBox>, Toggle<CheckBox>, Validatable<CheckBox>,
+        HasCommand<Command.Toggle, CheckBox> {
     /**
      * Style key for the unchecked box (paint, required).
      */
@@ -108,6 +117,12 @@ public interface CheckBox extends Component<CheckBox>, Focusable<CheckBox>, HasC
      * Style key for the unchecked box when disabled (paint, optional).
      */
     String STYLE_DISABLED = "checkbox.disabled";
+    /**
+     * Style key for the box while the check box is enabled and its validation is an error, in place of the four
+     * enabled faces, checked or not (paint, optional). The check and mixed marks still draw on it. Without it the box
+     * draws its usual face with a one-unit outline in {@value Validatable#STYLE_ERROR}.
+     */
+    String STYLE_INVALID = "checkbox.invalid";
     /**
      * Style key for the checked box when disabled (paint, optional).
      */

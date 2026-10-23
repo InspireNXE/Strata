@@ -16,12 +16,14 @@
 package org.inspirenxe.strata.api.screen;
 
 import org.inspirenxe.strata.api.ComponentFactory;
+import org.inspirenxe.strata.api.text.Text;
 import org.inspirenxe.strata.api.theme.ThemeRef;
 
 /**
  * What an open screen can ask of its host. Each opening of a screen gets its own handle; once that opening ends
- * (the screen closed, or the host opened another screen), the handle's methods do nothing, except {@link #open},
- * which throws.
+ * (the screen closed, or its host showed another screen in its place), the handle's methods do nothing, except
+ * {@link #open}, which throws. Opening a screen above this one with {@link #open} does not end this opening: the
+ * screen is covered, keeps its handle, and shows again when the screen above closes.
  *
  * <p>Hosts create handles. Do not implement this interface.</p>
  */
@@ -34,10 +36,39 @@ public interface ScreenHandle {
     void invalidate();
 
     /**
-     * Asks the host to close the screen. The host decides what that means: a Swing screen stack pops the screen,
-     * and an engine with its own screens may close the engine screen that shows it.
+     * Asks the host to close the screen, without asking the screen's {@link Screen#closeRequested}: a close from code
+     * is always carried out. The host decides what closing means: a screen stack removes the screen, and an engine
+     * with its own screens may close the engine screen that shows it.
      */
     void close();
+
+    /**
+     * Asks to close the screen as the user would, for a Cancel or Back button. The host calls the screen's
+     * {@link Screen#closeRequested} with this handle, and closes the screen as {@link #close()} does if it returns
+     * true.
+     *
+     * @return true if the screen agreed and the host was asked to close it; false if the screen refused, or this
+     *     opening has already ended
+     */
+    boolean requestClose();
+
+    /**
+     * Returns whether this opening of the screen is still going on. It ends when the screen closes, or when its host
+     * shows another screen in its place; a screen covered by another one it opened is still open.
+     *
+     * @return false once this opening has ended
+     */
+    boolean isOpen();
+
+    /**
+     * Replaces the title hosts show for the screen, which starts as {@link Screen#title()}. An engine that shows the
+     * title, such as in a window's title bar, shows the new one from its next frame. Does nothing once this opening
+     * has ended.
+     *
+     * @param title the new title
+     * @return this handle
+     */
+    ScreenHandle setTitle(Text title);
 
     /**
      * Returns the factory of the host showing the screen, the same one passed to {@link Screen#build}.

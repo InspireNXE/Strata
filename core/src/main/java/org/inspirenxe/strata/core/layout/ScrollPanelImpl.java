@@ -31,6 +31,7 @@ import org.inspirenxe.strata.api.input.MouseButton;
 import org.inspirenxe.strata.api.layout.ScrollPanel;
 import org.inspirenxe.strata.api.theme.Paint;
 import org.inspirenxe.strata.api.theme.Theme;
+import org.inspirenxe.strata.core.control.Motion;
 import org.inspirenxe.strata.core.node.BuiltInContainer;
 import org.inspirenxe.strata.core.node.ComponentFactoryImpl;
 
@@ -40,7 +41,19 @@ import java.util.Set;
 /**
  * The core {@link ScrollPanel}. An {@link ScrollPolicy#AUTO} axis measures its children once without its scroll
  * bar and again with it only if the first pass overflowed; arranging checks again against the real bounds and shows
- * the bar if the content overflows them. Offsets set before the first layout are kept and clamped by it.
+ * the bar if the content overflows them. A bar that arranging adds measures the children again when its gutter
+ * narrows an axis that does not scroll, so text wraps at the viewport; that can show the other bar too. Offsets set
+ * before the first layout are only kept from going below 0, and the first layout clamps them.
+ *
+ * <p>Wheel steps, the scrolling keys and {@link #scrollToVisible(Rect)}, which focus moving inside the panel uses,
+ * glide over the theme's {@value ScrollPanel#STYLE_SMOOTH} time through a {@link Motion}, and a further step adds to
+ * where a glide under way is headed. {@link #setScroll}, {@link #scrollBy}, the thumb and the track move at once and
+ * stop a glide, as everything does when the time is 0 or the panel is detached.</p>
+ *
+ * <p>Right to left (design 4.49), the panel lays out as for left to right and mirrors the viewport and the bars
+ * inside its bounds, as its children are mirrored: the vertical bar sits at the left, the horizontal bar starts at
+ * the right, and an offset of 0 shows the content's right edge, its start. Left and Right and a sideways wheel move
+ * the other way, so they still move toward the side they name; Shift with the wheel keeps moving toward the end.</p>
  */
 public final class ScrollPanelImpl extends BuiltInContainer<ScrollPanel> implements ScrollPanel {
     private static final Set<String> REQUIRED = Set.of(STYLE_THUMB);
@@ -51,11 +64,22 @@ public final class ScrollPanelImpl extends BuiltInContainer<ScrollPanel> impleme
     private ScrollPolicy horizontalPolicy;
     private ScrollPolicy verticalPolicy;
     private float rate;
+    private boolean dragScroll = true;
     private float scrollX;
     private float scrollY;
     private float maxScrollX;
     private float maxScrollY;
     private boolean arranged;
+
+    // Smooth scrolling: a glide from one offset to another, driven by the progress of a motion from 0 to 1
+    private long smoothMillis;
+    private float glideFromX;
+    private float glideFromY;
+    private float glideToX;
+    private float glideToY;
+    private final Motion glide = new Motion(progress -> this.scrollTo(
+            progress >= 1f ? this.glideToX : this.glideFromX + (this.glideToX - this.glideFromX) * progress,
+            progress >= 1f ? this.glideToY : this.glideFromY + (this.glideToY - this.glideFromY) * progress));
 
     // Layout results
     private float contentWidth;
@@ -63,6 +87,8 @@ public final class ScrollPanelImpl extends BuiltInContainer<ScrollPanel> impleme
     private boolean verticalShown;
     private boolean horizontalShown;
     private Rect viewport;
+    // The viewport as for left to right, where the children's slot is worked out
+    private Rect logicalViewport;
 
     // Pointer
     private int dragAxis;
@@ -89,6 +115,7 @@ public final class ScrollPanelImpl extends BuiltInContainer<ScrollPanel> impleme
         this.verticalPolicy = ScrollPolicy.AUTO;
         this.rate = DEFAULT_SCROLL_RATE;
         this.viewport = Rect.ZERO;
+        this.logicalViewport = Rect.ZERO;
         this.thumb = Paint.NONE;
         this.thumbHoveredPaint = Paint.NONE;
         this.track = Paint.NONE;
@@ -120,12 +147,20 @@ public final class ScrollPanelImpl extends BuiltInContainer<ScrollPanel> impleme
 
     @Override
     public ScrollPanel setScroll(final float x, final float y) {
+        if (Float.isNaN(x) || Float.isNaN(y)) {
+            throw new IllegalArgumentException("A scroll offset must not be NaN: " + x + ", " + y);
+        }
+        this.glide.stop();
         this.scrollTo(x, y);
         return this;
     }
 
     @Override
     public ScrollPanel scrollBy(final float dx, final float dy) {
+        if (Float.isNaN(dx) || Float.isNaN(dy)) {
+            throw new IllegalArgumentException("A scroll distance must not be NaN: " + dx + ", " + dy);
+        }
+        this.glide.stop();
         this.scrollTo(this.scrollX + dx, this.scrollY + dy);
         return this;
     }
@@ -152,9 +187,42 @@ public final class ScrollPanelImpl extends BuiltInContainer<ScrollPanel> impleme
         return true;
     }
 
+    /**
+     * Glides to an offset over the theme's {@link ScrollPanel#STYLE_SMOOTH} time, or moves there at once when that is
+     * 0 or the panel is detached. The target is clamped as {@link #scrollTo} clamps.
+     *
+     * @return true if where the panel is headed changed
+     */
+    private boolean glideTo(final float x, final float y) {
+        final float toX = this.arranged ? clamp(x, this.maxScrollX) : Math.max(0f, x);
+        final float toY = this.arranged ? clamp(y, this.maxScrollY) : Math.max(0f, y);
+        if (toX == this.aimX() && toY == this.aimY()) {
+            return false;
+        }
+        this.glideFromX = this.scrollX;
+        this.glideFromY = this.scrollY;
+        this.glideToX = toX;
+        this.glideToY = toY;
+        this.glide.move(this.motionAnimator(), this.smoothMillis, 0f, 1f);
+        return true;
+    }
+
+    /**
+     * Returns where the panel is headed on the horizontal axis: the end of a glide under way, or the offset.
+     */
+    private float aimX() {
+        return this.glide.isMoving() ? this.glideToX : this.scrollX;
+    }
+
+    private float aimY() {
+        return this.glide.isMoving() ? this.glideToY : this.scrollY;
+    }
+
     @Override
-    public ScrollPanel scrollToVisible(final Rect area) {
-        final Rect view = this.viewport;
+    public ScrollPanel scrollToVisible(final Rect wanted) {
+        // Right to left, the area is mirrored to where it would be left to right, where the offsets work alike
+        final Rect area = this.isRightToLeft() ? Flow.mirror(wanted, this.bounds()) : wanted;
+        final Rect view = this.logicalViewport;
         float x = this.scrollX;
         float y = this.scrollY;
         if (area.y() < view.y()) {
@@ -167,7 +235,7 @@ public final class ScrollPanelImpl extends BuiltInContainer<ScrollPanel> impleme
         } else if (area.right() > view.right()) {
             x += Math.min(area.right() - view.right(), area.x() - view.x());
         }
-        this.scrollTo(x, y);
+        this.glideTo(x, y);
         return this;
     }
 
@@ -213,6 +281,35 @@ public final class ScrollPanelImpl extends BuiltInContainer<ScrollPanel> impleme
         return this.viewport;
     }
 
+    @Override
+    public boolean isDragScroll() {
+        return this.dragScroll;
+    }
+
+    @Override
+    public ScrollPanel setDragScroll(final boolean dragScroll) {
+        this.dragScroll = dragScroll;
+        return this;
+    }
+
+    @Override
+    protected boolean onEdgeScroll(final float x, final float y) {
+        if (!this.dragScroll || !this.arranged) {
+            return false;
+        }
+        final Rect view = this.viewport;
+        final float dx = this.horizontalPolicy == ScrollPolicy.NEVER ? 0f
+                : EdgeScroll.step(x, view.x(), view.right(), this.rate, this.scrollX, this.maxScrollX);
+        final float dy = this.verticalPolicy == ScrollPolicy.NEVER || !(x >= view.x() && x < view.right()) ? 0f
+                : EdgeScroll.step(y, view.y(), view.bottom(), this.rate, this.scrollY, this.maxScrollY);
+        final float dxInside = y >= view.y() && y < view.bottom() ? dx : 0f;
+        if (dxInside == 0f && dy == 0f) {
+            return false;
+        }
+        this.glide.stop();
+        return this.scrollTo(this.scrollX + dxInside, this.scrollY + dy);
+    }
+
     private State state() {
         return new State(this.scrollX, this.scrollY, this.maxScrollX, this.maxScrollY);
     }
@@ -231,6 +328,7 @@ public final class ScrollPanelImpl extends BuiltInContainer<ScrollPanel> impleme
         this.thumb = theme.paintOr(STYLE_THUMB, Paint.NONE);
         this.thumbHoveredPaint = theme.paintOr(STYLE_THUMB_HOVERED, this.thumb);
         this.track = theme.paintOr(STYLE_TRACK, Paint.NONE);
+        this.smoothMillis = Motion.millis(theme, STYLE_SMOOTH);
     }
 
     @Override
@@ -241,14 +339,14 @@ public final class ScrollPanelImpl extends BuiltInContainer<ScrollPanel> impleme
         boolean vertical = this.verticalPolicy == ScrollPolicy.ALWAYS;
         boolean horizontal = this.horizontalPolicy == ScrollPolicy.ALWAYS;
 
-        this.measureChildren(context, innerWidth, innerHeight, vertical, horizontal);
+        this.measureChildren(context::measure, innerWidth, innerHeight, vertical, horizontal);
         if (this.verticalPolicy == ScrollPolicy.AUTO && this.contentHeight > innerHeight - (horizontal ? GUTTER : 0f)) {
             vertical = true;
-            this.measureChildren(context, innerWidth, innerHeight, vertical, horizontal);
+            this.measureChildren(context::measure, innerWidth, innerHeight, vertical, horizontal);
         }
         if (this.horizontalPolicy == ScrollPolicy.AUTO && this.contentWidth > innerWidth - (vertical ? GUTTER : 0f)) {
             horizontal = true;
-            this.measureChildren(context, innerWidth, innerHeight, vertical, horizontal);
+            this.measureChildren(context::measure, innerWidth, innerHeight, vertical, horizontal);
         }
         this.verticalShown = vertical;
         this.horizontalShown = horizontal;
@@ -264,7 +362,7 @@ public final class ScrollPanelImpl extends BuiltInContainer<ScrollPanel> impleme
         return new Size(width, height);
     }
 
-    private void measureChildren(final MeasureContext context, final float innerWidth, final float innerHeight,
+    private void measureChildren(final Measurer context, final float innerWidth, final float innerHeight,
                                  final boolean vertical, final boolean horizontal) {
         final float childWidth = this.horizontalPolicy == ScrollPolicy.NEVER
                 ? innerWidth - (vertical ? GUTTER : 0f) : Float.POSITIVE_INFINITY;
@@ -286,40 +384,57 @@ public final class ScrollPanelImpl extends BuiltInContainer<ScrollPanel> impleme
         final Rect content = this.contentBox();
         boolean vertical = this.verticalShown;
         boolean horizontal = this.horizontalShown;
-        if (this.verticalPolicy == ScrollPolicy.AUTO && !vertical
-                && this.contentHeight > content.height() - (horizontal ? GUTTER : 0f)) {
-            vertical = true;
-        }
-        if (this.horizontalPolicy == ScrollPolicy.AUTO && !horizontal
-                && this.contentWidth > content.width() - (vertical ? GUTTER : 0f)) {
-            horizontal = true;
+        // A bar that takes room from an axis that does not scroll measures the children again, so text rewraps
+        boolean added = true;
+        while (added) {
+            added = false;
+            if (this.verticalPolicy == ScrollPolicy.AUTO && !vertical
+                    && this.contentHeight > content.height() - (horizontal ? GUTTER : 0f)) {
+                vertical = true;
+                added = true;
+                if (this.horizontalPolicy == ScrollPolicy.NEVER) {
+                    this.measureChildren(context::measure, content.width(), content.height(), vertical, horizontal);
+                }
+            }
+            if (this.horizontalPolicy == ScrollPolicy.AUTO && !horizontal
+                    && this.contentWidth > content.width() - (vertical ? GUTTER : 0f)) {
+                horizontal = true;
+                added = true;
+                if (this.verticalPolicy == ScrollPolicy.NEVER) {
+                    this.measureChildren(context::measure, content.width(), content.height(), vertical, horizontal);
+                }
+            }
         }
         this.verticalShown = vertical;
         this.horizontalShown = horizontal;
 
-        this.viewport = new Rect(content.x(), content.y(),
+        final Rect view = new Rect(content.x(), content.y(),
                 Math.max(0f, content.width() - (vertical ? GUTTER : 0f)),
                 Math.max(0f, content.height() - (horizontal ? GUTTER : 0f)));
+        this.logicalViewport = view;
+        this.viewport = this.flow(view);
         final float extentWidth = this.horizontalPolicy == ScrollPolicy.NEVER
-                ? this.viewport.width() : Math.max(this.contentWidth, this.viewport.width());
+                ? view.width() : Math.max(this.contentWidth, view.width());
         final float extentHeight = this.verticalPolicy == ScrollPolicy.NEVER
-                ? this.viewport.height() : Math.max(this.contentHeight, this.viewport.height());
-        this.maxScrollX = Math.max(0f, extentWidth - this.viewport.width());
-        this.maxScrollY = Math.max(0f, extentHeight - this.viewport.height());
+                ? view.height() : Math.max(this.contentHeight, view.height());
+        this.maxScrollX = Math.max(0f, extentWidth - view.width());
+        this.maxScrollY = Math.max(0f, extentHeight - view.height());
         this.scrollX = clamp(this.scrollX, this.maxScrollX);
         this.scrollY = clamp(this.scrollY, this.maxScrollY);
         this.arranged = true;
 
-        final Rect slot = new Rect(this.viewport.x() - Math.round(this.scrollX), this.viewport.y() - Math.round(this.scrollY),
+        // Worked out as for left to right; the children's node mirrors them right to left
+        final Rect slot = new Rect(view.x() - Math.round(this.scrollX), view.y() - Math.round(this.scrollY),
                 extentWidth, extentHeight);
         for (final Component<?> child : this.children()) {
             context.arrange(child, slot);
         }
 
-        this.verticalBar.update(new Rect(content.right() - BAR_WIDTH, content.y(), BAR_WIDTH, this.viewport.height()),
-                this.viewport.height(), extentHeight);
-        this.horizontalBar.update(new Rect(content.x(), content.bottom() - BAR_WIDTH, this.viewport.width(), BAR_WIDTH),
-                this.viewport.width(), extentWidth);
+        this.verticalBar.update(this.flow(new Rect(content.right() - BAR_WIDTH, content.y(), BAR_WIDTH,
+                view.height())), view.height(), extentHeight);
+        this.horizontalBar.setReversed(this.isRightToLeft());
+        this.horizontalBar.update(this.flow(new Rect(content.x(), content.bottom() - BAR_WIDTH, view.width(),
+                BAR_WIDTH)), view.width(), extentWidth);
     }
 
     @Override
@@ -345,8 +460,14 @@ public final class ScrollPanelImpl extends BuiltInContainer<ScrollPanel> impleme
 
     @Override
     protected void onScroll(final ScrollEvent event) {
-        float dx = -event.scrollX() * this.rate;
+        // A sideways wheel moves toward the side it turns to, which is toward the start right to left
+        float dx = (this.isRightToLeft() ? event.scrollX() : -event.scrollX()) * this.rate;
         float dy = -event.scrollY() * this.rate;
+        // Shift turns a vertical scroll sideways; an engine that turns it itself sends a horizontal one
+        if (event.modifiers().shift() && dx == 0f && this.horizontalPolicy != ScrollPolicy.NEVER) {
+            dx = dy;
+            dy = 0f;
+        }
         if (this.verticalPolicy == ScrollPolicy.NEVER) {
             if (dx == 0f) {
                 dx = dy;
@@ -356,25 +477,30 @@ public final class ScrollPanelImpl extends BuiltInContainer<ScrollPanel> impleme
         if (this.horizontalPolicy == ScrollPolicy.NEVER) {
             dx = 0f;
         }
-        if (this.scrollTo(this.scrollX + dx, this.scrollY + dy)) {
+        if (this.glideTo(this.aimX() + dx, this.aimY() + dy)) {
             event.consume();
         }
     }
 
     @Override
     protected void onKey(final KeyEvent event) {
-        if (!event.action().isDown() || this.verticalPolicy == ScrollPolicy.NEVER
-                || event.modifiers().control() || event.modifiers().alt()) {
+        if (!event.action().isDown() || event.modifiers().control() || event.modifiers().alt()) {
             return;
         }
+        final boolean vertical = this.verticalPolicy != ScrollPolicy.NEVER;
+        final boolean horizontal = this.horizontalPolicy != ScrollPolicy.NEVER;
         final float page = Math.max(this.rate, this.viewport.height() - this.rate);
+        // Left and Right move toward the side they name, so they swap right to left
+        final float leftward = this.isRightToLeft() ? this.rate : -this.rate;
         final boolean moved = switch (event.key()) {
-            case UP -> this.scrollTo(this.scrollX, this.scrollY - this.rate);
-            case DOWN -> this.scrollTo(this.scrollX, this.scrollY + this.rate);
-            case PAGE_UP -> this.scrollTo(this.scrollX, this.scrollY - page);
-            case PAGE_DOWN -> this.scrollTo(this.scrollX, this.scrollY + page);
-            case HOME -> this.scrollTo(this.scrollX, 0f);
-            case END -> this.scrollTo(this.scrollX, this.maxScrollY);
+            case UP -> vertical && this.glideTo(this.aimX(), this.aimY() - this.rate);
+            case DOWN -> vertical && this.glideTo(this.aimX(), this.aimY() + this.rate);
+            case PAGE_UP -> vertical && this.glideTo(this.aimX(), this.aimY() - page);
+            case PAGE_DOWN -> vertical && this.glideTo(this.aimX(), this.aimY() + page);
+            case HOME -> vertical && this.glideTo(this.aimX(), 0f);
+            case END -> vertical && this.glideTo(this.aimX(), this.maxScrollY);
+            case LEFT -> horizontal && this.glideTo(this.aimX() + leftward, this.aimY());
+            case RIGHT -> horizontal && this.glideTo(this.aimX() - leftward, this.aimY());
             default -> false;
         };
         if (moved) {
@@ -388,6 +514,8 @@ public final class ScrollPanelImpl extends BuiltInContainer<ScrollPanel> impleme
         if (event.button() != MouseButton.LEFT) {
             return;
         }
+        // The thumb and the track move the offset at once
+        this.glide.stop();
         final float x = event.x();
         final float y = event.y();
         if (this.verticalShown && this.verticalBar.track().contains(x, y)) {
@@ -407,7 +535,8 @@ public final class ScrollPanelImpl extends BuiltInContainer<ScrollPanel> impleme
                 this.dragGrab = x - thumbRect.x();
             } else {
                 final float page = Math.max(this.rate, this.viewport.width() - this.rate);
-                this.scrollTo(this.scrollX + (x < thumbRect.x() ? -page : page), this.scrollY);
+                final boolean towardStart = x < thumbRect.x() != this.horizontalBar.isReversed();
+                this.scrollTo(this.scrollX + (towardStart ? -page : page), this.scrollY);
             }
             event.consume();
         }
@@ -465,5 +594,13 @@ public final class ScrollPanelImpl extends BuiltInContainer<ScrollPanel> impleme
 
     private static float clamp(final float value, final float max) {
         return Math.max(0f, Math.min(value, max));
+    }
+
+    /**
+     * Measures a child, from a {@link MeasureContext} during measure or an {@link ArrangeContext} during arrange.
+     */
+    @FunctionalInterface
+    private interface Measurer {
+        Size measure(Component<?> child, float availableWidth, float availableHeight);
     }
 }

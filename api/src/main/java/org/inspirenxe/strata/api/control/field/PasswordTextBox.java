@@ -17,14 +17,17 @@ package org.inspirenxe.strata.api.control.field;
 
 import org.inspirenxe.strata.api.component.Component;
 import org.inspirenxe.strata.api.component.Focusable;
+import org.inspirenxe.strata.api.component.HasContextMenu;
 import org.inspirenxe.strata.api.component.HasCursor;
 import org.inspirenxe.strata.api.component.HasTooltip;
 import org.inspirenxe.strata.api.control.attribute.text.TextEntry;
+import org.inspirenxe.strata.api.control.attribute.value.Validatable;
 import org.inspirenxe.strata.api.event.EventType;
 import org.inspirenxe.strata.api.event.control.ControlEvent;
 import org.inspirenxe.strata.api.event.control.RequestEvent;
 import org.inspirenxe.strata.api.event.control.ValueEvent;
 import org.inspirenxe.strata.api.event.control.ValueRequestEvent;
+import org.inspirenxe.strata.api.layout.HorizontalAlignment;
 import org.inspirenxe.strata.api.state.PropertyKey;
 import org.inspirenxe.strata.api.text.Text;
 
@@ -36,9 +39,10 @@ import java.util.function.IntPredicate;
  *
  * <p>It edits like a {@link TextBox}, but keeps its text from showing up where nobody meant it to. It holds the text
  * in a {@code char[]} that Strata zeroes, gives it to code only as a {@code char[]}, and never puts it in an event, a
- * snapshot, the clipboard or a {@code toString}. It cannot keep the text from code in the same process that sets out
- * to read it: a {@link org.inspirenxe.strata.api.event.input.InputEvents#CHAR} handler on the box sees each typed
- * code point, and the engine delivers them.</p>
+ * snapshot, the clipboard, a drag or a {@code toString}, and takes no text dropped on it. It cannot keep the text
+ * from code in the same process that sets out to read it: a
+ * {@link org.inspirenxe.strata.api.event.input.InputEvents#CHAR} handler on the box sees each typed code point, and
+ * the engine delivers them.</p>
  *
  * <pre>{@code
  * PasswordTextBox password = factory.passwordTextBox().setPlaceholder("Password").setMaxLength(64);
@@ -67,11 +71,12 @@ import java.util.function.IntPredicate;
  * <p>Editing works as in a {@link TextBox}, with these differences:</p>
  * <ul>
  *     <li>Every code point draws as the {@linkplain #setMaskCodePoint mask}. The caret and the selection sit on the
- *     mask glyphs. The placeholder is not masked.</li>
+ *     mask glyphs, and Left, Right, Backspace and Delete move or delete one code point, one glyph, at a time. The
+ *     placeholder is not masked.</li>
  *     <li>Ctrl+C and Ctrl+X do nothing, read-only or not, revealed or not.</li>
- *     <li>Ctrl+V pastes with line breaks removed. A paste that the length limit or the
- *     {@linkplain #setCodePointFilter code point filter} would change is refused whole, since a password silently cut
- *     short is worse than none.</li>
+ *     <li>Ctrl+V pastes with line breaks removed. A paste that still holds a control character, such as a tab, or
+ *     that the length limit or the {@linkplain #setCodePointFilter code point filter} would change is refused whole,
+ *     since a password silently cut short is worse than none.</li>
  *     <li>Ctrl+Left, Ctrl+Right, Ctrl+Backspace and Ctrl+Delete treat the whole text as one word, and a double click
  *     selects everything, so the caret does not show where spaces are.</li>
  *     <li>Typed characters are consumed while the box has focus, read-only included, so they stop at the box and do
@@ -137,11 +142,16 @@ import java.util.function.IntPredicate;
  * at least 20 tall, though a smaller height set on it applies. The eye is a
  * square one line tall at the right of the text area, 2 units from the text.</p>
  *
+ * <p>It has a default {@linkplain #contextMenu() context menu} of Paste, Delete and Select all, captioned from the
+ * {@code strata.edit.*} translation keys, each enabled only while it would do something; it has no Undo, Redo,
+ * Cut or Copy. {@code setContextMenu(null)} removes it.</p>
+ *
  * <p>Get one from {@link org.inspirenxe.strata.api.ComponentFactory#passwordTextBox()}. Do not implement this
  * interface.</p>
  */
 public interface PasswordTextBox extends Component<PasswordTextBox>, Focusable<PasswordTextBox>,
-        HasCursor<PasswordTextBox>, HasTooltip<PasswordTextBox>, TextEntry<PasswordTextBox> {
+        HasCursor<PasswordTextBox>, HasTooltip<PasswordTextBox>, HasContextMenu<PasswordTextBox>,
+        TextEntry<PasswordTextBox>, Validatable<PasswordTextBox> {
     /**
      * Style key for the mask while the box is enabled and editable (text style, optional).
      */
@@ -297,7 +307,7 @@ public interface PasswordTextBox extends Component<PasswordTextBox>, Focusable<P
      * Sets the hint drawn in the {@value TextBox#STYLE_PLACEHOLDER} style while the box is empty, such as
      * {@code "Password"}. The mask does not cover it.
      *
-     * @param placeholder the hint, or {@code null} or empty for none
+     * @param placeholder the hint, or empty for none
      * @return this box
      */
     PasswordTextBox setPlaceholder(Text placeholder);
@@ -305,11 +315,11 @@ public interface PasswordTextBox extends Component<PasswordTextBox>, Focusable<P
     /**
      * Does the same as {@link #setPlaceholder(Text)} with literal text.
      *
-     * @param placeholder the hint, or {@code null} or empty for none
+     * @param placeholder the hint, or empty for none
      * @return this box
      */
     default PasswordTextBox setPlaceholder(final String placeholder) {
-        return this.setPlaceholder(placeholder == null ? null : Text.of(placeholder));
+        return this.setPlaceholder(Text.of(placeholder));
     }
 
     /**
@@ -327,6 +337,23 @@ public interface PasswordTextBox extends Component<PasswordTextBox>, Focusable<P
      * @return this box
      */
     PasswordTextBox setSelectAllOnFocus(boolean selectAll);
+
+    /**
+     * Returns how text narrower than the box sits in it.
+     *
+     * @return the alignment; {@link HorizontalAlignment#LEFT} by default
+     */
+    HorizontalAlignment textAlignment();
+
+    /**
+     * Sets how the mask or the shown text sits in the box when it is narrower than the room left of the eye, as on a
+     * text box. The caret and the placeholder align with it. {@link HorizontalAlignment#STRETCH} counts as
+     * {@link HorizontalAlignment#LEFT}.
+     *
+     * @param alignment the alignment
+     * @return this box
+     */
+    PasswordTextBox setTextAlignment(HorizontalAlignment alignment);
 
     /**
      * Sets which code points the user may type or paste. Typing a code point the filter refuses does nothing, and a

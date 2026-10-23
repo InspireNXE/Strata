@@ -74,7 +74,7 @@ class ThemePaddingTest {
         // 40 wide, and the 20-unit minimum height
         assertEquals(new Rect(0, 0, 40, 20), button.bounds());
 
-        button.setTextPadding(null);
+        button.clearTextPadding();
         test.host().layout();
         assertEquals(new Rect(0, 0, 56, 21), button.bounds());
 
@@ -136,7 +136,7 @@ class ThemePaddingTest {
         assertEquals(Insets.of(9), window.padding());
         window.setPadding(Insets.of(1));
         assertEquals(Insets.of(1), window.padding());
-        window.setPadding(null);
+        window.clearPadding();
         assertEquals(Insets.of(9), window.padding());
     }
 
