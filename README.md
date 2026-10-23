@@ -55,7 +55,7 @@ Strata-Swing, Strata-Minecraft and Strata-Gallery build against a Strata checkou
 
 ## Documentation
 
-The [documentation site](https://inspirenxe.github.io/Strata-Docs/) has the guides, the reference and the Javadoc. Its source is in [Strata-Docs](https://github.com/InspireNXE/Strata-Docs). The design and plans live here: [docs/design-implemented.md](docs/design-implemented.md) describes the design as built, [docs/design-pending.md](docs/design-pending.md) holds proposals and open questions, [docs/design-deferred.md](docs/design-deferred.md) holds what is set aside for later, and [docs/ROADMAP.md](docs/ROADMAP.md) tracks what comes next. To try every control, run [Strata-Gallery](https://github.com/InspireNXE/Strata-Gallery).
+The [documentation site](https://inspirenxe.github.io/Strata-Docs/) has the guides, the reference and the Javadoc. Its source is in [Strata-Docs](https://github.com/InspireNXE/Strata-Docs). To try every control, run [Strata-Gallery](https://github.com/InspireNXE/Strata-Gallery).
 
 ## License
 
