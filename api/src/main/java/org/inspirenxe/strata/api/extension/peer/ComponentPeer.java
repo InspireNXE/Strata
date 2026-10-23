@@ -487,6 +487,11 @@ public interface ComponentPeer {
     void repaint();
 
     /**
+     * See {@link org.inspirenxe.strata.api.extension.CustomComponent#repaintNextFrame()}.
+     */
+    void repaintNextFrame();
+
+    /**
      * See {@link org.inspirenxe.strata.api.extension.CustomComponent#repaintAfter(long)}.
      *
      * @param millis the delay in milliseconds

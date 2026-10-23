@@ -36,7 +36,7 @@ import java.util.function.Supplier;
  * UI thread and the bindings.
  *
  * <p>A step reads the clock once and steps every running animation with it, in the order they started. While any
- * still runs afterwards it registers a frame {@link FrameRequests#CONTINUOUS_MILLIS} later, and starting one asks for
+ * still runs afterwards it registers the next frame the frame rate allows, and starting one asks for
  * a frame at once. Stepping allocates only what each step's cause frame and the animated values need.</p>
  *
  * <p>An animation whose step throws is stopped where it is, the others still step, and the first exception goes on
@@ -147,7 +147,7 @@ public final class AnimatorImpl implements Animator {
             this.stepping.clear();
         }
         if (!this.running.isEmpty()) {
-            this.frames.at(now + FrameRequests.CONTINUOUS_MILLIS * 1_000_000L);
+            this.frames.atNextFrame(now);
         }
         if (failure != null) {
             throw failure;

@@ -40,7 +40,6 @@ import org.inspirenxe.strata.api.theme.Theme;
 import org.inspirenxe.strata.core.control.Activation;
 import org.inspirenxe.strata.core.control.Caption;
 import org.inspirenxe.strata.core.control.RectCache;
-import org.inspirenxe.strata.core.frame.FrameRequests;
 import org.inspirenxe.strata.core.node.BuiltInComponent;
 import org.inspirenxe.strata.core.node.BuiltInComposite;
 import org.inspirenxe.strata.core.node.ComponentFactoryImpl;
@@ -491,7 +490,7 @@ public final class TabBarImpl extends BuiltInComposite<TabBar> implements TabBar
             if (this.caption.draw(painter, caption, bounds, pad,
                     bounds.y() + pad.top() + (bounds.height() - pad.top() - pad.bottom() - this.lineHeight) * 0.5f,
                     this.environment().millis())) {
-                this.repaintAfter(FrameRequests.CONTINUOUS_MILLIS);
+                this.repaintNextFrame();
             }
         }
 

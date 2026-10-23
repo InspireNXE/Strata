@@ -208,6 +208,32 @@ public interface ScreenStack extends InputSink, ScreenController {
     void setFrameRequester(Runnable requester);
 
     /**
+     * Sets the frame rate of every screen, and of screens pushed later, as {@link ScreenHost#setFrameRate(int)}
+     * describes for a host. Any thread may call this.
+     *
+     * @param framesPerSecond frames a second, from {@link ScreenHost#MIN_FRAME_RATE} to
+     *     {@link ScreenHost#MAX_FRAME_RATE}
+     * @throws IllegalArgumentException if the rate is out of that range
+     */
+    void setFrameRate(int framesPerSecond);
+
+    /**
+     * Returns the frame rate of the stack's screens.
+     *
+     * @return the rate {@link #setFrameRate} set, or {@link ScreenHost#DEFAULT_FRAME_RATE}
+     */
+    int frameRate();
+
+    /**
+     * Returns the time between two frames at the {@linkplain #frameRate() frame rate}, as
+     * {@link ScreenHost#frameIntervalNanos()} describes. An adapter that renders on demand renders no sooner than this
+     * after its last render began.
+     *
+     * @return the interval in nanoseconds
+     */
+    long frameIntervalNanos();
+
+    /**
      * Draws the visible screens, bottom to top.
      *
      * @param canvas the engine canvas for this frame

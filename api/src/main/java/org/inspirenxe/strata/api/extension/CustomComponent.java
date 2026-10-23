@@ -1206,6 +1206,17 @@ public abstract class CustomComponent<T extends Component<T>> implements Compone
     }
 
     /**
+     * Asks for the next frame the host's frame rate allows, because the component's look moves with the clock, such as
+     * a needle that eases toward its value or a pattern that scrolls. Call it from {@link #paint} while the look keeps
+     * moving, and read the clock through {@link #environment()} when painting, so a host with a low rate shows the
+     * same motion in fewer steps. On an engine that draws every frame it costs nothing. Does nothing while the
+     * component is detached. Any thread may call it.
+     */
+    protected final void repaintNextFrame() {
+        this.peer.repaintNextFrame();
+    }
+
+    /**
      * Tells the host that the component's look changes by itself after a time, such as a blinking cursor's next
      * blink or a clock's next second, so a host that draws only when asked draws a frame then. Call it from
      * {@link #paint} for the next change only, and again on the next paint; the same deadline registered twice

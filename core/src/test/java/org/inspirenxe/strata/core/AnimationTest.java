@@ -27,7 +27,6 @@ import org.inspirenxe.strata.api.event.cause.Origin;
 import org.inspirenxe.strata.api.geometry.Insets;
 import org.inspirenxe.strata.api.state.State;
 import org.inspirenxe.strata.api.theme.Themes;
-import org.inspirenxe.strata.core.frame.FrameRequests;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
@@ -272,7 +271,8 @@ class AnimationTest {
             AnimationTest.this.animator.animate(bar, Ranged.VALUE, 1.0, 100L, Easing.EASE_IN_OUT);
             assertTrue(AnimationTest.this.test.host().needsFrame(), "starting asks at once");
             AnimationTest.this.frame(40L);
-            assertEquals((40L + FrameRequests.CONTINUOUS_MILLIS) * MS, AnimationTest.this.test.host().nextFrameNanos());
+            assertEquals(40L * MS + AnimationTest.this.test.host().frameIntervalNanos(),
+                    AnimationTest.this.test.host().nextFrameNanos());
             AnimationTest.this.frame(60L);
             assertEquals(Long.MAX_VALUE, AnimationTest.this.test.host().nextFrameNanos());
         }

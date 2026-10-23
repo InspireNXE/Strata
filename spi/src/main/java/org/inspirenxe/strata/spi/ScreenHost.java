@@ -41,7 +41,9 @@ import java.util.Optional;
  *     <li>Call {@link #render} once per frame. It builds pending screens, runs layout if needed, draws, and asks for
  *     the cursor. An adapter whose engine does not draw every frame may render on demand instead: whenever
  *     {@link #needsFrame()} is true, which the {@linkplain #setFrameRequester frame requester} announces, and
- *     whenever the platform's clock reaches {@link #nextFrameNanos()}.</li>
+ *     whenever the platform's clock reaches {@link #nextFrameNanos()}. Either way it renders no sooner than
+ *     {@link #frameIntervalNanos()} after its last render began, so the host is drawn at most
+ *     {@link #frameRate()} times a second.</li>
  *     <li>Call {@link #close()} when the engine screen goes away, so the Strata screen's {@code closed()} runs.</li>
  *     <li>When the user asks to close the engine screen, with its close button or a key the engine closes screens
  *     with, call {@link #requestClose()} first and close the engine screen only if it returns true.</li>
@@ -51,6 +53,20 @@ import java.util.Optional;
  * </ul>
  */
 public interface ScreenHost extends InputSink {
+    /**
+     * The frame rate of a host, and of a stack, until {@link #setFrameRate} changes it.
+     */
+    int DEFAULT_FRAME_RATE = 30;
+
+    /**
+     * The lowest frame rate {@link #setFrameRate} accepts.
+     */
+    int MIN_FRAME_RATE = 1;
+
+    /**
+     * The highest frame rate {@link #setFrameRate} accepts.
+     */
+    int MAX_FRAME_RATE = 1000;
 
     /**
      * Returns the factory for components shown by this host, the one screens receive in {@link Screen#build}.
@@ -262,6 +278,35 @@ public interface ScreenHost extends InputSink {
      * @param requester the requester, or {@code null} for none
      */
     void setFrameRequester(Runnable requester);
+
+    /**
+     * Sets how many frames a second the host asks for at most. {@link #nextFrameNanos()} is never sooner than one
+     * interval after the last {@link #render} began, and things that move with the clock, such as a running
+     * animation or a sliding caption, ask for the next frame one interval ahead. Every motion reads the clock when it
+     * draws, so a lower rate shows the same motion in fewer steps. An adapter that renders on demand holds frames that
+     * {@link #needsFrame()} asks for to the same rate. An engine that draws every frame anyway is not held to it.
+     * It is {@link #DEFAULT_FRAME_RATE} until set. A change asks for a frame. Any thread may call this.
+     *
+     * @param framesPerSecond frames a second, from {@link #MIN_FRAME_RATE} to {@link #MAX_FRAME_RATE}
+     * @throws IllegalArgumentException if the rate is out of that range
+     */
+    void setFrameRate(int framesPerSecond);
+
+    /**
+     * Returns how many frames a second the host asks for at most.
+     *
+     * @return the rate {@link #setFrameRate} set, or {@link #DEFAULT_FRAME_RATE}
+     */
+    int frameRate();
+
+    /**
+     * Returns the time between two frames at the {@linkplain #frameRate() frame rate}: one second divided by the rate,
+     * rounded to the nearest nanosecond. An adapter that renders on demand renders no sooner than this after its last
+     * render began.
+     *
+     * @return the interval in nanoseconds of the {@link Clock}
+     */
+    long frameIntervalNanos();
 
     /**
      * Returns the component with keyboard focus.

@@ -423,6 +423,21 @@ public final class ScreenHostImpl implements ScreenHost {
     }
 
     @Override
+    public void setFrameRate(final int framesPerSecond) {
+        this.root.setFrameRate(framesPerSecond);
+    }
+
+    @Override
+    public int frameRate() {
+        return this.root.frames().rate();
+    }
+
+    @Override
+    public long frameIntervalNanos() {
+        return this.root.frames().intervalNanos();
+    }
+
+    @Override
     public Optional<Component<?>> focused() {
         return Optional.ofNullable(this.root.focused()).map(Node::facade);
     }

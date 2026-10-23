@@ -35,7 +35,6 @@ import org.inspirenxe.strata.api.theme.Theme;
 import org.inspirenxe.strata.core.control.Caption;
 import org.inspirenxe.strata.core.control.Activation;
 import org.inspirenxe.strata.core.control.Rings;
-import org.inspirenxe.strata.core.frame.FrameRequests;
 import org.inspirenxe.strata.core.node.BuiltInComponent;
 import org.inspirenxe.strata.core.node.ComponentFactoryImpl;
 import org.inspirenxe.strata.core.text.TextLine;
@@ -374,7 +373,7 @@ public final class CycleButtonImpl<T> extends BuiltInComponent<CycleButton<T>> i
         if (this.caption.draw(painter, line, bounds, padding,
                 bounds.y() + padding.top() + (bounds.height() - padding.vertical() - this.lineHeight) * 0.5f,
                 this.environment().millis())) {
-            this.repaintAfter(FrameRequests.CONTINUOUS_MILLIS);
+            this.repaintNextFrame();
         }
     }
 

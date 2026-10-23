@@ -33,7 +33,6 @@ import org.inspirenxe.strata.api.theme.Theme;
 import org.inspirenxe.strata.api.visual.Visual;
 import org.inspirenxe.strata.core.control.Activation;
 import org.inspirenxe.strata.core.control.Commands;
-import org.inspirenxe.strata.core.frame.FrameRequests;
 import org.inspirenxe.strata.core.node.BuiltInComponent;
 import org.inspirenxe.strata.core.node.ComponentFactoryImpl;
 import org.inspirenxe.strata.core.node.MnemonicTarget;
@@ -289,7 +288,7 @@ public final class ToggleButtonImpl extends BuiltInComponent<ToggleButton> imple
         }
         if (content.paintContent(painter, bounds, content.padding(false), enabled, shown, this.environment().millis(),
                 this.isRightToLeft())) {
-            this.repaintAfter(FrameRequests.CONTINUOUS_MILLIS);
+            this.repaintNextFrame();
         }
     }
 

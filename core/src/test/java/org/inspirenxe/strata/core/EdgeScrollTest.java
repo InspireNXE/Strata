@@ -62,7 +62,8 @@ class EdgeScrollTest {
     }
 
     private void frame() {
-        this.platform.advanceMillis(16);
+        // One frame at the host's rate later
+        this.platform.advanceMillis((this.host.frameIntervalNanos() + 999_999L) / 1_000_000L);
         this.host.render(new NullCanvas());
     }
 
@@ -85,7 +86,8 @@ class EdgeScrollTest {
         final float first = this.scroll.scrollY();
         assertEquals(7.5f, first, 0.01f);
         final long due = this.host.nextFrameNanos();
-        assertTrue(due <= this.platform.clock().nanoTime() + 16_000_000L, "a frame is asked for while still");
+        assertTrue(due <= this.platform.clock().nanoTime() + this.host.frameIntervalNanos(),
+                "the next frame the rate allows is asked for while still");
         this.frame();
         this.frame();
         assertEquals(first * 3, this.scroll.scrollY(), 0.01f);

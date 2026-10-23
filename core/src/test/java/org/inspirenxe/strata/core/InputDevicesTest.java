@@ -130,6 +130,8 @@ class InputDevicesTest {
     void aLongPressOpensTheContextMenuAndClicksNothing() {
         final Menu menu = this.ui.menu().addItem(Text.of("Copy"), () -> { });
         this.panel.setContextMenu(menu);
+        // At most a millisecond between frames, so the long press's own time decides when it is due
+        this.host.setFrameRate(1000);
         this.touch(FIRST, 20, 20, true);
         this.test.platform().advanceMillis(Root.LONG_PRESS_MILLIS - 1);
         this.host.render(new NullCanvas());

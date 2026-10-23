@@ -36,6 +36,7 @@ import org.inspirenxe.strata.core.theme.ThemeResolver;
 import org.inspirenxe.strata.spi.Canvas;
 import org.inspirenxe.strata.spi.InputContext;
 import org.inspirenxe.strata.spi.Platform;
+import org.inspirenxe.strata.spi.ScreenHost;
 import org.inspirenxe.strata.spi.ScreenStack;
 
 import java.util.ArrayList;
@@ -73,6 +74,7 @@ public final class ScreenStackImpl implements ScreenStack {
     // Negative until set, so each screen follows its theme
     private long tooltipDelay = -1L;
     private float pixelsPerUnit = 1f;
+    private int frameRate = ScreenHost.DEFAULT_FRAME_RATE;
     private final FrameRequests frames = new FrameRequests();
 
     /**
@@ -160,6 +162,7 @@ public final class ScreenStackImpl implements ScreenStack {
         host.setFrameRequester(this.frames::request);
         host.resize(this.width, this.height);
         host.setPixelsPerUnit(this.pixelsPerUnit);
+        host.setFrameRate(this.frameRate);
         if (this.tooltipDelay >= 0L) {
             host.setTooltipDelay(this.tooltipDelay);
         }
@@ -432,6 +435,27 @@ public final class ScreenStackImpl implements ScreenStack {
     @Override
     public void setFrameRequester(final Runnable requester) {
         this.frames.setRequester(requester);
+    }
+
+    @Override
+    public void setFrameRate(final int framesPerSecond) {
+        FrameRequests.checkRate(framesPerSecond);
+        this.frameRate = framesPerSecond;
+        this.frames.setRate(framesPerSecond);
+        this.frames.request();
+        for (final Entry entry : this.entries) {
+            entry.host().setFrameRate(framesPerSecond);
+        }
+    }
+
+    @Override
+    public int frameRate() {
+        return this.frameRate;
+    }
+
+    @Override
+    public long frameIntervalNanos() {
+        return this.frames.intervalNanos();
     }
 
     private Optional<ScreenHostImpl> input() {

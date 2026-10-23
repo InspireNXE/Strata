@@ -396,6 +396,30 @@ public final class Root {
     }
 
     /**
+     * Asks for the next frame the frame rate allows, for a look that moves with the clock. On the UI thread it
+     * registers a deadline one interval ahead; on any other thread it asks for a frame, which an adapter that renders
+     * on demand still holds to the rate.
+     */
+    void repaintNextFrame() {
+        if (this.uiThread.isElsewhere()) {
+            this.frames.request();
+        } else {
+            this.frames.atNextFrame(this.platform.clock().nanoTime());
+        }
+    }
+
+    /**
+     * Sets how many frames a second the host asks for at most.
+     *
+     * @param framesPerSecond the rate
+     * @throws IllegalArgumentException if the rate is out of range
+     */
+    public void setFrameRate(final int framesPerSecond) {
+        this.frames.setRate(framesPerSecond);
+        this.frames.request();
+    }
+
+    /**
      * Registers a timed change, so {@link #nextFrameNanos()} reports a frame due then.
      *
      * @param nanos the platform clock's {@code nanoTime()} at which the look changes
@@ -415,8 +439,8 @@ public final class Root {
 
     /**
      * Returns when the next timed change is due: the earliest of the deadlines components registered, each toast's
-     * expiry, the end of the delay of a tooltip waiting to show, and the next key repeat the root makes itself.
-     * Allocates nothing.
+     * expiry, the end of the delay of a tooltip waiting to show, and the next key repeat the root makes itself. A
+     * change due sooner than one interval after the last frame began is due then instead. Allocates nothing.
      *
      * @return the platform clock's {@code nanoTime()} at which a frame is due, or {@link Long#MAX_VALUE} for none
      */
@@ -441,7 +465,7 @@ public final class Root {
         if (hold != Long.MAX_VALUE) {
             next = Math.min(next, hold * 1_000_000L);
         }
-        return next;
+        return next == Long.MAX_VALUE ? next : Math.max(next, this.frames.earliestAllowed());
     }
 
     /**
@@ -1185,7 +1209,9 @@ public final class Root {
      * @param canvas the frame's canvas
      */
     public void render(final Canvas canvas) {
-        this.frames.prune(this.platform.clock().nanoTime());
+        final long now = this.platform.clock().nanoTime();
+        this.frames.frameStarted(now);
+        this.frames.prune(now);
         this.pumpKeyRepeat();
         this.pumpLongPress();
         this.pumpHoldRepeat();
@@ -1255,14 +1281,14 @@ public final class Root {
 
     /**
      * Lets the node under a drag that carries a transfer, or its nearest ancestor that can, scroll one step toward
-     * the edge the pointer is near. After a step it asks for a frame {@link FrameRequests#CONTINUOUS_MILLIS} later,
-     * and tells the drag to move again, since other content is now under the pointer.
+     * the edge the pointer is near. After a step it asks for the next frame the frame rate allows, and tells the
+     * drag to move again, since other content is now under the pointer.
      */
     private void edgeScroll(final TransferDrag drag) {
         this.layout();
         for (Node node = this.hitTest(drag.x(), drag.y()); node != null; node = node.parentNode()) {
             if (node.hooks().edgeScroll(drag.x(), drag.y())) {
-                this.frames.at(this.platform.clock().nanoTime() + FrameRequests.CONTINUOUS_MILLIS * 1_000_000L);
+                this.frames.atNextFrame(this.platform.clock().nanoTime());
                 try (CauseFrame _ = this.inputFrame(Device.MOUSE, this.modifiers)) {
                     drag.moved(drag.x(), drag.y(), this.modifiers);
                 }

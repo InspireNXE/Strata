@@ -500,6 +500,18 @@ public class Node implements ComponentPeer {
     }
 
     /**
+     * Asks for the next frame the host's frame rate allows, because the look moves with the clock. Any thread may
+     * call it. Does nothing while detached.
+     */
+    @Override
+    public final void repaintNextFrame() {
+        final Root current = this.root;
+        if (current != null) {
+            current.repaintNextFrame();
+        }
+    }
+
+    /**
      * Tells the host that the component's look changes by itself after a time, so a host that renders on demand
      * draws a frame then. A delay of 0 is {@link #repaint()}. Does nothing while detached.
      *

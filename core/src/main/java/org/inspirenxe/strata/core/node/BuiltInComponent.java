@@ -1262,9 +1262,16 @@ public abstract class BuiltInComponent<T extends Component<T>> implements Compon
     }
 
     /**
+     * Asks for the next frame the host's frame rate allows, as {@code CustomComponent.repaintNextFrame()} does, for a
+     * look that moves with the clock such as a sliding caption.
+     */
+    protected final void repaintNextFrame() {
+        this.node.repaintNextFrame();
+    }
+
+    /**
      * Tells the host that the look changes by itself after a time, as {@code CustomComponent.repaintAfter} does:
-     * the caret's next blink, a step of a busy indicator or a sliding caption. Call it from {@link #paint}, for the
-     * next change only.
+     * the caret's next blink or a step of a busy indicator. Call it from {@link #paint}, for the next change only.
      *
      * @param millis the delay in milliseconds, by the platform's clock; 0 is {@link #repaint()}
      * @throws IllegalArgumentException if {@code millis} is negative

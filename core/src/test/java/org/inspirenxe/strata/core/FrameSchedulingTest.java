@@ -40,7 +40,6 @@ import org.inspirenxe.strata.api.text.Text;
 import org.inspirenxe.strata.api.theme.Paint;
 import org.inspirenxe.strata.api.theme.Theme;
 import org.inspirenxe.strata.api.theme.Themes;
-import org.inspirenxe.strata.core.frame.FrameRequests;
 import org.inspirenxe.strata.core.host.ScreenHostImpl;
 import org.inspirenxe.strata.spi.ScreenStack;
 import org.junit.jupiter.api.Nested;
@@ -51,11 +50,12 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Frames on demand (design 4.47): when a host needs a frame, when the requester runs, and the deadline each timed
- * change reports.
+ * change reports, held to the frame rate (design 4.59).
  */
 class FrameSchedulingTest {
     private static final long MS = 1_000_000L;
@@ -103,6 +103,11 @@ class FrameSchedulingTest {
 
         Gauge pulseIn(final long millis) {
             this.repaintAfter(millis);
+            return this;
+        }
+
+        Gauge keepMoving() {
+            this.repaintNextFrame();
             return this;
         }
 
@@ -359,13 +364,87 @@ class FrameSchedulingTest {
             button.setWidth(50f);
             test.show(button);
             test.host().render(FrameSchedulingTest.this.canvas);
-            assertEquals(FrameRequests.CONTINUOUS_MILLIS * MS, test.host().nextFrameNanos());
+            assertEquals(test.host().frameIntervalNanos(), test.host().nextFrameNanos());
         }
 
         @Test
         void aCalendarAsksForTheNextReadingOfToday() {
             FrameSchedulingTest.this.showClean(FrameSchedulingTest.this.ui.calendarView());
             assertEquals(60_000L * MS, FrameSchedulingTest.this.host.nextFrameNanos());
+        }
+    }
+
+    @Nested
+    class Rates {
+        private static final long THIRTY = 33_333_333L;
+
+        @Test
+        void theRateIsThirtyUntilSet() {
+            assertEquals(30, FrameSchedulingTest.this.host.frameRate());
+            assertEquals(THIRTY, FrameSchedulingTest.this.host.frameIntervalNanos());
+            FrameSchedulingTest.this.host.setFrameRate(60);
+            assertEquals(60, FrameSchedulingTest.this.host.frameRate());
+            assertEquals(16_666_667L, FrameSchedulingTest.this.host.frameIntervalNanos(), "rounded");
+        }
+
+        @Test
+        void aRateOutOfRangeIsRejected() {
+            assertThrows(IllegalArgumentException.class, () -> FrameSchedulingTest.this.host.setFrameRate(0));
+            assertThrows(IllegalArgumentException.class, () -> FrameSchedulingTest.this.host.setFrameRate(1001));
+            assertEquals(30, FrameSchedulingTest.this.host.frameRate());
+        }
+
+        @Test
+        void changingTheRateAsksForAFrame() {
+            FrameSchedulingTest.this.showClean(FrameSchedulingTest.this.ui.label(Text.of("Still")));
+            FrameSchedulingTest.this.host.setFrameRate(10);
+            assertTrue(FrameSchedulingTest.this.host.needsFrame());
+            assertEquals(1, FrameSchedulingTest.this.requests.get());
+        }
+
+        @Test
+        void anIndeterminateBarWaitsOneIntervalAfterTheLastFrame() {
+            final ProgressBar bar = FrameSchedulingTest.this.ui.progressBar().setIndeterminate(true);
+            bar.setWidth(160f);
+            FrameSchedulingTest.this.showClean(bar);
+            assertEquals(THIRTY, FrameSchedulingTest.this.host.nextFrameNanos(),
+                    "the segment's next step comes sooner, so the rate decides");
+            FrameSchedulingTest.this.host.setFrameRate(60);
+            FrameSchedulingTest.this.platform.advanceMillis(40);
+            FrameSchedulingTest.this.render();
+            assertEquals(40L * MS + 16_666_667L, FrameSchedulingTest.this.host.nextFrameNanos());
+        }
+
+        @Test
+        void aNeededFrameIsStillAskedForAtOnce() {
+            final Label label = FrameSchedulingTest.this.ui.label(Text.of("Before"));
+            FrameSchedulingTest.this.showClean(label);
+            label.setText(Text.of("After"));
+            assertTrue(FrameSchedulingTest.this.host.needsFrame());
+            assertEquals(1, FrameSchedulingTest.this.requests.get());
+        }
+
+        @Test
+        void aComponentOfYourOwnAsksForTheNextFrame() throws InterruptedException {
+            final Gauge gauge = new Gauge(FrameSchedulingTest.this.ui);
+            FrameSchedulingTest.this.showClean(gauge);
+            FrameSchedulingTest.this.platform.advanceMillis(5);
+            gauge.keepMoving();
+            assertEquals(5L * MS + THIRTY, FrameSchedulingTest.this.host.nextFrameNanos());
+            assertFalse(FrameSchedulingTest.this.host.needsFrame(), "on the UI thread it waits for its deadline");
+            final Thread other = new Thread(gauge::keepMoving);
+            other.start();
+            other.join();
+            assertTrue(FrameSchedulingTest.this.host.needsFrame(), "from another thread it asks for a frame");
+        }
+
+        @Test
+        void aDetachedComponentAsksForNothing() {
+            final Gauge gauge = new Gauge(FrameSchedulingTest.this.ui);
+            FrameSchedulingTest.this.showClean(FrameSchedulingTest.this.ui.label(Text.of("Other")));
+            gauge.keepMoving();
+            assertFalse(FrameSchedulingTest.this.host.needsFrame());
+            assertEquals(Long.MAX_VALUE, FrameSchedulingTest.this.host.nextFrameNanos());
         }
     }
 
@@ -416,6 +495,21 @@ class FrameSchedulingTest {
             this.stack.render(FrameSchedulingTest.this.canvas);
             assertEquals(Long.MAX_VALUE, this.stack.nextFrameNanos());
             assertFalse(this.stack.needsFrame());
+        }
+
+        @Test
+        void aStackGivesItsRateToScreensPushedBeforeAndAfter() {
+            this.stack.push(ui -> ui.progressBar().setIndeterminate(true));
+            assertEquals(30, this.stack.frameRate());
+            this.stack.setFrameRate(10);
+            this.stack.render(FrameSchedulingTest.this.canvas);
+            assertEquals(100L * MS, this.stack.nextFrameNanos());
+            this.platform.advanceMillis(100);
+            this.stack.push(ui -> ui.progressBar().setIndeterminate(true));
+            this.stack.render(FrameSchedulingTest.this.canvas);
+            assertEquals(200L * MS, this.stack.nextFrameNanos(), "the screen pushed later keeps the rate too");
+            assertEquals(100L * MS, this.stack.frameIntervalNanos());
+            assertThrows(IllegalArgumentException.class, () -> this.stack.setFrameRate(0));
         }
 
         @Test

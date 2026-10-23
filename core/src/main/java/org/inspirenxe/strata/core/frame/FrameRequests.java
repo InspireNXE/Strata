@@ -15,6 +15,8 @@
  */
 package org.inspirenxe.strata.core.frame;
 
+import org.inspirenxe.strata.spi.ScreenHost;
+
 import java.util.Arrays;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -28,25 +30,102 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * <p>Deadlines are {@code Clock.nanoTime()} readings kept in a small array on the UI thread. Equal deadlines are
  * kept once, and {@link #prune} drops those a frame has reached, so registering the same deadline on every paint, as
  * a blinking caret does, allocates nothing.</p>
+ *
+ * <p>The frame rate keeps frames apart: {@link #earliestAllowed()} is one interval after the start of the last frame,
+ * and {@link #atNextFrame(long)} registers the next frame something that moves with the clock needs. The rate is
+ * {@link ScreenHost#DEFAULT_FRAME_RATE} until set.</p>
  */
 public final class FrameRequests {
-    /**
-     * How soon, in milliseconds, something that moves with the clock asks for its next frame, such as a sliding
-     * caption or a running animation: about 60 frames a second.
-     */
-    public static final long CONTINUOUS_MILLIS = 16L;
-
     private final AtomicBoolean dirty;
     private volatile Runnable requester;
     private long[] deadlines;
     private int count;
+    private volatile int rate;
+    private volatile long intervalNanos;
+    private long lastFrame;
+    private boolean framed;
 
     /**
-     * Creates a dirty instance with no requester and no deadlines.
+     * Creates a dirty instance with no requester, no deadlines and the default frame rate.
      */
     public FrameRequests() {
         this.dirty = new AtomicBoolean(true);
         this.deadlines = new long[8];
+        this.setRate(ScreenHost.DEFAULT_FRAME_RATE);
+    }
+
+    /**
+     * Checks a frame rate.
+     *
+     * @param framesPerSecond the rate
+     * @throws IllegalArgumentException if the rate is outside {@link ScreenHost#MIN_FRAME_RATE} to
+     *     {@link ScreenHost#MAX_FRAME_RATE}
+     */
+    public static void checkRate(final int framesPerSecond) {
+        if (framesPerSecond < ScreenHost.MIN_FRAME_RATE || framesPerSecond > ScreenHost.MAX_FRAME_RATE) {
+            throw new IllegalArgumentException("A frame rate must be from " + ScreenHost.MIN_FRAME_RATE + " to "
+                    + ScreenHost.MAX_FRAME_RATE + ": " + framesPerSecond);
+        }
+    }
+
+    /**
+     * Sets the frame rate. Any thread may call this.
+     *
+     * @param framesPerSecond frames a second
+     * @throws IllegalArgumentException if the rate is out of range, as {@link #checkRate} says
+     */
+    public void setRate(final int framesPerSecond) {
+        checkRate(framesPerSecond);
+        this.rate = framesPerSecond;
+        this.intervalNanos = (1_000_000_000L + framesPerSecond / 2) / framesPerSecond;
+    }
+
+    /**
+     * Returns the frame rate.
+     *
+     * @return frames a second
+     */
+    public int rate() {
+        return this.rate;
+    }
+
+    /**
+     * Returns the time between two frames at the frame rate: one second divided by the rate, rounded.
+     *
+     * @return the interval in nanoseconds
+     */
+    public long intervalNanos() {
+        return this.intervalNanos;
+    }
+
+    /**
+     * Notes that a frame starts now. Call on the UI thread, as each frame begins.
+     *
+     * @param now the clock's reading at the start of the frame
+     */
+    public void frameStarted(final long now) {
+        this.lastFrame = now;
+        this.framed = true;
+    }
+
+    /**
+     * Returns the earliest time the next frame may start: one interval after the start of the last frame. Call on
+     * the UI thread.
+     *
+     * @return the clock's {@code nanoTime()}, or {@link Long#MIN_VALUE} before the first frame
+     */
+    public long earliestAllowed() {
+        return this.framed ? this.lastFrame + this.intervalNanos : Long.MIN_VALUE;
+    }
+
+    /**
+     * Registers a deadline one interval from now, for something that moves with the clock and needs the next frame
+     * the rate allows. Call on the UI thread.
+     *
+     * @param now the clock's reading
+     */
+    public void atNextFrame(final long now) {
+        this.at(now + this.intervalNanos);
     }
 
     /**

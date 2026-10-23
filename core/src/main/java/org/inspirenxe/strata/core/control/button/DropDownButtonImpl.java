@@ -39,7 +39,6 @@ import org.inspirenxe.strata.core.control.CorePopup;
 import org.inspirenxe.strata.core.control.RectCache;
 import org.inspirenxe.strata.core.control.Rings;
 import org.inspirenxe.strata.core.control.collection.ComboBoxImpl;
-import org.inspirenxe.strata.core.frame.FrameRequests;
 import org.inspirenxe.strata.core.node.BuiltInComponent;
 import org.inspirenxe.strata.core.node.ComponentFactoryImpl;
 import org.inspirenxe.strata.core.node.MnemonicTarget;
@@ -330,7 +329,7 @@ public final class DropDownButtonImpl extends BuiltInComponent<DropDownButton> i
         if (content.paintContent(painter, this.contentArea.at(rightToLeft ? bounds.x() + beside : bounds.x(),
                         bounds.y(), bounds.width() - beside, bounds.height()), padding,
                 enabled, shown, this.environment().millis(), rightToLeft)) {
-            this.repaintAfter(FrameRequests.CONTINUOUS_MILLIS);
+            this.repaintNextFrame();
         }
 
         final float arrowX = rightToLeft ? bounds.x() + padding.right()

@@ -35,7 +35,6 @@ import org.inspirenxe.strata.api.text.TextStyle;
 import org.inspirenxe.strata.api.theme.Paint;
 import org.inspirenxe.strata.api.theme.Theme;
 import org.inspirenxe.strata.core.control.Caption;
-import org.inspirenxe.strata.core.frame.FrameRequests;
 import org.inspirenxe.strata.core.node.BuiltInComponent;
 import org.inspirenxe.strata.core.node.ComponentFactoryImpl;
 import org.inspirenxe.strata.core.text.TextLine;
@@ -502,7 +501,7 @@ public final class SliderImpl extends BuiltInComponent<Slider> implements Slider
             if (this.caption.draw(painter, enabled ? this.labelSpan : this.disabledLabelSpan, bounds, padding,
                     bounds.y() + padding.top() + (bounds.height() - padding.vertical() - this.labelHeight) * 0.5f,
                     this.environment().millis())) {
-                this.repaintAfter(FrameRequests.CONTINUOUS_MILLIS);
+                this.repaintNextFrame();
             }
         }
     }
