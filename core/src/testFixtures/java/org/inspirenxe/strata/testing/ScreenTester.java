@@ -61,9 +61,12 @@ import java.util.function.Predicate;
  *
  * <h2>The platform</h2>
  * <p>Text is measured as if monospaced: {@value #CHAR_WIDTH} units wide per code point, {@value #MONO_CHAR_WIDTH} in a
- * monospaced style, and {@value #LINE_HEIGHT} units per line. The clock stands still until {@link #advance} moves it,
- * so delays such as a tooltip's never pass on their own and animations move only as it does ({@link #settle()} runs
- * them to their end), and the wall clock always reads
+ * monospaced style, and {@value #LINE_HEIGHT} units per line, at the default size of {@value #TEXT_SIZE}; a style
+ * with another {@linkplain org.inspirenxe.strata.api.text.TextStyle#size() size} measures in proportion, and every
+ * font measures alike. The clock stands still until {@link #advance} moves it, so delays such as a tooltip's never
+ * pass on their own, animations move only as it does ({@link #settle()} runs them to their end), and a screen's
+ * {@code ScreenHandle.every} tasks run as it passes them, once for each interval passed, on the test's thread. The
+ * wall clock always reads
  * {@link TesterOptions#now()}. The clipboard is held in memory, and the engine sends its own key repeats, so a key
  * repeats only when the test presses it again.</p>
  *
@@ -98,6 +101,11 @@ public final class ScreenTester implements AutoCloseable {
      * How tall the tester measures a line of text, in UI units.
      */
     public static final float LINE_HEIGHT = 9f;
+    /**
+     * The size the tester measures text of size 0 at, in UI units. Text of another size measures as much larger or
+     * smaller.
+     */
+    public static final float TEXT_SIZE = 9f;
 
     /**
      * How far apart {@link #settle()} runs its frames, in milliseconds: an animation's frame (design 4.47).
@@ -457,8 +465,8 @@ public final class ScreenTester implements AutoCloseable {
     }
 
     /**
-     * Moves the clock forward and runs a {@link #frame()}, so waiting tooltips show and toasts whose time ran out
-     * close.
+     * Moves the clock forward, running the screen's repeating tasks it passes, and runs a {@link #frame()}, so
+     * waiting tooltips show and toasts whose time ran out close.
      *
      * @param millis how far, in milliseconds
      * @return this tester

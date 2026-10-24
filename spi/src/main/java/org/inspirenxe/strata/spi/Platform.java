@@ -61,6 +61,14 @@ public interface Platform {
     Clock clock();
 
     /**
+     * Returns what runs the repeating tasks screens ask for with {@code ScreenHandle.every}. Every platform gives
+     * one, so a screen that polls works on every engine.
+     *
+     * @return the scheduler
+     */
+    Scheduler scheduler();
+
+    /**
      * Returns where hosts announce that a text field gained or lost focus.
      *
      * @return the text input sink, or {@link TextInputSink#NONE} if the engine needs no signal

@@ -69,6 +69,11 @@ public final class InlineMetrics implements TextMetrics {
         return this.engine.ascent(style);
     }
 
+    @Override
+    public long version() {
+        return this.engine.version();
+    }
+
     /**
      * Returns the height a span takes in a line: its style's line height, or an element's height.
      *

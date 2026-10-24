@@ -17,6 +17,7 @@ package org.inspirenxe.strata.core.theme;
 
 import org.inspirenxe.strata.api.geometry.Insets;
 import org.inspirenxe.strata.api.geometry.Size;
+import org.inspirenxe.strata.api.text.FontId;
 import org.inspirenxe.strata.api.text.TextStyle;
 import org.inspirenxe.strata.api.text.TextStylePatch;
 import org.inspirenxe.strata.api.theme.Paint;
@@ -53,7 +54,7 @@ record ThemeFile(String layer, Optional<ThemeId> parent, Map<String, Paint> pain
     private static final Set<String> COLOR_KEYS = Set.of("color", "radius");
     private static final Pattern DURATION = Pattern.compile("([0-9]+(?:\\.[0-9]+)?)(ms|s)");
     private static final Set<String> TEXT_KEYS =
-            Set.of("color", "bold", "italic", "underline", "strikethrough", "shadow", "monospace");
+            Set.of("color", "bold", "italic", "underline", "strikethrough", "shadow", "monospace", "font", "size");
 
     /**
      * Parses a document.
@@ -184,6 +185,22 @@ record ThemeFile(String layer, Optional<ThemeId> parent, Map<String, Paint> pain
         final Boolean monospace = flag(map, "monospace", where);
         if (monospace != null) {
             patch = patch.monospace(monospace);
+        }
+        if (map.containsKey("font")) {
+            // null names the platform's default font, so a child key can undo its parent's
+            final Object font = map.get("font");
+            try {
+                patch = patch.font(font == Json.NULL ? null : FontId.parse(string(font, where + ".font")));
+            } catch (final IllegalArgumentException e) {
+                throw new IllegalArgumentException(where + ".font: " + e.getMessage(), e);
+            }
+        }
+        if (map.containsKey("size")) {
+            final float size = number(map.get("size"), where + ".size");
+            if (size < 0f) {
+                throw new IllegalArgumentException(where + ".size must not be negative: " + size);
+            }
+            patch = patch.size(size);
         }
         return patch;
     }

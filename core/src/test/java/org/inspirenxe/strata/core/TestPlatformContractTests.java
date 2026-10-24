@@ -35,9 +35,17 @@ class TestPlatformContractTests {
 
     @Nested
     class PlatformTest extends PlatformContract {
+        private TestPlatform last;
+
         @Override
         protected Platform platform() {
-            return new TestPlatform();
+            this.last = new TestPlatform();
+            return this.last;
+        }
+
+        @Override
+        protected void passTime(final long millis) {
+            this.last.advanceMillis(millis);
         }
 
         @Override
@@ -56,11 +64,18 @@ class TestPlatformContractTests {
      */
     @Nested
     class PlatformWithCausesTest extends PlatformContract {
+        private TestPlatform last;
+
         @Override
         protected Platform platform() {
-            final TestPlatform platform = new TestPlatform();
-            platform.setCauses(CauseStackImpl.forThread());
-            return platform;
+            this.last = new TestPlatform();
+            this.last.setCauses(CauseStackImpl.forThread());
+            return this.last;
+        }
+
+        @Override
+        protected void passTime(final long millis) {
+            this.last.advanceMillis(millis);
         }
 
         @Override

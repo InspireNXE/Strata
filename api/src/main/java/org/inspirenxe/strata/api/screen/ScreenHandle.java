@@ -16,6 +16,7 @@
 package org.inspirenxe.strata.api.screen;
 
 import org.inspirenxe.strata.api.ComponentFactory;
+import org.inspirenxe.strata.api.event.Subscription;
 import org.inspirenxe.strata.api.text.Text;
 import org.inspirenxe.strata.api.theme.ThemeRef;
 
@@ -69,6 +70,32 @@ public interface ScreenHandle {
      * @return this handle
      */
     ScreenHandle setTitle(Text title);
+
+    /**
+     * Runs a task every interval while this opening of the screen goes on, for a screen that polls: refreshing
+     * figures, checking on a download, enabling a button after a delay. The engine schedules it on the UI thread, so
+     * the task may change components. The first run comes about one interval from now. An engine with a coarser beat,
+     * such as a tick, rounds the interval up to whole beats, and may drop runs it missed while paused.
+     *
+     * <p>The task stops when the subscription closes or the opening ends, whichever comes first, and never runs
+     * after that. Closing the subscription twice, or after the screen closed, does nothing. Once this opening has
+     * ended the task is never run, and the subscription returned is already closed.</p>
+     *
+     * <pre>{@code
+     * public void opened(ScreenHandle handle) {
+     *     handle.every(100, this::refresh);
+     * }
+     * }</pre>
+     *
+     * <p>For motion, use {@code ComponentFactory.animator()} instead: animations step once for every frame drawn,
+     * where a task runs on the engine's own beat.</p>
+     *
+     * @param millis the interval in milliseconds; above 0
+     * @param task what to run
+     * @return the subscription that stops the task
+     * @throws IllegalArgumentException if {@code millis} is 0 or less
+     */
+    Subscription every(long millis, Runnable task);
 
     /**
      * Returns the factory of the host showing the screen, the same one passed to {@link Screen#build}.

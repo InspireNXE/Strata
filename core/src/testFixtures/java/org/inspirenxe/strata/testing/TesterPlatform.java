@@ -22,6 +22,7 @@ import org.inspirenxe.strata.spi.Capabilities;
 import org.inspirenxe.strata.spi.Clipboard;
 import org.inspirenxe.strata.spi.Clock;
 import org.inspirenxe.strata.spi.Platform;
+import org.inspirenxe.strata.spi.Scheduler;
 import org.inspirenxe.strata.spi.TextInputSink;
 import org.inspirenxe.strata.spi.ThemeSource;
 
@@ -29,11 +30,13 @@ import java.util.Optional;
 
 /**
  * The platform behind a {@link ScreenTester}: text measured as if monospaced, a clock the tester moves by hand, a
- * wall clock that never moves, a clipboard held in memory and no engine text input. The engine sends key repeats
+ * scheduler that runs as that clock moves, a wall clock that never moves, a clipboard held in memory and no engine
+ * text input. The engine sends key repeats
  * itself, so holding a key repeats nothing unless the test presses it again.
  */
 final class TesterPlatform implements Platform {
     private final java.time.Clock wall;
+    private final TesterScheduler scheduler = new TesterScheduler();
     private long nanos;
     private String clipboard;
 
@@ -48,6 +51,7 @@ final class TesterPlatform implements Platform {
      */
     void advance(final long millis) {
         this.nanos += millis * 1_000_000L;
+        this.scheduler.advanceTo(this.nanos / 1_000_000L);
     }
 
     @Override
@@ -56,14 +60,27 @@ final class TesterPlatform implements Platform {
             @Override
             public float width(final TextSpan span) {
                 return span.text().codePointCount(0, span.text().length())
-                        * (span.style().monospace() ? ScreenTester.MONO_CHAR_WIDTH : ScreenTester.CHAR_WIDTH);
+                        * (span.style().monospace() ? ScreenTester.MONO_CHAR_WIDTH : ScreenTester.CHAR_WIDTH)
+                        * scale(span.style());
             }
 
             @Override
             public float lineHeight(final TextStyle style) {
-                return ScreenTester.LINE_HEIGHT;
+                return ScreenTester.LINE_HEIGHT * scale(style);
             }
         };
+    }
+
+    /**
+     * How much larger a style's size draws than the tester's default size.
+     */
+    private static float scale(final TextStyle style) {
+        return style.size() == 0f ? 1f : style.size() / ScreenTester.TEXT_SIZE;
+    }
+
+    @Override
+    public Scheduler scheduler() {
+        return this.scheduler;
     }
 
     @Override
