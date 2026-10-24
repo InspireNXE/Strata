@@ -25,7 +25,10 @@ package org.inspirenxe.strata.api.text;
  * <ul>
  *     <li>Match drawing: a span drawn at x must end at x plus its measured width, give or take a unit of rounding.
  *     Text boxes place the caret and selection from these numbers.</li>
- *     <li>Be pure: the same span gives the same result every time, with no side effects.</li>
+ *     <li>Be pure: the same span gives the same result every time while {@link #version} stays the same, with no
+ *     side effects.</li>
+ *     <li>Measure a style's {@link TextStyle#font() font} and {@link TextStyle#size() size} as they are drawn: a
+ *     family the engine lacks measures as its default font, and a size of 0 as its default size.</li>
  *     <li>{@link #width} is 0 for an empty span and never negative.</li>
  *     <li>Widths must not shrink as text grows: appending a code point to a span never makes it narrower. Text
  *     boxes rely on this to find the character under the pointer.</li>
@@ -66,5 +69,16 @@ public interface TextMetrics {
      */
     default float ascent(final TextStyle style) {
         return this.lineHeight(style) * 0.8f;
+    }
+
+    /**
+     * Returns a number that changes whenever the same text could measure differently: a font family was added,
+     * replaced or removed, or the user changed font options. Hosts compare it at the start of each layout and lay
+     * every screen out again when it changed. The default is 0 for metrics that never change.
+     *
+     * @return the version; any value, compared only for equality
+     */
+    default long version() {
+        return 0L;
     }
 }

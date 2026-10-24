@@ -19,6 +19,7 @@ import org.inspirenxe.strata.api.transfer.DropEffect;
 import org.inspirenxe.strata.api.transfer.Transfer;
 import org.inspirenxe.strata.api.ComponentFactory;
 import org.inspirenxe.strata.api.component.Component;
+import org.inspirenxe.strata.api.event.Subscription;
 import org.inspirenxe.strata.api.geometry.Size;
 import org.inspirenxe.strata.api.input.Key;
 import org.inspirenxe.strata.api.input.KeyAction;
@@ -43,9 +44,11 @@ import org.inspirenxe.strata.core.theme.ThemeResolver;
 import org.inspirenxe.strata.spi.Canvas;
 import org.inspirenxe.strata.spi.InputContext;
 import org.inspirenxe.strata.spi.Platform;
+import org.inspirenxe.strata.spi.Scheduler;
 import org.inspirenxe.strata.spi.ScreenHost;
 import org.inspirenxe.strata.spi.ThemeSource;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -70,12 +73,18 @@ import java.util.Set;
  * steps the root's animations and evaluates dirty bindings, in that order. Closing the screen stops its
  * animations where they are.</p>
  *
+ * <p>A handle's {@code every} hands the task to the platform's {@link Scheduler} and keeps the subscription. Closing
+ * the screen, or showing another in its place, closes every subscription its opening made before the screen's
+ * {@code closed()} runs, and a task checks that its opening still goes on before each run, so it never runs after
+ * the opening ends even on a scheduler that has already queued it.</p>
+ *
  * <p>Whether a frame is needed and when the next timed change is due come from the root: see
  * {@link Root#render} and {@link Root#nextFrameNanos()}.</p>
  */
 public final class ScreenHostImpl implements ScreenHost {
     private static final System.Logger LOGGER = System.getLogger(ScreenHostImpl.class.getName());
 
+    private final Platform platform;
     private final ComponentFactoryImpl ui;
     private final Root root;
     private final Runnable closeRequested;
@@ -87,6 +96,7 @@ public final class ScreenHostImpl implements ScreenHost {
     private long themeVersion;
     private long registryVersion;
     private long textVersion = Translations.version();
+    private long metricsVersion;
     private Screen screen;
     private Handle handle;
     // The open screen's title: read from it on open, replaced through its handle
@@ -104,6 +114,8 @@ public final class ScreenHostImpl implements ScreenHost {
      */
     public ScreenHostImpl(final Platform platform, final Theme theme, final Runnable closeRequested) {
         this.theme = Objects.requireNonNull(theme, "theme");
+        this.platform = platform;
+        this.metricsVersion = platform.textMetrics().version();
         this.themes = platform.themes();
         this.resolver = new ThemeResolver(this.themes);
         this.ui = new ComponentFactoryImpl(() -> this.theme, platform);
@@ -186,10 +198,12 @@ public final class ScreenHostImpl implements ScreenHost {
         }
         final Screen closing = this.screen;
         this.screen = null;
+        final Handle ending = this.handle;
         this.handle = null;
         this.title = Text.empty();
-        // The screen's motion stops where it is, so nothing writes to a closed tree
+        // The screen's motion and its repeating tasks stop, so nothing writes to a closed tree
         this.root.animator().stopAll();
+        ending.stopTasks();
         try {
             closing.closed();
         } finally {
@@ -320,12 +334,14 @@ public final class ScreenHostImpl implements ScreenHost {
     }
 
     /**
-     * Lays out every node again if translations changed since the last time.
+     * Lays out every node again if translations or the platform's text metrics changed since the last time.
      */
     private void refreshText() {
         final long version = Translations.version();
-        if (version != this.textVersion) {
+        final long metrics = this.platform.textMetrics().version();
+        if (version != this.textVersion || metrics != this.metricsVersion) {
             this.textVersion = version;
+            this.metricsVersion = metrics;
             this.root.invalidateText();
         }
     }
@@ -543,9 +559,19 @@ public final class ScreenHostImpl implements ScreenHost {
      */
     private final class Handle implements ScreenHandle {
         private final Screen owner;
+        private final List<ScreenTask> tasks = new ArrayList<>();
 
         Handle(final Screen owner) {
             this.owner = owner;
+        }
+
+        /**
+         * Closes the subscription of every task this opening still runs.
+         */
+        void stopTasks() {
+            for (final ScreenTask task : List.copyOf(this.tasks)) {
+                task.unsubscribe();
+            }
         }
 
         private boolean current() {
@@ -593,6 +619,21 @@ public final class ScreenHostImpl implements ScreenHost {
         }
 
         @Override
+        public Subscription every(final long millis, final Runnable task) {
+            Objects.requireNonNull(task, "task");
+            if (millis <= 0L) {
+                throw new IllegalArgumentException("A task's interval must be above 0 ms: " + millis);
+            }
+            if (!this.current()) {
+                return () -> { };
+            }
+            final ScreenTask scheduled = new ScreenTask(this, task);
+            this.tasks.add(scheduled);
+            scheduled.engine = ScreenHostImpl.this.platform.scheduler().every(millis, scheduled::run);
+            return scheduled;
+        }
+
+        @Override
         public ComponentFactory factory() {
             return ScreenHostImpl.this.ui;
         }
@@ -606,6 +647,39 @@ public final class ScreenHostImpl implements ScreenHost {
             }
             final ScreenController above = ScreenHostImpl.this.opener;
             return (above != null ? above : PlatformScreens.get()).open(screen, theme);
+        }
+    }
+
+    /**
+     * A task an opening asked to repeat, with the platform's subscription for it.
+     */
+    private static final class ScreenTask implements Subscription {
+        private final Handle handle;
+        private final Runnable task;
+        private Subscription engine;
+        private boolean closed;
+
+        ScreenTask(final Handle handle, final Runnable task) {
+            this.handle = handle;
+            this.task = task;
+        }
+
+        void run() {
+            if (!this.closed && this.handle.current()) {
+                this.task.run();
+            }
+        }
+
+        @Override
+        public void unsubscribe() {
+            if (this.closed) {
+                return;
+            }
+            this.closed = true;
+            this.handle.tasks.remove(this);
+            if (this.engine != null) {
+                this.engine.unsubscribe();
+            }
         }
     }
 

@@ -20,6 +20,9 @@ import org.inspirenxe.strata.api.event.cause.CauseKey;
 import org.inspirenxe.strata.api.event.cause.CauseStack;
 import org.inspirenxe.strata.api.geometry.Rect;
 import org.inspirenxe.strata.api.input.TextInputKind;
+import org.inspirenxe.strata.api.event.Subscription;
+import org.inspirenxe.strata.api.text.FontId;
+import org.inspirenxe.strata.api.text.TextMetrics;
 import org.inspirenxe.strata.api.text.TextSpan;
 import org.inspirenxe.strata.api.text.TextStyle;
 import org.inspirenxe.strata.api.theme.ThemeId;
@@ -31,6 +34,7 @@ import org.inspirenxe.strata.spi.Clipboard;
 import org.inspirenxe.strata.spi.Clock;
 import org.inspirenxe.strata.spi.Conventions;
 import org.inspirenxe.strata.spi.Platform;
+import org.inspirenxe.strata.spi.Scheduler;
 import org.inspirenxe.strata.spi.TextInputSink;
 import org.inspirenxe.strata.spi.ThemeSource;
 import org.inspirenxe.strata.spi.Translator;
@@ -41,12 +45,14 @@ import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
@@ -57,8 +63,10 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
  * drives by hand, and {@link #translator()} to check the adapter's {@link Translator} too.
  *
  * <p>Besides the services every platform has, the checks cover the conventions and the theme source, which must
- * answer an id they do not know with nothing and keep their version while nothing changes, and, when the platform
- * returns one, the engine's cause stack, whose frames must hide and restore values in order.</p>
+ * answer an id they do not know with nothing and keep their version while nothing changes; text sizes and fonts the
+ * engine lacks; the scheduler, whose tasks must repeat until closed and never run after; and, when the platform
+ * returns one, the engine's cause stack, whose frames must hide and restore values in order. Override
+ * {@link #passTime} for a scheduler that runs only when the application drives it.</p>
  */
 public abstract class PlatformContract {
 
@@ -89,6 +97,18 @@ public abstract class PlatformContract {
     }
 
     /**
+     * Lets time pass so the platform's scheduler can run what is due. The default sleeps, which suits a scheduler
+     * with a timer or a thread of its own. Override it for a scheduler that runs only when the application drives
+     * it, to move a test clock or run the loop that runs the tasks.
+     *
+     * @param millis about how long, in milliseconds
+     * @throws InterruptedException if the test thread is interrupted while it sleeps
+     */
+    protected void passTime(final long millis) throws InterruptedException {
+        Thread.sleep(millis);
+    }
+
+    /**
      * Returns the translator the adapter gives core with {@code StrataCore.setTranslator}, for the translator checks.
      * The default returns {@code null}, which skips them.
      *
@@ -106,6 +126,7 @@ public abstract class PlatformContract {
         assertNotNull(platform.clock(), "clock");
         assertNotNull(platform.textInput(), "textInput");
         assertNotNull(platform.capabilities(), "capabilities");
+        assertNotNull(platform.scheduler(), "scheduler");
         assertNotNull(platform.conventions(), "conventions");
         assertNotNull(platform.themes(), "themes");
         assertNotNull(platform.causes(), "causes");
@@ -129,6 +150,65 @@ public abstract class PlatformContract {
         assertFalse(two.drawsShapes(), "two arguments draw no shapes");
         assertFalse(three.drawsShapes(), "three arguments draw no shapes");
         assertEquals(new Capabilities(true, true, true, false), three);
+    }
+
+    @Test
+    void aLargerSizeMeasuresLarger() {
+        final TextMetrics metrics = this.platform().textMetrics();
+        final TextStyle small = TextStyle.DEFAULT.withSize(10f);
+        final TextStyle large = TextStyle.DEFAULT.withSize(20f);
+        assertTrue(metrics.width(new TextSpan("Strata", large)) > metrics.width(new TextSpan("Strata", small)),
+                "twice the size measures wider");
+        assertTrue(metrics.lineHeight(large) > metrics.lineHeight(small), "twice the size has taller lines");
+    }
+
+    @Test
+    void aFontTheEngineLacksMeasuresAsTheDefault() {
+        final TextMetrics metrics = this.platform().textMetrics();
+        final TextStyle missing = TextStyle.DEFAULT.withFont(FontId.of("strata_contract", "no_such_font"));
+        assertEquals(metrics.width(new TextSpan("Strata", TextStyle.DEFAULT)),
+                metrics.width(new TextSpan("Strata", missing)), 0.5f);
+        assertEquals(metrics.lineHeight(TextStyle.DEFAULT), metrics.lineHeight(missing), 0.5f);
+    }
+
+    @Test
+    void theMetricsVersionHoldsWhileNothingChanges() {
+        final TextMetrics metrics = this.platform().textMetrics();
+        final long first = metrics.version();
+        for (int i = 0; i < 10; i++) {
+            assertEquals(first, metrics.version());
+        }
+    }
+
+    @Test
+    void theSchedulerRefusesAnIntervalOfZero() {
+        final Scheduler scheduler = this.platform().scheduler();
+        assertThrows(IllegalArgumentException.class, () -> scheduler.every(0L, () -> { }));
+    }
+
+    @Test
+    void aScheduledTaskRepeatsUntilClosed() throws InterruptedException {
+        final AtomicInteger runs = new AtomicInteger();
+        final Subscription subscription = this.platform().scheduler().every(10L, runs::incrementAndGet);
+        for (int waited = 0; runs.get() < 2 && waited < 5_000; waited += 20) {
+            this.passTime(20L);
+        }
+        assertTrue(runs.get() >= 2, "the task ran " + runs.get() + " times in five seconds");
+        subscription.close();
+        subscription.close();
+        // A run already handed to the engine's queue may still land; none may come after it
+        this.passTime(50L);
+        final int stopped = runs.get();
+        this.passTime(100L);
+        assertEquals(stopped, runs.get(), "the task ran after its subscription closed");
+    }
+
+    @Test
+    void aTaskClosedAtOnceNeverRuns() throws InterruptedException {
+        final AtomicInteger runs = new AtomicInteger();
+        this.platform().scheduler().every(10L, runs::incrementAndGet).close();
+        this.passTime(100L);
+        assertEquals(0, runs.get());
     }
 
     @Test

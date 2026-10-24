@@ -16,6 +16,7 @@
 package org.inspirenxe.strata.api;
 
 import org.inspirenxe.strata.api.component.registry.ComponentId;
+import org.inspirenxe.strata.api.text.FontId;
 import org.inspirenxe.strata.api.theme.SpriteId;
 import org.inspirenxe.strata.api.theme.ThemeId;
 
@@ -23,13 +24,14 @@ import java.util.Objects;
 import java.util.function.BiFunction;
 
 /**
- * An id written as {@code namespace:path}: a {@link ComponentId}, a {@link ThemeId} or a {@link SpriteId}.
+ * An id written as {@code namespace:path}: a {@link ComponentId}, a {@link ThemeId}, a {@link SpriteId} or a
+ * {@link FontId}.
  *
- * <p>All three follow one grammar, which {@link #check} enforces and {@link #parse} reads. The namespace is one or
+ * <p>All four follow one grammar, which {@link #check} enforces and {@link #parse} reads. The namespace is one or
  * more characters with no colon, and the path one or more characters of any kind, colons included. Parsing splits
  * at the first colon, so an id's {@code toString()}, which is {@code namespace:path}, parses back to an equal id.</p>
  *
- * <p>Do not implement this interface. The three records are the only kinds of id. It is not sealed because a sealed
+ * <p>Do not implement this interface. The four records are the only kinds of id. It is not sealed because a sealed
  * type in a jar without a module descriptor must keep its subtypes in its own package.</p>
  */
 public interface NamespacedId {

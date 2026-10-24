@@ -16,6 +16,7 @@
 package org.inspirenxe.strata.core.host;
 
 import org.inspirenxe.strata.api.ComponentFactory;
+import org.inspirenxe.strata.api.event.Subscription;
 import org.inspirenxe.strata.api.UiThread;
 import org.inspirenxe.strata.api.screen.Screen;
 import org.inspirenxe.strata.api.screen.ScreenHandle;
@@ -44,6 +45,9 @@ import java.util.function.Supplier;
  *     handle's answer after that.</li>
  *     <li>{@link #factory()} throws {@link IllegalStateException} until the screen has opened, since its host does
  *     not exist before then.</li>
+ *     <li>{@link #every} checks its arguments at once and hands the task over like the others; the subscription it
+ *     returns stops the task whether or not the screen has opened yet. Closed off the UI thread, it reaches the real
+ *     subscription on the UI thread's next turn.</li>
  * </ul>
  *
  * <p>An opening that throws on the UI thread, such as for a theme that lacks a key, is logged by the UI thread, and
@@ -176,6 +180,17 @@ final class HandedOverHandle implements ScreenHandle {
     }
 
     @Override
+    public Subscription every(final long millis, final Runnable task) {
+        Objects.requireNonNull(task, "task");
+        if (millis <= 0L) {
+            throw new IllegalArgumentException("A task's interval must be above 0 ms: " + millis);
+        }
+        final HandedOverTask handed = new HandedOverTask(this.ui);
+        this.act(handle -> handed.start(handle.every(millis, task)));
+        return handed;
+    }
+
+    @Override
     public ComponentFactory factory() {
         final ScreenHandle handle;
         synchronized (this) {
@@ -203,5 +218,50 @@ final class HandedOverHandle implements ScreenHandle {
             return handle.open(screen, theme);
         });
         return above;
+    }
+
+    /**
+     * The subscription of a task handed over before its screen opened: it holds the real subscription once the task
+     * has started, and closes it, or keeps the task from starting, when closed.
+     */
+    private static final class HandedOverTask implements Subscription {
+        private final UiThread ui;
+        // Guarded by this
+        private Subscription started;
+        private boolean closed;
+
+        HandedOverTask(final UiThread ui) {
+            this.ui = ui;
+        }
+
+        void start(final Subscription subscription) {
+            synchronized (this) {
+                if (!this.closed) {
+                    this.started = subscription;
+                    return;
+                }
+            }
+            subscription.unsubscribe();
+        }
+
+        @Override
+        public void unsubscribe() {
+            final Subscription subscription;
+            synchronized (this) {
+                if (this.closed) {
+                    return;
+                }
+                this.closed = true;
+                subscription = this.started;
+            }
+            if (subscription == null) {
+                return;
+            }
+            if (this.ui.isCurrent()) {
+                subscription.unsubscribe();
+            } else {
+                this.ui.execute(subscription::unsubscribe);
+            }
+        }
     }
 }

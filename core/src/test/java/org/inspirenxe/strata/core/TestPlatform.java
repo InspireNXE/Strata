@@ -15,6 +15,7 @@
  */
 package org.inspirenxe.strata.core;
 
+import org.inspirenxe.strata.api.event.Subscription;
 import org.inspirenxe.strata.api.event.cause.CauseStack;
 import org.inspirenxe.strata.api.geometry.Rect;
 import org.inspirenxe.strata.api.input.TextInputKind;
@@ -27,11 +28,14 @@ import org.inspirenxe.strata.spi.FileDialogSource;
 import org.inspirenxe.strata.spi.Clock;
 import org.inspirenxe.strata.spi.Conventions;
 import org.inspirenxe.strata.spi.Platform;
+import org.inspirenxe.strata.spi.Scheduler;
 import org.inspirenxe.strata.spi.TextInputSink;
 import org.inspirenxe.strata.spi.ThemeSource;
 
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.Executor;
 import java.util.function.BooleanSupplier;
@@ -46,12 +50,17 @@ public final class TestPlatform implements Platform {
     public static final float ASCENT = 7f;
     // Monospaced text measures wider, so tests can tell which style a span was measured in
     public static final float MONO_CHAR_WIDTH = 7f;
+    // Text of size 0 measures at this size; other sizes measure in proportion
+    public static final float TEXT_SIZE = 9f;
     // What the wall clock reads until a test sets another time
     public static final LocalDateTime TODAY = LocalDateTime.of(2026, 10, 20, 12, 0);
 
     private final boolean sendsKeyRepeat;
     private boolean drawsShapes;
     private long nanos;
+    private long metricsVersion;
+    private float metricsScale = 1f;
+    private final ClockScheduler scheduler = new ClockScheduler();
     private String clipboard;
     private Rect textInputArea;
     private TextInputKind textInputKind;
@@ -73,6 +82,7 @@ public final class TestPlatform implements Platform {
 
     public void advanceMillis(final long millis) {
         this.nanos += millis * 1_000_000L;
+        this.scheduler.advanceTo(this.nanos / 1_000_000L);
     }
 
     /**
@@ -95,19 +105,107 @@ public final class TestPlatform implements Platform {
             @Override
             public float width(final TextSpan span) {
                 return span.text().codePointCount(0, span.text().length())
-                        * (span.style().monospace() ? MONO_CHAR_WIDTH : CHAR_WIDTH);
+                        * (span.style().monospace() ? MONO_CHAR_WIDTH : CHAR_WIDTH) * scale(span.style())
+                        * TestPlatform.this.metricsScale;
             }
 
             @Override
             public float lineHeight(final TextStyle style) {
-                return LINE_HEIGHT;
+                return LINE_HEIGHT * scale(style);
             }
 
             @Override
             public float ascent(final TextStyle style) {
-                return ASCENT;
+                return ASCENT * scale(style);
+            }
+
+            @Override
+            public long version() {
+                return TestPlatform.this.metricsVersion;
             }
         };
+    }
+
+    private static float scale(final TextStyle style) {
+        return style.size() == 0f ? 1f : style.size() / TEXT_SIZE;
+    }
+
+    /**
+     * Changes the metrics' version, as an engine does when fonts change.
+     */
+    public void changeMetrics() {
+        this.metricsVersion++;
+    }
+
+    /**
+     * Makes text measure wider by a factor from now on, without changing the version.
+     */
+    public void setMetricsScale(final float scale) {
+        this.metricsScale = scale;
+    }
+
+    @Override
+    public ClockScheduler scheduler() {
+        return this.scheduler;
+    }
+
+    /**
+     * Runs tasks as {@link #advanceMillis} moves the clock past them, every run passed over, in time order.
+     */
+    public static final class ClockScheduler implements Scheduler {
+        private final List<Task> tasks = new ArrayList<>();
+        private long nowMillis;
+
+        @Override
+        public Subscription every(final long millis, final Runnable task) {
+            if (millis <= 0L) {
+                throw new IllegalArgumentException("interval " + millis);
+            }
+            final Task scheduled = new Task(millis, this.nowMillis + millis, task);
+            this.tasks.add(scheduled);
+            return scheduled;
+        }
+
+        /**
+         * How many tasks are still scheduled.
+         */
+        public int scheduled() {
+            return this.tasks.size();
+        }
+
+        void advanceTo(final long nowMillis) {
+            this.nowMillis = nowMillis;
+            while (true) {
+                Task next = null;
+                for (final Task task : this.tasks) {
+                    if (task.due <= nowMillis && (next == null || task.due < next.due)) {
+                        next = task;
+                    }
+                }
+                if (next == null) {
+                    return;
+                }
+                next.due += next.interval;
+                next.task.run();
+            }
+        }
+
+        private final class Task implements Subscription {
+            private final long interval;
+            private final Runnable task;
+            private long due;
+
+            Task(final long interval, final long due, final Runnable task) {
+                this.interval = interval;
+                this.due = due;
+                this.task = task;
+            }
+
+            @Override
+            public void unsubscribe() {
+                ClockScheduler.this.tasks.remove(this);
+            }
+        }
     }
 
     private Clipboard clipboardOverride;

@@ -27,6 +27,10 @@ import java.util.Set;
  * the engine's own bold, italic, underline, strikethrough and shadow; the Swing adapter derives bold and italic
  * fonts and draws the lines and shadow itself.</p>
  *
+ * <p>The font and the size choose the family and how large it is drawn. A named font wins over {@code monospace}, and
+ * an engine without the named family uses its default font, monospaced or not, at the style's size. A size multiplies
+ * with a label's text scale, so a scale of 2 on 12-unit text draws 24 units.</p>
+ *
  * @param color the color as ARGB; alpha 0 draws nothing
  * @param bold whether the text is bold
  * @param italic whether the text is italic
@@ -36,14 +40,28 @@ import java.util.Set;
  * @param monospace whether the text uses the engine's monospaced font, where every character has the same
  *                  width, so code and columns line up. An engine without one uses its normal font; see
  *                  {@code Capabilities.monospaceFont} in the SPI.
+ * @param font the font family, or {@code null} for the platform's default font
+ * @param size the size in UI units, the height of the font's em square as a point size is; 0 for the platform's
+ *             default size
  */
 public record TextStyle(int color, boolean bold, boolean italic, boolean underline, boolean strikethrough,
-        boolean shadow,
-                        boolean monospace) {
+                        boolean shadow, boolean monospace, FontId font, float size) {
     /**
-     * Opaque white, no decoration, no shadow, in the normal font.
+     * Opaque white, no decoration, no shadow, in the platform's default font at its default size.
      */
-    public static final TextStyle DEFAULT = new TextStyle(0xFFFFFFFF, false, false, false, false, false, false);
+    public static final TextStyle DEFAULT = new TextStyle(0xFFFFFFFF, false, false, false, false, false, false, null,
+            0f);
+
+    /**
+     * Checks the size.
+     *
+     * @throws IllegalArgumentException if the size is negative, infinite or NaN
+     */
+    public TextStyle {
+        if (!(size >= 0f) || size == Float.POSITIVE_INFINITY) {
+            throw new IllegalArgumentException("A text size must be finite and not negative: " + size);
+        }
+    }
 
     /**
      * Returns a copy with another color.
@@ -53,7 +71,7 @@ public record TextStyle(int color, boolean bold, boolean italic, boolean underli
      */
     public TextStyle withColor(final int color) {
         return new TextStyle(color, this.bold, this.italic, this.underline, this.strikethrough, this.shadow,
-                this.monospace);
+                this.monospace, this.font, this.size);
     }
 
     /**
@@ -64,7 +82,7 @@ public record TextStyle(int color, boolean bold, boolean italic, boolean underli
      */
     public TextStyle withBold(final boolean bold) {
         return new TextStyle(this.color, bold, this.italic, this.underline, this.strikethrough, this.shadow,
-                this.monospace);
+                this.monospace, this.font, this.size);
     }
 
     /**
@@ -75,7 +93,7 @@ public record TextStyle(int color, boolean bold, boolean italic, boolean underli
      */
     public TextStyle withItalic(final boolean italic) {
         return new TextStyle(this.color, this.bold, italic, this.underline, this.strikethrough, this.shadow,
-                this.monospace);
+                this.monospace, this.font, this.size);
     }
 
     /**
@@ -86,7 +104,7 @@ public record TextStyle(int color, boolean bold, boolean italic, boolean underli
      */
     public TextStyle withUnderline(final boolean underline) {
         return new TextStyle(this.color, this.bold, this.italic, underline, this.strikethrough, this.shadow,
-                this.monospace);
+                this.monospace, this.font, this.size);
     }
 
     /**
@@ -97,7 +115,7 @@ public record TextStyle(int color, boolean bold, boolean italic, boolean underli
      */
     public TextStyle withStrikethrough(final boolean strikethrough) {
         return new TextStyle(this.color, this.bold, this.italic, this.underline, strikethrough, this.shadow,
-                this.monospace);
+                this.monospace, this.font, this.size);
     }
 
     /**
@@ -108,7 +126,7 @@ public record TextStyle(int color, boolean bold, boolean italic, boolean underli
      */
     public TextStyle withShadow(final boolean shadow) {
         return new TextStyle(this.color, this.bold, this.italic, this.underline, this.strikethrough, shadow,
-                this.monospace);
+                this.monospace, this.font, this.size);
     }
 
     /**
@@ -119,7 +137,30 @@ public record TextStyle(int color, boolean bold, boolean italic, boolean underli
      */
     public TextStyle withMonospace(final boolean monospace) {
         return new TextStyle(this.color, this.bold, this.italic, this.underline, this.strikethrough, this.shadow,
-                monospace);
+                monospace, this.font, this.size);
+    }
+
+    /**
+     * Returns a copy in another font family.
+     *
+     * @param font the family, or {@code null} for the platform's default font
+     * @return the new style
+     */
+    public TextStyle withFont(final FontId font) {
+        return new TextStyle(this.color, this.bold, this.italic, this.underline, this.strikethrough, this.shadow,
+                this.monospace, font, this.size);
+    }
+
+    /**
+     * Returns a copy at another size.
+     *
+     * @param size the size in UI units; 0 for the platform's default size
+     * @return the new style
+     * @throws IllegalArgumentException if the size is negative, infinite or NaN
+     */
+    public TextStyle withSize(final float size) {
+        return new TextStyle(this.color, this.bold, this.italic, this.underline, this.strikethrough, this.shadow,
+                this.monospace, this.font, size);
     }
 
     /**
@@ -162,7 +203,9 @@ public record TextStyle(int color, boolean bold, boolean italic, boolean underli
                 properties.contains(Property.UNDERLINE) ? other.underline : this.underline,
                 properties.contains(Property.STRIKETHROUGH) ? other.strikethrough : this.strikethrough,
                 properties.contains(Property.SHADOW) ? other.shadow : this.shadow,
-                properties.contains(Property.MONOSPACE) ? other.monospace : this.monospace);
+                properties.contains(Property.MONOSPACE) ? other.monospace : this.monospace,
+                properties.contains(Property.FONT) ? other.font : this.font,
+                properties.contains(Property.SIZE) ? other.size : this.size);
     }
 
     /**
@@ -197,6 +240,14 @@ public record TextStyle(int color, boolean bold, boolean italic, boolean underli
         /**
          * {@link TextStyle#monospace()}.
          */
-        MONOSPACE
+        MONOSPACE,
+        /**
+         * {@link TextStyle#font()}.
+         */
+        FONT,
+        /**
+         * {@link TextStyle#size()}.
+         */
+        SIZE
     }
 }

@@ -150,6 +150,27 @@ public record TextStylePatch(TextStyle values, Set<TextStyle.Property> propertie
     }
 
     /**
+     * Returns a copy that also sets the font family.
+     *
+     * @param font the family, or {@code null} for the platform's default font
+     * @return the new patch
+     */
+    public TextStylePatch font(final FontId font) {
+        return this.with(this.values.withFont(font), TextStyle.Property.FONT);
+    }
+
+    /**
+     * Returns a copy that also sets the size.
+     *
+     * @param size the size in UI units; 0 for the platform's default size
+     * @return the new patch
+     * @throws IllegalArgumentException if the size is negative, infinite or NaN
+     */
+    public TextStylePatch size(final float size) {
+        return this.with(this.values.withSize(size), TextStyle.Property.SIZE);
+    }
+
+    /**
      * Returns a patch that makes this patch's changes and then another's, so where both set a property the other's
      * value wins.
      *
