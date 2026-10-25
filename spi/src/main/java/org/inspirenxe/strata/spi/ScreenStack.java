@@ -200,6 +200,16 @@ public interface ScreenStack extends InputSink, ScreenController {
     long nextFrameNanos();
 
     /**
+     * Returns whether a render at a time would draw something other than what the last {@link #render} drew, for the
+     * stack itself or a screen that would be drawn, as {@link ScreenHost#needsRender(long)} describes for a host. Call
+     * it on the UI thread, after a render. It allocates nothing.
+     *
+     * @param nanoTime the platform clock's {@link Clock#nanoTime()} reading for the frame
+     * @return true if a render is needed to draw the frame
+     */
+    boolean needsRender(long nanoTime);
+
+    /**
      * Sets what runs when {@link #needsFrame()} turns from false to true, as
      * {@link ScreenHost#setFrameRequester(Runnable)} describes for a host.
      *

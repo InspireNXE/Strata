@@ -124,7 +124,13 @@ public final class LabelImpl extends BuiltInComponent<Label> implements Label, M
         Objects.requireNonNull(text, "text");
         if (!this.text.equals(text)) {
             this.text = text;
-            this.invalidateLayout();
+            if (this.wrap || this.overflow == TextOverflow.ELLIPSIS) {
+                // Its size depends on the space offered, so its parent measures it again
+                this.invalidateLayout();
+            } else {
+                // Text of the same size is only drawn again
+                this.node().invalidateMeasure();
+            }
         }
         return this;
     }

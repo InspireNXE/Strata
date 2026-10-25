@@ -233,6 +233,8 @@ public final class Root {
     // The layers being painted, copied each frame so a paint handler can close an overlay
     private final List<Layer> paintLayers;
     private final List<Node> arrangeRequests;
+    // Nodes whose content changed in a way that may keep their size, measured again before the layout
+    private final List<Node> measureRequests;
     private final OverlaysImpl overlays;
     private final BindingQueue bindingQueue;
     // Bindings of nodes attached since attachTree last evaluated them
@@ -312,6 +314,7 @@ public final class Root {
         this.layers = new ArrayList<>();
         this.paintLayers = new ArrayList<>();
         this.arrangeRequests = new ArrayList<>();
+        this.measureRequests = new ArrayList<>();
         this.overlays = new OverlaysImpl();
         this.user = new Origin.User(platform.user().orElse(null));
         this.uiThread = ui.uiThread();
@@ -445,6 +448,26 @@ public final class Root {
      * @return the platform clock's {@code nanoTime()} at which a frame is due, or {@link Long#MAX_VALUE} for none
      */
     public long nextFrameNanos() {
+        final long next = this.nextChange();
+        return next == Long.MAX_VALUE ? next : Math.max(next, this.frames.earliestAllowed());
+    }
+
+    /**
+     * Returns whether a frame drawn at a time would show something the last frame did not: a change asked for a
+     * frame, something that moves with the clock asked for the next one, or a timed change is due by then, whatever
+     * the frame rate. Allocates nothing.
+     *
+     * @param now the platform clock's {@code nanoTime()}
+     * @return true if the frame would differ from the last one
+     */
+    public boolean needsRender(final long now) {
+        return this.frames.needsFrame() || this.frames.isMoving() || this.nextChange() <= now;
+    }
+
+    /**
+     * Returns the earliest timed change, as {@link #nextFrameNanos()} describes, without holding it to the frame rate.
+     */
+    private long nextChange() {
         long next = this.frames.earliest();
         for (int i = 0; i < this.layers.size(); i++) {
             final Layer layer = this.layers.get(i);
@@ -465,7 +488,7 @@ public final class Root {
         if (hold != Long.MAX_VALUE) {
             next = Math.min(next, hold * 1_000_000L);
         }
-        return next == Long.MAX_VALUE ? next : Math.max(next, this.frames.earliestAllowed());
+        return next;
     }
 
     /**
@@ -1068,6 +1091,12 @@ public final class Root {
         this.frames.request();
     }
 
+    void requestMeasure(final Node node) {
+        this.measureRequests.add(node);
+        this.layoutRequested = true;
+        this.frames.request();
+    }
+
     void requestArrangement(final Node node) {
         this.arrangeRequests.add(node);
         this.layoutRequested = true;
@@ -1077,8 +1106,9 @@ public final class Root {
     /**
      * Lays out every layer if anything requested it since the last layout: the content and dialogs are measured
      * with the root's size and arranged into it, popups are placed by their anchor, and the tooltip by the pointer.
-     * Subtrees that did not change are skipped. Then nodes that asked only to be arranged again are arranged in their
-     * last slot. Rendering and pointer input call this first, so bounds are never stale. If a measure or arrange hook
+     * Subtrees that did not change are skipped. Nodes that asked to be measured again come first, and those whose size
+     * stayed the same are only arranged again in their last slot. Last, nodes that asked only to be arranged again
+     * are arranged in their last slot. Rendering and pointer input call this first, so bounds are never stale. If a measure or arrange hook
      * throws, the layout stays requested, so the next call tries again.
      */
     public void layout() {
@@ -1099,6 +1129,16 @@ public final class Root {
 
     private void layoutLayers() {
         final Rect area = this.area;
+        // First, so a node whose size changed after all is laid out with its ancestors below
+        while (!this.measureRequests.isEmpty()) {
+            final List<Node> requests = List.copyOf(this.measureRequests);
+            this.measureRequests.clear();
+            for (final Node node : requests) {
+                if (node.root() == this) {
+                    node.remeasure(this.layoutPass);
+                }
+            }
+        }
         if (this.content != null) {
             this.content.measure(this.layoutPass, this.width, this.height);
             this.content.arrange(this.layoutPass, area);

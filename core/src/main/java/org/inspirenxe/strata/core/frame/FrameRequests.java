@@ -44,6 +44,8 @@ public final class FrameRequests {
     private volatile long intervalNanos;
     private long lastFrame;
     private boolean framed;
+    // Whether something that moves with the clock asked for the next frame since the last render began
+    private boolean moving;
 
     /**
      * Creates a dirty instance with no requester, no deadlines and the default frame rate.
@@ -125,7 +127,26 @@ public final class FrameRequests {
      * @param now the clock's reading
      */
     public void atNextFrame(final long now) {
+        this.moving = true;
         this.at(now + this.intervalNanos);
+    }
+
+    /**
+     * Returns whether something that moves with the clock asked for the next frame through {@link #atNextFrame}
+     * since the last {@link #forgetMotion()}. Call on the UI thread.
+     *
+     * @return true if the next frame shows the motion further on
+     */
+    public boolean isMoving() {
+        return this.moving;
+    }
+
+    /**
+     * Forgets the motion asked for so far, as a render about to draw it does. Call on the UI thread as each render
+     * begins, before animations step, so what they ask for counts toward the next render.
+     */
+    public void forgetMotion() {
+        this.moving = false;
     }
 
     /**

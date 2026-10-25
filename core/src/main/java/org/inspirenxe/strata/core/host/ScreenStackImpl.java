@@ -393,7 +393,7 @@ public final class ScreenStackImpl implements ScreenStack {
      */
     private int firstShown() {
         for (int i = this.entries.size() - 1; i >= 0; i--) {
-            if (this.entries.get(i).host().screen().map(Screen::hidesBackground).orElse(false)) {
+            if (this.entries.get(i).host().hidesBackground()) {
                 return i;
             }
         }
@@ -421,6 +421,23 @@ public final class ScreenStackImpl implements ScreenStack {
     @Override
     public boolean needsFrame() {
         return this.frames.needsFrame();
+    }
+
+    /**
+     * Returns whether a render at a time would draw something the last one did not: what {@link #needsFrame()}
+     * reports, or what a drawn screen's {@link ScreenHostImpl#needsRender} reports. Allocates nothing.
+     */
+    @Override
+    public boolean needsRender(final long nanoTime) {
+        if (this.frames.needsFrame()) {
+            return true;
+        }
+        for (int i = this.firstShown(); i < this.entries.size(); i++) {
+            if (this.entries.get(i).host().needsRender(nanoTime)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     @Override

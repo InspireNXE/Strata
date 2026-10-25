@@ -488,6 +488,73 @@ public class Node implements ComponentPeer {
     }
 
     /**
+     * Lays the component out again after a change that may leave its size as it was, such as new text in a label that
+     * neither wraps nor shortens it. The next layout measures it again in the space it was last offered. When its
+     * desired size, its minimum size, if a parent asked for it, and its baseline come out as before, it is only
+     * arranged again in its last slot and drawn again, and no ancestor is measured or arranged. Otherwise its
+     * ancestors are laid out again, as after {@link #invalidateLayout()}. A component that was never laid out, is
+     * hidden, already needs a measure or has a {@link Component#MEASURED} handler is invalidated at once. Use it only
+     * for a component whose size does not depend on the space it is offered, since only the last space is tried.
+     *
+     * @throws IllegalStateException if attached and called off the UI thread
+     */
+    public final void invalidateMeasure() {
+        this.checkThread();
+        final Root current = this.root;
+        if (current == null || this.measureDirty || this.lastSlot == null || !this.visible
+                || this.dispatcher != null && this.dispatcher.hasHandlers(Component.MEASURED)) {
+            this.invalidateLayout();
+            return;
+        }
+        this.measureDirty = true;
+        current.requestMeasure(this);
+    }
+
+    /**
+     * Measures the component again in the space it was last offered, as {@link #invalidateMeasure()} asked: arranges
+     * it again in its last slot if its size, minimum and baseline stayed the same, and marks its ancestors for layout
+     * otherwise. Does nothing if something measured it since it asked.
+     *
+     * @param pass the layout context
+     */
+    final void remeasure(final LayoutPass pass) {
+        if (!this.measureDirty || this.lastSlot == null) {
+            return;
+        }
+        final float width = this.desiredWidth;
+        final float height = this.desiredHeight;
+        final boolean minimumKnown = !this.minimumDirty;
+        final float minimumWidth = this.contentMinWidth;
+        final float minimumHeight = this.contentMinHeight;
+        final float baseline = this.baseline();
+        boolean same = false;
+        try {
+            this.measure(pass, this.lastAvailableWidth, this.lastAvailableHeight);
+            this.minimumDirty = true;
+            same = this.desiredWidth == width && this.desiredHeight == height
+                    && Float.compare(this.baseline(), baseline) == 0;
+            if (same && minimumKnown) {
+                this.minimumSize(pass);
+                same = this.contentMinWidth == minimumWidth && this.contentMinHeight == minimumHeight;
+            }
+        } finally {
+            if (!same) {
+                // The layout that follows measures the ancestors, which take this node's new size
+                this.minimumDirty = true;
+                this.arrangeDirty = true;
+                for (Node node = this.parent; node != null; node = node.parent) {
+                    node.measureDirty = true;
+                    node.minimumDirty = true;
+                    node.arrangeDirty = true;
+                }
+            }
+        }
+        if (same) {
+            this.rearrange(pass);
+        }
+    }
+
+    /**
      * Asks the host for a frame, because the component's look changed and its layout did not. Does nothing while
      * detached: attaching asks for a frame anyway.
      */
