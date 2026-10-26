@@ -25,6 +25,7 @@ import org.inspirenxe.strata.api.geometry.Rect;
 import org.inspirenxe.strata.api.geometry.Size;
 import org.inspirenxe.strata.api.theme.SpriteId;
 import org.inspirenxe.strata.api.visual.PixelBuffer;
+import org.inspirenxe.strata.api.visual.Sampling;
 import org.inspirenxe.strata.api.visual.Visual;
 import org.inspirenxe.strata.core.control.RectCache;
 import org.inspirenxe.strata.core.node.BuiltInComponent;
@@ -53,6 +54,11 @@ public final class ImageImpl extends BuiltInComponent<Image> implements Image {
     // False once the developer sets a size, which showing a sprite or pixels then keeps
     private boolean sizeFromSource = true;
     private Scaling scaling;
+    private Sampling sampling = Sampling.NEAREST;
+    // What the linear draw paints, set only while it runs, so it allocates nothing
+    private Painter linearPainter;
+    private Rect linearRect;
+    private final Runnable drawLinear = () -> this.drawSource(this.linearPainter, this.linearRect);
     // What the clipped draw paints, set only while it runs, so a cut image allocates nothing
     private Painter clipPainter;
     private Rect clipPlaced;
@@ -261,6 +267,18 @@ public final class ImageImpl extends BuiltInComponent<Image> implements Image {
     }
 
     @Override
+    public Sampling sampling() {
+        return this.sampling;
+    }
+
+    @Override
+    public Image setSampling(final Sampling sampling) {
+        this.sampling = Objects.requireNonNull(sampling, "sampling");
+        this.repaint();
+        return this;
+    }
+
+    @Override
     protected Size measure(final MeasureContext context, final float availableWidth, final float availableHeight) {
         if (this.sprite != null && this.sizeFromSource && this.isAttached()) {
             final Size size = this.hostRoot().spriteSize(this.sprite).orElse(null);
@@ -303,6 +321,21 @@ public final class ImageImpl extends BuiltInComponent<Image> implements Image {
     }
 
     private void draw(final Painter painter, final Rect rect) {
+        if (this.sampling == Sampling.NEAREST || this.visual != null) {
+            this.drawSource(painter, rect);
+            return;
+        }
+        this.linearPainter = painter;
+        this.linearRect = rect;
+        try {
+            painter.sampled(this.sampling, this.drawLinear);
+        } finally {
+            this.linearPainter = null;
+            this.linearRect = null;
+        }
+    }
+
+    private void drawSource(final Painter painter, final Rect rect) {
         if (this.visual != null) {
             painter.visual(this.visual, rect, this.tint);
         } else if (this.sprite != null) {

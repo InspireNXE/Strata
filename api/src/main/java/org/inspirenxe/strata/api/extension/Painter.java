@@ -23,6 +23,7 @@ import org.inspirenxe.strata.api.layout.VerticalAlignment;
 import org.inspirenxe.strata.api.text.TextSpan;
 import org.inspirenxe.strata.api.theme.SpriteId;
 import org.inspirenxe.strata.api.visual.PixelBuffer;
+import org.inspirenxe.strata.api.visual.Sampling;
 import org.inspirenxe.strata.api.visual.Visual;
 
 /**
@@ -188,6 +189,17 @@ public interface Painter {
      * @param draw the drawing
      */
     void smoothed(boolean smooth, Runnable draw);
+
+    /**
+     * Runs {@code draw} with sprites, nine-slices, tiled sprites and pixel buffers sampled one way. Outside any call
+     * they are sampled {@link Sampling#NEAREST}, which keeps pixel art sharp; {@link Sampling#LINEAR} suits photos
+     * and blurred pictures. Text, shapes and an engine's own visuals are not affected, and an engine that cannot
+     * choose samples its own way.
+     *
+     * @param sampling the sampling
+     * @param draw the drawing
+     */
+    void sampled(Sampling sampling, Runnable draw);
 
     /**
      * Runs {@code draw} with drawing limited to a rectangle with rounded corners, intersected with any clip already

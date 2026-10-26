@@ -24,6 +24,7 @@ import org.inspirenxe.strata.api.geometry.Rect;
 import org.inspirenxe.strata.api.text.TextSpan;
 import org.inspirenxe.strata.api.theme.SpriteId;
 import org.inspirenxe.strata.api.visual.PixelBuffer;
+import org.inspirenxe.strata.api.visual.Sampling;
 import org.inspirenxe.strata.api.visual.Visual;
 
 /**
@@ -306,6 +307,24 @@ public interface Canvas {
      * Restores the smoothing in place before the matching {@link #pushSmoothing}. The default does nothing.
      */
     default void popSmoothing() {
+    }
+
+    /**
+     * Sets how later {@link #sprite}, {@link #spriteRegion}, {@link #nineSlice} and {@link #pixels} calls sample
+     * their images until the matching {@link #popSampling()}. Outside any push they are sampled
+     * {@link Sampling#NEAREST}. Core balances every push with a pop, as it does
+     * clips. A canvas that can choose must apply it to those calls, and may leave text and visuals alone. The default
+     * does nothing, for an engine that samples its own way.
+     *
+     * @param sampling the sampling
+     */
+    default void pushSampling(final Sampling sampling) {
+    }
+
+    /**
+     * Restores the sampling in place before the matching {@link #pushSampling}. The default does nothing.
+     */
+    default void popSampling() {
     }
 
     /**

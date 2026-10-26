@@ -30,6 +30,7 @@ import org.inspirenxe.strata.api.text.TextMetrics;
 import org.inspirenxe.strata.api.text.TextSpan;
 import org.inspirenxe.strata.api.theme.SpriteId;
 import org.inspirenxe.strata.api.visual.PixelBuffer;
+import org.inspirenxe.strata.api.visual.Sampling;
 import org.inspirenxe.strata.api.visual.Visual;
 import org.inspirenxe.strata.core.text.InlineMetrics;
 import org.inspirenxe.strata.spi.Canvas;
@@ -319,6 +320,16 @@ public final class CanvasPainter implements Painter {
             this.canvas.shadow(rect, r, blur, argb);
         } else {
             this.fallback.shadow(rect, r, blur, argb);
+        }
+    }
+
+    @Override
+    public void sampled(final Sampling sampling, final Runnable draw) {
+        this.canvas.pushSampling(sampling);
+        try {
+            draw.run();
+        } finally {
+            this.canvas.popSampling();
         }
     }
 

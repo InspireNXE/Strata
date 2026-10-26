@@ -22,6 +22,7 @@ import org.inspirenxe.strata.api.component.HasTooltip;
 import org.inspirenxe.strata.api.state.PropertyKey;
 import org.inspirenxe.strata.api.theme.SpriteId;
 import org.inspirenxe.strata.api.visual.PixelBuffer;
+import org.inspirenxe.strata.api.visual.Sampling;
 import org.inspirenxe.strata.api.visual.Visual;
 
 import java.util.Objects;
@@ -36,10 +37,11 @@ import java.util.Optional;
  * pixel buffer's width and height, one pixel to a unit, and a sprite's size where the engine knows it, which it may
  * only once the image is shown. A sprite the engine cannot size, and an image showing nothing, are 16 by 16. A
  * visual brings its own natural size, which becomes the image size whenever the visual is set, even after a size set
- * by hand, and the size follows what is shown again from there. The
- * sprite is looked up as described in {@link SpriteId}; a missing sprite, or a visual the engine cannot draw, draws
- * the engine's placeholder. A pixel buffer is shown like a sprite, at the image size, and an engine that cannot draw
- * pixels shows its placeholder. An image shows one of a sprite, a visual and a pixel buffer at a time.</p>
+ * by hand, and the size follows what is shown again from there. The sprite is looked up as described in
+ * {@link SpriteId}; a missing sprite, or a visual the engine cannot draw, draws the engine's placeholder. An engine
+ * that cannot draw pixels shows its placeholder for a pixel buffer. An image shows one of a sprite, a visual and a
+ * pixel buffer at a time. Sprites and pixels are sampled {@link Sampling#NEAREST} unless {@link #setSampling} says
+ * otherwise, which suits pixel art; a photo looks better {@link Sampling#LINEAR}.</p>
  *
  * <p>An image is not focusable, reads no theme keys and has no default behavior for input, so clicks pass through to
  * its ancestors. A disabled image draws the same as an enabled one; tint it to show the difference. It fires no
@@ -195,6 +197,24 @@ public interface Image extends Component<Image>, HasCursor<Image>, HasTooltip<Im
      * @return this image
      */
     Image setScaling(Scaling scaling);
+
+    /**
+     * Returns how the sprite or pixel buffer is sampled when drawn at another size than its own.
+     *
+     * @return the sampling; {@link Sampling#NEAREST} by default
+     */
+    Sampling sampling();
+
+    /**
+     * Sets how the sprite or pixel buffer is sampled when drawn at another size than its own:
+     * {@link Sampling#NEAREST} keeps pixel art sharp, and {@link Sampling#LINEAR} scales a photo or a blurred
+     * picture smoothly. A visual is drawn the engine's way whatever this says, and an engine that cannot choose
+     * samples its own way.
+     *
+     * @param sampling the sampling
+     * @return this image
+     */
+    Image setSampling(Sampling sampling);
 
     /**
      * How an {@link Image} draws its sprite in bounds of another size.
