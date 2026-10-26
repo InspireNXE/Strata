@@ -51,6 +51,7 @@ import org.inspirenxe.strata.api.overlay.Overlays;
 import org.inspirenxe.strata.api.state.Source;
 import org.inspirenxe.strata.api.text.Text;
 import org.inspirenxe.strata.api.theme.Paint;
+import org.inspirenxe.strata.api.theme.SpriteId;
 import org.inspirenxe.strata.api.theme.Theme;
 import org.inspirenxe.strata.api.theme.ThemeException;
 import org.inspirenxe.strata.api.transfer.DropEffect;
@@ -82,6 +83,7 @@ import org.inspirenxe.strata.core.text.Translations;
 import org.inspirenxe.strata.spi.Canvas;
 import org.inspirenxe.strata.spi.InputContext;
 import org.inspirenxe.strata.spi.Platform;
+import org.inspirenxe.strata.spi.SpriteSizes;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -288,6 +290,7 @@ public final class Root {
     private Node tooltipPending;
     private long tooltipPendingSince;
     private boolean focusFromPress;
+    private SpriteSizes spriteSizes = SpriteSizes.NONE;
     // The drag that carries a transfer, from this host or another application, or null
     private TransferDrag transferDrag;
 
@@ -1049,6 +1052,28 @@ public final class Root {
             this.invalidateText();
             this.requestLayout();
         }
+    }
+
+    /**
+     * Gives the root the sizes of the sprites its host draws, and marks every node for measuring so images that take
+     * a sprite's size measure again.
+     *
+     * @param sizes the sprite sizes
+     */
+    public void setSpriteSizes(final SpriteSizes sizes) {
+        this.spriteSizes = Objects.requireNonNull(sizes, "sizes");
+        this.invalidateText();
+        this.requestLayout();
+    }
+
+    /**
+     * Returns a sprite's size from the host's sprite sizes.
+     *
+     * @param sprite the sprite
+     * @return its size in UI units, or empty when the host does not know it
+     */
+    public Optional<Size> spriteSize(final SpriteId sprite) {
+        return this.spriteSizes.size(sprite);
     }
 
     /**

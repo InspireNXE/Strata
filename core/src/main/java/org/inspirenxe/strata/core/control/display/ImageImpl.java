@@ -42,12 +42,16 @@ import java.util.Optional;
  * any scaling but {@code STRETCH}.
  */
 public final class ImageImpl extends BuiltInComponent<Image> implements Image {
+    private static final float DEFAULT_SIZE = 16f;
+
     private SpriteId sprite;
     private Visual visual;
     private PixelBuffer pixels;
     private int tint;
     private float imageWidth;
     private float imageHeight;
+    // False once the developer sets a size, which showing a sprite or pixels then keeps
+    private boolean sizeFromSource = true;
     private Scaling scaling;
     // What the clipped draw paints, set only while it runs, so a cut image allocates nothing
     private Painter clipPainter;
@@ -68,8 +72,8 @@ public final class ImageImpl extends BuiltInComponent<Image> implements Image {
     public ImageImpl(final ComponentFactoryImpl ui) {
         super(ui);
         this.tint = 0xFFFFFFFF;
-        this.imageWidth = 16f;
-        this.imageHeight = 16f;
+        this.imageWidth = DEFAULT_SIZE;
+        this.imageHeight = DEFAULT_SIZE;
         this.scaling = Scaling.STRETCH;
     }
 
@@ -83,8 +87,8 @@ public final class ImageImpl extends BuiltInComponent<Image> implements Image {
         super(ui);
         this.sprite = Objects.requireNonNull(sprite, "sprite");
         this.tint = 0xFFFFFFFF;
-        this.imageWidth = 16f;
-        this.imageHeight = 16f;
+        this.imageWidth = DEFAULT_SIZE;
+        this.imageHeight = DEFAULT_SIZE;
         this.scaling = Scaling.STRETCH;
     }
 
@@ -115,6 +119,10 @@ public final class ImageImpl extends BuiltInComponent<Image> implements Image {
         this.pixels = null;
         this.value = null;
         this.showValueTooltip();
+        if (this.sizeFromSource) {
+            // Measuring asks the host for the sprite's size
+            this.sourceSize(DEFAULT_SIZE, DEFAULT_SIZE);
+        }
         return this;
     }
 
@@ -130,7 +138,9 @@ public final class ImageImpl extends BuiltInComponent<Image> implements Image {
         this.pixels = null;
         this.value = null;
         this.showValueTooltip();
-        return this.setImageSize(visual.size().width(), visual.size().height());
+        this.sizeFromSource = true;
+        this.sourceSize(visual.size().width(), visual.size().height());
+        return this;
     }
 
     @Override
@@ -145,6 +155,9 @@ public final class ImageImpl extends BuiltInComponent<Image> implements Image {
         this.visual = null;
         this.value = null;
         this.showValueTooltip();
+        if (buffer != null && this.sizeFromSource) {
+            this.sourceSize(buffer.width(), buffer.height());
+        }
         return this;
     }
 
@@ -160,7 +173,8 @@ public final class ImageImpl extends BuiltInComponent<Image> implements Image {
         this.pixels = null;
         this.visual = icon;
         if (icon != null) {
-            this.setImageSize(icon.size().width(), icon.size().height());
+            this.sizeFromSource = true;
+            this.sourceSize(icon.size().width(), icon.size().height());
         }
         this.value = value;
         this.showValueTooltip();
@@ -219,10 +233,20 @@ public final class ImageImpl extends BuiltInComponent<Image> implements Image {
         if (!(width >= 0f) || !(height >= 0f) || Float.isInfinite(width) || Float.isInfinite(height)) {
             throw new IllegalArgumentException("Image size must be finite and not negative: " + width + " x " + height);
         }
-        this.imageWidth = width;
-        this.imageHeight = height;
-        this.invalidateLayout();
+        this.sizeFromSource = false;
+        this.sourceSize(width, height);
         return this;
+    }
+
+    /**
+     * Takes a size without marking it as set by hand, and lays out again when it changed.
+     */
+    private void sourceSize(final float width, final float height) {
+        if (width != this.imageWidth || height != this.imageHeight) {
+            this.imageWidth = width;
+            this.imageHeight = height;
+            this.invalidateLayout();
+        }
     }
 
     @Override
@@ -238,6 +262,11 @@ public final class ImageImpl extends BuiltInComponent<Image> implements Image {
 
     @Override
     protected Size measure(final MeasureContext context, final float availableWidth, final float availableHeight) {
+        if (this.sprite != null && this.sizeFromSource && this.isAttached()) {
+            final Size size = this.hostRoot().spriteSize(this.sprite).orElse(null);
+            this.imageWidth = size != null ? size.width() : DEFAULT_SIZE;
+            this.imageHeight = size != null ? size.height() : DEFAULT_SIZE;
+        }
         return new Size(this.imageWidth, this.imageHeight);
     }
 

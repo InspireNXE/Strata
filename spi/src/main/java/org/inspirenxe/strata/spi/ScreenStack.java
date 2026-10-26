@@ -157,6 +157,14 @@ public interface ScreenStack extends InputSink, ScreenController {
     void setPixelsPerUnit(float pixelsPerUnit);
 
     /**
+     * Gives every screen, and screens pushed later, the sizes of the sprites they draw, as
+     * {@link ScreenHost#setSpriteSizes(SpriteSizes)} does.
+     *
+     * @param sizes the sprite sizes
+     */
+    void setSpriteSizes(SpriteSizes sizes);
+
+    /**
      * Returns the size the top screen's content wants in a given space, as {@link ScreenHost#preferredSize} describes.
      * The screens below are left out.
      *

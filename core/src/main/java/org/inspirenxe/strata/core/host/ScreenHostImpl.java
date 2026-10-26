@@ -46,6 +46,7 @@ import org.inspirenxe.strata.spi.InputContext;
 import org.inspirenxe.strata.spi.Platform;
 import org.inspirenxe.strata.spi.Scheduler;
 import org.inspirenxe.strata.spi.ScreenHost;
+import org.inspirenxe.strata.spi.SpriteSizes;
 import org.inspirenxe.strata.spi.ThemeSource;
 
 import java.util.ArrayList;
@@ -361,6 +362,11 @@ public final class ScreenHostImpl implements ScreenHost {
     @Override
     public void setPixelsPerUnit(final float pixelsPerUnit) {
         this.root.setPixelsPerUnit(pixelsPerUnit);
+    }
+
+    @Override
+    public void setSpriteSizes(final SpriteSizes sizes) {
+        this.root.setSpriteSizes(sizes);
     }
 
     @Override

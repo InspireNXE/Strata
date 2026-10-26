@@ -199,6 +199,14 @@ public interface ScreenHost extends InputSink {
     void setPixelsPerUnit(float pixelsPerUnit);
 
     /**
+     * Gives the host the sizes of the sprites it draws, which images showing a sprite take as their size until the
+     * developer sets one. It is {@link SpriteSizes#NONE} until set. Setting it marks every component for measuring.
+     *
+     * @param sizes the sprite sizes
+     */
+    void setSpriteSizes(SpriteSizes sizes);
+
+    /**
      * Returns the size the open screen's content wants in a given space, for a toolkit that asks an embedded widget
      * for its preferred size, such as Swing's {@code pack()}. The host builds a pending screen and flushes bindings,
      * then measures the content with the space offered, as a parent measures a child, without arranging it or
