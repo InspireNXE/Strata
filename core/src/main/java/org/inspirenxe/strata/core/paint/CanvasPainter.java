@@ -22,6 +22,8 @@ import org.inspirenxe.strata.api.extension.Stroke;
 import org.inspirenxe.strata.api.geometry.Insets;
 import org.inspirenxe.strata.api.geometry.Rect;
 import org.inspirenxe.strata.api.geometry.Size;
+import org.inspirenxe.strata.api.layout.HorizontalAlignment;
+import org.inspirenxe.strata.api.layout.VerticalAlignment;
 import org.inspirenxe.strata.api.text.InlineSprite;
 import org.inspirenxe.strata.api.text.InlineVisual;
 import org.inspirenxe.strata.api.text.TextMetrics;
@@ -535,6 +537,36 @@ public final class CanvasPainter implements Painter {
         } else {
             this.canvas.text(reversed, x, y);
         }
+    }
+
+    @Override
+    public void text(final TextSpan span, final Rect rect, final HorizontalAlignment horizontal,
+                     final VerticalAlignment vertical) {
+        // A painter made without metrics cannot measure, so it aligns a size of 0
+        final float width = this.metrics == null ? 0f : this.metrics.width(span);
+        final float height = this.metrics == null ? 0f : this.metrics.height(span);
+        final float x = switch (horizontal) {
+            case LEFT, STRETCH -> rect.x();
+            case CENTER -> centered(rect.x(), rect.width(), width);
+            case RIGHT -> rect.right() - width;
+        };
+        final float y = switch (vertical) {
+            case TOP, STRETCH, BASELINE -> rect.y();
+            case MIDDLE -> centered(rect.y(), rect.height(), height);
+            case BOTTOM -> rect.bottom() - height;
+        };
+        this.text(span, x, y);
+    }
+
+    /**
+     * Returns where something of a size starts when centered in a space, keeping whole numbers whole as
+     * {@code Caption.center} does.
+     */
+    private static float centered(final float start, final float space, final float size) {
+        if (space == Math.rint(space) && size == Math.rint(size)) {
+            return start + (float) (Math.floor(space / 2d) - Math.floor(size / 2d));
+        }
+        return start + (space - size) * 0.5f;
     }
 
     @Override

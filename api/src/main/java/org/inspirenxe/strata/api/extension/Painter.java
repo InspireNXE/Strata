@@ -18,6 +18,8 @@ package org.inspirenxe.strata.api.extension;
 import org.inspirenxe.strata.api.geometry.Insets;
 import org.inspirenxe.strata.api.geometry.Rect;
 import org.inspirenxe.strata.api.geometry.Size;
+import org.inspirenxe.strata.api.layout.HorizontalAlignment;
+import org.inspirenxe.strata.api.layout.VerticalAlignment;
 import org.inspirenxe.strata.api.text.TextSpan;
 import org.inspirenxe.strata.api.theme.SpriteId;
 import org.inspirenxe.strata.api.visual.PixelBuffer;
@@ -274,6 +276,25 @@ public interface Painter {
      * @param y the top edge (not the baseline)
      */
     void text(TextSpan span, float x, float y);
+
+    /**
+     * Draws one line of text aligned in a rectangle, measured with the host's
+     * {@link org.inspirenxe.strata.api.text.TextMetrics}. Across, {@link HorizontalAlignment#LEFT} and
+     * {@link HorizontalAlignment#STRETCH} put it at the left edge, {@link HorizontalAlignment#CENTER} in the middle
+     * and {@link HorizontalAlignment#RIGHT} against the right edge. Down, {@link VerticalAlignment#TOP},
+     * {@link VerticalAlignment#STRETCH} and {@link VerticalAlignment#BASELINE} put the line's top at the top edge,
+     * {@link VerticalAlignment#MIDDLE} centers its line height and {@link VerticalAlignment#BOTTOM} puts its bottom
+     * at the bottom edge. Centering keeps whole numbers whole: with a whole rectangle and a whole text size, the
+     * spare unit of an odd difference goes right or below. The alignment does not mirror right to left, and text
+     * wider or taller than the rectangle is not cut; draw inside {@link #clipped} for that. The line's baseline is
+     * {@link org.inspirenxe.strata.api.text.TextMetrics#ascent} below where its top lands.
+     *
+     * @param span the text and its style
+     * @param rect the rectangle to align in
+     * @param horizontal where the text sits across
+     * @param vertical where the text sits down
+     */
+    void text(TextSpan span, Rect rect, HorizontalAlignment horizontal, VerticalAlignment vertical);
 
     /**
      * Runs {@code draw} with drawing limited to a rectangle, intersected with any clip already in place.
