@@ -181,6 +181,20 @@ public interface Painter {
     void shadow(Rect rect, float radius, float blur, int argb);
 
     /**
+     * Draws frosted glass over a rectangle: what lies behind it blurred, then the tint over that, cut to rounded
+     * corners. What counts as behind is the engine's to say. An engine whose application gives it a backdrop image,
+     * such as the scene behind the screens, blurs that image where the rectangle sits; one that can read what it
+     * drew blurs that. An engine that cannot blur fills the rounded rectangle with the tint alone, which is also
+     * what a blur of 0 gives. Radii follow the rules above.
+     *
+     * @param rect the area
+     * @param radius the radius of each corner
+     * @param blur how far the blur reaches, in UI units: about three times the spread of the Gaussian it applies
+     * @param tint the ARGB color over the blurred backdrop
+     */
+    void backdrop(Rect rect, float radius, float blur, int tint);
+
+    /**
      * Runs {@code draw} with anti-aliasing turned on or off for what it draws. Shapes are smooth by default; pixel
      * art and bitmap fonts want hard edges. Engines that cannot anti-alias draw hard edges either way, and an engine
      * may apply the setting to sprites and text too.

@@ -310,6 +310,23 @@ public interface Canvas {
     }
 
     /**
+     * Draws frosted glass, as {@link org.inspirenxe.strata.api.extension.Painter#backdrop} describes: the backdrop
+     * behind the rectangle blurred, then the tint over it, both cut to rounded corners and inside the current clip,
+     * under the current opacity. Core calls it only when {@link Capabilities#blursBackdrop()} is true, with a radius
+     * already limited to half the shorter side and a blur of 0 or more; otherwise it fills a rounded rectangle with
+     * the tint. A canvas with no backdrop to blur at the time draws the tint alone. The default fills the rounded
+     * rectangle with the tint through {@link #fillRoundRect}.
+     *
+     * @param rect the area
+     * @param radius the radius of each corner
+     * @param blur how far the blur reaches, in UI units
+     * @param tint the ARGB color over the blurred backdrop
+     */
+    default void backdrop(final Rect rect, final float radius, final float blur, final int tint) {
+        this.fillRoundRect(rect, radius, tint);
+    }
+
+    /**
      * Sets how later {@link #sprite}, {@link #spriteRegion}, {@link #nineSlice} and {@link #pixels} calls sample
      * their images until the matching {@link #popSampling()}. Outside any push they are sampled
      * {@link Sampling#NEAREST}. Core balances every push with a pop, as it does

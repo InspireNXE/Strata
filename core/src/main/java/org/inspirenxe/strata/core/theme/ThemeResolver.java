@@ -89,8 +89,9 @@ import java.util.Set;
  * {@link Paint#NONE}, or an object: {@code {"color": color}} with an optional {@code radius} for rounded corners,
  * in UI units, {@code {"sprite": id}}, {@code {"tiled": id, "size": [w, h]}},
  * {@code {"nine_slice": id, "border": ...}} with an optional {@code size} and {@code "tiled": true}, which needs the
- * size, or {@code {"gradient": [top, bottom]}}. Sprites, tiled sprites and nine-slices take an optional
- * {@code tint}, which defaults to opaque white. A nine-slice {@code border} is one number,
+ * size, {@code {"gradient": [top, bottom]}}, or {@code {"backdrop": blur}} for frosted glass, with an optional
+ * {@code tint}, transparent by default, and {@code radius}, both as in {@link Paint#backdrop(float, int, float)}.
+ * Sprites, tiled sprites and nine-slices take an optional {@code tint}, which defaults to opaque white. A nine-slice {@code border} is one number,
  * {@code [horizontal, vertical]} or {@code [left, top, right, bottom]}. A text style sets any of {@code color},
  * {@code bold}, {@code italic}, {@code underline}, {@code strikethrough}, {@code shadow} and {@code monospace}; the
  * rest keep the inherited style for that key, or {@link TextStyle#DEFAULT} if there is none. Insets take the same

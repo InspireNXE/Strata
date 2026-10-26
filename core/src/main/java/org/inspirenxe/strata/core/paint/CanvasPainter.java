@@ -78,6 +78,7 @@ public final class CanvasPainter implements Painter {
     private boolean slicesSprites;
     private boolean drawsShapes;
     private boolean shapesRightToLeft;
+    private boolean blursBackdrop;
     // Device pixels per unit of the host, and the product of the scales in progress
     private float pixelsPerUnit = 1f;
     private float scale = 1f;
@@ -134,6 +135,7 @@ public final class CanvasPainter implements Painter {
     public CanvasPainter begin(final Canvas canvas, final Capabilities capabilities, final float pixelsPerUnit) {
         this.begin(canvas, capabilities.slicesSprites(), capabilities.drawsShapes(), pixelsPerUnit);
         this.shapesRightToLeft = capabilities.shapesRightToLeft();
+        this.blursBackdrop = capabilities.blursBackdrop();
         return this;
     }
 
@@ -143,6 +145,7 @@ public final class CanvasPainter implements Painter {
         this.slicesSprites = slicesSprites;
         this.drawsShapes = drawsShapes;
         this.shapesRightToLeft = false;
+        this.blursBackdrop = false;
         this.pixelsPerUnit = pixelsPerUnit;
         this.scale = 1f;
         this.fallback.begin(canvas);
@@ -208,6 +211,18 @@ public final class CanvasPainter implements Painter {
         } else {
             this.fallback.polyline(points, count, stroke, argb);
         }
+    }
+
+    @Override
+    public void backdrop(final Rect rect, final float radius, final float blur, final int tint) {
+        if (!this.blursBackdrop || !(blur > 0f)) {
+            this.fillRoundRect(rect, radius, tint);
+            return;
+        }
+        if (!CanvasPainter.isArea(rect)) {
+            return;
+        }
+        this.canvas.backdrop(rect, CanvasPainter.radius(rect, radius), blur, tint);
     }
 
     @Override

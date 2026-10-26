@@ -37,6 +37,35 @@ public sealed interface Paint {
     Paint NONE = new Solid(0x00000000);
 
     /**
+     * Returns frosted glass with square corners: what lies behind blurred, with a tint over it. See
+     * {@link #backdrop(float, int, float)}.
+     *
+     * @param blur how far the blur reaches, in UI units
+     * @param tint the ARGB color over the blurred backdrop
+     * @return the paint
+     * @throws IllegalArgumentException if the blur is negative or not finite
+     */
+    static Paint backdrop(final float blur, final int tint) {
+        return new Backdrop(blur, tint, 0f);
+    }
+
+    /**
+     * Returns frosted glass: what lies behind the area blurred, with a tint over it and rounded corners, as
+     * {@link Painter#backdrop} draws it. Give it to a panel with {@code setBackground} or to a theme key. An engine
+     * that cannot blur draws the tint alone, so pick a tint that reads on its own too, such as a dark color at three
+     * quarters alpha.
+     *
+     * @param blur how far the blur reaches, in UI units; 0 tints without blurring
+     * @param tint the ARGB color over the blurred backdrop
+     * @param radius the radius of each corner, in UI units
+     * @return the paint
+     * @throws IllegalArgumentException if the blur or the radius is negative or not finite
+     */
+    static Paint backdrop(final float blur, final int tint, final float radius) {
+        return new Backdrop(blur, tint, radius);
+    }
+
+    /**
      * Returns a solid color.
      *
      * @param argb the color
@@ -139,6 +168,7 @@ public sealed interface Paint {
      */
     default void paint(final Painter painter, final Rect rect) {
         switch (this) {
+            case Backdrop backdrop -> painter.backdrop(rect, backdrop.radius, backdrop.blur, backdrop.tint);
             case Solid solid -> {
                 if ((solid.argb >>> 24) != 0) {
                     painter.fill(rect, solid.argb);
@@ -158,6 +188,29 @@ public sealed interface Paint {
                 } else {
                     painter.nineSlice(slice.sprite, rect, slice.size, slice.border, slice.tiled, slice.tint);
                 }
+            }
+        }
+    }
+
+    /**
+     * A blurred backdrop with a tint over it, as {@link #backdrop(float, int, float)} describes.
+     *
+     * @param blur how far the blur reaches, in UI units; 0 tints without blurring
+     * @param tint the ARGB color over the blurred backdrop
+     * @param radius the radius of each corner, in UI units
+     */
+    record Backdrop(float blur, int tint, float radius) implements Paint {
+        /**
+         * Checks the blur and the radius.
+         *
+         * @throws IllegalArgumentException if either is negative or not finite
+         */
+        public Backdrop {
+            if (!(blur >= 0f) || Float.isInfinite(blur)) {
+                throw new IllegalArgumentException("Blur must be finite and not negative: " + blur);
+            }
+            if (!(radius >= 0f) || Float.isInfinite(radius)) {
+                throw new IllegalArgumentException("Corner radius must be finite and not negative: " + radius);
             }
         }
     }
