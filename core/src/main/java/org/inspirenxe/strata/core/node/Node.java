@@ -999,11 +999,16 @@ public class Node implements ComponentPeer {
         this.styleStates().set(state, on);
     }
 
+    @Override
+    public final boolean hasStyleState(final String state) {
+        return this.styleStates != null && this.styleStates.isOn(state);
+    }
+
     /**
      * Looks up a paint for the component's style states, as {@link StyleStates} describes: {@code key.disabled}
      * while the component is disabled, itself or through an ancestor, then {@code key.<state>} for each of its own
-     * states that is on, in the order they were first set, then {@code key.pressed}, {@code key.hovered} and
-     * {@code key.focused}, and last the key. The result of each combination is kept until the theme changes.
+     * states that is on, in the order they were first set, then {@code key.pressed}, {@code key.hovered},
+     * {@code key.focus_visible} and {@code key.focused}, and last the key. The result of each combination is kept until the theme changes.
      *
      * @param key the style key
      * @param fallback returned when the theme has none of the keys tried, or the node has no theme yet

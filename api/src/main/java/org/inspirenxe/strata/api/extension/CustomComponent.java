@@ -1075,6 +1075,20 @@ public abstract class CustomComponent<T extends Component<T>> implements Compone
     }
 
     /**
+     * Returns whether one of this component's own style states is on, set by the component itself or by a control
+     * that holds it, as a list sets {@code selected} on the cells of its selected rows. Code that draws part of its
+     * look itself, such as a selected row's accent, checks it here; looks the theme gives come through
+     * {@link #stylePaint} and {@link #styleText} without asking.
+     *
+     * @param state the state's name
+     * @return true if the state is on; false for the five states Strata keeps on every component, which have their
+     *         own methods
+     */
+    protected final boolean hasStyleState(final String state) {
+        return this.peer.hasStyleState(state);
+    }
+
+    /**
      * Looks up a paint from the theme for this component's style states. The lookup tries {@code key.disabled}
      * while the component is disabled, itself or through an ancestor, then {@code key.<state>} for each of the
      * component's own states that is on, in the order they were first set, then {@code key.pressed},

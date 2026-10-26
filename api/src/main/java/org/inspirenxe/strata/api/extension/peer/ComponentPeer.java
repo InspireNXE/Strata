@@ -600,6 +600,14 @@ public interface ComponentPeer {
     void setStyleState(String state, boolean on);
 
     /**
+     * Returns whether one of the component's own style states is on. See {@code CustomComponent.hasStyleState}.
+     *
+     * @param state the state's name
+     * @return true if the state is on
+     */
+    boolean hasStyleState(String state);
+
+    /**
      * Looks up a paint by key for the component's style states. See {@code CustomComponent.stylePaint}.
      *
      * @param key the style key

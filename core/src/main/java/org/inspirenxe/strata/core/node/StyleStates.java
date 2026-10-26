@@ -111,6 +111,11 @@ final class StyleStates {
      * @param focused whether it has focus
      * @return the combination
      */
+    boolean isOn(final String state) {
+        final int index = this.own.indexOf(state);
+        return index >= 0 && (this.ownOn & 1L << index) != 0L;
+    }
+
     long combination(final boolean disabled, final boolean pressed, final boolean hovered,
                      final boolean focusVisible, final boolean focused) {
         return (disabled ? 1L : 0L) | (pressed ? 2L : 0L) | (hovered ? 4L : 0L) | (focusVisible ? 8L : 0L)

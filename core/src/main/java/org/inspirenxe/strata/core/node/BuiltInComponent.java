@@ -1146,6 +1146,17 @@ public abstract class BuiltInComponent<T extends Component<T>> implements Compon
     }
 
     /**
+     * Returns whether one of this component's own style states is on, as {@code CustomComponent.hasStyleState}
+     * does.
+     *
+     * @param state the state's name
+     * @return true if the state is on
+     */
+    protected final boolean hasStyleState(final String state) {
+        return this.node.hasStyleState(state);
+    }
+
+    /**
      * Looks up a paint for this component's style states, as {@code CustomComponent.stylePaint} does.
      *
      * @param key the style key
