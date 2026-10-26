@@ -460,7 +460,7 @@ public final class SliderImpl extends BuiltInComponent<Slider> implements Slider
     protected void paint(final Painter painter, final Rect bounds) {
         final boolean enabled = this.isEnabled();
         final Paint trackFace = !enabled ? this.trackDisabled
-                : this.validity.face(this.isFocused() ? this.trackFocused : this.track);
+                : this.validity.face(this.isFocusVisible() ? this.trackFocused : this.track);
         trackFace.paint(painter, bounds);
         if (enabled) {
             this.validity.paintOutline(painter, bounds);
@@ -469,7 +469,7 @@ public final class SliderImpl extends BuiltInComponent<Slider> implements Slider
         final Paint thumbFace;
         if (!enabled) {
             thumbFace = this.thumbDisabled;
-        } else if (this.isHovered() || this.isFocused() || this.isPressed()) {
+        } else if (this.isHovered() || this.isFocusVisible() || this.isPressed()) {
             thumbFace = this.thumbHovered;
         } else {
             thumbFace = this.thumb;

@@ -511,7 +511,7 @@ public final class ComboBoxImpl<T> extends BuiltInComponent<ComboBox<T>> impleme
         if (!enabled) {
             face = this.disabledPaint;
         } else {
-            face = this.validity.face(this.isHovered() || this.isFocused() || this.isOpen() ? this.hoveredPaint : this.normal);
+            face = this.validity.face(this.isHovered() || this.isFocusVisible() || this.isOpen() ? this.hoveredPaint : this.normal);
         }
         face.paint(painter, bounds);
         if (enabled) {

@@ -350,14 +350,14 @@ public final class CycleButtonImpl<T> extends BuiltInComponent<CycleButton<T>> i
             face = this.disabled;
         } else if (this.isPressed() && this.isHovered()) {
             face = this.pressedPaint;
-        } else if (this.isHovered() || this.isFocused()) {
+        } else if (this.isHovered() || this.isFocusVisible()) {
             face = this.hoveredPaint;
         } else {
             face = this.normal;
         }
         face.paint(painter, bounds);
 
-        if (this.isFocused() && this.focusRing != Paint.NONE) {
+        if (this.isFocusVisible() && this.focusRing != Paint.NONE) {
             this.ring.paint(painter, this.focusRing, bounds);
         }
 

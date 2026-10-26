@@ -322,7 +322,7 @@ public final class ExpanderImpl extends BuiltInComposite<Expander> implements Ex
     @Override
     protected void paint(final Painter painter, final Rect bounds) {
         final Rect head = this.headRect.at(bounds.x(), bounds.y(), bounds.width(), this.headerHeight);
-        final boolean lit = this.isFocused() || this.isHovered() && this.overHeader(this.pointerY);
+        final boolean lit = this.isFocusVisible() || this.isHovered() && this.overHeader(this.pointerY);
         (lit ? this.headerHovered : this.header).paint(painter, head);
         final boolean enabled = this.isEnabled();
         final int color = (enabled ? this.textStyle : this.disabledTextStyle).color();

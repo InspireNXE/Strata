@@ -252,7 +252,7 @@ public final class RadioButtonImpl extends BuiltInComponent<RadioButton> impleme
         final boolean rightToLeft = this.isRightToLeft();
         final Rect box = this.layout.box(bounds, rightToLeft);
         final boolean enabled = this.isEnabled();
-        final boolean lit = this.isHovered() || this.isFocused();
+        final boolean lit = this.isHovered() || this.isFocusVisible();
         final boolean selected = this.isSelected();
 
         final Paint face;
@@ -270,7 +270,7 @@ public final class RadioButtonImpl extends BuiltInComponent<RadioButton> impleme
             (enabled ? this.mark : this.markDisabled).paint(painter, this.markArea.at(box.x() + inset,
                     box.y() + inset, box.width() - inset * 2f, box.height() - inset * 2f));
         }
-        if (this.isFocused() && this.focusRing != Paint.NONE) {
+        if (this.isFocusVisible() && this.focusRing != Paint.NONE) {
             this.ring.paint(painter, this.focusRing, box);
         }
         this.layout.paintCaption(painter, bounds, enabled,

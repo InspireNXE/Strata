@@ -279,7 +279,7 @@ public final class ToggleButtonImpl extends BuiltInComponent<ToggleButton> imple
     protected void paint(final Painter painter, final Rect bounds) {
         final ButtonContent content = this.content;
         final boolean enabled = this.isEnabled();
-        final boolean lit = this.isHovered() || this.isFocused();
+        final boolean lit = this.isHovered() || this.isFocusVisible();
         final boolean held = this.isPressed() && this.isHovered();
         final Paint face;
         if (!enabled) {
@@ -292,7 +292,7 @@ public final class ToggleButtonImpl extends BuiltInComponent<ToggleButton> imple
             face = lit ? content.hovered : content.normal;
         }
         face.paint(painter, bounds);
-        if (this.isFocused()) {
+        if (this.isFocusVisible()) {
             content.paintFocusRing(painter, bounds);
         }
         TextLine shown = enabled ? content.caption : content.disabledCaption;

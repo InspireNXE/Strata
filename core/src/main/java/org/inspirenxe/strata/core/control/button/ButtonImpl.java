@@ -349,11 +349,11 @@ public final class ButtonImpl extends BuiltInComponent<Button> implements Button
     protected void paint(final Painter painter, final Rect bounds) {
         final ButtonContent content = this.content;
         final boolean enabled = this.isEnabled();
-        final boolean lit = this.isHovered() || this.isFocused();
+        final boolean lit = this.isHovered() || this.isFocusVisible();
         if (!this.link) {
             final Paint face = content.face(enabled, this.isPressed() && this.isHovered(), lit);
             (this.isDefault && face == content.normal ? content.defaultFace : face).paint(painter, bounds);
-            if (this.isFocused()) {
+            if (this.isFocusVisible()) {
                 content.paintFocusRing(painter, bounds);
             }
         }

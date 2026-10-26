@@ -715,7 +715,7 @@ public final class CalendarViewImpl extends BuiltInComponent<CalendarView> imple
         for (int i = 0; i < 7; i++) {
             this.drawCentered(painter, this.weekdayLines[i], this.weekdayRects[i]);
         }
-        final boolean focused = this.isFocused() && enabled;
+        final boolean focused = this.isFocusVisible() && enabled;
         for (int i = 0; i < 42; i++) {
             final LocalDate day = this.cells[i];
             final boolean outside = day.getMonthValue() != this.shown.getMonthValue();
@@ -750,7 +750,7 @@ public final class CalendarViewImpl extends BuiltInComponent<CalendarView> imple
     }
 
     private void paintYear(final Painter painter, final boolean enabled) {
-        final boolean focused = this.isFocused() && enabled;
+        final boolean focused = this.isFocusVisible() && enabled;
         final int year = this.shown.getYear();
         for (int i = 0; i < 12; i++) {
             final YearMonth month = YearMonth.of(year, i + 1);
@@ -768,7 +768,7 @@ public final class CalendarViewImpl extends BuiltInComponent<CalendarView> imple
     }
 
     private void paintDecade(final Painter painter, final boolean enabled) {
-        final boolean focused = this.isFocused() && enabled;
+        final boolean focused = this.isFocusVisible() && enabled;
         for (int i = 0; i < 12; i++) {
             final int year = this.yearsFrom + i;
             final Rect cell = this.gridRects[i];

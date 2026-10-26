@@ -1021,6 +1021,16 @@ public abstract class BuiltInComponent<T extends Component<T>> implements Compon
     }
 
     /**
+     * Returns whether this component has keyboard focus that should be shown. See
+     * {@link Focusable#isFocusVisible()}.
+     *
+     * @return true while focused and focus is shown
+     */
+    public final boolean isFocusVisible() {
+        return this.node.isFocusVisible();
+    }
+
+    /**
      * Returns whether this component has keyboard focus. See {@link Focusable#isFocused()}.
      *
      * @return true while focused
@@ -1126,8 +1136,8 @@ public abstract class BuiltInComponent<T extends Component<T>> implements Compon
     /**
      * Turns one of this component's own style states on or off, as {@code CustomComponent.setStyleState} does.
      *
-     * @param state the state's name; any name but {@code disabled}, {@code pressed}, {@code hovered} and
-     *              {@code focused}, which the node sets
+     * @param state the state's name; any name but {@code disabled}, {@code pressed}, {@code hovered},
+     *              {@code focus_visible} and {@code focused}, which the node sets
      * @param on whether the state is on
      * @throws IllegalArgumentException if the name is empty or one the node sets
      */

@@ -539,6 +539,12 @@ public final class ScreenHostImpl implements ScreenHost {
     }
 
     @Override
+    public void activeChanged(final boolean active) {
+        this.uiThread.record();
+        this.root.setActive(active);
+    }
+
+    @Override
     public boolean key(final Key key, final KeyAction action, final Modifiers modifiers) {
         return this.key(key, action, modifiers, InputContext.KEYBOARD);
     }

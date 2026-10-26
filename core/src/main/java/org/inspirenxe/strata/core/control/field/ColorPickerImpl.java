@@ -575,7 +575,7 @@ public final class ColorPickerImpl extends BuiltInComposite<ColorPicker> impleme
         for (final Rect rect : this.markerFills) {
             this.marker.paint(painter, rect);
         }
-        if (this.isFocused() && this.focusRing != Paint.NONE) {
+        if (this.isFocusVisible() && this.focusRing != Paint.NONE) {
             this.ring.paint(painter, this.focusRing, this.squareFrame);
         }
     }

@@ -230,11 +230,11 @@ public final class ToggleSwitchImpl extends BuiltInComponent<ToggleSwitch> imple
         if (!enabled) {
             face = this.knobDisabled;
         } else {
-            face = this.isHovered() || this.isFocused() ? this.knobHovered : this.knob;
+            face = this.isHovered() || this.isFocusVisible() ? this.knobHovered : this.knob;
         }
         face.paint(painter, this.knobRect.at(knobX, bar.y() + inset.top(), knobSize, knobSize));
 
-        if (this.isFocused() && this.focusRing != Paint.NONE) {
+        if (this.isFocusVisible() && this.focusRing != Paint.NONE) {
             this.ring.paint(painter, this.focusRing, bar);
         }
         this.layout.paintCaption(painter, bounds, enabled,

@@ -1046,7 +1046,8 @@ public class Node implements ComponentPeer {
     }
 
     private long styleCombination(final StyleStates states) {
-        return states.combination(!this.facade.isEffectivelyEnabled(), this.pressed, this.hovered, this.focused);
+        return states.combination(!this.facade.isEffectivelyEnabled(), this.pressed, this.hovered,
+                this.isFocusVisible(), this.focused);
     }
 
     // ------------------------------------------------------------------
@@ -1255,6 +1256,11 @@ public class Node implements ComponentPeer {
     @Override
     public final boolean isFocused() {
         return this.focused;
+    }
+
+    @Override
+    public final boolean isFocusVisible() {
+        return this.focused && this.root != null && this.root.isFocusVisible();
     }
 
     final void setFocused(final boolean focused) {

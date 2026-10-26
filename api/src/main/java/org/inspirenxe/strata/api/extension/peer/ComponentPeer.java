@@ -244,6 +244,13 @@ public interface ComponentPeer {
     boolean isFocused();
 
     /**
+     * See {@link org.inspirenxe.strata.api.component.Focusable#isFocusVisible()}.
+     *
+     * @return true while focused and focus is shown
+     */
+    boolean isFocusVisible();
+
+    /**
      * See {@link org.inspirenxe.strata.api.component.Focusable#requestFocus()}.
      *
      * @return true if the component now has focus

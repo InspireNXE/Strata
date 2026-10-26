@@ -944,6 +944,16 @@ public abstract class CustomComponent<T extends Component<T>> implements Compone
     }
 
     /**
+     * Returns whether this component has keyboard focus that should be shown. See
+     * {@link Focusable#isFocusVisible()}.
+     *
+     * @return true while focused and focus is shown
+     */
+    public final boolean isFocusVisible() {
+        return this.peer.isFocusVisible();
+    }
+
+    /**
      * Returns whether this component has keyboard focus. See {@link Focusable#isFocused()}.
      *
      * @return true while focused
@@ -1051,13 +1061,13 @@ public abstract class CustomComponent<T extends Component<T>> implements Compone
      * Turns one of this component's own style states on or off, such as {@code "selected"} or {@code "warning"}, so
      * {@link #stylePaint} and {@link #styleText} pick the theme's look for it: with {@code "warning"} on, a lookup of
      * {@code fancy.card} finds {@code fancy.card.warning} when the theme has it. Strata sets {@code disabled},
-     * {@code pressed}, {@code hovered} and {@code focused} on every component itself, so those names cannot be set
-     * here. A state's place in a lookup is the order in which it was first set. Changing a state marks nothing for
-     * layout; call {@link #invalidateLayout()} if the styles it picks change the component's size.
+     * {@code pressed}, {@code hovered}, {@code focus_visible} and {@code focused} on every component itself, so those
+     * names cannot be set here. A state's place in a lookup is the order in which it was first set. Changing a state
+     * marks nothing for layout; call {@link #invalidateLayout()} if the styles it picks change the component's size.
      *
-     * @param state the state's name; any name but the four Strata sets
+     * @param state the state's name; any name but the five Strata sets
      * @param on whether the state is on
-     * @throws IllegalArgumentException if the name is empty or one Strata sets, or the component already has 60
+     * @throws IllegalArgumentException if the name is empty or one Strata sets, or the component already has 59
      *     states of its own
      */
     protected final void setStyleState(final String state, final boolean on) {
@@ -1068,7 +1078,8 @@ public abstract class CustomComponent<T extends Component<T>> implements Compone
      * Looks up a paint from the theme for this component's style states. The lookup tries {@code key.disabled}
      * while the component is disabled, itself or through an ancestor, then {@code key.<state>} for each of the
      * component's own states that is on, in the order they were first set, then {@code key.pressed},
-     * {@code key.hovered} and {@code key.focused} for those that are on, and last the key itself. The first key
+     * {@code key.hovered}, {@code key.focus_visible} (see {@link Focusable#isFocusVisible()}) and
+     * {@code key.focused} for those that are on, and last the key itself. The first key
      * the theme has wins, so with {@code "warning"} on, {@code fancy.card.warning} wins over {@code fancy.card},
      * and a disabled card shows {@code fancy.card.disabled}. The result for each combination of states is kept
      * until the theme changes, so calling this from {@link #paint} allocates nothing once each combination was

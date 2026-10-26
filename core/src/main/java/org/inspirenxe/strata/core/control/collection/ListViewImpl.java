@@ -1312,7 +1312,7 @@ public final class ListViewImpl<T> extends BuiltInComposite<ListView<T>> impleme
             final Rect rect = this.paintRect[i];
             if (this.chosenBits.get(index)) {
                 (focused ? this.rowSelected : this.rowSelectedUnfocused).paint(this.painter, rect);
-                final Paint edge = focused ? this.ring : this.ringUnfocused;
+                final Paint edge = this.isFocusVisible() ? this.ring : this.ringUnfocused;
                 if (edge != Paint.NONE) {
                     if (this.paintRing[i] == null) {
                         this.paintRing[i] = Shapes.ring(rect);

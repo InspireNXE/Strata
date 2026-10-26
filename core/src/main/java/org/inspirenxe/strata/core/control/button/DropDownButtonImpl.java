@@ -323,9 +323,9 @@ public final class DropDownButtonImpl extends BuiltInComponent<DropDownButton> i
     protected void paint(final Painter painter, final Rect bounds) {
         final ButtonContent content = this.content;
         final boolean enabled = this.isEnabled();
-        content.face(enabled, this.open || this.isPressed() && this.isHovered(), this.isHovered() || this.isFocused())
+        content.face(enabled, this.open || this.isPressed() && this.isHovered(), this.isHovered() || this.isFocusVisible())
                 .paint(painter, bounds);
-        if (this.isFocused()) {
+        if (this.isFocusVisible()) {
             content.paintFocusRing(painter, bounds);
         }
         final Insets padding = content.padding(false);

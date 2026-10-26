@@ -76,6 +76,7 @@ public final class ScreenStackImpl implements ScreenStack {
     private long tooltipDelay = -1L;
     private float pixelsPerUnit = 1f;
     private SpriteSizes spriteSizes = SpriteSizes.NONE;
+    private boolean active = true;
     private int frameRate = ScreenHost.DEFAULT_FRAME_RATE;
     private final FrameRequests frames = new FrameRequests();
 
@@ -165,6 +166,9 @@ public final class ScreenStackImpl implements ScreenStack {
         host.resize(this.width, this.height);
         host.setPixelsPerUnit(this.pixelsPerUnit);
         host.setSpriteSizes(this.spriteSizes);
+        if (!this.active) {
+            host.activeChanged(false);
+        }
         host.setFrameRate(this.frameRate);
         if (this.tooltipDelay >= 0L) {
             host.setTooltipDelay(this.tooltipDelay);
@@ -511,6 +515,17 @@ public final class ScreenStackImpl implements ScreenStack {
     @Override
     public void pointerLeft() {
         this.input().ifPresent(ScreenHostImpl::pointerLeft);
+    }
+
+    /**
+     * Makes every screen active or inactive, and screens pushed later start that way.
+     */
+    @Override
+    public void activeChanged(final boolean active) {
+        this.active = active;
+        for (final Entry entry : this.entries) {
+            entry.host().activeChanged(active);
+        }
     }
 
     @Override
