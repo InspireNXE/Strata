@@ -18,6 +18,7 @@ package org.inspirenxe.strata.core.control;
 import org.inspirenxe.strata.api.extension.Painter;
 import org.inspirenxe.strata.api.geometry.Insets;
 import org.inspirenxe.strata.api.geometry.Rect;
+import org.inspirenxe.strata.api.layout.HorizontalAlignment;
 import org.inspirenxe.strata.api.theme.Theme;
 import org.inspirenxe.strata.core.text.TextLine;
 
@@ -26,8 +27,8 @@ import org.inspirenxe.strata.core.text.TextLine;
  * back and forth when the theme asks for it. Each control that has a caption keeps one and reads three keys into
  * it: insets for the clip area, and two metrics for scrolling.
  *
- * <p>A caption that fits the clip area is centered in the control less its padding, then moved inside the clip
- * area if centering put it partly outside. A caption wider than the clip area is drawn from the clip area's left
+ * <p>A caption that fits the clip area is centered in the control less its padding, or put at its left or right
+ * when {@link #setAlignment} says so, then moved inside the clip area if that put it partly outside. A caption wider than the clip area is drawn from the clip area's left
  * edge and cut at its right, or, when the scroll metric is above 0, slides between its two ends, starting from the
  * end: one full sweep there and back takes the overflow in units times the metric, in milliseconds, but no less
  * than the minimum metric. The slide eases at each end and follows the platform's clock.</p>
@@ -46,6 +47,7 @@ public final class Caption {
     private Insets clip;
     private float scrollRate;
     private float scrollMinimum;
+    private HorizontalAlignment alignment = HorizontalAlignment.CENTER;
 
     // The caption being drawn, kept so the clip callback needs no new object
     private Painter painter;
@@ -59,6 +61,34 @@ public final class Caption {
      * Creates a caption drawer with no clip insets and no scrolling, until {@link #applyTheme} reads them.
      */
     public Caption() {
+    }
+
+    /**
+     * Sets where a caption that fits sits across the control less its padding. {@link HorizontalAlignment#STRETCH}
+     * counts as {@link HorizontalAlignment#LEFT}. It is {@link HorizontalAlignment#CENTER} until set. The caller
+     * mirrors it for right to left.
+     *
+     * @param alignment the alignment
+     */
+    public void setAlignment(final HorizontalAlignment alignment) {
+        this.alignment = alignment;
+    }
+
+    /**
+     * Returns where something of a given size starts in a space, by the alignment: at the space's start for left
+     * and stretch, at its end less the size for right, and as {@link #center} says for center.
+     *
+     * @param start where the space starts
+     * @param space the space's length
+     * @param size the length of what is placed
+     * @return where it starts
+     */
+    public float place(final float start, final float space, final float size) {
+        return switch (this.alignment) {
+            case LEFT, STRETCH -> start;
+            case RIGHT -> start + space - size;
+            case CENTER -> center(start, space, size);
+        };
     }
 
     /**
@@ -176,8 +206,9 @@ public final class Caption {
     }
 
     /**
-     * Returns where a piece of a given width starts: centered across the control less its padding and moved inside
-     * the clip area when it fits there, or else at the clip area's left edge.
+     * Returns where a piece of a given width starts: placed across the control less its padding by the alignment,
+     * centered by default, and moved inside the clip area when it fits there, or else at the clip area's left
+     * edge.
      *
      * @param bounds the control's bounds
      * @param padding the control's padding, which centering leaves out
@@ -190,8 +221,8 @@ public final class Caption {
         if (width > clipRight - clipLeft) {
             return clipLeft;
         }
-        final float centered = center(bounds.x() + padding.left(), bounds.width() - padding.horizontal(), width);
-        return Math.max(clipLeft, Math.min(centered, clipRight - width));
+        final float placed = this.place(bounds.x() + padding.left(), bounds.width() - padding.horizontal(), width);
+        return Math.max(clipLeft, Math.min(placed, clipRight - width));
     }
 
 

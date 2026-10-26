@@ -26,6 +26,7 @@ import org.inspirenxe.strata.api.extension.Painter;
 import org.inspirenxe.strata.api.geometry.Insets;
 import org.inspirenxe.strata.api.geometry.Rect;
 import org.inspirenxe.strata.api.geometry.Size;
+import org.inspirenxe.strata.api.layout.HorizontalAlignment;
 import org.inspirenxe.strata.api.text.Text;
 import org.inspirenxe.strata.api.theme.Paint;
 import org.inspirenxe.strata.api.theme.SpriteId;
@@ -197,6 +198,18 @@ public final class ButtonImpl extends BuiltInComponent<Button> implements Button
     public Button setIconPlacement(final IconPlacement placement) {
         this.content.setPlacement(placement);
         this.invalidateLayout();
+        return this;
+    }
+
+    @Override
+    public HorizontalAlignment captionAlignment() {
+        return this.content.alignment();
+    }
+
+    @Override
+    public Button setCaptionAlignment(final HorizontalAlignment alignment) {
+        this.content.setAlignment(alignment);
+        this.repaint();
         return this;
     }
 

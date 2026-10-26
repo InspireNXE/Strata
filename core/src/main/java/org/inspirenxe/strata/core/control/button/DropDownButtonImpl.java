@@ -27,6 +27,7 @@ import org.inspirenxe.strata.api.extension.Painter;
 import org.inspirenxe.strata.api.geometry.Insets;
 import org.inspirenxe.strata.api.geometry.Rect;
 import org.inspirenxe.strata.api.geometry.Size;
+import org.inspirenxe.strata.api.layout.HorizontalAlignment;
 import org.inspirenxe.strata.api.input.Key;
 import org.inspirenxe.strata.api.input.KeyAction;
 import org.inspirenxe.strata.api.input.MouseButton;
@@ -175,6 +176,18 @@ public final class DropDownButtonImpl extends BuiltInComponent<DropDownButton> i
     public DropDownButton setIconPlacement(final IconPlacement placement) {
         this.content.setPlacement(placement);
         this.invalidateLayout();
+        return this;
+    }
+
+    @Override
+    public HorizontalAlignment captionAlignment() {
+        return this.content.alignment();
+    }
+
+    @Override
+    public DropDownButton setCaptionAlignment(final HorizontalAlignment alignment) {
+        this.content.setAlignment(alignment);
+        this.repaint();
         return this;
     }
 

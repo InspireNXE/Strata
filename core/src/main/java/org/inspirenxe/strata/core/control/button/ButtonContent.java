@@ -20,6 +20,7 @@ import org.inspirenxe.strata.api.control.button.IconPlacement;
 import org.inspirenxe.strata.api.extension.Painter;
 import org.inspirenxe.strata.api.geometry.Insets;
 import org.inspirenxe.strata.api.geometry.Rect;
+import org.inspirenxe.strata.api.layout.HorizontalAlignment;
 import org.inspirenxe.strata.api.text.Text;
 import org.inspirenxe.strata.api.text.TextMetrics;
 import org.inspirenxe.strata.api.text.TextStyle;
@@ -68,6 +69,7 @@ final class ButtonContent {
     private float iconWidth;
     private float iconHeight;
     private IconPlacement placement = IconPlacement.START;
+    private HorizontalAlignment alignment = HorizontalAlignment.CENTER;
     private final Caption captionDrawer = new Caption();
     private final RectCache iconRect = new RectCache();
     private final RectCache captionArea = new RectCache();
@@ -223,6 +225,14 @@ final class ButtonContent {
         this.placement = Objects.requireNonNull(placement, "placement");
     }
 
+    HorizontalAlignment alignment() {
+        return this.alignment;
+    }
+
+    void setAlignment(final HorizontalAlignment alignment) {
+        this.alignment = Objects.requireNonNull(alignment, "alignment");
+    }
+
     boolean hasIcon() {
         return this.iconSprite != null || this.iconVisual != null;
     }
@@ -370,10 +380,11 @@ final class ButtonContent {
     }
 
     /**
-     * Draws the icon and a caption centered together in the bounds less the padding: horizontally across it, and
-     * each vertically in it. The caption is drawn by a {@link Caption}, so one too wide is cut or scrolled as the
-     * theme says; beside an icon, the icon starts at the clip area's left edge and the caption is cut after it. Right
-     * to left the piece is mirrored: the icon sits at its right end and the caption before it.
+     * Draws the icon and a caption together in the bounds less the padding: across it where the caption alignment
+     * says, centered by default, and each centered vertically in it. The caption is drawn by a {@link Caption}, so
+     * one too wide is cut or scrolled as the theme says; beside an icon, the icon starts at the clip area's left edge
+     * and the caption is cut after it. Right to left the piece is mirrored: the icon sits at its right end and the
+     * caption before it, and a left or right alignment puts the piece at the other side.
      *
      * @param painter what to draw with
      * @param bounds the bounds to center in, less anything the button draws beside its content
@@ -392,13 +403,14 @@ final class ButtonContent {
         final float top = bounds.y() + padding.top();
         final float width = bounds.width() - padding.horizontal();
         final float height = bounds.height() - padding.vertical();
+        this.captionDrawer.setAlignment(rightToLeft ? mirrored(this.alignment) : this.alignment);
         if (!icon) {
             return hasText && this.captionDrawer.draw(painter, shown, bounds, padding,
                     top + (height - this.captionHeight) * 0.5f, millis);
         }
         final int tint = enabled ? 0xFFFFFFFF : DISABLED_ICON_TINT;
         if (!hasText) {
-            this.paintIcon(painter, Caption.center(left, width, this.iconWidth),
+            this.paintIcon(painter, this.captionDrawer.place(left, width, this.iconWidth),
                     top + (height - this.iconHeight) * 0.5f, tint);
             return false;
         }
@@ -413,7 +425,7 @@ final class ButtonContent {
             case TOP, BOTTOM -> {
                 final float blockTop = top + (height - this.contentHeight()) * 0.5f;
                 final boolean above = placement == IconPlacement.TOP;
-                this.paintIcon(painter, Caption.center(left, width, this.iconWidth),
+                this.paintIcon(painter, this.captionDrawer.place(left, width, this.iconWidth),
                         above ? blockTop : blockTop + this.captionHeight + ButtonImpl.ICON_GAP, tint);
                 return this.captionDrawer.draw(painter, shown, bounds, padding, blockTop + this.captionOffset(), millis);
             }
@@ -436,6 +448,14 @@ final class ButtonContent {
                         contentWidth, top + (height - this.captionHeight) * 0.5f, millis);
             }
         }
+    }
+
+    private static HorizontalAlignment mirrored(final HorizontalAlignment alignment) {
+        return switch (alignment) {
+            case LEFT, STRETCH -> HorizontalAlignment.RIGHT;
+            case RIGHT -> HorizontalAlignment.LEFT;
+            case CENTER -> HorizontalAlignment.CENTER;
+        };
     }
 
     private void paintIcon(final Painter painter, final float x, final float y, final int tint) {
