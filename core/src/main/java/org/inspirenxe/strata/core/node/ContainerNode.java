@@ -445,7 +445,7 @@ public final class ContainerNode extends Node implements ContainerPeer {
      */
     @Override
     public Node hitTest(final float x, final float y) {
-        if (!this.isVisible() || this.bounds().isEmpty()) {
+        if (!this.isVisible() || !this.isHitTestVisible() || this.bounds().isEmpty()) {
             return null;
         }
         final boolean inside = this.bounds().contains(x, y);

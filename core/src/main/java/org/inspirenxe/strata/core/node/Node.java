@@ -122,6 +122,7 @@ public class Node implements ComponentPeer {
     private StyleStates styleStates;
 
     private boolean visible;
+    private boolean hitTestVisible;
     private boolean enabled;
     private boolean focusable;
     private boolean tabbable;
@@ -196,6 +197,7 @@ public class Node implements ComponentPeer {
         this.facade = Objects.requireNonNull(facade, "facade");
         this.hooks = Objects.requireNonNull(hooks, "hooks");
         this.visible = true;
+        this.hitTestVisible = true;
         this.enabled = true;
         this.opacity = 1f;
         this.margin = Insets.NONE;
@@ -731,16 +733,16 @@ public class Node implements ComponentPeer {
     }
 
     /**
-     * Finds the deepest visible node at a point. A hidden node hides its whole subtree from the pointer. A disabled
-     * node, or one inside a disabled node, can be hit, so the pointer stops there: {@link Root} gives it no input
-     * events and shows its tooltip.
+     * Finds the deepest visible node at a point. A hidden node, or one whose hit testing is turned off, hides its
+     * whole subtree from the pointer. A disabled node, or one inside a disabled node, can be hit, so the pointer stops
+     * there: {@link Root} gives it no input events and shows its tooltip.
      *
      * @param x the x, in the host's coordinates
      * @param y the y, in the host's coordinates
      * @return the node hit, or {@code null} if the point misses this node
      */
     public Node hitTest(final float x, final float y) {
-        if (!this.visible || !this.bounds.contains(x, y)) {
+        if (!this.visible || !this.hitTestVisible || !this.bounds.contains(x, y)) {
             return null;
         }
         return this;
@@ -1307,6 +1309,19 @@ public class Node implements ComponentPeer {
         if (this.visible != visible) {
             this.visible = visible;
             this.invalidateLayout();
+            this.treeChanged();
+        }
+    }
+
+    @Override
+    public final boolean isHitTestVisible() {
+        return this.hitTestVisible;
+    }
+
+    @Override
+    public final void setHitTestVisible(final boolean hitTestVisible) {
+        if (this.hitTestVisible != hitTestVisible) {
+            this.hitTestVisible = hitTestVisible;
             this.treeChanged();
         }
     }

@@ -704,6 +704,17 @@ public abstract class CustomComponent<T extends Component<T>> implements Compone
     }
 
     @Override
+    public final boolean isHitTestVisible() {
+        return this.peer.isHitTestVisible();
+    }
+
+    @Override
+    public final T setHitTestVisible(final boolean hitTestVisible) {
+        this.peer.setHitTestVisible(hitTestVisible);
+        return this.self();
+    }
+
+    @Override
     public final boolean isEnabled() {
         return this.peer.isEnabled();
     }

@@ -749,6 +749,17 @@ public abstract class BuiltInComponent<T extends Component<T>> implements Compon
     }
 
     @Override
+    public final boolean isHitTestVisible() {
+        return this.node.isHitTestVisible();
+    }
+
+    @Override
+    public final T setHitTestVisible(final boolean hitTestVisible) {
+        this.node.setHitTestVisible(hitTestVisible);
+        return this.self();
+    }
+
+    @Override
     public final boolean isEnabled() {
         return this.node.isEnabled();
     }

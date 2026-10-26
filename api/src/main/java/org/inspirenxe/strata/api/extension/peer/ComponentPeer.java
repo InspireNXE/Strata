@@ -125,6 +125,20 @@ public interface ComponentPeer {
     void setVisible(boolean visible);
 
     /**
+     * See {@link org.inspirenxe.strata.api.component.Component#isHitTestVisible()}.
+     *
+     * @return true if the pointer can hit the component
+     */
+    boolean isHitTestVisible();
+
+    /**
+     * See {@link org.inspirenxe.strata.api.component.Component#setHitTestVisible(boolean)}.
+     *
+     * @param hitTestVisible false to let the pointer through
+     */
+    void setHitTestVisible(boolean hitTestVisible);
+
+    /**
      * See {@link org.inspirenxe.strata.api.component.Component#isEnabled()}.
      *
      * @return true if enabled
