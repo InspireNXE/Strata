@@ -53,9 +53,25 @@ package org.inspirenxe.strata.spi;
  *                          characters in reverse order and its brackets mirrored, which reads correctly for Hebrew
  *                          and draws Arabic unjoined. Either way core runs the bidirectional algorithm and places the
  *                          runs of a line in visual order.
+ * @param blursBackdrop true when the canvas implements {@link Canvas#backdrop}, blurring a backdrop it has or can
+ *                      read. When false, core draws a backdrop paint as a rounded rectangle of its tint.
  */
 public record Capabilities(boolean sendsKeyRepeat, boolean monospaceFont, boolean slicesSprites,
-                           boolean drawsShapes, boolean shapesRightToLeft) {
+                           boolean drawsShapes, boolean shapesRightToLeft, boolean blursBackdrop) {
+    /**
+     * Creates capabilities for an engine that cannot blur a backdrop.
+     *
+     * @param sendsKeyRepeat true when the adapter delivers key repeats itself
+     * @param monospaceFont true when the engine has a monospaced font
+     * @param slicesSprites true when the engine stores slicing with its images
+     * @param drawsShapes true when the canvas implements every shape call
+     * @param shapesRightToLeft true when the engine shapes right-to-left text itself
+     */
+    public Capabilities(final boolean sendsKeyRepeat, final boolean monospaceFont, final boolean slicesSprites,
+                        final boolean drawsShapes, final boolean shapesRightToLeft) {
+        this(sendsKeyRepeat, monospaceFont, slicesSprites, drawsShapes, shapesRightToLeft, false);
+    }
+
     /**
      * Creates capabilities for an engine that stores no slicing with its images and draws no shapes.
      *

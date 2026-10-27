@@ -57,6 +57,7 @@ public final class TestPlatform implements Platform {
 
     private final boolean sendsKeyRepeat;
     private boolean drawsShapes;
+    private boolean blursBackdrop;
     private long nanos;
     private long metricsVersion;
     private float metricsScale = 1f;
@@ -301,7 +302,7 @@ public final class TestPlatform implements Platform {
 
     @Override
     public Capabilities capabilities() {
-        return new Capabilities(this.sendsKeyRepeat, false, false, this.drawsShapes);
+        return new Capabilities(this.sendsKeyRepeat, false, false, this.drawsShapes, false, this.blursBackdrop);
     }
 
     /**
@@ -309,6 +310,13 @@ public final class TestPlatform implements Platform {
      */
     public void setDrawsShapes(final boolean drawsShapes) {
         this.drawsShapes = drawsShapes;
+    }
+
+    /**
+     * Sets whether the platform's capabilities say its canvas blurs a backdrop. False until set.
+     */
+    public void setBlursBackdrop(final boolean blursBackdrop) {
+        this.blursBackdrop = blursBackdrop;
     }
 
     /**

@@ -338,7 +338,7 @@ public final class CheckBoxImpl extends BuiltInComponent<CheckBox> implements Ch
         final boolean rightToLeft = this.isRightToLeft();
         final Rect box = this.layout.box(bounds, rightToLeft);
         final boolean enabled = this.isEnabled();
-        final boolean lit = this.isHovered() || this.isFocused();
+        final boolean lit = this.isHovered() || this.isFocusVisible();
 
         final boolean checked = this.state.isChecked();
         final Paint face;
@@ -362,7 +362,7 @@ public final class CheckBoxImpl extends BuiltInComponent<CheckBox> implements Ch
         } else if (this.state == CheckState.MIXED) {
             (enabled ? this.mixedMark : this.mixedMarkDisabled).paint(painter, inner);
         }
-        if (this.isFocused() && this.focusRing != Paint.NONE) {
+        if (this.isFocusVisible() && this.focusRing != Paint.NONE) {
             this.ring.paint(painter, this.focusRing, box);
         }
         this.layout.paintCaption(painter, bounds, enabled,

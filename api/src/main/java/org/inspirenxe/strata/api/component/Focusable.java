@@ -101,6 +101,19 @@ public interface Focusable<S extends Focusable<S>> extends EventTarget<S> {
     boolean isFocused();
 
     /**
+     * Returns whether this component has keyboard focus that should be shown, as a focus ring or a lit face. Focus
+     * is shown when it came from the keyboard, or from code while the last press was a key's rather than a pointer's,
+     * and also once a key is pressed while it has focus; a pointer press hides it again. So a button clicked with the
+     * mouse keeps focus without looking focused, and Tab shows where focus is. When the host becomes active again,
+     * focus comes back shown as it was. Strata's controls draw their focus rings, lit faces and keyboard cursors only
+     * while this is true, and text boxes show their focused look whenever they have focus. Themes can style it
+     * through the {@code focus_visible} style state.
+     *
+     * @return true while focused and focus is shown
+     */
+    boolean isFocusVisible();
+
+    /**
      * Asks the host to give this component keyboard focus. Fails, changing nothing, unless the component is
      * attached, focusable, visible and enabled, with every ancestor visible and enabled. While a dialog is open, it
      * also fails for a component below the top dialog, so only the dialog's content and overlays opened above it can

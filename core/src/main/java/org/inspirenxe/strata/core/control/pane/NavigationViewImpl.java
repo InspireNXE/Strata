@@ -1736,7 +1736,7 @@ public final class NavigationViewImpl extends BuiltInComposite<NavigationView> i
                 }
             }
             this.badge.paint(painter, this.badgeRect);
-            if (view.isFocused() && view.cursor == item) {
+            if (view.isFocusVisible() && view.cursor == item) {
                 this.ring.paint(painter, view.focusRing, bounds);
             }
         }

@@ -122,6 +122,7 @@ public class Node implements ComponentPeer {
     private StyleStates styleStates;
 
     private boolean visible;
+    private boolean hitTestVisible;
     private boolean enabled;
     private boolean focusable;
     private boolean tabbable;
@@ -196,6 +197,7 @@ public class Node implements ComponentPeer {
         this.facade = Objects.requireNonNull(facade, "facade");
         this.hooks = Objects.requireNonNull(hooks, "hooks");
         this.visible = true;
+        this.hitTestVisible = true;
         this.enabled = true;
         this.opacity = 1f;
         this.margin = Insets.NONE;
@@ -488,6 +490,73 @@ public class Node implements ComponentPeer {
     }
 
     /**
+     * Lays the component out again after a change that may leave its size as it was, such as new text in a label that
+     * neither wraps nor shortens it. The next layout measures it again in the space it was last offered. When its
+     * desired size, its minimum size, if a parent asked for it, and its baseline come out as before, it is only
+     * arranged again in its last slot and drawn again, and no ancestor is measured or arranged. Otherwise its
+     * ancestors are laid out again, as after {@link #invalidateLayout()}. A component that was never laid out, is
+     * hidden, already needs a measure or has a {@link Component#MEASURED} handler is invalidated at once. Use it only
+     * for a component whose size does not depend on the space it is offered, since only the last space is tried.
+     *
+     * @throws IllegalStateException if attached and called off the UI thread
+     */
+    public final void invalidateMeasure() {
+        this.checkThread();
+        final Root current = this.root;
+        if (current == null || this.measureDirty || this.lastSlot == null || !this.visible
+                || this.dispatcher != null && this.dispatcher.hasHandlers(Component.MEASURED)) {
+            this.invalidateLayout();
+            return;
+        }
+        this.measureDirty = true;
+        current.requestMeasure(this);
+    }
+
+    /**
+     * Measures the component again in the space it was last offered, as {@link #invalidateMeasure()} asked: arranges
+     * it again in its last slot if its size, minimum and baseline stayed the same, and marks its ancestors for layout
+     * otherwise. Does nothing if something measured it since it asked.
+     *
+     * @param pass the layout context
+     */
+    final void remeasure(final LayoutPass pass) {
+        if (!this.measureDirty || this.lastSlot == null) {
+            return;
+        }
+        final float width = this.desiredWidth;
+        final float height = this.desiredHeight;
+        final boolean minimumKnown = !this.minimumDirty;
+        final float minimumWidth = this.contentMinWidth;
+        final float minimumHeight = this.contentMinHeight;
+        final float baseline = this.baseline();
+        boolean same = false;
+        try {
+            this.measure(pass, this.lastAvailableWidth, this.lastAvailableHeight);
+            this.minimumDirty = true;
+            same = this.desiredWidth == width && this.desiredHeight == height
+                    && Float.compare(this.baseline(), baseline) == 0;
+            if (same && minimumKnown) {
+                this.minimumSize(pass);
+                same = this.contentMinWidth == minimumWidth && this.contentMinHeight == minimumHeight;
+            }
+        } finally {
+            if (!same) {
+                // The layout that follows measures the ancestors, which take this node's new size
+                this.minimumDirty = true;
+                this.arrangeDirty = true;
+                for (Node node = this.parent; node != null; node = node.parent) {
+                    node.measureDirty = true;
+                    node.minimumDirty = true;
+                    node.arrangeDirty = true;
+                }
+            }
+        }
+        if (same) {
+            this.rearrange(pass);
+        }
+    }
+
+    /**
      * Asks the host for a frame, because the component's look changed and its layout did not. Does nothing while
      * detached: attaching asks for a frame anyway.
      */
@@ -664,16 +733,16 @@ public class Node implements ComponentPeer {
     }
 
     /**
-     * Finds the deepest visible node at a point. A hidden node hides its whole subtree from the pointer. A disabled
-     * node, or one inside a disabled node, can be hit, so the pointer stops there: {@link Root} gives it no input
-     * events and shows its tooltip.
+     * Finds the deepest visible node at a point. A hidden node, or one whose hit testing is turned off, hides its
+     * whole subtree from the pointer. A disabled node, or one inside a disabled node, can be hit, so the pointer stops
+     * there: {@link Root} gives it no input events and shows its tooltip.
      *
      * @param x the x, in the host's coordinates
      * @param y the y, in the host's coordinates
      * @return the node hit, or {@code null} if the point misses this node
      */
     public Node hitTest(final float x, final float y) {
-        if (!this.visible || !this.bounds.contains(x, y)) {
+        if (!this.visible || !this.hitTestVisible || !this.bounds.contains(x, y)) {
             return null;
         }
         return this;
@@ -930,11 +999,16 @@ public class Node implements ComponentPeer {
         this.styleStates().set(state, on);
     }
 
+    @Override
+    public final boolean hasStyleState(final String state) {
+        return this.styleStates != null && this.styleStates.isOn(state);
+    }
+
     /**
      * Looks up a paint for the component's style states, as {@link StyleStates} describes: {@code key.disabled}
      * while the component is disabled, itself or through an ancestor, then {@code key.<state>} for each of its own
-     * states that is on, in the order they were first set, then {@code key.pressed}, {@code key.hovered} and
-     * {@code key.focused}, and last the key. The result of each combination is kept until the theme changes.
+     * states that is on, in the order they were first set, then {@code key.pressed}, {@code key.hovered},
+     * {@code key.focus_visible} and {@code key.focused}, and last the key. The result of each combination is kept until the theme changes.
      *
      * @param key the style key
      * @param fallback returned when the theme has none of the keys tried, or the node has no theme yet
@@ -977,7 +1051,8 @@ public class Node implements ComponentPeer {
     }
 
     private long styleCombination(final StyleStates states) {
-        return states.combination(!this.facade.isEffectivelyEnabled(), this.pressed, this.hovered, this.focused);
+        return states.combination(!this.facade.isEffectivelyEnabled(), this.pressed, this.hovered,
+                this.isFocusVisible(), this.focused);
     }
 
     // ------------------------------------------------------------------
@@ -1188,6 +1263,11 @@ public class Node implements ComponentPeer {
         return this.focused;
     }
 
+    @Override
+    public final boolean isFocusVisible() {
+        return this.focused && this.root != null && this.root.isFocusVisible();
+    }
+
     final void setFocused(final boolean focused) {
         this.focused = focused;
     }
@@ -1240,6 +1320,19 @@ public class Node implements ComponentPeer {
         if (this.visible != visible) {
             this.visible = visible;
             this.invalidateLayout();
+            this.treeChanged();
+        }
+    }
+
+    @Override
+    public final boolean isHitTestVisible() {
+        return this.hitTestVisible;
+    }
+
+    @Override
+    public final void setHitTestVisible(final boolean hitTestVisible) {
+        if (this.hitTestVisible != hitTestVisible) {
+            this.hitTestVisible = hitTestVisible;
             this.treeChanged();
         }
     }

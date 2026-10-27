@@ -24,6 +24,7 @@ import org.inspirenxe.strata.api.geometry.Rect;
 import org.inspirenxe.strata.api.text.TextSpan;
 import org.inspirenxe.strata.api.theme.SpriteId;
 import org.inspirenxe.strata.api.visual.PixelBuffer;
+import org.inspirenxe.strata.api.visual.Sampling;
 import org.inspirenxe.strata.api.visual.Visual;
 
 /**
@@ -306,6 +307,41 @@ public interface Canvas {
      * Restores the smoothing in place before the matching {@link #pushSmoothing}. The default does nothing.
      */
     default void popSmoothing() {
+    }
+
+    /**
+     * Draws frosted glass, as {@link org.inspirenxe.strata.api.extension.Painter#backdrop} describes: the backdrop
+     * behind the rectangle blurred, then the tint over it, both cut to rounded corners and inside the current clip,
+     * under the current opacity. Core calls it only when {@link Capabilities#blursBackdrop()} is true, with a radius
+     * already limited to half the shorter side and a blur of 0 or more; otherwise it fills a rounded rectangle with
+     * the tint. A canvas with no backdrop to blur at the time draws the tint alone. The default fills the rounded
+     * rectangle with the tint through {@link #fillRoundRect}.
+     *
+     * @param rect the area
+     * @param radius the radius of each corner
+     * @param blur how far the blur reaches, in UI units
+     * @param tint the ARGB color over the blurred backdrop
+     */
+    default void backdrop(final Rect rect, final float radius, final float blur, final int tint) {
+        this.fillRoundRect(rect, radius, tint);
+    }
+
+    /**
+     * Sets how later {@link #sprite}, {@link #spriteRegion}, {@link #nineSlice} and {@link #pixels} calls sample
+     * their images until the matching {@link #popSampling()}. Outside any push they are sampled
+     * {@link Sampling#NEAREST}. Core balances every push with a pop, as it does
+     * clips. A canvas that can choose must apply it to those calls, and may leave text and visuals alone. The default
+     * does nothing, for an engine that samples its own way.
+     *
+     * @param sampling the sampling
+     */
+    default void pushSampling(final Sampling sampling) {
+    }
+
+    /**
+     * Restores the sampling in place before the matching {@link #pushSampling}. The default does nothing.
+     */
+    default void popSampling() {
     }
 
     /**

@@ -18,9 +18,12 @@ package org.inspirenxe.strata.api.extension;
 import org.inspirenxe.strata.api.geometry.Insets;
 import org.inspirenxe.strata.api.geometry.Rect;
 import org.inspirenxe.strata.api.geometry.Size;
+import org.inspirenxe.strata.api.layout.HorizontalAlignment;
+import org.inspirenxe.strata.api.layout.VerticalAlignment;
 import org.inspirenxe.strata.api.text.TextSpan;
 import org.inspirenxe.strata.api.theme.SpriteId;
 import org.inspirenxe.strata.api.visual.PixelBuffer;
+import org.inspirenxe.strata.api.visual.Sampling;
 import org.inspirenxe.strata.api.visual.Visual;
 
 /**
@@ -178,6 +181,20 @@ public interface Painter {
     void shadow(Rect rect, float radius, float blur, int argb);
 
     /**
+     * Draws frosted glass over a rectangle: what lies behind it blurred, then the tint over that, cut to rounded
+     * corners. What counts as behind is the engine's to say. An engine whose application gives it a backdrop image,
+     * such as the scene behind the screens, blurs that image where the rectangle sits; one that can read what it
+     * drew blurs that. An engine that cannot blur fills the rounded rectangle with the tint alone, which is also
+     * what a blur of 0 gives. Radii follow the rules above.
+     *
+     * @param rect the area
+     * @param radius the radius of each corner
+     * @param blur how far the blur reaches, in UI units: about three times the spread of the Gaussian it applies
+     * @param tint the ARGB color over the blurred backdrop
+     */
+    void backdrop(Rect rect, float radius, float blur, int tint);
+
+    /**
      * Runs {@code draw} with anti-aliasing turned on or off for what it draws. Shapes are smooth by default; pixel
      * art and bitmap fonts want hard edges. Engines that cannot anti-alias draw hard edges either way, and an engine
      * may apply the setting to sprites and text too.
@@ -186,6 +203,17 @@ public interface Painter {
      * @param draw the drawing
      */
     void smoothed(boolean smooth, Runnable draw);
+
+    /**
+     * Runs {@code draw} with sprites, nine-slices, tiled sprites and pixel buffers sampled one way. Outside any call
+     * they are sampled {@link Sampling#NEAREST}, which keeps pixel art sharp; {@link Sampling#LINEAR} suits photos
+     * and blurred pictures. Text, shapes and an engine's own visuals are not affected, and an engine that cannot
+     * choose samples its own way.
+     *
+     * @param sampling the sampling
+     * @param draw the drawing
+     */
+    void sampled(Sampling sampling, Runnable draw);
 
     /**
      * Runs {@code draw} with drawing limited to a rectangle with rounded corners, intersected with any clip already
@@ -274,6 +302,25 @@ public interface Painter {
      * @param y the top edge (not the baseline)
      */
     void text(TextSpan span, float x, float y);
+
+    /**
+     * Draws one line of text aligned in a rectangle, measured with the host's
+     * {@link org.inspirenxe.strata.api.text.TextMetrics}. Across, {@link HorizontalAlignment#LEFT} and
+     * {@link HorizontalAlignment#STRETCH} put it at the left edge, {@link HorizontalAlignment#CENTER} in the middle
+     * and {@link HorizontalAlignment#RIGHT} against the right edge. Down, {@link VerticalAlignment#TOP},
+     * {@link VerticalAlignment#STRETCH} and {@link VerticalAlignment#BASELINE} put the line's top at the top edge,
+     * {@link VerticalAlignment#MIDDLE} centers its line height and {@link VerticalAlignment#BOTTOM} puts its bottom
+     * at the bottom edge. Centering keeps whole numbers whole: with a whole rectangle and a whole text size, the
+     * spare unit of an odd difference goes right or below. The alignment does not mirror right to left, and text
+     * wider or taller than the rectangle is not cut; draw inside {@link #clipped} for that. The line's baseline is
+     * {@link org.inspirenxe.strata.api.text.TextMetrics#ascent} below where its top lands.
+     *
+     * @param span the text and its style
+     * @param rect the rectangle to align in
+     * @param horizontal where the text sits across
+     * @param vertical where the text sits down
+     */
+    void text(TextSpan span, Rect rect, HorizontalAlignment horizontal, VerticalAlignment vertical);
 
     /**
      * Runs {@code draw} with drawing limited to a rectangle, intersected with any clip already in place.

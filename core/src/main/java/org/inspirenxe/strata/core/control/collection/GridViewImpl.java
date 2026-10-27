@@ -1104,7 +1104,7 @@ public final class GridViewImpl<T> extends BuiltInComposite<GridView<T>> impleme
             } else if (this.isHoverWithin()) {
                 this.grid.hoveredPaint.paint(painter, this.highlight(bounds));
             }
-            if (this.index == this.grid.cursor && this.grid.isFocused()) {
+            if (this.index == this.grid.cursor && this.grid.isFocusVisible()) {
                 this.grid.focusPaint.paint(painter, bounds);
             }
         }

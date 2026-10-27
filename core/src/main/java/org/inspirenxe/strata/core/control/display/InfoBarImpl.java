@@ -547,10 +547,10 @@ public final class InfoBarImpl extends BuiltInComposite<InfoBar> implements Info
 
         @Override
         protected void paint(final Painter painter, final Rect bounds) {
-            final TextLine line = this.isHovered() || this.isFocused() ? this.hovered : this.normal;
+            final TextLine line = this.isHovered() || this.isFocusVisible() ? this.hovered : this.normal;
             line.draw(painter, bounds.x() + (bounds.width() - line.width()) * 0.5f,
                     bounds.y() + (bounds.height() - line.height()) * 0.5f);
-            if (this.isFocused() && !this.bar.focusRing.equals(Paint.NONE)) {
+            if (this.isFocusVisible() && !this.bar.focusRing.equals(Paint.NONE)) {
                 Rings.paint(painter, this.bar.focusRing, bounds);
             }
         }

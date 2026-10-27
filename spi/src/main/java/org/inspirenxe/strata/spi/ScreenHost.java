@@ -199,6 +199,14 @@ public interface ScreenHost extends InputSink {
     void setPixelsPerUnit(float pixelsPerUnit);
 
     /**
+     * Gives the host the sizes of the sprites it draws, which images showing a sprite take as their size until the
+     * developer sets one. It is {@link SpriteSizes#NONE} until set. Setting it marks every component for measuring.
+     *
+     * @param sizes the sprite sizes
+     */
+    void setSpriteSizes(SpriteSizes sizes);
+
+    /**
      * Returns the size the open screen's content wants in a given space, for a toolkit that asks an embedded widget
      * for its preferred size, such as Swing's {@code pack()}. The host builds a pending screen and flushes bindings,
      * then measures the content with the space offered, as a parent measures a child, without arranging it or
@@ -267,6 +275,21 @@ public interface ScreenHost extends InputSink {
      *     {@link Long#MAX_VALUE} if nothing timed is waiting
      */
     long nextFrameNanos();
+
+    /**
+     * Returns whether a render at a time would draw something other than what the last {@link #render} drew: when
+     * {@link #needsFrame()} is true, when something that moves with the clock, such as a running animation, asked for
+     * the next frame, when a timed change {@link #nextFrameNanos()} counts is due by then, or when the theme source,
+     * the theme registry, the translations or the platform's text metrics changed. Unlike {@link #nextFrameNanos()},
+     * it does not hold motion to the {@linkplain #frameRate() frame rate}. An engine that draws every frame anyway may
+     * show what it drew for the last render again in place of rendering while this is false, as long as nothing of
+     * its own that the host drew with changed, such as its sprites or its fonts. Call it on the UI thread, after a
+     * render. It allocates nothing.
+     *
+     * @param nanoTime the platform clock's {@link Clock#nanoTime()} reading for the frame
+     * @return true if a render is needed to draw the frame
+     */
+    boolean needsRender(long nanoTime);
 
     /**
      * Sets what runs when {@link #needsFrame()} turns from false to true, and runs it at once if a frame is already

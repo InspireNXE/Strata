@@ -114,13 +114,28 @@ import java.util.function.Function;
  * </ul>
  *
  * <h2>Theme keys</h2>
+ * <p>Every key can be replaced for one screen through the {@link org.inspirenxe.strata.api.theme.ThemeRef} it opens
+ * with, as the example below does; {@code Paint.NONE} turns a paint off, even the required one.</p>
  * <ul>
  *     <li>{@value #STYLE_BACKGROUND} (paint, optional): the list's whole area, behind the rows, so an empty list or
  *     the space below the last row is not see-through. Nothing is drawn if it is missing.</li>
- *     <li>{@value #STYLE_ROW_SELECTED} (paint, required): the selected row.</li>
- *     <li>{@value #STYLE_ROW} (paint, optional): every other row. Nothing is drawn if it is missing.</li>
- *     <li>{@value #STYLE_ROW_HOVERED} (paint, optional): a row under the pointer. Falls back to
+ *     <li>{@value #STYLE_ROW} (paint, optional): every row that is neither selected nor under the pointer. Nothing
+ *     is drawn if it is missing.</li>
+ *     <li>{@value #STYLE_ROW_HOVERED} (paint, optional): a row under the pointer that is not selected. Falls back to
  *     {@value #STYLE_ROW}.</li>
+ *     <li>{@value #STYLE_ROW_SELECTED} (paint, required): a selected row while the list has focus.</li>
+ *     <li>{@value #STYLE_ROW_SELECTED_UNFOCUSED} (paint, optional): a selected row while the list does not have
+ *     focus. Falls back to {@value #STYLE_ROW_SELECTED}.</li>
+ *     <li>{@value #STYLE_ROW_RING} (paint, optional): a one-unit ring just inside each selected row while the list's
+ *     focus is {@linkplain #isFocusVisible() shown}. None if it is missing.</li>
+ *     <li>{@value #STYLE_ROW_RING_UNFOCUSED} (paint, optional): the same ring at other times. None if it is
+ *     missing.</li>
+ *     <li>{@value #STYLE_PADDING} (insets, optional): space above the first row and below the last.</li>
+ *     <li>{@value #STYLE_ROW_WIDTH} (metric, optional) and {@value #STYLE_BAR_GAP} (metric, optional): a centered
+ *     column of rows no wider than this, and the gap to its scroll bar.</li>
+ *     <li>{@value #STYLE_SCROLL_ROWS} (metric, optional): how many rows a wheel notch scrolls.</li>
+ *     <li>{@value #STYLE_EDGE} and {@value #STYLE_EDGE_OUTER} (paints, optional): lines outside the top and bottom
+ *     edges.</li>
  *     <li>{@value #STYLE_PLACEHOLDER} (text style, optional): the {@linkplain #setPlaceholder placeholder}. Falls
  *     back to the default style.</li>
  *     <li>{@value #STYLE_DROP} (paint, optional): the line, {@value #DROP_MARK_HEIGHT} units high across the rows,
@@ -129,8 +144,27 @@ import java.util.function.Function;
  *     {@link org.inspirenxe.strata.api.ComponentFactory#cellLabel(String)} makes. Defaults to
  *     {@value org.inspirenxe.strata.api.ComponentFactory#CELL_PADDING} at the sides and none at the top and
  *     bottom.</li>
+ *     <li>{@value #STYLE_TYPEAHEAD_TIMEOUT} (metric, optional): how long a type-ahead prefix lasts.</li>
  *     <li>The scroll bar keys of {@link org.inspirenxe.strata.api.layout.ScrollPanel}.</li>
  * </ul>
+ *
+ * <pre>{@code
+ * ScreenHandle handle = screens.open(menu, ThemeRef.platform()
+ *         .override(ListView.STYLE_ROW, Paint.NONE)
+ *         .override(ListView.STYLE_ROW_HOVERED, Paint.solid(0x22FFFFFF))
+ *         .override(ListView.STYLE_ROW_SELECTED, Paint.solid(0x44FFFFFF))
+ *         .override(ListView.STYLE_ROW_SELECTED_UNFOCUSED, Paint.solid(0x33FFFFFF))
+ *         .override(ListView.STYLE_ROW_RING, Paint.NONE));
+ * }</pre>
+ *
+ * <h2>Cells that draw the row's look</h2>
+ * <p>The list turns the {@value #STATE_SELECTED} style state on for the cells of selected rows and
+ * {@value #STATE_ROW_HOVERED} for the cell of the row under the pointer, and off again, before they are drawn. A cell
+ * written as a {@link org.inspirenxe.strata.api.extension.CustomComponent} picks its look for them from the theme
+ * with {@code stylePaint}, so {@code menu.row.selected} applies to a selected row, or checks them with
+ * {@code hasStyleState}, as for an accent bar drawn at the left of a selected row. With
+ * {@link #setRowBackgrounds setRowBackgrounds(false)} the list draws no row paints or rings of its own, so its cells
+ * take the whole look without changing the theme for other lists.</p>
  *
  * <pre>{@code
  * ListView<Listing> listings = factory.listView((Listing listing) -> factory.label(listing.name()))
@@ -171,13 +205,13 @@ public interface ListView<T> extends Component<ListView<T>>, Focusable<ListView<
      */
     String STYLE_ROW_SELECTED_UNFOCUSED = "list.row.selected.unfocused";
     /**
-     * Style key for a one-unit ring just inside the selected row while the list has focus (paint, optional).
-     * Defaults to none. Trees and tables read it too.
+     * Style key for a one-unit ring just inside the selected row while the list's focus is
+     * {@linkplain #isFocusVisible() shown} (paint, optional). Defaults to none. Trees and tables read it too.
      */
     String STYLE_ROW_RING = "list.row.ring";
     /**
-     * Style key for a one-unit ring just inside the selected row while the list does not have focus (paint,
-     * optional). Defaults to none. Trees and tables read it too.
+     * Style key for a one-unit ring just inside the selected row while the list does not have focus, or has it
+     * without showing it (paint, optional). Defaults to none. Trees and tables read it too.
      */
     String STYLE_ROW_RING_UNFOCUSED = "list.row.ring.unfocused";
     /**
@@ -245,6 +279,34 @@ public interface ListView<T> extends Component<ListView<T>>, Focusable<ListView<
      * milliseconds.
      */
     long DEFAULT_TYPEAHEAD_TIMEOUT = 1000L;
+    /**
+     * The style state the list turns on for the cells of selected rows, for a cell that draws the row's look.
+     */
+    String STATE_SELECTED = "selected";
+    /**
+     * The style state the list turns on for the cell of the row under the pointer, for a cell that draws the row's
+     * look. It differs from the {@code hovered} state, which is the deepest component under the pointer and may be a
+     * part of the cell.
+     */
+    String STATE_ROW_HOVERED = "row_hovered";
+
+    /**
+     * Returns whether the list draws its rows' paints and rings behind the cells.
+     *
+     * @return true unless turned off with {@code setRowBackgrounds(false)}
+     */
+    boolean hasRowBackgrounds();
+
+    /**
+     * Sets whether the list draws {@value #STYLE_ROW}, {@value #STYLE_ROW_HOVERED}, {@value #STYLE_ROW_SELECTED},
+     * {@value #STYLE_ROW_SELECTED_UNFOCUSED} and the rings behind its cells. Turned off, only the cells draw the
+     * rows, picking their look from the {@value #STATE_SELECTED} and {@value #STATE_ROW_HOVERED} style states, while
+     * other lists keep the theme's. The background, the drop line and the scroll bar are drawn either way.
+     *
+     * @param rowBackgrounds false to leave the rows' look to the cells
+     * @return this list
+     */
+    ListView<T> setRowBackgrounds(boolean rowBackgrounds);
 
     /**
      * Replaces the items and rebuilds the rows in view. Each selected item moves to the item with its key, as

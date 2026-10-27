@@ -26,6 +26,7 @@ import org.inspirenxe.strata.api.extension.Painter;
 import org.inspirenxe.strata.api.geometry.Insets;
 import org.inspirenxe.strata.api.geometry.Rect;
 import org.inspirenxe.strata.api.geometry.Size;
+import org.inspirenxe.strata.api.layout.HorizontalAlignment;
 import org.inspirenxe.strata.api.text.Text;
 import org.inspirenxe.strata.api.theme.Paint;
 import org.inspirenxe.strata.api.theme.SpriteId;
@@ -201,6 +202,18 @@ public final class ButtonImpl extends BuiltInComponent<Button> implements Button
     }
 
     @Override
+    public HorizontalAlignment captionAlignment() {
+        return this.content.alignment();
+    }
+
+    @Override
+    public Button setCaptionAlignment(final HorizontalAlignment alignment) {
+        this.content.setAlignment(alignment);
+        this.repaint();
+        return this;
+    }
+
+    @Override
     public boolean isLink() {
         return this.link;
     }
@@ -336,11 +349,11 @@ public final class ButtonImpl extends BuiltInComponent<Button> implements Button
     protected void paint(final Painter painter, final Rect bounds) {
         final ButtonContent content = this.content;
         final boolean enabled = this.isEnabled();
-        final boolean lit = this.isHovered() || this.isFocused();
+        final boolean lit = this.isHovered() || this.isFocusVisible();
         if (!this.link) {
             final Paint face = content.face(enabled, this.isPressed() && this.isHovered(), lit);
             (this.isDefault && face == content.normal ? content.defaultFace : face).paint(painter, bounds);
-            if (this.isFocused()) {
+            if (this.isFocusVisible()) {
                 content.paintFocusRing(painter, bounds);
             }
         }

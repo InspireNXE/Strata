@@ -277,6 +277,26 @@ public interface Component<T extends Component<T>> extends EventTarget<T>, Enabl
     T setVisible(boolean visible);
 
     /**
+     * Returns whether the pointer can hit the component.
+     *
+     * @return true unless turned off with {@code setHitTestVisible(false)}
+     */
+    boolean isHitTestVisible();
+
+    /**
+     * Sets whether the pointer can hit the component and everything inside it. Turned off, the component is still
+     * drawn and still takes space, but hit testing passes over it and its descendants as if they were not there, so
+     * the pointer targets what lies below: usually the parent. A label inside a custom button, for example, would
+     * otherwise take the hover and the press from the button. The component can still take focus from the keyboard
+     * or from code. {@link org.inspirenxe.strata.api.ComponentFactory#componentAt} skips it too. A change takes
+     * effect for hover before the next frame, without the pointer moving.
+     *
+     * @param hitTestVisible false to let the pointer through
+     * @return this component
+     */
+    T setHitTestVisible(boolean hitTestVisible);
+
+    /**
      * Returns whether the component is enabled.
      *
      * @return true unless disabled with {@code setEnabled(false)}

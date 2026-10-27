@@ -22,6 +22,8 @@ import org.inspirenxe.strata.api.extension.Stroke;
 import org.inspirenxe.strata.api.geometry.Insets;
 import org.inspirenxe.strata.api.geometry.Rect;
 import org.inspirenxe.strata.api.geometry.Size;
+import org.inspirenxe.strata.api.layout.HorizontalAlignment;
+import org.inspirenxe.strata.api.layout.VerticalAlignment;
 import org.inspirenxe.strata.api.text.InlineElement;
 import org.inspirenxe.strata.api.text.InlineSprite;
 import org.inspirenxe.strata.api.text.InlineVisual;
@@ -29,6 +31,7 @@ import org.inspirenxe.strata.api.text.TextMetrics;
 import org.inspirenxe.strata.api.text.TextSpan;
 import org.inspirenxe.strata.api.theme.SpriteId;
 import org.inspirenxe.strata.api.visual.PixelBuffer;
+import org.inspirenxe.strata.api.visual.Sampling;
 import org.inspirenxe.strata.api.visual.Visual;
 import org.inspirenxe.strata.core.text.InlineMetrics;
 import org.inspirenxe.strata.spi.Canvas;
@@ -76,6 +79,7 @@ public final class CanvasPainter implements Painter {
     private boolean slicesSprites;
     private boolean drawsShapes;
     private boolean shapesRightToLeft;
+    private boolean blursBackdrop;
     // Device pixels per unit of the host, and the product of the scales in progress
     private float pixelsPerUnit = 1f;
     private float scale = 1f;
@@ -132,6 +136,7 @@ public final class CanvasPainter implements Painter {
     public CanvasPainter begin(final Canvas canvas, final Capabilities capabilities, final float pixelsPerUnit) {
         this.begin(canvas, capabilities.slicesSprites(), capabilities.drawsShapes(), pixelsPerUnit);
         this.shapesRightToLeft = capabilities.shapesRightToLeft();
+        this.blursBackdrop = capabilities.blursBackdrop();
         return this;
     }
 
@@ -141,6 +146,7 @@ public final class CanvasPainter implements Painter {
         this.slicesSprites = slicesSprites;
         this.drawsShapes = drawsShapes;
         this.shapesRightToLeft = false;
+        this.blursBackdrop = false;
         this.pixelsPerUnit = pixelsPerUnit;
         this.scale = 1f;
         this.fallback.begin(canvas);
@@ -206,6 +212,18 @@ public final class CanvasPainter implements Painter {
         } else {
             this.fallback.polyline(points, count, stroke, argb);
         }
+    }
+
+    @Override
+    public void backdrop(final Rect rect, final float radius, final float blur, final int tint) {
+        if (!this.blursBackdrop || !(blur > 0f)) {
+            this.fillRoundRect(rect, radius, tint);
+            return;
+        }
+        if (!CanvasPainter.isArea(rect)) {
+            return;
+        }
+        this.canvas.backdrop(rect, CanvasPainter.radius(rect, radius), blur, tint);
     }
 
     @Override
@@ -318,6 +336,16 @@ public final class CanvasPainter implements Painter {
             this.canvas.shadow(rect, r, blur, argb);
         } else {
             this.fallback.shadow(rect, r, blur, argb);
+        }
+    }
+
+    @Override
+    public void sampled(final Sampling sampling, final Runnable draw) {
+        this.canvas.pushSampling(sampling);
+        try {
+            draw.run();
+        } finally {
+            this.canvas.popSampling();
         }
     }
 
@@ -536,6 +564,36 @@ public final class CanvasPainter implements Painter {
         } else {
             this.canvas.text(reversed, x, y);
         }
+    }
+
+    @Override
+    public void text(final TextSpan span, final Rect rect, final HorizontalAlignment horizontal,
+                     final VerticalAlignment vertical) {
+        // A painter made without metrics cannot measure, so it aligns a size of 0
+        final float width = this.metrics == null ? 0f : this.metrics.width(span);
+        final float height = this.metrics == null ? 0f : this.metrics.height(span);
+        final float x = switch (horizontal) {
+            case LEFT, STRETCH -> rect.x();
+            case CENTER -> centered(rect.x(), rect.width(), width);
+            case RIGHT -> rect.right() - width;
+        };
+        final float y = switch (vertical) {
+            case TOP, STRETCH, BASELINE -> rect.y();
+            case MIDDLE -> centered(rect.y(), rect.height(), height);
+            case BOTTOM -> rect.bottom() - height;
+        };
+        this.text(span, x, y);
+    }
+
+    /**
+     * Returns where something of a size starts when centered in a space, keeping whole numbers whole as
+     * {@code Caption.center} does.
+     */
+    private static float centered(final float start, final float space, final float size) {
+        if (space == Math.rint(space) && size == Math.rint(size)) {
+            return start + (float) (Math.floor(space / 2d) - Math.floor(size / 2d));
+        }
+        return start + (space - size) * 0.5f;
     }
 
     @Override

@@ -477,14 +477,16 @@ public interface ComponentFactory {
 
     /**
      * Makes an {@link Image} that draws nothing until it is given a {@linkplain Image#setSprite sprite} or a
-     * {@linkplain Image#setVisual visual}, 16 by 16 units until {@linkplain Image#setImageSize resized}.
+     * {@linkplain Image#setVisual visual}, 16 by 16 units until it shows something with a size of its own or is
+     * {@linkplain Image#setImageSize resized}.
      *
      * @return a new image
      */
     Image image();
 
     /**
-     * Makes an {@link Image}, 16 by 16 units until {@linkplain Image#setImageSize resized}.
+     * Makes an {@link Image} at the sprite's size where the engine knows it, and 16 by 16 units where it does not,
+     * until {@linkplain Image#setImageSize resized}.
      *
      * @param sprite the sprite to draw
      * @return a new image

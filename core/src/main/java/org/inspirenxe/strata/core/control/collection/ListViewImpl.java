@@ -54,6 +54,7 @@ import org.inspirenxe.strata.core.layout.ScrollTrack;
 import org.inspirenxe.strata.core.layout.ThumbDrag;
 import org.inspirenxe.strata.core.node.BuiltInComposite;
 import org.inspirenxe.strata.core.node.ComponentFactoryImpl;
+import org.inspirenxe.strata.core.node.Node;
 import org.inspirenxe.strata.core.node.Root;
 import org.inspirenxe.strata.core.text.TextLine;
 
@@ -120,6 +121,7 @@ public final class ListViewImpl<T> extends BuiltInComposite<ListView<T>> impleme
     private int anchor;
     private boolean deselectable;
     private boolean activateOnClick;
+    private boolean rowBackgrounds = true;
     private Text placeholder;
     private TextLine placeholderLine = TextLine.EMPTY;
     private boolean rowsStale;
@@ -157,6 +159,7 @@ public final class ListViewImpl<T> extends BuiltInComposite<ListView<T>> impleme
     // lines and the thumb
     private int[] paintIndex;
     private Rect[] paintRect;
+    private Component<?>[] paintCell;
     private Rect[][] paintRing;
     private int paintCount;
     private Rect[] edges;
@@ -223,6 +226,7 @@ public final class ListViewImpl<T> extends BuiltInComposite<ListView<T>> impleme
         this.chosenBits = new BitSet();
         this.paintIndex = new int[0];
         this.paintRect = new Rect[0];
+        this.paintCell = new Component<?>[0];
         this.paintRing = new Rect[0][];
         this.edges = new Rect[0];
         this.thumbRect = Rect.ZERO;
@@ -796,6 +800,18 @@ public final class ListViewImpl<T> extends BuiltInComposite<ListView<T>> impleme
     }
 
     @Override
+    public boolean hasRowBackgrounds() {
+        return this.rowBackgrounds;
+    }
+
+    @Override
+    public ListView<T> setRowBackgrounds(final boolean rowBackgrounds) {
+        this.rowBackgrounds = rowBackgrounds;
+        this.repaint();
+        return this;
+    }
+
+    @Override
     public ListView<T> setActivateOnClick(final boolean onClick) {
         this.activateOnClick = onClick;
         return this;
@@ -1234,6 +1250,7 @@ public final class ListViewImpl<T> extends BuiltInComposite<ListView<T>> impleme
         if (this.paintRect.length < count) {
             this.paintIndex = new int[count];
             this.paintRect = new Rect[count];
+            this.paintCell = new Component<?>[count];
             this.paintRing = new Rect[count][];
         }
         this.paintCount = 0;
@@ -1249,6 +1266,7 @@ public final class ListViewImpl<T> extends BuiltInComposite<ListView<T>> impleme
                     this.rowWidth, this.rowHeight);
             context.arrange(cell, rect);
             this.paintIndex[this.paintCount] = i;
+            this.paintCell[this.paintCount] = cell;
             this.paintRect[this.paintCount] = this.flow(rect);
             this.paintRing[this.paintCount] = null;
             this.paintCount++;
@@ -1302,7 +1320,8 @@ public final class ListViewImpl<T> extends BuiltInComposite<ListView<T>> impleme
     }
 
     /**
-     * Draws each built row's background, inside the viewport clip, from the rectangles arrange made.
+     * Gives each built row's cell its row's style states and draws the row's background, inside the viewport clip,
+     * from the rectangles arrange made.
      */
     private void drawRows() {
         final int hoveredRow = this.isHoverWithin() ? this.rowAt(this.pointerY) : -1;
@@ -1310,9 +1329,15 @@ public final class ListViewImpl<T> extends BuiltInComposite<ListView<T>> impleme
         for (int i = 0; i < this.paintCount; i++) {
             final int index = this.paintIndex[i];
             final Rect rect = this.paintRect[i];
+            final Node cell = this.nodeOf(this.paintCell[i]);
+            cell.setStyleState(STATE_SELECTED, this.chosenBits.get(index));
+            cell.setStyleState(STATE_ROW_HOVERED, index == hoveredRow);
+            if (!this.rowBackgrounds) {
+                continue;
+            }
             if (this.chosenBits.get(index)) {
                 (focused ? this.rowSelected : this.rowSelectedUnfocused).paint(this.painter, rect);
-                final Paint edge = focused ? this.ring : this.ringUnfocused;
+                final Paint edge = this.isFocusVisible() ? this.ring : this.ringUnfocused;
                 if (edge != Paint.NONE) {
                     if (this.paintRing[i] == null) {
                         this.paintRing[i] = Shapes.ring(rect);

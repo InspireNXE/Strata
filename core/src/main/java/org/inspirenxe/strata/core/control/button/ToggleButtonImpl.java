@@ -26,6 +26,7 @@ import org.inspirenxe.strata.api.extension.Painter;
 import org.inspirenxe.strata.api.geometry.Insets;
 import org.inspirenxe.strata.api.geometry.Rect;
 import org.inspirenxe.strata.api.geometry.Size;
+import org.inspirenxe.strata.api.layout.HorizontalAlignment;
 import org.inspirenxe.strata.api.text.Text;
 import org.inspirenxe.strata.api.theme.Paint;
 import org.inspirenxe.strata.api.theme.SpriteId;
@@ -166,6 +167,18 @@ public final class ToggleButtonImpl extends BuiltInComponent<ToggleButton> imple
     }
 
     @Override
+    public HorizontalAlignment captionAlignment() {
+        return this.content.alignment();
+    }
+
+    @Override
+    public ToggleButton setCaptionAlignment(final HorizontalAlignment alignment) {
+        this.content.setAlignment(alignment);
+        this.repaint();
+        return this;
+    }
+
+    @Override
     public boolean isSelected() {
         return this.on;
     }
@@ -266,7 +279,7 @@ public final class ToggleButtonImpl extends BuiltInComponent<ToggleButton> imple
     protected void paint(final Painter painter, final Rect bounds) {
         final ButtonContent content = this.content;
         final boolean enabled = this.isEnabled();
-        final boolean lit = this.isHovered() || this.isFocused();
+        final boolean lit = this.isHovered() || this.isFocusVisible();
         final boolean held = this.isPressed() && this.isHovered();
         final Paint face;
         if (!enabled) {
@@ -279,7 +292,7 @@ public final class ToggleButtonImpl extends BuiltInComponent<ToggleButton> imple
             face = lit ? content.hovered : content.normal;
         }
         face.paint(painter, bounds);
-        if (this.isFocused()) {
+        if (this.isFocusVisible()) {
             content.paintFocusRing(painter, bounds);
         }
         TextLine shown = enabled ? content.caption : content.disabledCaption;

@@ -52,15 +52,19 @@ final class StyleStates {
      */
     static final String HOVERED = "hovered";
     /**
+     * The state of the component with keyboard focus that should be shown.
+     */
+    static final String FOCUS_VISIBLE = "focus_visible";
+    /**
      * The state of the component with keyboard focus.
      */
     static final String FOCUSED = "focused";
 
-    private static final Set<String> BUILT_IN = Set.of(DISABLED, PRESSED, HOVERED, FOCUSED);
+    private static final Set<String> BUILT_IN = Set.of(DISABLED, PRESSED, HOVERED, FOCUS_VISIBLE, FOCUSED);
     // The node's states after the component's own, in the order a lookup tries them; their bits start at 2
-    private static final String[] AFTER_OWN = {PRESSED, HOVERED, FOCUSED};
-    // The node's states take the four low bits of a combination, the component's own the rest
-    private static final int OWN_SHIFT = 4;
+    private static final String[] AFTER_OWN = {PRESSED, HOVERED, FOCUS_VISIBLE, FOCUSED};
+    // The node's states take the five low bits of a combination, the component's own the rest
+    private static final int OWN_SHIFT = 5;
     private static final int MAX_OWN = Long.SIZE - OWN_SHIFT;
     // A cached lookup that found no key, so the caller's fallback applies
     private static final Object MISSING = new Object();
@@ -107,9 +111,15 @@ final class StyleStates {
      * @param focused whether it has focus
      * @return the combination
      */
-    long combination(final boolean disabled, final boolean pressed, final boolean hovered, final boolean focused) {
-        return (disabled ? 1L : 0L) | (pressed ? 2L : 0L) | (hovered ? 4L : 0L) | (focused ? 8L : 0L)
-                | this.ownOn << OWN_SHIFT;
+    boolean isOn(final String state) {
+        final int index = this.own.indexOf(state);
+        return index >= 0 && (this.ownOn & 1L << index) != 0L;
+    }
+
+    long combination(final boolean disabled, final boolean pressed, final boolean hovered,
+                     final boolean focusVisible, final boolean focused) {
+        return (disabled ? 1L : 0L) | (pressed ? 2L : 0L) | (hovered ? 4L : 0L) | (focusVisible ? 8L : 0L)
+                | (focused ? 16L : 0L) | this.ownOn << OWN_SHIFT;
     }
 
     /**

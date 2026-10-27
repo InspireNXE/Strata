@@ -17,6 +17,7 @@ package org.inspirenxe.strata.core.event;
 
 import org.inspirenxe.strata.api.component.Component;
 import org.inspirenxe.strata.api.event.input.FocusEvent;
+import org.inspirenxe.strata.api.event.input.FocusReason;
 
 import java.util.Optional;
 
@@ -26,6 +27,7 @@ import java.util.Optional;
  */
 public final class FocusEventImpl extends EventImpl implements FocusEvent {
     private final Component<?> other;
+    private final FocusReason reason;
 
     /**
      * Creates the event.
@@ -33,14 +35,21 @@ public final class FocusEventImpl extends EventImpl implements FocusEvent {
      * @param target the component gaining or losing focus
      * @param other the component on the other side of the move, or {@code null} when focus comes from nothing or
      *     goes to nothing
+     * @param reason why focus moved
      */
-    public FocusEventImpl(final Component<?> target, final Component<?> other) {
+    public FocusEventImpl(final Component<?> target, final Component<?> other, final FocusReason reason) {
         super(target);
         this.other = other;
+        this.reason = reason;
     }
 
     @Override
     public Optional<Component<?>> other() {
         return Optional.ofNullable(this.other);
+    }
+
+    @Override
+    public FocusReason reason() {
+        return this.reason;
     }
 }

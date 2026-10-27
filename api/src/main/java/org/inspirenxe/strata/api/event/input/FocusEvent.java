@@ -38,4 +38,11 @@ public interface FocusEvent extends SnapshotEvent {
      *         came from or went to nothing
      */
     Optional<Component<?>> other();
+
+    /**
+     * Returns why focus moved. A loss and the gain that follows it report the same reason.
+     *
+     * @return the reason
+     */
+    FocusReason reason();
 }

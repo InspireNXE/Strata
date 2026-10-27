@@ -31,10 +31,12 @@ import org.inspirenxe.strata.api.event.Event;
 import org.inspirenxe.strata.api.event.EventHandler;
 import org.inspirenxe.strata.api.event.EventType;
 import org.inspirenxe.strata.api.event.Subscription;
+import org.inspirenxe.strata.api.event.cause.Cause;
 import org.inspirenxe.strata.api.event.cause.CauseFrame;
 import org.inspirenxe.strata.api.event.cause.CauseKeys;
 import org.inspirenxe.strata.api.event.cause.Device;
 import org.inspirenxe.strata.api.event.cause.Origin;
+import org.inspirenxe.strata.api.event.input.FocusReason;
 import org.inspirenxe.strata.api.event.input.InputEvents;
 import org.inspirenxe.strata.api.geometry.Rect;
 import org.inspirenxe.strata.api.geometry.Size;
@@ -51,6 +53,7 @@ import org.inspirenxe.strata.api.overlay.Overlays;
 import org.inspirenxe.strata.api.state.Source;
 import org.inspirenxe.strata.api.text.Text;
 import org.inspirenxe.strata.api.theme.Paint;
+import org.inspirenxe.strata.api.theme.SpriteId;
 import org.inspirenxe.strata.api.theme.Theme;
 import org.inspirenxe.strata.api.theme.ThemeException;
 import org.inspirenxe.strata.api.transfer.DropEffect;
@@ -82,6 +85,7 @@ import org.inspirenxe.strata.core.text.Translations;
 import org.inspirenxe.strata.spi.Canvas;
 import org.inspirenxe.strata.spi.InputContext;
 import org.inspirenxe.strata.spi.Platform;
+import org.inspirenxe.strata.spi.SpriteSizes;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -233,6 +237,8 @@ public final class Root {
     // The layers being painted, copied each frame so a paint handler can close an overlay
     private final List<Layer> paintLayers;
     private final List<Node> arrangeRequests;
+    // Nodes whose content changed in a way that may keep their size, measured again before the layout
+    private final List<Node> measureRequests;
     private final OverlaysImpl overlays;
     private final BindingQueue bindingQueue;
     // Bindings of nodes attached since attachTree last evaluated them
@@ -286,6 +292,16 @@ public final class Root {
     private Node tooltipPending;
     private long tooltipPendingSince;
     private boolean focusFromPress;
+    // Whether focus should be shown, and whether the last press was a pointer's, which hides focus that code moves
+    private boolean focusVisible;
+    private boolean pointerLast;
+    // The reason a move of focus must report whatever the input, such as activation, or null to work it out
+    private FocusReason forcedReason;
+    // Whether the host is active, and the node that had focus when it stopped being active
+    private boolean active = true;
+    private Node inactiveFocus;
+    private boolean inactiveFocusVisible;
+    private SpriteSizes spriteSizes = SpriteSizes.NONE;
     // The drag that carries a transfer, from this host or another application, or null
     private TransferDrag transferDrag;
 
@@ -312,6 +328,7 @@ public final class Root {
         this.layers = new ArrayList<>();
         this.paintLayers = new ArrayList<>();
         this.arrangeRequests = new ArrayList<>();
+        this.measureRequests = new ArrayList<>();
         this.overlays = new OverlaysImpl();
         this.user = new Origin.User(platform.user().orElse(null));
         this.uiThread = ui.uiThread();
@@ -445,6 +462,26 @@ public final class Root {
      * @return the platform clock's {@code nanoTime()} at which a frame is due, or {@link Long#MAX_VALUE} for none
      */
     public long nextFrameNanos() {
+        final long next = this.nextChange();
+        return next == Long.MAX_VALUE ? next : Math.max(next, this.frames.earliestAllowed());
+    }
+
+    /**
+     * Returns whether a frame drawn at a time would show something the last frame did not: a change asked for a
+     * frame, something that moves with the clock asked for the next one, or a timed change is due by then, whatever
+     * the frame rate. Allocates nothing.
+     *
+     * @param now the platform clock's {@code nanoTime()}
+     * @return true if the frame would differ from the last one
+     */
+    public boolean needsRender(final long now) {
+        return this.frames.needsFrame() || this.frames.isMoving() || this.nextChange() <= now;
+    }
+
+    /**
+     * Returns the earliest timed change, as {@link #nextFrameNanos()} describes, without holding it to the frame rate.
+     */
+    private long nextChange() {
         long next = this.frames.earliest();
         for (int i = 0; i < this.layers.size(); i++) {
             final Layer layer = this.layers.get(i);
@@ -465,7 +502,7 @@ public final class Root {
         if (hold != Long.MAX_VALUE) {
             next = Math.min(next, hold * 1_000_000L);
         }
-        return next == Long.MAX_VALUE ? next : Math.max(next, this.frames.earliestAllowed());
+        return next;
     }
 
     /**
@@ -553,6 +590,91 @@ public final class Root {
      */
     public boolean isFocusFromPress() {
         return this.focusFromPress;
+    }
+
+    /**
+     * Returns whether the focused node's focus should be shown, as {@code Focusable.isFocusVisible()} describes.
+     *
+     * @return true when focus came from the keyboard, from code after a key press, or a key was pressed since
+     */
+    public boolean isFocusVisible() {
+        return this.focusVisible;
+    }
+
+    /**
+     * Shows or hides focus without moving it, asking for a frame when that changes the look.
+     */
+    private void showFocus(final boolean visible) {
+        if (this.focusVisible != visible) {
+            this.focusVisible = visible;
+            if (this.focused != null) {
+                this.frames.request();
+            }
+        }
+    }
+
+    /**
+     * Makes the host active or inactive, as {@code InputSink.activeChanged} describes: becoming inactive takes focus
+     * away and remembers the node and whether its focus was shown, and becoming active gives focus back to it if it
+     * can still take it. Both moves report {@link FocusReason#ACTIVATION}.
+     *
+     * @param active true when the host became active
+     */
+    public void setActive(final boolean active) {
+        if (this.active == active) {
+            return;
+        }
+        this.active = active;
+        this.forcedReason = FocusReason.ACTIVATION;
+        try {
+            if (!active) {
+                this.inactiveFocus = this.focused;
+                this.inactiveFocusVisible = this.focusVisible;
+                this.changeFocus(null);
+            } else {
+                final Node back = this.inactiveFocus;
+                this.inactiveFocus = null;
+                if (back != null && this.focused == null && this.canFocus(back)) {
+                    this.focusVisible = this.inactiveFocusVisible;
+                    this.changeFocus(back);
+                }
+            }
+        } finally {
+            this.forcedReason = null;
+        }
+    }
+
+    /**
+     * Returns whether the host is active, as {@link #setActive} last set it.
+     *
+     * @return true unless the host was made inactive
+     */
+    public boolean isActive() {
+        return this.active;
+    }
+
+    /**
+     * Works out why focus is moving now: the forced reason, a pointer press, the device of the user's input being
+     * handled, or else code.
+     */
+    private FocusReason focusReason() {
+        if (this.forcedReason != null) {
+            return this.forcedReason;
+        }
+        if (this.focusFromPress) {
+            return FocusReason.POINTER;
+        }
+        final Cause cause = this.ui.causes().current();
+        if (cause.origin() instanceof Origin.User) {
+            final Device device = cause.context(CauseKeys.DEVICE).orElse(null);
+            if (device != null) {
+                return switch (device) {
+                    case MOUSE, TOUCH, PEN -> FocusReason.POINTER;
+                    case KEYBOARD, CONTROLLER, NARRATOR -> FocusReason.KEYBOARD;
+                };
+            }
+        }
+        return FocusReason.CODE;
     }
 
     // ------------------------------------------------------------------
@@ -1029,6 +1151,28 @@ public final class Root {
     }
 
     /**
+     * Gives the root the sizes of the sprites its host draws, and marks every node for measuring so images that take
+     * a sprite's size measure again.
+     *
+     * @param sizes the sprite sizes
+     */
+    public void setSpriteSizes(final SpriteSizes sizes) {
+        this.spriteSizes = Objects.requireNonNull(sizes, "sizes");
+        this.invalidateText();
+        this.requestLayout();
+    }
+
+    /**
+     * Returns a sprite's size from the host's sprite sizes.
+     *
+     * @param sprite the sprite
+     * @return its size in UI units, or empty when the host does not know it
+     */
+    public Optional<Size> spriteSize(final SpriteId sprite) {
+        return this.spriteSizes.size(sprite);
+    }
+
+    /**
      * Checks a density.
      *
      * @param pixelsPerUnit device pixels per UI unit
@@ -1068,6 +1212,12 @@ public final class Root {
         this.frames.request();
     }
 
+    void requestMeasure(final Node node) {
+        this.measureRequests.add(node);
+        this.layoutRequested = true;
+        this.frames.request();
+    }
+
     void requestArrangement(final Node node) {
         this.arrangeRequests.add(node);
         this.layoutRequested = true;
@@ -1077,8 +1227,9 @@ public final class Root {
     /**
      * Lays out every layer if anything requested it since the last layout: the content and dialogs are measured
      * with the root's size and arranged into it, popups are placed by their anchor, and the tooltip by the pointer.
-     * Subtrees that did not change are skipped. Then nodes that asked only to be arranged again are arranged in their
-     * last slot. Rendering and pointer input call this first, so bounds are never stale. If a measure or arrange hook
+     * Subtrees that did not change are skipped. Nodes that asked to be measured again come first, and those whose size
+     * stayed the same are only arranged again in their last slot. Last, nodes that asked only to be arranged again
+     * are arranged in their last slot. Rendering and pointer input call this first, so bounds are never stale. If a measure or arrange hook
      * throws, the layout stays requested, so the next call tries again.
      */
     public void layout() {
@@ -1099,6 +1250,16 @@ public final class Root {
 
     private void layoutLayers() {
         final Rect area = this.area;
+        // First, so a node whose size changed after all is laid out with its ancestors below
+        while (!this.measureRequests.isEmpty()) {
+            final List<Node> requests = List.copyOf(this.measureRequests);
+            this.measureRequests.clear();
+            for (final Node node : requests) {
+                if (node.root() == this) {
+                    node.remeasure(this.layoutPass);
+                }
+            }
+        }
         if (this.content != null) {
             this.content.measure(this.layoutPass, this.width, this.height);
             this.content.arrange(this.layoutPass, area);
@@ -1754,6 +1915,9 @@ public final class Root {
                 return true;
             }
         }
+        // A pointer press hides focus, wherever it lands
+        this.pointerLast = true;
+        this.showFocus(false);
         final Node target;
         if (hovers) {
             this.updateHover(x, y, modifiers);
@@ -2420,6 +2584,11 @@ public final class Root {
         try (CauseFrame frame = this.inputFrame(context.device(), modifiers)) {
             this.updateModifiers(modifiers, key, action);
             frame.put(CauseKeys.MODIFIERS, this.modifiers);
+            if (action == KeyAction.PRESS && !key.isModifier()) {
+                // A key shows focus, as moving it with the keyboard would
+                this.pointerLast = false;
+                this.showFocus(true);
+            }
             return this.handleKey(key, action, this.modifiers);
         }
     }
@@ -3048,6 +3217,16 @@ public final class Root {
         }
         this.frames.request();
         this.endKeyGrab();
+        final FocusReason reason = this.focusReason();
+        if (next != null) {
+            switch (reason) {
+                case POINTER -> this.focusVisible = false;
+                case KEYBOARD -> this.focusVisible = true;
+                case CODE -> this.focusVisible = !this.pointerLast;
+                // Activation shows focus as it was when the host stopped being active
+                case ACTIVATION -> { }
+            }
+        }
         final Node previous = this.focused;
         // A node another change assigned but has not told yet never had focus, so it has none to lose
         final Node lost = previous == this.focusArriving ? null : previous;
@@ -3059,38 +3238,41 @@ public final class Root {
                 if (lost.acceptsTextInput() && (next == null || !next.acceptsTextInput())) {
                     this.platform.textInput().stop();
                 }
-                lost.fire(Focusable.FOCUS_LOST, new FocusEventImpl(lost.facade(), next == null ? null : next.facade()));
+                lost.fire(Focusable.FOCUS_LOST, new FocusEventImpl(lost.facade(), next == null ? null : next.facade(),
+                        reason));
                 // The control a delegate takes focus for hears it too
                 final Node owner = lost.focusOwner();
                 if (owner != null) {
                     owner.fire(Focusable.FOCUS_LOST,
-                            new FocusEventImpl(owner.facade(), next == null ? null : next.facade()));
+                            new FocusEventImpl(owner.facade(), next == null ? null : next.facade(), reason));
                 }
-                this.focusExits(lost, this.focused);
+                this.focusExits(lost, this.focused, reason);
             }
         } finally {
             if (this.focused == next) {
                 this.focusArriving = null;
                 if (next != null) {
-                    this.focusGained(next, lost);
+                    this.focusGained(next, lost, reason);
                 }
             }
         }
     }
 
-    private void focusGained(final Node next, final Node lost) {
+    private void focusGained(final Node next, final Node lost, final FocusReason reason) {
         next.setFocused(true);
         if (next.acceptsTextInput()) {
             this.platform.textInput().start(next.bounds(), next.textInputKind());
         }
-        this.focusEnters(next, lost);
+        this.focusEnters(next, lost, reason);
         if (this.focused != next) {
             return;
         }
-        next.fire(Focusable.FOCUS_GAINED, new FocusEventImpl(next.facade(), lost == null ? null : lost.facade()));
+        next.fire(Focusable.FOCUS_GAINED, new FocusEventImpl(next.facade(), lost == null ? null : lost.facade(),
+                reason));
         final Node owner = next.focusOwner();
         if (owner != null && this.focused == next) {
-            owner.fire(Focusable.FOCUS_GAINED, new FocusEventImpl(owner.facade(), lost == null ? null : lost.facade()));
+            owner.fire(Focusable.FOCUS_GAINED, new FocusEventImpl(owner.facade(), lost == null ? null : lost.facade(),
+                    reason));
         }
         for (Node ancestor = next.parentNode(); ancestor != null && this.focused == next; ancestor = ancestor.parentNode()) {
             ancestor.hooks().descendantFocused(next.facade());
@@ -3101,14 +3283,14 @@ public final class Root {
      * Fires {@link InputEvents#FOCUS_EXIT} on each ancestor of the node that lost focus that is not an ancestor of
      * the node that has it now, innermost first, on those with a handler.
      */
-    private void focusExits(final Node lost, final Node now) {
+    private void focusExits(final Node lost, final Node now, final FocusReason reason) {
         for (Node ancestor = lost.parentNode(); ancestor != null; ancestor = ancestor.parentNode()) {
             if (now != null && isAncestorOrSelf(ancestor, now)) {
                 return;
             }
             if (ancestor.isHandled(InputEvents.FOCUS_EXIT)) {
                 ancestor.fire(InputEvents.FOCUS_EXIT, new FocusEventImpl(ancestor.facade(),
-                        now == null ? null : now.facade()));
+                        now == null ? null : now.facade(), reason));
             }
         }
     }
@@ -3117,7 +3299,7 @@ public final class Root {
      * Fires {@link InputEvents#FOCUS_ENTER} on each ancestor of the node that gained focus that is not an ancestor of
      * the node that lost it, outermost first, on those with a handler. Allocates nothing when none has one.
      */
-    private void focusEnters(final Node next, final Node lost) {
+    private void focusEnters(final Node next, final Node lost, final FocusReason reason) {
         List<Node> entered = null;
         for (Node ancestor = next.parentNode(); ancestor != null; ancestor = ancestor.parentNode()) {
             if (lost != null && isAncestorOrSelf(ancestor, lost)) {
@@ -3136,7 +3318,7 @@ public final class Root {
         for (int i = entered.size() - 1; i >= 0 && this.focused == next; i--) {
             final Node ancestor = entered.get(i);
             ancestor.fire(InputEvents.FOCUS_ENTER, new FocusEventImpl(ancestor.facade(),
-                    lost == null ? null : lost.facade()));
+                    lost == null ? null : lost.facade(), reason));
         }
     }
 

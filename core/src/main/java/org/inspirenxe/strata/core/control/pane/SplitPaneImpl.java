@@ -496,7 +496,7 @@ public final class SplitPaneImpl extends BuiltInComposite<SplitPane> implements 
         @Override
         protected void paint(final Painter painter, final Rect bounds) {
             (this.isHovered() || this.dragging ? this.hovered : this.paint).paint(painter, bounds);
-            if (this.isFocused() && this.focus != Paint.NONE) {
+            if (this.isFocusVisible() && this.focus != Paint.NONE) {
                 this.ring.paint(painter, this.focus, bounds);
             }
         }

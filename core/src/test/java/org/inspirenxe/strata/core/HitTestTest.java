@@ -17,16 +17,21 @@ package org.inspirenxe.strata.core;
 
 import org.inspirenxe.strata.api.ComponentFactory;
 import org.inspirenxe.strata.api.component.Component;
+import org.inspirenxe.strata.api.event.input.InputEvents;
 import org.inspirenxe.strata.api.geometry.Rect;
+import org.inspirenxe.strata.api.input.Modifiers;
 import org.inspirenxe.strata.api.layout.AbsolutePanel;
 import org.inspirenxe.strata.api.layout.HorizontalAlignment;
 import org.inspirenxe.strata.api.layout.VerticalAlignment;
 import org.junit.jupiter.api.Test;
 
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Finding the component under a point (design 4.48).
@@ -60,6 +65,50 @@ class HitTestTest {
         this.right.setEnabled(false);
         assertSame(this.panel, this.at(20, 20));
         assertSame(this.right, this.at(110, 20));
+    }
+
+    @Test
+    void passesThePointerThroughAComponentWithHitTestingOff() {
+        assertTrue(this.left.isHitTestVisible());
+        final AtomicInteger leftClicks = new AtomicInteger();
+        final AtomicInteger panelClicks = new AtomicInteger();
+        this.left.onEvent(InputEvents.CLICK, e -> leftClicks.incrementAndGet());
+        this.panel.onEvent(InputEvents.CLICK, e -> panelClicks.incrementAndGet());
+
+        this.left.setHitTestVisible(false);
+        assertFalse(this.left.isHitTestVisible());
+        assertSame(this.panel, this.at(20, 20));
+        this.test.click(20, 20);
+        assertEquals(0, leftClicks.get());
+        assertEquals(1, panelClicks.get());
+        assertFalse(this.left.pressed());
+
+        this.left.setHitTestVisible(true);
+        assertSame(this.left, this.at(20, 20));
+    }
+
+    @Test
+    void hidesAWholeSubtreeFromThePointerButNotFromDrawingOrFocus() {
+        final Box inner = new Box(this.ui, 10, 10);
+        final AbsolutePanel card = this.ui.absolutePanel().add(inner, 0, 0);
+        this.panel.add(card, 150, 60);
+        assertSame(inner, this.at(155, 65));
+
+        card.setHitTestVisible(false);
+        assertSame(this.panel, this.at(155, 65));
+        assertTrue(inner.isHitTestVisible());
+        assertTrue(card.isEffectivelyVisible());
+    }
+
+    @Test
+    void movesHoverOffAComponentWhenItsHitTestingTurnsOffUnderAStillPointer() {
+        final AtomicInteger exits = new AtomicInteger();
+        this.left.onEvent(InputEvents.POINTER_EXIT, e -> exits.incrementAndGet());
+        this.test.host().pointerMoved(20, 20, Modifiers.NONE);
+        this.left.setHitTestVisible(false);
+        this.test.host().layout();
+        this.test.host().render(new NullCanvas());
+        assertEquals(1, exits.get());
     }
 
     @Test

@@ -26,6 +26,7 @@ import org.inspirenxe.strata.api.control.attribute.text.HasIcon;
 import org.inspirenxe.strata.api.control.attribute.text.HasText;
 import org.inspirenxe.strata.api.control.attribute.value.Toggle;
 import org.inspirenxe.strata.api.geometry.Insets;
+import org.inspirenxe.strata.api.layout.HorizontalAlignment;
 import org.inspirenxe.strata.api.text.Text;
 
 import java.util.Objects;
@@ -159,6 +160,25 @@ public interface ToggleButton extends Component<ToggleButton>, Focusable<ToggleB
      * @return this button
      */
     ToggleButton setIconPlacement(IconPlacement placement);
+
+    /**
+     * Returns where the caption, with its icon, sits across the button.
+     *
+     * @return the alignment; {@link HorizontalAlignment#CENTER} for a new button
+     */
+    HorizontalAlignment captionAlignment();
+
+    /**
+     * Sets where the caption, with its icon, sits across the space inside the padding: at the left, centered or at
+     * the right. {@link HorizontalAlignment#STRETCH} counts as {@link HorizontalAlignment#LEFT}. Right to left,
+     * left and right mean the start and the end, as they do for layout. A caption too wide for the button starts at
+     * the left of its clip area and is cut or scrolled whatever the alignment. A full-width menu button, for
+     * example, reads better with its caption at the left.
+     *
+     * @param alignment the alignment
+     * @return this button
+     */
+    ToggleButton setCaptionAlignment(HorizontalAlignment alignment);
 
     /**
      * A toggle button's own state in a {@link org.inspirenxe.strata.api.component.ComponentSnapshot}. Whether it was

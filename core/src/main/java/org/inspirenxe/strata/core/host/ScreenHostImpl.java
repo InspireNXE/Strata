@@ -46,6 +46,7 @@ import org.inspirenxe.strata.spi.InputContext;
 import org.inspirenxe.strata.spi.Platform;
 import org.inspirenxe.strata.spi.Scheduler;
 import org.inspirenxe.strata.spi.ScreenHost;
+import org.inspirenxe.strata.spi.SpriteSizes;
 import org.inspirenxe.strata.spi.ThemeSource;
 
 import java.util.ArrayList;
@@ -245,6 +246,13 @@ public final class ScreenHostImpl implements ScreenHost {
         return Optional.ofNullable(this.screen);
     }
 
+    /**
+     * Returns whether the open screen hides the screens below it, without allocating.
+     */
+    boolean hidesBackground() {
+        return this.screen != null && this.screen.hidesBackground();
+    }
+
     @Override
     public Optional<ScreenHandle> handle() {
         return Optional.ofNullable(this.handle);
@@ -357,6 +365,11 @@ public final class ScreenHostImpl implements ScreenHost {
     }
 
     @Override
+    public void setSpriteSizes(final SpriteSizes sizes) {
+        this.root.setSpriteSizes(sizes);
+    }
+
+    @Override
     public Size preferredSize(final float availableWidth, final float availableHeight) {
         this.refreshTheme();
         this.refreshText();
@@ -402,6 +415,7 @@ public final class ScreenHostImpl implements ScreenHost {
     @Override
     public void render(final Canvas canvas) {
         this.uiThread.record();
+        this.root.frames().forgetMotion();
         this.refreshTheme();
         this.refreshText();
         this.flush();
@@ -431,6 +445,24 @@ public final class ScreenHostImpl implements ScreenHost {
     @Override
     public long nextFrameNanos() {
         return this.root.nextFrameNanos();
+    }
+
+    /**
+     * Returns whether a render at a time would draw something the last one did not: what {@link #needsFrame()}
+     * reports, motion or a timed change by then, a rebuild the screen's handle asked for, or a new version of the
+     * theme source, the theme registry, the translations or the platform's text metrics. Allocates nothing.
+     */
+    @Override
+    public boolean needsRender(final long nanoTime) {
+        if (this.rebuild || this.root.needsRender(nanoTime)) {
+            return true;
+        }
+        if (Translations.version() != this.textVersion
+                || this.platform.textMetrics().version() != this.metricsVersion) {
+            return true;
+        }
+        return this.themeRef != null && (this.themes.version() != this.themeVersion
+                || ThemeRegistryImpl.INSTANCE.version() != this.registryVersion);
     }
 
     @Override
@@ -504,6 +536,12 @@ public final class ScreenHostImpl implements ScreenHost {
     public void pointerLeft() {
         this.uiThread.record();
         this.root.pointerLeft();
+    }
+
+    @Override
+    public void activeChanged(final boolean active) {
+        this.uiThread.record();
+        this.root.setActive(active);
     }
 
     @Override

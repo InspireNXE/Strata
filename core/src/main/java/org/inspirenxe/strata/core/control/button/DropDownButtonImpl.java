@@ -27,6 +27,7 @@ import org.inspirenxe.strata.api.extension.Painter;
 import org.inspirenxe.strata.api.geometry.Insets;
 import org.inspirenxe.strata.api.geometry.Rect;
 import org.inspirenxe.strata.api.geometry.Size;
+import org.inspirenxe.strata.api.layout.HorizontalAlignment;
 import org.inspirenxe.strata.api.input.Key;
 import org.inspirenxe.strata.api.input.KeyAction;
 import org.inspirenxe.strata.api.input.MouseButton;
@@ -178,6 +179,18 @@ public final class DropDownButtonImpl extends BuiltInComponent<DropDownButton> i
         return this;
     }
 
+    @Override
+    public HorizontalAlignment captionAlignment() {
+        return this.content.alignment();
+    }
+
+    @Override
+    public DropDownButton setCaptionAlignment(final HorizontalAlignment alignment) {
+        this.content.setAlignment(alignment);
+        this.repaint();
+        return this;
+    }
+
     // ------------------------------------------------------------------
     // The popup
     // ------------------------------------------------------------------
@@ -310,9 +323,9 @@ public final class DropDownButtonImpl extends BuiltInComponent<DropDownButton> i
     protected void paint(final Painter painter, final Rect bounds) {
         final ButtonContent content = this.content;
         final boolean enabled = this.isEnabled();
-        content.face(enabled, this.open || this.isPressed() && this.isHovered(), this.isHovered() || this.isFocused())
+        content.face(enabled, this.open || this.isPressed() && this.isHovered(), this.isHovered() || this.isFocusVisible())
                 .paint(painter, bounds);
-        if (this.isFocused()) {
+        if (this.isFocusVisible()) {
             content.paintFocusRing(painter, bounds);
         }
         final Insets padding = content.padding(false);

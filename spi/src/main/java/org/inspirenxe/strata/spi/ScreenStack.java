@@ -157,6 +157,14 @@ public interface ScreenStack extends InputSink, ScreenController {
     void setPixelsPerUnit(float pixelsPerUnit);
 
     /**
+     * Gives every screen, and screens pushed later, the sizes of the sprites they draw, as
+     * {@link ScreenHost#setSpriteSizes(SpriteSizes)} does.
+     *
+     * @param sizes the sprite sizes
+     */
+    void setSpriteSizes(SpriteSizes sizes);
+
+    /**
      * Returns the size the top screen's content wants in a given space, as {@link ScreenHost#preferredSize} describes.
      * The screens below are left out.
      *
@@ -198,6 +206,16 @@ public interface ScreenStack extends InputSink, ScreenController {
      *     timed is waiting
      */
     long nextFrameNanos();
+
+    /**
+     * Returns whether a render at a time would draw something other than what the last {@link #render} drew, for the
+     * stack itself or a screen that would be drawn, as {@link ScreenHost#needsRender(long)} describes for a host. Call
+     * it on the UI thread, after a render. It allocates nothing.
+     *
+     * @param nanoTime the platform clock's {@link Clock#nanoTime()} reading for the frame
+     * @return true if a render is needed to draw the frame
+     */
+    boolean needsRender(long nanoTime);
 
     /**
      * Sets what runs when {@link #needsFrame()} turns from false to true, as

@@ -21,7 +21,6 @@ import org.inspirenxe.strata.api.component.HasCursor;
 import org.inspirenxe.strata.api.component.HasTooltip;
 import org.inspirenxe.strata.api.control.pane.Tab;
 import org.inspirenxe.strata.api.control.pane.TabBar;
-import org.inspirenxe.strata.api.event.input.FocusEvent;
 import org.inspirenxe.strata.api.event.input.KeyEvent;
 import org.inspirenxe.strata.api.event.input.PointerButtonEvent;
 import org.inspirenxe.strata.api.extension.ArrangeContext;
@@ -71,9 +70,6 @@ public final class TabBarImpl extends BuiltInComposite<TabBar> implements TabBar
     private final List<TabView> views;
     private int selectedIndex;
     private float spacing;
-    // True while the keyboard brought or kept focus here, which lights the selected tab
-    private boolean keyboardFocus;
-
     /**
      * Creates a bar with no tabs.
      *
@@ -296,16 +292,10 @@ public final class TabBarImpl extends BuiltInComposite<TabBar> implements TabBar
     }
 
     @Override
-    protected void onFocusGained(final FocusEvent event) {
-        this.keyboardFocus = !this.isFocusFromPress();
-    }
-
-    @Override
     protected void onKey(final KeyEvent event) {
         if (!event.action().isDown() || this.views.isEmpty()) {
             return;
         }
-        this.keyboardFocus = true;
         // Right to left the tabs run from the right, so Left goes to the next one
         final int direction = switch (Flow.key(event.key(), this.isRightToLeft())) {
             case LEFT -> -1;
@@ -457,7 +447,7 @@ public final class TabBarImpl extends BuiltInComposite<TabBar> implements TabBar
             final MnemonicLine shown;
             if (isSelected) {
                 face = !enabled ? this.selectedDisabled
-                        : this.isHovered() || this.bar.isFocused() && this.bar.keyboardFocus ? this.selectedHovered
+                        : this.isHovered() || this.bar.isFocusVisible() ? this.selectedHovered
                         : this.selected;
                 shown = enabled ? this.selectedSpan : this.disabledSpan;
             } else if (!enabled) {
@@ -514,9 +504,7 @@ public final class TabBarImpl extends BuiltInComposite<TabBar> implements TabBar
          */
         @Override
         public void activateMnemonic(final int mnemonic) {
-            if (this.bar.requestFocus()) {
-                this.bar.keyboardFocus = true;
-            }
+            this.bar.requestFocus();
             this.bar.userSelect(this.index());
         }
 
@@ -528,7 +516,6 @@ public final class TabBarImpl extends BuiltInComposite<TabBar> implements TabBar
                 // A clicked tab takes the bar's focus, as a clicked button takes its own
                 if (this.bar.isEnabled()) {
                     this.bar.requestFocus();
-                    this.bar.keyboardFocus = false;
                 }
                 this.bar.userSelect(this.index());
                 event.consume();

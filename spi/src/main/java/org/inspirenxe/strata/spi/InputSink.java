@@ -99,6 +99,20 @@ public interface InputSink {
     void pointerLeft();
 
     /**
+     * The window or area the host sits in became active or inactive, as when its window gains or loses the
+     * keyboard. Becoming inactive takes focus away from the focused component, which hears
+     * {@link org.inspirenxe.strata.api.component.Focusable#FOCUS_LOST} with
+     * {@link org.inspirenxe.strata.api.event.input.FocusReason#ACTIVATION}, and remembers it; becoming active gives
+     * focus back to it, if it can still take focus, with the same reason and shown as it was. Calls that repeat the
+     * current state do nothing. A host is active until told otherwise. The default does nothing; Strata's hosts
+     * implement it, and an adapter calls it when the engine reports the change.
+     *
+     * @param active true when the host became active
+     */
+    default void activeChanged(final boolean active) {
+    }
+
+    /**
      * A key went down, repeated or came up.
      *
      * @param key the key, mapped from the engine's code; {@link Key#UNKNOWN} if unmapped

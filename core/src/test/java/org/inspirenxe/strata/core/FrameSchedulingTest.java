@@ -449,6 +449,90 @@ class FrameSchedulingTest {
     }
 
     @Nested
+    class Renders {
+        @Test
+        void anIdleHostNeedsNoRenderAsTimePasses() {
+            FrameSchedulingTest.this.showClean(FrameSchedulingTest.this.ui.label(Text.of("Idle")));
+            assertFalse(FrameSchedulingTest.this.host.needsRender(FrameSchedulingTest.this.now()));
+            FrameSchedulingTest.this.platform.advanceMillis(5_000L);
+            assertFalse(FrameSchedulingTest.this.host.needsRender(FrameSchedulingTest.this.now()));
+        }
+
+        @Test
+        void aChangeNeedsARenderUntilOneDrawsIt() {
+            final Label label = FrameSchedulingTest.this.ui.label(Text.of("Price"));
+            FrameSchedulingTest.this.showClean(label);
+            label.setText(Text.of("Cost"));
+            assertTrue(FrameSchedulingTest.this.host.needsRender(FrameSchedulingTest.this.now()));
+            FrameSchedulingTest.this.render();
+            assertFalse(FrameSchedulingTest.this.host.needsRender(FrameSchedulingTest.this.now()));
+        }
+
+        @Test
+        void motionNeedsEveryRenderWhateverTheRate() {
+            final Gauge gauge = new Gauge(FrameSchedulingTest.this.ui);
+            gauge.onEvent(Component.PAINTED, event -> gauge.keepMoving());
+            FrameSchedulingTest.this.showClean(gauge);
+            FrameSchedulingTest.this.platform.advanceMillis(1L);
+            assertTrue(FrameSchedulingTest.this.host.nextFrameNanos() > FrameSchedulingTest.this.now(),
+                    "the rate holds the next frame back");
+            assertTrue(FrameSchedulingTest.this.host.needsRender(FrameSchedulingTest.this.now()),
+                    "an engine drawing every frame shows the motion at once");
+        }
+
+        @Test
+        void motionThatStoppedNeedsNoRender() {
+            final Gauge gauge = new Gauge(FrameSchedulingTest.this.ui);
+            FrameSchedulingTest.this.showClean(gauge);
+            gauge.keepMoving();
+            assertTrue(FrameSchedulingTest.this.host.needsRender(FrameSchedulingTest.this.now()));
+            FrameSchedulingTest.this.render();
+            FrameSchedulingTest.this.platform.advanceMillis(1L);
+            assertFalse(FrameSchedulingTest.this.host.needsRender(FrameSchedulingTest.this.now()),
+                    "the frame drew the gauge, which asked for no more");
+        }
+
+        @Test
+        void aTimedChangeNeedsARenderOnceDue() {
+            final Gauge gauge = new Gauge(FrameSchedulingTest.this.ui);
+            FrameSchedulingTest.this.showClean(gauge);
+            gauge.pulseIn(250L);
+            assertFalse(FrameSchedulingTest.this.host.needsRender(FrameSchedulingTest.this.now()));
+            FrameSchedulingTest.this.platform.advanceMillis(249L);
+            assertFalse(FrameSchedulingTest.this.host.needsRender(FrameSchedulingTest.this.now()));
+            FrameSchedulingTest.this.platform.advanceMillis(1L);
+            assertTrue(FrameSchedulingTest.this.host.needsRender(FrameSchedulingTest.this.now()));
+        }
+
+        @Test
+        void newTextMetricsNeedARender() {
+            FrameSchedulingTest.this.showClean(FrameSchedulingTest.this.ui.label(Text.of("Price")));
+            FrameSchedulingTest.this.platform.changeMetrics();
+            assertFalse(FrameSchedulingTest.this.host.needsFrame(), "metrics are looked at when a frame draws");
+            assertTrue(FrameSchedulingTest.this.host.needsRender(FrameSchedulingTest.this.now()));
+            FrameSchedulingTest.this.render();
+            assertFalse(FrameSchedulingTest.this.host.needsRender(FrameSchedulingTest.this.now()));
+        }
+
+        @Test
+        void aStackNeedsARenderWhenAShownScreenDoes() {
+            final TestPlatform platform = new TestPlatform();
+            final ScreenStack stack = StrataCore.createScreenStack(platform, Themes.flat());
+            stack.resize(300, 200);
+            final Gauge[] gauge = new Gauge[1];
+            stack.push(ui -> gauge[0] = new Gauge(ui));
+            assertTrue(stack.needsRender(platform.clock().nanoTime()), "nothing drawn yet");
+            stack.render(FrameSchedulingTest.this.canvas);
+            assertFalse(stack.needsRender(platform.clock().nanoTime()));
+            gauge[0].keepMoving();
+            assertFalse(stack.needsFrame(), "motion waits for the rate");
+            assertTrue(stack.needsRender(platform.clock().nanoTime()));
+            stack.render(FrameSchedulingTest.this.canvas);
+            assertFalse(stack.needsRender(platform.clock().nanoTime()));
+        }
+    }
+
+    @Nested
     class Stacks {
         private final TestPlatform platform = new TestPlatform();
         private final ScreenStack stack = StrataCore.createScreenStack(this.platform, Themes.flat());

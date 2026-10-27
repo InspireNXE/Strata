@@ -52,6 +52,7 @@ record ThemeFile(String layer, Optional<ThemeId> parent, Map<String, Paint> pain
     private static final Set<String> TILED_KEYS = Set.of("tiled", "size", "tint");
     private static final Set<String> GRADIENT_KEYS = Set.of("gradient");
     private static final Set<String> COLOR_KEYS = Set.of("color", "radius");
+    private static final Set<String> BACKDROP_KEYS = Set.of("backdrop", "tint", "radius");
     private static final Pattern DURATION = Pattern.compile("([0-9]+(?:\\.[0-9]+)?)(ms|s)");
     private static final Set<String> TEXT_KEYS =
             Set.of("color", "bold", "italic", "underline", "strikethrough", "shadow", "monospace", "font", "size");
@@ -129,6 +130,17 @@ record ThemeFile(String layer, Optional<ThemeId> parent, Map<String, Paint> pain
             }
             return new Paint.Tiled(SpriteId.parse(string(map.get("tiled"), where + ".tiled")),
                     size(map.get("size"), where + ".size"), tint(map, where));
+        }
+        if (map.containsKey("backdrop")) {
+            checkKeys(map, BACKDROP_KEYS, where);
+            final float blur = number(map.get("backdrop"), where + ".backdrop");
+            final float radius = map.containsKey("radius") ? number(map.get("radius"), where + ".radius") : 0f;
+            if (blur < 0f || radius < 0f) {
+                throw new IllegalArgumentException(where + " needs a blur and a radius that are not negative");
+            }
+            final int tint = map.containsKey("tint")
+                    ? color(string(map.get("tint"), where + ".tint"), where + ".tint") : 0x00000000;
+            return Paint.backdrop(blur, tint, radius);
         }
         if (map.containsKey("color")) {
             checkKeys(map, COLOR_KEYS, where);

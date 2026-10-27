@@ -22,6 +22,7 @@ import org.inspirenxe.strata.api.component.HasTooltip;
 import org.inspirenxe.strata.api.state.PropertyKey;
 import org.inspirenxe.strata.api.theme.SpriteId;
 import org.inspirenxe.strata.api.visual.PixelBuffer;
+import org.inspirenxe.strata.api.visual.Sampling;
 import org.inspirenxe.strata.api.visual.Visual;
 
 import java.util.Objects;
@@ -31,12 +32,16 @@ import java.util.Optional;
  * A sprite, an engine {@link Visual} or a {@link PixelBuffer} drawn at a size you choose, such as an icon, a
  * picture, a product photo or a heat map.
  *
- * <p>Strata cannot ask the engine how big a sprite's image is, so the image's size in UI units is set with
- * {@link #setImageSize}; it is 16 by 16 by default. A visual brings its own natural size, which becomes the image
- * size when the visual is set. That size is the desired size, and the aspect ratio {@link Scaling#FIT} keeps. The
- * sprite is looked up as described in {@link SpriteId}; a missing sprite, or a visual the engine cannot draw, draws
- * the engine's placeholder. A pixel buffer is shown like a sprite, at the image size, and an engine that cannot draw
- * pixels shows its placeholder. An image shows one of a sprite, a visual and a pixel buffer at a time.</p>
+ * <p>The image size in UI units is the desired size, and the aspect ratio {@link Scaling#FIT} and
+ * {@link Scaling#COVER} keep. Until you set one with {@link #setImageSize}, the image takes it from what it shows: a
+ * pixel buffer's width and height, one pixel to a unit, and a sprite's size where the engine knows it, which it may
+ * only once the image is shown. A sprite the engine cannot size, and an image showing nothing, are 16 by 16. A
+ * visual brings its own natural size, which becomes the image size whenever the visual is set, even after a size set
+ * by hand, and the size follows what is shown again from there. The sprite is looked up as described in
+ * {@link SpriteId}; a missing sprite, or a visual the engine cannot draw, draws the engine's placeholder. An engine
+ * that cannot draw pixels shows its placeholder for a pixel buffer. An image shows one of a sprite, a visual and a
+ * pixel buffer at a time. Sprites and pixels are sampled {@link Sampling#NEAREST} unless {@link #setSampling} says
+ * otherwise, which suits pixel art; a photo looks better {@link Sampling#LINEAR}.</p>
  *
  * <p>An image is not focusable, reads no theme keys and has no default behavior for input, so clicks pass through to
  * its ancestors. A disabled image draws the same as an enabled one; tint it to show the difference. It fires no
@@ -72,7 +77,8 @@ public interface Image extends Component<Image>, HasCursor<Image>, HasTooltip<Im
     Optional<SpriteId> sprite();
 
     /**
-     * Shows a sprite, replacing the sprite or visual shown before. Does not change the size.
+     * Shows a sprite, replacing the sprite or visual shown before. Unless a size was set by hand, the image takes the
+     * sprite's size where the engine knows it, and 16 by 16 where it does not.
      *
      * @param sprite the sprite to draw
      * @return this image
@@ -103,9 +109,10 @@ public interface Image extends Component<Image>, HasCursor<Image>, HasTooltip<Im
     Optional<PixelBuffer> pixels();
 
     /**
-     * Shows a pixel buffer, replacing the sprite, visual or value shown before, like a sprite: the image size does
-     * not change. Write the buffer and call {@link PixelBuffer#changed()} to show new pixels; the image draws the
-     * buffer as it is at each paint.
+     * Shows a pixel buffer, replacing the sprite, visual or value shown before. Unless a size was set by hand, the
+     * image takes the buffer's size, one pixel to a unit, so a 320 by 180 buffer makes a 320 by 180 image; showing
+     * nothing keeps the size. Write the buffer and call {@link PixelBuffer#changed()} to show new pixels; the image
+     * draws the buffer as it is at each paint.
      *
      * @param buffer the pixels, or {@code null} to show nothing
      * @return this image
@@ -151,20 +158,22 @@ public interface Image extends Component<Image>, HasCursor<Image>, HasTooltip<Im
     /**
      * Returns the width of the image, in UI units.
      *
-     * @return the image width; 16 by default
+     * @return the image width: the one set by hand, or else that of what the image shows as far as it is known,
+     *         16 when it is not
      */
     float imageWidth();
 
     /**
      * Returns the height of the image, in UI units.
      *
-     * @return the image height; 16 by default
+     * @return the image height: the one set by hand, or else that of what the image shows as far as it is known,
+     *         16 when it is not
      */
     float imageHeight();
 
     /**
-     * Sets the size the image is drawn at when nothing stretches it, which is also its desired size. A new layout
-     * runs.
+     * Sets the size the image is drawn at when nothing stretches it, which is also its desired size. From then on,
+     * showing a sprite or a pixel buffer keeps this size; only a visual brings its own. A new layout runs.
      *
      * @param width the width in UI units
      * @param height the height in UI units
@@ -188,6 +197,24 @@ public interface Image extends Component<Image>, HasCursor<Image>, HasTooltip<Im
      * @return this image
      */
     Image setScaling(Scaling scaling);
+
+    /**
+     * Returns how the sprite or pixel buffer is sampled when drawn at another size than its own.
+     *
+     * @return the sampling; {@link Sampling#NEAREST} by default
+     */
+    Sampling sampling();
+
+    /**
+     * Sets how the sprite or pixel buffer is sampled when drawn at another size than its own:
+     * {@link Sampling#NEAREST} keeps pixel art sharp, and {@link Sampling#LINEAR} scales a photo or a blurred
+     * picture smoothly. A visual is drawn the engine's way whatever this says, and an engine that cannot choose
+     * samples its own way.
+     *
+     * @param sampling the sampling
+     * @return this image
+     */
+    Image setSampling(Sampling sampling);
 
     /**
      * How an {@link Image} draws its sprite in bounds of another size.

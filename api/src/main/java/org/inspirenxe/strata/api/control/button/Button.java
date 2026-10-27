@@ -28,6 +28,7 @@ import org.inspirenxe.strata.api.event.EventType;
 import org.inspirenxe.strata.api.event.control.ControlEvent;
 import org.inspirenxe.strata.api.event.control.RequestEvent;
 import org.inspirenxe.strata.api.geometry.Insets;
+import org.inspirenxe.strata.api.layout.HorizontalAlignment;
 import org.inspirenxe.strata.api.text.Text;
 import org.inspirenxe.strata.api.theme.SpriteId;
 
@@ -257,6 +258,25 @@ public interface Button extends Component<Button>, Focusable<Button>, HasCursor<
      * @return this button
      */
     Button setIconPlacement(IconPlacement placement);
+
+    /**
+     * Returns where the caption, with its icon, sits across the button.
+     *
+     * @return the alignment; {@link HorizontalAlignment#CENTER} for a new button
+     */
+    HorizontalAlignment captionAlignment();
+
+    /**
+     * Sets where the caption, with its icon, sits across the space inside the padding: at the left, centered or at
+     * the right. {@link HorizontalAlignment#STRETCH} counts as {@link HorizontalAlignment#LEFT}. Right to left,
+     * left and right mean the start and the end, as they do for layout. A caption too wide for the button starts at
+     * the left of its clip area and is cut or scrolled whatever the alignment. A full-width menu button, for
+     * example, reads better with its caption at the left.
+     *
+     * @param alignment the alignment
+     * @return this button
+     */
+    Button setCaptionAlignment(HorizontalAlignment alignment);
 
     /**
      * Returns whether the button is a link.

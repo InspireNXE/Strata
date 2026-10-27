@@ -125,6 +125,20 @@ public interface ComponentPeer {
     void setVisible(boolean visible);
 
     /**
+     * See {@link org.inspirenxe.strata.api.component.Component#isHitTestVisible()}.
+     *
+     * @return true if the pointer can hit the component
+     */
+    boolean isHitTestVisible();
+
+    /**
+     * See {@link org.inspirenxe.strata.api.component.Component#setHitTestVisible(boolean)}.
+     *
+     * @param hitTestVisible false to let the pointer through
+     */
+    void setHitTestVisible(boolean hitTestVisible);
+
+    /**
      * See {@link org.inspirenxe.strata.api.component.Component#isEnabled()}.
      *
      * @return true if enabled
@@ -228,6 +242,13 @@ public interface ComponentPeer {
      * @return true while focused
      */
     boolean isFocused();
+
+    /**
+     * See {@link org.inspirenxe.strata.api.component.Focusable#isFocusVisible()}.
+     *
+     * @return true while focused and focus is shown
+     */
+    boolean isFocusVisible();
 
     /**
      * See {@link org.inspirenxe.strata.api.component.Focusable#requestFocus()}.
@@ -577,6 +598,14 @@ public interface ComponentPeer {
      * @throws IllegalArgumentException if the name is empty or one Strata sets
      */
     void setStyleState(String state, boolean on);
+
+    /**
+     * Returns whether one of the component's own style states is on. See {@code CustomComponent.hasStyleState}.
+     *
+     * @param state the state's name
+     * @return true if the state is on
+     */
+    boolean hasStyleState(String state);
 
     /**
      * Looks up a paint by key for the component's style states. See {@code CustomComponent.stylePaint}.
